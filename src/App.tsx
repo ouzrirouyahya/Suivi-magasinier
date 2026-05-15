@@ -96,7 +96,7 @@ export default function App() {
       <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
         <div className="text-center space-y-4">
           <Loader2 className="w-10 h-10 text-sky-600 animate-spin mx-auto" />
-          <p className="text-slate-500 font-bold uppercase tracking-widest animate-pulse">Initialisation Hydromines Suivi...</p>
+          <p className="text-slate-500 font-bold uppercase tracking-widest animate-pulse">Initialisation Système Magasinier...</p>
         </div>
       </div>
     );

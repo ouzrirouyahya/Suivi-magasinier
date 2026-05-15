@@ -124,12 +124,24 @@
   .print-only {
     display: block !important;
   }
+  .no-print-scroll {
+    max-height: none !important;
+    overflow: visible !important;
+  }
   body {
     background-color: white;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
   }
   .card {
-    border: none;
-    box-shadow: none;
+    border: 1px solid #e2e8f0 !important;
+    box-shadow: none !important;
+    break-inside: avoid;
+    background-color: white !important;
+  }
+  .recharts-responsive-container {
+    width: 100% !important;
+    height: 400px !important;
   }
 }
 

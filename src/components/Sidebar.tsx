@@ -60,7 +60,7 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
     { id: 'STOCK_PERFORATEURS', label: 'Foreuses & Perfos', icon: Drill },
     { id: 'STOCK_CONSOMMABLES', label: 'Consommables', icon: Droplets },
     { id: 'STOCK_EPI', label: 'Protection (EPI)', icon: Shield },
-    { id: 'SEP_M', label: 'FLUX LOGISTIQUES', isSeparator: true },
+    { id: 'SEP_M', label: 'GESTION DES STOCKS', isSeparator: true },
     { id: 'BON_ENTREE', label: 'Suivi des Entrées', icon: ArrowDownLeft, activeColor: 'text-emerald-600' },
     { id: 'BON_SORTIE', label: 'Suivi des Sorties', icon: ArrowUpRight, activeColor: 'text-rose-700' },
     { id: 'TRANSFERT', label: 'Transfert Inter-Site', icon: RefreshCw },

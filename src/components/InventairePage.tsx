@@ -66,10 +66,11 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       ...activeSession,
       items: activeSession.items.map(i => {
         if (i.articleId === articleId) {
+          const validCount = isNaN(count) ? 0 : count;
           return {
             ...i,
-            countedQuantity: count,
-            difference: count - i.theoricQuantity
+            countedQuantity: validCount,
+            difference: validCount - (i.theoricQuantity || 0)
           };
         }
         return i;
@@ -214,7 +215,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                               </td>
                               <td className="px-8 py-6 text-center">
                                  <span className="px-3 py-1 bg-slate-100 rounded-lg font-mono font-black text-slate-600 text-sm">
-                                   {sessionItem.theoricQuantity}
+                                   {isNaN(sessionItem.theoricQuantity) ? 0 : sessionItem.theoricQuantity}
                                  </span>
                               </td>
                               <td className="px-8 py-6 text-center">
@@ -224,16 +225,16 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                                       "w-24 px-4 py-2 rounded-xl font-black text-lg text-center outline-none transition-all",
                                       hasError ? "bg-amber-100 text-amber-800 ring-2 ring-amber-400" : "bg-slate-100 focus:bg-white focus:ring-4 focus:ring-sky-500/10"
                                     )}
-                                    value={sessionItem.countedQuantity}
+                                    value={isNaN(sessionItem.countedQuantity) ? '' : sessionItem.countedQuantity}
                                     onChange={(e) => updateCount(article.id, Number(e.target.value))}
                                  />
                               </td>
                               <td className="px-8 py-6 text-center">
                                  <span className={cn(
                                    "text-sm font-black flex items-center justify-center gap-1.5",
-                                   sessionItem.difference > 0 ? "text-emerald-600" : sessionItem.difference < 0 ? "text-rose-600" : "text-slate-400"
+                                   (sessionItem.difference || 0) > 0 ? "text-emerald-600" : (sessionItem.difference || 0) < 0 ? "text-rose-600" : "text-slate-400"
                                  )}>
-                                   {sessionItem.difference > 0 ? '+' : ''}{sessionItem.difference}
+                                   {(sessionItem.difference || 0) > 0 ? '+' : ''}{isNaN(sessionItem.difference) ? 0 : sessionItem.difference}
                                    {hasError && <AlertCircle className="w-3.5 h-3.5" />}
                                  </span>
                               </td>

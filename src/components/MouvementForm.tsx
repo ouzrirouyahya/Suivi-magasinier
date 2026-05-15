@@ -1,5 +1,20 @@
-import React, { useState } from 'react';
-import { Plus, Trash2, AlertCircle, User, Truck, Drill, Wallet, ArrowDownLeft, ArrowUpRight, Search, LayoutGrid, Database, BookOpen, Layers } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { 
+  Plus, 
+  Trash2, 
+  AlertCircle, 
+  User, 
+  Truck, 
+  Drill, 
+  Wallet, 
+  ArrowDownLeft, 
+  ArrowUpRight, 
+  Search, 
+  LayoutGrid, 
+  Database, 
+  BookOpen, 
+  Layers
+} from 'lucide-react';
 import { Article, Mouvement, MouvementType, MouvementItem, SiteCode, EnginMaster, PerfoMaster, AgentMaster, CatalogItem } from '../types';
 import { cn, formatCurrency, generateId } from '../lib/utils';
 import { SERVICES } from '../demoData';
@@ -123,11 +138,15 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     setItems(items.map(i => {
       if (i.articleId === articleId) {
         const article = articles.find(a => a.id === articleId);
-        if (type === 'SORTIE' && article && updates.quantity && updates.quantity > article.quantity) {
+        
+        const validQty = updates.quantity !== undefined ? (isNaN(updates.quantity) ? i.quantity : updates.quantity) : i.quantity;
+        const validPrice = updates.price !== undefined ? (isNaN(updates.price) ? i.price : updates.price) : i.price;
+
+        if (type === 'SORTIE' && article && updates.quantity !== undefined && validQty > article.quantity) {
           setValidationError(`Quantité maximale dépassée pour ${article.designation}. Stock disponible : ${article.quantity}`);
-          return { ...i, ...updates, quantity: article.quantity };
+          return { ...i, ...updates, quantity: article.quantity, price: validPrice };
         }
-        return { ...i, ...updates };
+        return { ...i, ...updates, quantity: validQty, price: validPrice };
       }
       return i;
     }));
@@ -212,7 +231,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const dropdownRef = React.useRef<HTMLDivElement>(null);
 
-  React.useEffect(() => {
+  useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
         setShowResults(false);
@@ -419,6 +438,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             />
           </div>
         </div>
+
 
         <div className="card glass overflow-visible no-print">
           <div className="p-8 border-b border-slate-100 bg-slate-50/30">
