@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default deny
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+    
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'ADMIN';
+    }
+
+    function isActive() {
+      return isSignedIn() && 
+             get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.active == true;
+    }
+
+    // Public/Metadata collections: Read by any signed-in user
+    match /catalog/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
+    match /metadata/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
+    match /engins/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
+    match /perfos/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
+    match /agents/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
+
+    // Articles: Read by all active users, write strictly by active
+    match /articles/{articleId} {
+      allow read: if isActive();
+      allow write: if isActive() && isValidId(articleId);
+    }
+
+    // Mouvements: Read by active, write by active
+    match /mouvements/{id} {
+      allow read: if isActive();
+      allow create: if isActive();
+      allow update: if isAdmin();
+    }
+
+    // Accounts: 
+    // - Anyone signed in can read their OWN doc
+    // - Listing the collection is restricted to Admins
+    match /accounts/{userId} {
+      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow list: if isAdmin();
+      allow create: if isOwner(userId) && isValidId(userId); // Allow users to bootstrap their own profile
+      allow update: if (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role)) && isValidId(userId); // Owner can update but not change role
+    }
+
+    // Others
+    match /auditLogs/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); }
+    match /transferts/{id} { allow read: if isSignedIn(); allow write: if isActive(); }
+    match /inventaires/{id} { allow read, write: if isActive(); }
+  }
+}
+

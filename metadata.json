@@ -1,0 +1,6 @@
+{
+  "name": "HYDROMINES ERP",
+  "description": "Système de Gestion de Stock & Logistique Avancé pour Sites Miniers. Suivi en temps réel, transferts inter-sites et audits d'inventaire.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,72 @@
+{
+  "entities": {
+    "Article": {
+      "title": "Article",
+      "description": "Un article en stock sur un site spécifique",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "site": { "type": "string" },
+        "ref": { "type": "string" },
+        "designation": { "type": "string" },
+        "type": { "type": "string" },
+        "category": { "type": "string" },
+        "unit": { "type": "string" },
+        "quantity": { "type": "number" },
+        "minStock": { "type": "number" },
+        "price": { "type": "number" },
+        "active": { "type": "boolean" },
+        "lastInventoryDate": { "type": "string" }
+      },
+      "required": ["id", "site", "ref", "designation", "quantity"]
+    },
+    "Mouvement": {
+      "title": "Mouvement",
+      "description": "Une transaction de stock (Entrée, Sortie, Transfert)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "site": { "type": "string" },
+        "date": { "type": "string" },
+        "type": { "type": "string" },
+        "status": { "type": "string" },
+        "items": { "type": "array" }
+      },
+      "required": ["id", "site", "date", "type", "status"]
+    },
+    "UserAccount": {
+      "title": "User Account",
+      "description": "Profil utilisateur et droits d'accès",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "email": { "type": "string" },
+        "role": { "type": "string" },
+        "active": { "type": "boolean" }
+      },
+      "required": ["id", "email", "role"]
+    }
+  },
+  "firestore": {
+    "/articles/{articleId}": {
+      "schema": "Article",
+      "description": "Collection principale des stocks"
+    },
+    "/mouvements/{mouvementId}": {
+      "schema": "Mouvement",
+      "description": "Historique des flux"
+    },
+    "/accounts/{userId}": {
+      "schema": "UserAccount",
+      "description": "Configuration des accès"
+    },
+    "/auditLogs/{logId}": {
+      "schema": "object",
+      "description": "Journaux d'audit système"
+    },
+    "/config/master": {
+      "schema": "object",
+      "description": "Paramètres globaux (Engins, Perfos, etc.)"
+    }
+  }
+}

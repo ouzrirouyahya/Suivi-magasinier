@@ -1,0 +1,1439 @@
+import React, { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp } from 'lucide-react';
+import { Article, StockType, SiteCode, CatalogItem } from '../types';
+import { cn, generateId, formatCurrency } from '../lib/utils';
+import { MASTER_CATALOG } from '../catalogData';
+import Papa from 'papaparse';
+
+interface ArticleManagementProps {
+  site: SiteCode;
+  articles: Article[];
+  catalog: CatalogItem[];
+  saveCatalogItem?: (item: CatalogItem) => Promise<void>;
+  setCatalog: (catalog: CatalogItem[] | ((prev: CatalogItem[]) => CatalogItem[])) => void;
+  onSave: (article: Article) => void;
+  onDelete: (id: string) => void;
+}
+
+// --- COMPONENTES AUXILIAIRES ---
+
+function NotificationCenter({ notifications }: { notifications: { id: string, message: string, type: 'success' | 'error' | 'info' }[] }) {
+  return (
+    <div className="fixed bottom-10 right-10 z-[100] flex flex-col gap-4 pointer-events-none w-full max-w-[420px]">
+      <AnimatePresence>
+        {notifications.map((notif) => (
+          <motion.div
+            key={notif.id}
+            initial={{ opacity: 0, x: 100, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8, x: 100 }}
+            className={cn(
+              "p-6 rounded-[2rem] shadow-2xl flex items-center gap-4 pointer-events-auto border backdrop-blur-xl",
+              notif.type === 'success' ? "bg-emerald-500/95 border-emerald-400 text-white shadow-emerald-500/20" :
+              notif.type === 'error' ? "bg-rose-500/95 border-rose-400 text-white shadow-rose-500/20" :
+              "bg-slate-900/95 border-slate-700 text-white shadow-slate-900/20"
+            )}
+          >
+            <div className={cn(
+              "w-10 h-10 rounded-2xl flex items-center justify-center shrink-0",
+              notif.type === 'success' ? "bg-white/20" :
+              notif.type === 'error' ? "bg-white/20" :
+              "bg-sky-500/20"
+            )}>
+              {notif.type === 'success' ? (
+                <Save className="w-5 h-5" />
+              ) : notif.type === 'error' ? (
+                <AlertCircle className="w-5 h-5" />
+              ) : (
+                <Database className="w-5 h-5" />
+              )}
+            </div>
+            <p className="text-sm font-black uppercase tracking-widest">{notif.message}</p>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
+}
+
+export function ArticleManagement({ site, articles, catalog, saveCatalogItem, setCatalog, onSave, onDelete }: ArticleManagementProps) {
+  const [searchTerm, setSearchTerm] = useState('');
+  const [editingArticle, setEditingArticle] = useState<Partial<Article> | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [activeCatalogType, setActiveCatalogType] = useState<StockType>('ENGINS');
+  const [catalogSearch, setCatalogSearch] = useState('');
+  
+  // Dynamic Catalog State - Removed internal state, using props
+  const [isManagingCatalog, setIsManagingCatalog] = useState(false);
+  const [editingCatalogItem, setEditingCatalogItem] = useState<Partial<CatalogItem> | null>(null);
+  const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
+
+  const filteredArticles = articles.filter(a => 
+    a.site === site &&
+    (a.designation.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    a.ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    a.component?.toLowerCase().includes(searchTerm.toLowerCase()))
+  );
+
+  const currentCatalog = React.useMemo(() => 
+    catalog.filter(item => item.suggestedType === activeCatalogType),
+    [catalog, activeCatalogType]
+  );
+
+  // Drill-down state
+  const [navPath, setNavPath] = useState<{level: string, value: string}[]>([]);
+  const [currentLevel, setCurrentLevel] = useState<'CATEGORY' | 'SUBCATEGORY' | 'COMPONENT' | 'SUBCOMPONENT' | 'RESULTS'>('CATEGORY');
+
+  useEffect(() => {
+    if (catalogSearch.length > 0) {
+      setCurrentLevel('RESULTS');
+    } else if (navPath.length === 0) {
+      setCurrentLevel('CATEGORY');
+    } else if (navPath.length === 1) {
+      setCurrentLevel('SUBCATEGORY');
+    } else if (navPath.length === 2) {
+      setCurrentLevel('COMPONENT');
+    } else if (navPath.length === 3) {
+      setCurrentLevel('SUBCOMPONENT');
+    }
+  }, [navPath, catalogSearch]);
+
+  const categories: string[] = React.useMemo(() => {
+    const unique = new Set<string>();
+    currentCatalog.forEach(item => unique.add(item.functionalCategory));
+    return Array.from(unique);
+  }, [currentCatalog]);
+  
+  const subCategories: string[] = React.useMemo(() => {
+    if (navPath.length < 1) return [];
+    const unique = new Set<string>();
+    currentCatalog
+      .filter(item => item.functionalCategory === navPath[0].value)
+      .forEach(item => { if (item.subCategory) unique.add(item.subCategory); });
+    return Array.from(unique);
+  }, [currentCatalog, navPath]);
+
+  const components: string[] = React.useMemo(() => {
+    if (navPath.length < 2) return [];
+    const unique = new Set<string>();
+    currentCatalog
+      .filter(item => item.functionalCategory === navPath[0].value && item.subCategory === navPath[1].value)
+      .forEach(item => { if (item.component) unique.add(item.component); });
+    return Array.from(unique);
+  }, [currentCatalog, navPath]);
+
+  const subComponents: string[] = React.useMemo(() => {
+    if (navPath.length < 3) return [];
+    const unique = new Set<string>();
+    currentCatalog
+      .filter(item => item.functionalCategory === navPath[0].value && item.subCategory === navPath[1].value && item.component === navPath[2].value)
+      .forEach(item => { if (item.subComponent) unique.add(item.subComponent); });
+    return Array.from(unique);
+  }, [currentCatalog, navPath]);
+
+  const finalItems = React.useMemo(() => 
+    currentCatalog.filter(item => {
+      if (catalogSearch.length > 0) {
+        const s = catalogSearch.toLowerCase();
+        return item.reference.toLowerCase().includes(s) ||
+               item.designation.toLowerCase().includes(s) ||
+               item.functionalCategory.toLowerCase().includes(s) ||
+               item.subCategory.toLowerCase().includes(s) ||
+               item.component.toLowerCase().includes(s) ||
+               item.subComponent.toLowerCase().includes(s);
+      }
+      
+      if (navPath.length === 0) return false;
+      
+      const matchesCategory = item.functionalCategory === navPath[0].value;
+      const matchesSub = navPath.length >= 2 ? item.subCategory === navPath[1].value : true;
+      const matchesComp = navPath.length >= 3 ? item.component === navPath[2].value : true;
+      const matchesSubComp = navPath.length >= 4 ? item.subComponent === navPath[3].value : true;
+
+      return matchesCategory && matchesSub && matchesComp && matchesSubComp;
+    }),
+    [currentCatalog, catalogSearch, navPath]
+  );
+
+  const [notifications, setNotifications] = useState<{id: string, message: string, type: 'success' | 'error' | 'info'}[]>([]);
+
+  const addNotification = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Math.random().toString(36).substring(7);
+    setNotifications(prev => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      setNotifications(prev => prev.filter(n => n.id !== id));
+    }, 5000);
+  };
+
+  const [isImporting, setIsImporting] = useState(false);
+  const [importProgress, setImportProgress] = useState(0);
+  
+    const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const confirmReplacement = confirm(
+        `AVERTISSEMENT : L'importation d'un nouveau fichier va remplacer les données actuelles du catalogue ${activeCatalogType === 'ENGINS' ? 'ST2G/ST2D' : 'Perforateurs'}.\n\nVoulez-vous continuer ?`
+      );
+
+      if (!confirmReplacement) {
+        if (event.target) event.target.value = '';
+        return;
+      }
+
+      setIsImporting(true);
+      setImportProgress(0);
+      
+      const normalize = (val: string) => {
+        if (!val) return "";
+        return val.toLowerCase()
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "") 
+          .replace(/[^a-z0-9]/g, "");
+      };
+
+      // PHASE 2: PROCESSING SYSTEM
+      const CHUNK_SIZE = 2000;
+      let rows: string[][] = [];
+      let headerRowIdx = -1;
+      const colIdx = { cat: -1, sub: -1, comp: -1, subComp: -1, ref: -1, desc: -1, notes: -1, price: -1 };
+      const newItems: CatalogItem[] = [];
+      
+      Papa.parse(file, {
+        encoding: "ISO-8859-1",
+        skipEmptyLines: 'greedy',
+        header: false,
+        worker: false, // Worker can be unstable in some sandboxes, use chunked main thread processing instead
+        complete: (results) => {
+          rows = results.data as string[][];
+          if (rows.length === 0) {
+            setIsImporting(false);
+            setImportProgress(0);
+            addNotification("Le fichier est vide.", "error");
+            return;
+          }
+
+          setImportProgress(10);
+          
+          // Identify headers
+          headerRowIdx = rows.findIndex(row => 
+            row.some(cell => {
+              const n = normalize(cell);
+              return n === 'reference' || n === 'ref' || n === 'designation' || n === 'description' || 
+                     n === 'partnumber' || n === 'codearticle' || n === 'oem' || n === 'pn' || 
+                     n === 'p/n' || n === 'code' || n === 'article' || n === 'label' || n === 'codepiece' ||
+                     n === 'referencepiece';
+            })
+          );
+
+          if (headerRowIdx === -1) {
+             colIdx.ref = 0;
+             colIdx.desc = 1;
+          } else {
+            rows[headerRowIdx].forEach((cell, i) => {
+              const n = normalize(cell);
+              if ((n.includes('cat') || n.includes('domain') || n.includes('famill') || n.includes('system') || n.includes('groupe')) && !n.includes('sous')) colIdx.cat = i;
+              if (n.includes('sous') && (n.includes('cat') || n.includes('domain') || n.includes('famill'))) colIdx.sub = i;
+              if ((n.includes('comp') || n.includes('bloc') || n.includes('moteur') || n.includes('ensemble') || n.includes('module')) && !n.includes('sous')) colIdx.comp = i;
+              if (n.includes('sous') && (n.includes('comp') || n.includes('bloc'))) colIdx.subComp = i;
+              if (n === 'reference' || n === 'ref' || n === 'partnumber' || n === 'code' || n === 'oem' || n === 'pn' || n === 'p/n' || n === 'codearticle' || n === 'codepiece' || n === 'referencepiece') colIdx.ref = i;
+              if (n === 'designation' || n === 'description' || n === 'article' || n === 'label' || n === 'nom' || n === 'libelle' || n === 'texte') colIdx.desc = i;
+              if (n.includes('note') || n.includes('obs') || n.includes('com') || n.includes('remarque')) colIdx.notes = i;
+              if (n.includes('prix') || n.includes('price') || n.includes('valeur') || n.includes('montant') || n.includes('cout')) colIdx.price = i;
+            });
+          }
+
+          // Special logic for the provided format: catégorie;sous catégorie;Composants;sous-composants;référence
+          if (colIdx.cat !== -1 && colIdx.sub !== -1 && colIdx.comp !== -1 && colIdx.subComp !== -1 && colIdx.ref === -1) {
+             // If we found the first 4 but not "ref", and there's a 5th column, it's likely "ref"
+             if (rows[headerRowIdx]?.length >= 5) colIdx.ref = 4;
+          }
+
+          if ((colIdx.ref === -1 || colIdx.desc === -1) && rows[headerRowIdx]?.length >= 6) {
+             if (colIdx.ref === -1) colIdx.ref = 4;
+             if (colIdx.desc === -1) colIdx.desc = 5;
+          }
+
+          const dataRows = rows.slice(headerRowIdx === -1 ? 0 : headerRowIdx + 1);
+          let currentIdx = 0;
+          let currentCat = '', currentSub = '', currentComp = '';
+
+          // BATCH PROCESSOR FUNCTION
+          const processNextChunk = () => {
+            const endIdx = Math.min(currentIdx + CHUNK_SIZE, dataRows.length);
+            
+            for (let i = currentIdx; i < endIdx; i++) {
+              const row = dataRows[i];
+              if (row.length < 2) continue;
+              const refVal = row[colIdx.ref]?.trim();
+              
+              if (!refVal) continue;
+              if (normalize(refVal) === 'reference' || normalize(refVal) === 'ref') continue; 
+
+              const priceVal = colIdx.price !== -1 ? parseFloat(row[colIdx.price]?.replace(',', '.') || '0') : 0;
+              
+              const cat = colIdx.cat !== -1 ? row[colIdx.cat]?.trim() : '';
+              const sub = colIdx.sub !== -1 ? row[colIdx.sub]?.trim() : '';
+              const comp = colIdx.comp !== -1 ? row[colIdx.comp]?.trim() : '';
+              const subComp = colIdx.subComp !== -1 ? row[colIdx.subComp]?.trim() : '';
+              
+              if (cat) currentCat = cat;
+              if (sub) currentSub = sub;
+              if (comp) currentComp = comp;
+              
+              // If designation is missing, use the most specific hierarchy name
+              let descVal = colIdx.desc !== -1 ? row[colIdx.desc]?.trim() : '';
+              if (!descVal) {
+                descVal = subComp || comp || sub || currentSub || currentComp || refVal;
+              }
+              
+              newItems.push({
+                id: `imp_${activeCatalogType}_${i}_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`,
+                functionalCategory: currentCat || 'AUTRES',
+                subCategory: currentSub || 'DIVERS',
+                component: currentComp || 'STANDARD',
+                subComponent: subComp || '',
+                reference: refVal,
+                designation: descVal,
+                notes: colIdx.notes !== -1 ? row[colIdx.notes]?.trim() || '' : '',
+                price: priceVal || 0,
+                suggestedType: activeCatalogType,
+                source: 'UPLOAD'
+              });
+            }
+
+            currentIdx = endIdx;
+            const progress = Math.round(10 + (currentIdx / dataRows.length) * 80);
+            setImportProgress(progress);
+
+            if (currentIdx < dataRows.length) {
+              // Yield to main thread
+              setTimeout(processNextChunk, 10);
+            } else {
+              // FINALIZE
+              finalizeImport();
+            }
+          };
+
+          const finalizeImport = () => {
+             if (newItems.length > 0) {
+               setCatalog(prev => {
+                 const otherTypeItems = prev.filter(item => item.suggestedType !== activeCatalogType);
+                 return [...otherTypeItems, ...newItems];
+               });
+               setNavPath([]);
+               setCatalogSearch('');
+               setImportProgress(100);
+               
+               setTimeout(() => {
+                 setIsImporting(false);
+                 setImportProgress(0);
+                 addNotification(`IMPORTATION RÉUSSIE : ${newItems.length} références synchronisées.`, 'success');
+                 if (event.target) event.target.value = '';
+               }, 500);
+             } else {
+               setIsImporting(false);
+               setImportProgress(0);
+               addNotification("Le fichier n'a pas pu être lu correctement. Vérifiez le format.", 'error');
+               if (event.target) event.target.value = '';
+             }
+          };
+
+          // Start processing
+          processNextChunk();
+        },
+        error: (err) => {
+          setIsImporting(false);
+          setImportProgress(0);
+          addNotification(`Erreur CSV: ${err}`, "error");
+        }
+      });
+    };
+
+  const deleteCatalogBranch = (scope: 'CATEGORY' | 'SUBCATEGORY' | 'COMPONENT', value: string) => {
+    if (!confirm(`Êtes-vous sûr de vouloir supprimer toute la branche "${value}" ?`)) return;
+
+    setCatalog(prev => prev.filter(item => {
+      if (scope === 'CATEGORY') return item.functionalCategory !== value;
+      if (scope === 'SUBCATEGORY') return item.subCategory !== value || item.functionalCategory !== navPath[0]?.value;
+      if (scope === 'COMPONENT') return item.component !== value || item.subCategory !== navPath[1]?.value || item.functionalCategory !== navPath[0]?.value;
+      return true;
+    }));
+  };
+
+  const deleteCatalogItem = (id: string) => {
+    if (!confirm('Supprimer cette référence du catalogue ?')) return;
+    setCatalog(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleSaveCatalogItem = async () => {
+    if (!editingCatalogItem?.reference || !editingCatalogItem?.designation) {
+      addNotification("Référence et Désignation sont requises", "error");
+      return;
+    }
+
+    const newItem: CatalogItem = {
+      id: editingCatalogItem.id || generateId(),
+      reference: editingCatalogItem.reference.toUpperCase(),
+      designation: editingCatalogItem.designation,
+      functionalCategory: editingCatalogItem.functionalCategory || (navPath[0]?.value || 'SANS CATÉGORIE'),
+      subCategory: editingCatalogItem.subCategory || (navPath[1]?.value || ''),
+      component: editingCatalogItem.component || (navPath[2]?.value || ''),
+      subComponent: editingCatalogItem.subComponent || '',
+      notes: editingCatalogItem.notes || '',
+      price: editingCatalogItem.price || 0,
+      suggestedType: editingCatalogItem.suggestedType || activeCatalogType,
+      source: 'MASTER'
+    };
+
+    if (saveCatalogItem) {
+      await saveCatalogItem(newItem);
+      addNotification(`Item ${newItem.reference} synchronisé au master`, "success");
+      setIsCatalogModalOpen(false);
+      setEditingCatalogItem(null);
+    }
+  };
+
+  const pushNav = (level: string, value: string) => {
+    setNavPath(prev => [...prev, { level, value }]);
+    setCatalogSearch('');
+  };
+
+  const resetNav = (index: number) => {
+    setNavPath(prev => prev.slice(0, index));
+    setCatalogSearch('');
+  };
+
+  const handleEdit = (article: Article) => {
+    setEditingArticle(article);
+    setIsModalOpen(true);
+  };
+
+  const handleCreate = () => {
+    setEditingArticle({
+      id: generateId(),
+      site,
+      ref: '',
+      designation: '',
+      type: 'ENGINS',
+      category: '',
+      unit: 'Pcs',
+      quantity: 0,
+      minStock: 0,
+      location: '',
+      price: 0,
+      active: true,
+      functionalCategory: '',
+      subCategory: '',
+      component: '',
+      subComponent: ''
+    });
+    setIsModalOpen(true);
+  };
+
+  const handleImportFromCatalog = (item: CatalogItem) => {
+    setEditingArticle({
+      id: generateId(),
+      site,
+      ref: item.reference,
+      designation: item.designation,
+      type: item.suggestedType,
+      category: item.functionalCategory,
+      functionalCategory: item.functionalCategory,
+      subCategory: item.subCategory,
+      component: item.component,
+      subComponent: item.subComponent,
+      notes: item.notes,
+      unit: 'Pcs',
+      quantity: 0,
+      minStock: 1,
+      location: '',
+      price: item.price || 0,
+      active: true
+    });
+    setIsCatalogOpen(false);
+    setIsModalOpen(true);
+  };
+
+  const handleSave = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (editingArticle) {
+      onSave(editingArticle as Article);
+      setIsModalOpen(false);
+      setEditingArticle(null);
+    }
+  };
+
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <header className="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-slate-100">
+        <div>
+          <h2 className="text-4xl font-black text-slate-950 tracking-tighter uppercase">Master Catalog</h2>
+          <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Gouvernance des références techniques du site {site}</p>
+        </div>
+        <div className="flex gap-4">
+          <button 
+            onClick={() => {
+              setActiveCatalogType('ENGINS');
+              setIsCatalogOpen(true);
+            }} 
+            className="btn bg-white text-sky-600 border-2 border-sky-100 hover:border-sky-600 shadow-xl h-14 px-8 rounded-2xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-3 relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-sky-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Database className="w-5 h-5 group-hover:scale-110 transition-transform relative z-10" /> 
+            <span className="relative z-10">Catalogue ST2G/ST2D</span>
+          </button>
+          
+          <button 
+            onClick={() => {
+              setActiveCatalogType('PERFORATEURS');
+              setIsCatalogOpen(true);
+            }} 
+            className="btn bg-white text-red-700 border-2 border-red-100 hover:border-red-700 shadow-xl h-14 px-8 rounded-2xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-3 relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-red-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <Layers className="w-5 h-5 group-hover:scale-110 transition-transform relative z-10" /> 
+            <span className="relative z-10">Catalogue Perforateurs</span>
+          </button>
+
+          <button onClick={handleCreate} className="btn bg-slate-950 text-white hover:bg-sky-600 shadow-2xl h-14 px-8 rounded-2xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-3">
+            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> Ajouter Manuel
+          </button>
+        </div>
+      </header>
+
+      <div className="card glass p-6 shadow-2xl ring-1 ring-slate-900/5">
+        <div className="relative">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+          <input 
+            type="text" 
+            placeholder="Rechercher une nomenclature (REF, OEM, Designation)..." 
+            className="input-field pl-14 h-14 text-base bg-white/40 border-slate-200/50"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="table-container glass border-0 shadow-2xl ring-1 ring-slate-900/5 overflow-hidden">
+        <table className="data-table w-full">
+          <thead>
+            <tr>
+              <th className="px-8 py-6">Référence & Désignation</th>
+              <th className="px-8 py-6">Classification</th>
+              <th className="px-8 py-6 text-right">Prix Unit.</th>
+              <th className="px-8 py-6 text-right">Seuil Alerte</th>
+              <th className="px-8 py-6">Localisation</th>
+              <th className="px-8 py-6">Statut</th>
+              <th className="px-8 py-6 text-center">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-100/50">
+            {filteredArticles.map(article => (
+              <tr key={article.id} className="group hover:bg-white/60 transition-all duration-300">
+                <td className="px-8 py-6">
+                  <p className="font-mono text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">#{article.ref}</p>
+                  <p className="font-black text-slate-900 text-base leading-tight">{article.designation}</p>
+                  {article.component && (
+                    <div className="flex items-center gap-2 mt-2">
+                       <Layers className="w-3 h-3 text-sky-400" />
+                       <p className="text-[9px] font-bold text-sky-600 uppercase tracking-tight">
+                         {article.functionalCategory} / {article.component}
+                       </p>
+                    </div>
+                  )}
+                </td>
+                <td className="px-8 py-6">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg w-fit border border-sky-100 uppercase tracking-tighter">
+                      {article.type}
+                    </span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{article.category}</span>
+                  </div>
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <p className="text-base font-black text-emerald-600">{formatCurrency(article.price)}</p>
+                </td>
+                <td className="px-8 py-6 text-right">
+                  <p className="text-base font-black text-slate-900">{article.minStock} <span className="text-[10px] text-slate-400 uppercase">{article.unit}</span></p>
+                </td>
+                <td className="px-8 py-6">
+                  <span className="font-bold text-slate-600 text-sm">{article.location}</span>
+                </td>
+                <td className="px-8 py-6">
+                  <span className={cn(
+                    "px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm",
+                    article.active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-100"
+                  )}>
+                    {article.active ? 'Opérationnel' : 'Archivé'}
+                  </span>
+                </td>
+                <td className="px-8 py-6">
+                  <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
+                    <button onClick={() => handleEdit(article)} className="p-3 bg-white shadow-xl border border-slate-100 text-sky-600 rounded-2xl hover:scale-110 active:scale-95 transition-all">
+                      <Pencil className="w-5 h-5" />
+                    </button>
+                    <button onClick={() => onDelete(article.id)} className="p-3 bg-white shadow-xl border border-slate-100 text-rose-600 rounded-2xl hover:scale-110 active:scale-95 transition-all">
+                      <Trash2 className="w-5 h-5" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {isCatalogOpen && (
+         <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[110] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[4rem] shadow-[0_0_100px_rgba(8,145,213,0.3)] w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
+            <header className="px-12 py-10 border-b border-slate-100 flex items-center justify-between bg-white relative z-10">
+              <div className="flex items-center gap-8">
+                <div className={cn(
+                  "p-5 rounded-[2rem] shadow-lg transition-all duration-500 hover:scale-110",
+                  activeCatalogType === 'ENGINS' 
+                    ? "bg-sky-50 text-sky-600 shadow-sky-100" 
+                    : "bg-red-50 text-red-600 shadow-red-100"
+                )}>
+                   {activeCatalogType === 'ENGINS' ? <Database className="w-8 h-8" /> : <Layers className="w-8 h-8" />}
+                </div>
+                <div>
+                  <div className="flex items-center gap-3 mb-1">
+                    <div className="shiny-logo px-4 py-1 rounded-2xl bg-white border border-slate-50 transition-all shadow-sm">
+                      <h3 className="text-3xl font-black tracking-tighter uppercase flex items-center">
+                        <span className="text-sky-500">Hydro</span>
+                        <span className="text-red-700">Mines</span>
+                      </h3>
+                    </div>
+                    <span className="mx-3 w-1.5 h-6 bg-slate-200 rounded-full" />
+                    <span className="text-slate-900 font-black text-3xl uppercase tracking-tighter">
+                      {activeCatalogType === 'ENGINS' ? 'ST2G / ST2D' : 'Perforateurs'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => resetNav(0)} className="text-[11px] font-black text-slate-400 hover:text-sky-600 uppercase tracking-[0.2em] transition-colors">Accueil</button>
+                    {navPath.map((node, i) => (
+                      <React.Fragment key={i}>
+                        <ChevronDown className="w-3 h-3 text-slate-200 -rotate-90" />
+                        <button 
+                          onClick={() => resetNav(i + 1)}
+                          className={cn(
+                            "text-[11px] font-black uppercase tracking-[0.2em] transition-all",
+                            i === navPath.length - 1 ? "text-sky-600 scale-105" : "text-slate-400 hover:text-sky-600"
+                          )}
+                        >
+                          {node.value}
+                        </button>
+                      </React.Fragment>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-6">
+                <button 
+                  onClick={() => {
+                    if (isManagingCatalog) {
+                      addNotification("Base de données synchronisée.", "success");
+                    }
+                    setIsManagingCatalog(!isManagingCatalog);
+                  }}
+                  className={cn(
+                    "flex items-center gap-3 px-6 h-12 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-sm",
+                    isManagingCatalog 
+                      ? "bg-emerald-600 text-white ring-4 ring-emerald-500/20" 
+                      : "bg-slate-50 text-slate-500 hover:bg-slate-100"
+                  )}
+                >
+                  {isManagingCatalog ? <Save className="w-4 h-4 animate-bounce" /> : <Pencil className="w-4 h-4" />}
+                  {isManagingCatalog ? 'Valider & Synchroniser' : 'Gérer Base'}
+                </button>
+                <button 
+                  onClick={() => {
+                    if (confirm("Voulez-vous réinitialiser ce catalogue avec les données d'usine (Master) ? Vos modifications locales seront perdues.")) {
+                      setCatalog(prev => {
+                        const others = prev.filter(i => i.suggestedType !== activeCatalogType);
+                        const masters = MASTER_CATALOG.filter(i => i.suggestedType === activeCatalogType);
+                        return [...others, ...masters];
+                      });
+                      setNavPath([]);
+                      setCatalogSearch('');
+                    }
+                  }}
+                  className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all"
+                  title="Réinitialiser"
+                >
+                  <BookOpen className="w-5 h-5" />
+                </button>
+                <button 
+                  onClick={() => {
+                    setIsCatalogOpen(false);
+                    setNavPath([]);
+                    setCatalogSearch('');
+                    setIsManagingCatalog(false);
+                  }} 
+                  className="w-14 h-14 rounded-[1.5rem] bg-slate-100 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all duration-300 hover:rotate-90"
+                >
+                  <X className="w-8 h-8" />
+                </button>
+              </div>
+            </header>
+            
+            <div className="p-12 pb-0 border-b border-slate-100 bg-slate-50/20">
+               <div className="flex flex-col md:flex-row gap-6 mb-8">
+                  <div className="relative flex-1 group">
+                    <div className="absolute inset-0 bg-sky-500/5 rounded-3xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-xl" />
+                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 relative z-10" />
+                    <input 
+                      type="text" 
+                      placeholder="RECHERCHE AVANCÉE : Tapez une réf, un nom ou une classification..." 
+                      className="input-field pl-16 h-16 text-lg bg-white border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/5 relative z-10 rounded-3xl font-medium tracking-tight shadow-sm"
+                      value={catalogSearch}
+                      onChange={(e) => setCatalogSearch(e.target.value)}
+                    />
+                    {catalogSearch && (
+                      <button 
+                         onClick={() => setCatalogSearch('')}
+                         className="absolute right-6 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-50 rounded-xl transition-colors z-20"
+                      >
+                        <X className="w-5 h-5 text-slate-300" />
+                      </button>
+                    )}
+                  </div>
+                  <div className="flex gap-4">
+                    <button 
+                      onClick={() => {
+                        setEditingCatalogItem({ 
+                          suggestedType: activeCatalogType,
+                          functionalCategory: navPath[0]?.value || '',
+                          subCategory: navPath[1]?.value || '',
+                          component: navPath[2]?.value || '',
+                          subComponent: navPath[3]?.value || ''
+                        });
+                        setIsCatalogModalOpen(true);
+                      }}
+                      className="flex items-center gap-3 px-8 h-16 bg-slate-900 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-sky-600 transition-all shadow-xl active:scale-95"
+                    >
+                      <Plus className="w-6 h-6" /> Ajouter au Master
+                    </button>
+
+                    <label className={cn(
+                      "flex items-center gap-4 px-8 h-16 rounded-3xl cursor-pointer transition-all font-black uppercase text-[11px] tracking-[0.2em] whitespace-nowrap border-2 shadow-sm",
+                      isImporting 
+                        ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" 
+                        : "bg-white text-emerald-600 border-emerald-100 hover:border-emerald-500 hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)]"
+                    )}>
+                      {isImporting ? (
+                        <div className="flex items-center gap-4">
+                          <div className="w-5 h-5 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
+                          Traitement CSV...
+                        </div>
+                      ) : (
+                        <>
+                          <FileUp className="w-6 h-6" />
+                          Importer CSV
+                        </>
+                      )}
+                      <input 
+                        type="file" 
+                        accept=".csv, text/csv, .txt, application/vnd.ms-excel" 
+                        className="hidden" 
+                        onChange={handleCsvUpload}
+                        disabled={isImporting}
+                      />
+                    </label>
+                  </div>
+               </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-12 bg-slate-50/20 relative">
+               {isImporting && (
+                 <div className="absolute inset-0 z-[100] bg-white/98 backdrop-blur-2xl flex flex-col items-center justify-center animate-in fade-in duration-700">
+                    <div className="w-40 h-40 relative mb-12">
+                       <div className="absolute inset-0 border-[16px] border-slate-100/50 rounded-[3.5rem] shadow-inner"></div>
+                       <div 
+                         className="absolute inset-0 border-[16px] border-sky-600 border-t-transparent rounded-[3.5rem] animate-spin shadow-xl"
+                         style={{ animationDuration: '0.8s' }}
+                       ></div>
+                       <div className="absolute inset-0 flex items-center justify-center">
+                          <span className="text-2xl font-black text-sky-600">{importProgress}%</span>
+                       </div>
+                    </div>
+                    
+                    <div className="text-center px-10 max-w-2xl bg-white p-12 rounded-[3.5rem] shadow-2xl shadow-sky-900/10 border border-sky-50">
+                       <h4 className="text-4xl font-black text-slate-950 uppercase tracking-tighter mb-6 leading-none">
+                         Synchronisation Technique
+                       </h4>
+                       <div className="flex flex-col gap-4">
+                          <p className="text-sky-600 font-bold uppercase text-[12px] tracking-[0.4em] animate-pulse">
+                            {importProgress < 30 ? "Lecture du fichier..." : importProgress < 60 ? "Indexation des références..." : "Finalisation du catalogue..."}
+                          </p>
+                          <p className="text-slate-400 font-black uppercase text-[11px] tracking-[0.2em] bg-slate-50 py-4 px-8 rounded-3xl border border-slate-100 shadow-sm">
+                            WAIT, YOUR CATALOGUE WILL APPEAR IN LESS THAN {importProgress < 50 ? "45 SECONDS" : "15 SECONDS"}
+                          </p>
+                       </div>
+                       
+                       <div className="mt-10 overflow-hidden">
+                          <div className="flex justify-between mb-3 px-1">
+                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Optimisation Cloud</span>
+                             <span className="text-[10px] font-black text-sky-600 uppercase tracking-widest">Hydromines Sync v2.0</span>
+                          </div>
+                          <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner p-1">
+                             <div 
+                               className="h-full bg-gradient-to-r from-sky-400 to-sky-600 rounded-full transition-all duration-700 shadow-[0_0_15px_rgba(8,145,213,0.4)]"
+                               style={{ width: `${importProgress}%` }}
+                             />
+                          </div>
+                       </div>
+                    </div>
+
+                    <div className="mt-12 flex items-center gap-4 text-slate-300">
+                       <div className="w-2 h-2 bg-slate-200 rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
+                       <div className="w-2 h-2 bg-slate-200 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                       <div className="w-2 h-2 bg-slate-200 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                       <span className="text-[9px] font-black uppercase tracking-[0.3em]">Processing Metadata...</span>
+                    </div>
+                 </div>
+               )}
+
+               {currentLevel === 'CATEGORY' && (
+                  <>
+                    {categories.length === 0 ? (
+                      <div className="flex flex-col items-center justify-center p-20 border-2 border-dashed border-slate-100 rounded-[3rem] bg-slate-50/50 animate-in fade-in duration-700">
+                        <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center shadow-xl mb-8 border border-slate-50">
+                          <BookOpen className="w-12 h-12 text-slate-200" />
+                        </div>
+                        <h3 className="text-xl font-black text-slate-900 mb-4 uppercase tracking-tight text-center">Catalogue Vide</h3>
+                        <p className="text-slate-500 text-center max-w-sm mb-10 font-bold leading-relaxed text-sm">
+                          Aucune donnée n'a été trouvée pour ce catalogue dans la base de données.<br/>Vous pouvez réinitialiser avec les données d'usine (Master).
+                        </p>
+                        
+                        <button
+                          onClick={() => {
+                            if (confirm("Voulez-vous réinitialiser ce catalogue avec les données d'usine (Master) ? Vos données actuelles pour ce catalogue seront écrasées.")) {
+                              const masters = MASTER_CATALOG.filter(i => i.suggestedType === activeCatalogType);
+                              if (setCatalog) {
+                                const others = catalog.filter(i => i.suggestedType !== activeCatalogType);
+                                setCatalog([...others, ...masters]);
+                              }
+                            }
+                          }}
+                          className="px-10 py-5 bg-sky-500 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-sky-600 transition-all shadow-xl shadow-sky-500/30 active:scale-95 flex items-center gap-3"
+                        >
+                          <BookOpen className="w-4 h-4" />
+                          Charger les données d'usine
+                        </button>
+                      </div>
+                    ) : (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+                         {categories.map(cat => (
+                           <CategoryCard 
+                             key={cat} 
+                             cat={cat} 
+                             count={currentCatalog.filter(i => i.functionalCategory === cat).length}
+                             activeType={activeCatalogType}
+                             onClick={() => pushNav('CATEGORY', cat)}
+                           />
+                         ))}
+                      </div>
+                    )}
+                  </>
+               )}
+
+               {currentLevel === 'SUBCATEGORY' && (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in zoom-in-95 duration-500">
+                    {subCategories.map(sub => (
+                      <div key={sub} className="group relative">
+                        <button
+                          onClick={() => pushNav('SUBCATEGORY', sub)}
+                          className="w-full p-8 bg-white border border-slate-100 rounded-[2rem] hover:border-sky-500 hover:shadow-2xl transition-all text-left flex items-center justify-between group overflow-hidden"
+                        >
+                          <div className="absolute inset-0 bg-sky-500/0 group-hover:bg-sky-500/[0.02] transition-colors" />
+                          <div className="flex items-center gap-6 relative z-10">
+                            <div className="w-14 h-14 bg-slate-50 text-slate-400 group-hover:bg-sky-50 group-hover:text-sky-600 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 group-hover:rotate-12 group-hover:scale-110">
+                              <BookOpen className="w-7 h-7" />
+                            </div>
+                            <span className="font-black text-slate-950 uppercase text-base tracking-tight leading-tight">{sub}</span>
+                          </div>
+                          <ChevronDown className="w-6 h-6 text-slate-200 -rotate-90 group-hover:text-sky-600 transition-all group-hover:translate-x-1 relative z-10" />
+                        </button>
+                        {isManagingCatalog && (
+                          <button 
+                            onClick={() => deleteCatalogBranch('SUBCATEGORY', sub)}
+                            className="absolute -top-3 -right-3 w-10 h-10 bg-white text-rose-500 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100 z-20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {isManagingCatalog && (
+                      <button 
+                        onClick={() => {
+                          setEditingCatalogItem({ functionalCategory: navPath[0]?.value, subCategory: '', suggestedType: activeCatalogType });
+                          setIsCatalogModalOpen(true);
+                        }}
+                        className="p-8 border-2 border-dashed border-slate-200 rounded-[2rem] hover:border-sky-300 hover:bg-sky-50 transition-all flex items-center justify-center gap-4 text-slate-400 hover:text-sky-600 group"
+                      >
+                         <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform" />
+                         <span className="text-[11px] font-black uppercase tracking-[0.25em]">Nouveau Sous-Système</span>
+                      </button>
+                    )}
+                 </div>
+               )}
+
+               {currentLevel === 'COMPONENT' && (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in zoom-in-95 duration-500">
+                    {components.map(comp => (
+                      <div key={comp} className="group relative">
+                        <button
+                          onClick={() => pushNav('COMPONENT', comp)}
+                          className="w-full p-8 bg-white border border-slate-100 rounded-[2rem] hover:border-sky-500 hover:shadow-2xl transition-all text-left flex items-center justify-between group overflow-hidden"
+                        >
+                          <div className="absolute inset-0 bg-sky-500/0 group-hover:bg-sky-500/[0.02] transition-colors" />
+                          <div className="flex items-center gap-6 relative z-10">
+                            <div className="w-14 h-14 bg-slate-50 text-slate-400 group-hover:bg-sky-50 group-hover:text-sky-600 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 group-hover:rotate-12 group-hover:scale-110">
+                              <Layers className="w-7 h-7" />
+                            </div>
+                            <span className="font-black text-slate-950 uppercase text-base tracking-tight leading-tight">{comp || 'SANS COMPOSANT'}</span>
+                          </div>
+                          <ChevronDown className="w-6 h-6 text-slate-200 -rotate-90 group-hover:text-sky-600 transition-all group-hover:translate-x-1 relative z-10" />
+                        </button>
+                        {isManagingCatalog && (
+                          <button 
+                            onClick={() => deleteCatalogBranch('COMPONENT', comp)}
+                            className="absolute -top-3 -right-3 w-10 h-10 bg-white text-rose-500 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100 z-20"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {isManagingCatalog && (
+                      <button 
+                        onClick={() => {
+                          setEditingCatalogItem({ 
+                            functionalCategory: navPath[0]?.value, 
+                            subCategory: navPath[1]?.value,
+                            component: '',
+                            suggestedType: activeCatalogType
+                          });
+                          setIsCatalogModalOpen(true);
+                        }}
+                        className="p-8 border-2 border-dashed border-slate-200 rounded-[2rem] hover:border-sky-300 hover:bg-sky-50 transition-all flex items-center justify-center gap-4 text-slate-400 hover:text-sky-600 group"
+                      >
+                         <Plus className="w-6 h-6 group-hover:rotate-90 transition-transform" />
+                         <span className="text-[11px] font-black uppercase tracking-[0.25em]">Nouveau Composant</span>
+                      </button>
+                    )}
+                 </div>
+               )}
+
+               {currentLevel === 'SUBCOMPONENT' && subComponents.length > 0 && (
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in fade-in zoom-in-95 duration-500">
+                    {subComponents.map(subComp => (
+                      <div key={subComp} className="group relative">
+                        <button
+                          onClick={() => pushNav('SUBCOMPONENT', subComp)}
+                          className="w-full p-8 bg-white border border-slate-100 rounded-[2rem] hover:border-sky-500 hover:shadow-2xl transition-all text-left flex items-center justify-between group overflow-hidden"
+                        >
+                          <div className="absolute inset-0 bg-sky-500/0 group-hover:bg-sky-500/[0.02] transition-colors" />
+                          <div className="flex items-center gap-6 relative z-10">
+                            <div className="w-14 h-14 bg-slate-50 text-slate-400 group-hover:bg-sky-50 group-hover:text-sky-600 rounded-[1.25rem] flex items-center justify-center transition-all duration-300 group-hover:rotate-12 group-hover:scale-110">
+                              <Wrench className="w-7 h-7" />
+                            </div>
+                            <span className="font-black text-slate-950 uppercase text-base tracking-tight leading-tight">{subComp}</span>
+                          </div>
+                          <ChevronDown className="w-6 h-6 text-slate-200 -rotate-90 group-hover:text-sky-600 transition-all group-hover:translate-x-1 relative z-10" />
+                        </button>
+                      </div>
+                    ))}
+                 </div>
+               )}
+
+               {(currentLevel === 'RESULTS' || finalItems.length > 0) && (
+                 <div className="space-y-8 animate-in fade-in slide-in-from-right-8 duration-500">
+                   {finalItems.length > 0 && (
+                      <div className="p-10 bg-white shadow-2xl shadow-sky-900/5 rounded-[3rem] border border-sky-50 mb-10 flex items-center justify-between relative overflow-hidden">
+                         <div className="absolute top-0 left-0 w-2 h-full bg-sky-600" />
+                         <div className="relative z-10">
+                            <p className="text-[12px] font-black text-sky-600 uppercase tracking-[0.3em] mb-1">Sélection Technique</p>
+                            <h4 className="text-3xl font-black text-slate-900 tracking-tighter">{navPath[navPath.length - 1]?.value}</h4>
+                         </div>
+                         <div className="flex items-center gap-8 relative z-10">
+                            <div className="text-right">
+                               <p className="text-[11px] font-black text-slate-300 uppercase tracking-widest mb-1">Résultats</p>
+                               <p className="text-xl font-black text-sky-600">{finalItems.length} Variantes</p>
+                            </div>
+                            {isManagingCatalog && (
+                              <button 
+                                onClick={() => {
+                                  setEditingCatalogItem({
+                                    functionalCategory: navPath[0]?.value,
+                                    subCategory: navPath[1]?.value,
+                                    component: navPath[2]?.value,
+                                    suggestedType: activeCatalogType
+                                  });
+                                  setIsCatalogModalOpen(true);
+                                }}
+                                className="flex items-center gap-4 px-8 h-16 bg-sky-600 text-white rounded-3xl font-black uppercase text-[12px] tracking-[0.2em] hover:bg-sky-700 transition-all shadow-[0_15px_30px_rgba(8,145,213,0.3)] hover:scale-105 active:scale-95"
+                              >
+                                <Plus className="w-6 h-6" /> Ajouter au Master
+                              </button>
+                            )}
+                         </div>
+                      </div>
+                   )}
+
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      {finalItems.map(item => (
+                        <div key={item.id} className="group relative">
+                          <button
+                            type="button"
+                            onClick={() => !isManagingCatalog && handleImportFromCatalog(item)}
+                            className={cn(
+                              "w-full flex flex-col p-8 bg-white border border-slate-100 rounded-[2.5rem] transition-all text-left relative overflow-hidden",
+                              !isManagingCatalog && "hover:border-sky-500 hover:shadow-[0_20px_40px_rgba(8,145,213,0.1)] cursor-pointer"
+                            )}
+                          >
+                            <div className="absolute inset-x-0 top-0 h-1 bg-sky-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            <div className="flex justify-between items-start mb-4 relative z-10">
+                               <p className="font-mono text-[11px] font-black text-slate-300 uppercase tracking-[0.25em] group-hover:text-sky-500 transition-colors">#{item.reference}</p>
+                               <span className="text-[10px] font-black text-sky-600 bg-sky-50 px-4 py-2 rounded-xl border border-sky-100 uppercase tracking-widest">
+                                 {item.subComponent || 'Version Directe'}
+                               </span>
+                            </div>
+                <p className="font-black text-slate-950 group-hover:text-sky-900 transition-colors text-xl leading-tight mb-8 relative z-10">{item.designation}</p>
+                <div className="mb-4 flex items-center gap-2">
+                  <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 uppercase tracking-widest">
+                    {formatCurrency(item.price || 0)}
+                  </span>
+                </div>
+                <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between relative z-10">
+                               <div className="flex items-center gap-3">
+                                 <div className="w-3 h-3 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.5)]"></div>
+                                 <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.2em]">Disponibilité : Master</p>
+                               </div>
+                               {!isManagingCatalog && (
+                                 <div className="flex items-center gap-2 text-sky-600 text-[11px] font-black uppercase tracking-[0.2em] hover:translate-x-2 transition-transform">
+                                   Importer <ChevronDown className="w-4 h-4 -rotate-90" />
+                                 </div>
+                               )}
+                            </div>
+                          </button>
+                          {isManagingCatalog && (
+                            <div className="absolute top-6 right-6 flex gap-3">
+                              <button 
+                                onClick={() => {
+                                  setEditingCatalogItem(item);
+                                  setIsCatalogModalOpen(true);
+                                }}
+                                className="w-12 h-12 bg-white text-amber-600 rounded-2xl flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all shadow-xl border border-amber-100"
+                              >
+                                <Pencil className="w-5 h-5" />
+                              </button>
+                              <button 
+                                onClick={() => deleteCatalogItem(item.id)}
+                                className="w-12 h-12 bg-white text-rose-500 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100"
+                              >
+                                <Trash2 className="w-5 h-5" />
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                   </div>
+                   {finalItems.length === 0 && (
+                     <div className="flex flex-col items-center justify-center h-80 text-slate-300">
+                        <Database className="w-20 h-20 mb-6 opacity-10" />
+                        <p className="font-black uppercase tracking-[0.4em] text-xs">Aucune référence master répertoriée</p>
+                     </div>
+                   )}
+                 </div>
+               )}
+            </div>
+            
+            {/* Catalog Edit Modal */}
+            {isCatalogModalOpen && editingCatalogItem && (
+               <div className="fixed inset-0 bg-slate-950/60 backdrop-blur-xl z-[150] flex items-center justify-center p-4">
+                  <div className="bg-white rounded-[3rem] w-full max-w-2xl overflow-hidden animate-in zoom-in-95 duration-300 shadow-2xl flex flex-col max-h-[90vh]">
+                    <header className="px-10 py-8 border-b border-slate-100 flex items-center justify-between shrink-0">
+                       <div>
+                          <h4 className="text-xl font-black text-slate-950 uppercase tracking-tighter">
+                            {editingCatalogItem.id ? 'Éditer l\'élément' : 'Ajouter au Catalogue'}
+                          </h4>
+                          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Configuration des données techniques</p>
+                       </div>
+                       <button onClick={() => setIsCatalogModalOpen(false)} className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 hover:text-rose-600 transition-colors"><X className="w-6 h-6" /></button>
+                    </header>
+                    <div className="p-10 space-y-6 overflow-y-auto">
+                       <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Système / Catégorie</label>
+                             <input 
+                                className="input-field" 
+                                value={editingCatalogItem.functionalCategory} 
+                                onChange={e => setEditingCatalogItem({...editingCatalogItem, functionalCategory: e.target.value})}
+                                placeholder="Ex: Propulsion"
+                             />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Bloc / Sous-Catégorie</label>
+                             <input 
+                                className="input-field" 
+                                value={editingCatalogItem.subCategory} 
+                                onChange={e => setEditingCatalogItem({...editingCatalogItem, subCategory: e.target.value})}
+                                placeholder="Ex: Moteur"
+                             />
+                          </div>
+                       </div>
+                       <div className="grid grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Composant</label>
+                             <input 
+                                className="input-field" 
+                                value={editingCatalogItem.component} 
+                                onChange={e => setEditingCatalogItem({...editingCatalogItem, component: e.target.value})}
+                                placeholder="Ex: Bloc"
+                             />
+                          </div>
+                          <div className="space-y-2">
+                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Sous-Composant (Variante)</label>
+                             <input 
+                                className="input-field" 
+                                value={editingCatalogItem.subComponent} 
+                                onChange={e => setEditingCatalogItem({...editingCatalogItem, subComponent: e.target.value})}
+                                placeholder="Ex: Standard"
+                             />
+                          </div>
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Référence Technique</label>
+                          <input 
+                            className="input-field" 
+                            value={editingCatalogItem.reference} 
+                            onChange={e => setEditingCatalogItem({...editingCatalogItem, reference: e.target.value})}
+                            placeholder="Ex: 5580 00XX XX"
+                          />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Désignation Complète</label>
+                          <input 
+                            className="input-field" 
+                            value={editingCatalogItem.designation} 
+                            onChange={e => setEditingCatalogItem({...editingCatalogItem, designation: e.target.value})}
+                            placeholder="Désignation technique précise"
+                          />
+                       </div>
+                       <div className="space-y-2">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prix Indicatif (MAD)</label>
+                          <input 
+                            type="number"
+                            step="0.01"
+                            className="input-field font-bold" 
+                            value={editingCatalogItem.price || 0} 
+                            onChange={e => setEditingCatalogItem({...editingCatalogItem, price: Number(e.target.value)})}
+                            placeholder="0.00"
+                          />
+                       </div>
+                       <div className="flex gap-4 pt-6">
+                          <button onClick={() => setIsCatalogModalOpen(false)} className="btn flex-1 bg-slate-100 text-slate-600 font-black h-14 rounded-2xl uppercase text-[10px] tracking-widest">Annuler</button>
+                          <button onClick={handleSaveCatalogItem} className="btn flex-1 bg-sky-600 text-white font-black h-14 rounded-2xl uppercase text-[10px] tracking-widest shadow-xl shadow-sky-600/20">Enregistrer</button>
+                       </div>
+                    </div>
+                  </div>
+               </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {isModalOpen && editingArticle && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-300 border border-white/20 ring-1 ring-slate-950/10 flex flex-col max-h-[95vh]">
+            <header className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+              <div>
+                <h3 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">
+                  {articles.some(a => a.id === editingArticle.id) ? 'Modifier Reference' : 'Nouvelle Nomenclature'}
+                </h3>
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Veuillez remplir les spécifications techniques</p>
+              </div>
+              <button 
+                onClick={() => setIsModalOpen(false)} 
+                className="w-12 h-12 rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:rotate-90 transition-all duration-500"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </header>
+            
+            <form onSubmit={handleSave} className="p-10 space-y-8 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Désignation de l'article</label>
+                  <input 
+                    type="text" 
+                    className="input-field h-14 font-black text-lg"
+                    placeholder="Ex: BARRE CONIQUE 1.8M"
+                    value={editingArticle.designation}
+                    onChange={(e) => setEditingArticle({...editingArticle, designation: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Référence OEM / Fabricant</label>
+                  <input 
+                    type="text" 
+                    className="input-field h-14 font-bold"
+                    placeholder="Ex: SMI-MOT-99"
+                    value={editingArticle.ref}
+                    onChange={(e) => setEditingArticle({...editingArticle, ref: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Famille d'article</label>
+                  <div className="relative">
+                    <select 
+                      className="input-field h-14 appearance-none font-bold cursor-pointer"
+                      value={editingArticle.type}
+                      onChange={(e) => setEditingArticle({...editingArticle, type: e.target.value as StockType})}
+                    >
+                      <option value="ENGINS">Pièces Engins</option>
+                      <option value="PERFORATEURS">Perforation (Tiges/Taillants)</option>
+                      <option value="CONSOMMABLES">Consommables Généraux</option>
+                      <option value="EPI">Equipements Protection (EPI)</option>
+                    </select>
+                    <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+                  </div>
+                </div>
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Composant Principal</label>
+                    <input 
+                      type="text" 
+                      className="input-field h-12 text-sm"
+                      placeholder="Ex: Bloc moteur, Piston..."
+                      value={editingArticle.component || ''}
+                      onChange={(e) => setEditingArticle({...editingArticle, component: e.target.value})}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sous-Composant</label>
+                    <input 
+                      type="text" 
+                      className="input-field h-12 text-sm"
+                      placeholder="Ex: Coussinet, Segment..."
+                      value={editingArticle.subComponent || ''}
+                      onChange={(e) => setEditingArticle({...editingArticle, subComponent: e.target.value})}
+                    />
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sous-Catégorie</label>
+                  <input 
+                    type="text" 
+                    placeholder="Ex: Hydraulique, Moteur..."
+                    className="input-field h-14 font-bold"
+                    value={editingArticle.category}
+                    onChange={(e) => setEditingArticle({...editingArticle, category: e.target.value})}
+                    required
+                  />
+                </div>
+                 <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unité de mesure</label>
+                  <input 
+                    type="text" 
+                    placeholder="Pcs, Kg, Kit..."
+                    className="input-field h-14 font-bold uppercase"
+                    value={editingArticle.unit}
+                    onChange={(e) => setEditingArticle({...editingArticle, unit: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Seuil d'alerte critique</label>
+                  <input 
+                    type="number" 
+                    className="input-field h-14 font-black"
+                    value={editingArticle.minStock}
+                    onChange={(e) => setEditingArticle({...editingArticle, minStock: Number(e.target.value)})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-sky-600 uppercase tracking-widest ml-1">Prix Standard HT (MAD) *</label>
+                  <input 
+                    type="number" 
+                    step="0.01"
+                    min="0"
+                    placeholder="1200.00"
+                    className="input-field h-14 font-black border-sky-200 bg-sky-50/50 focus:border-sky-500 text-sky-700 text-xl"
+                    value={editingArticle.price === 0 ? '' : editingArticle.price}
+                    onChange={(e) => setEditingArticle({...editingArticle, price: e.target.value === '' ? 0 : Number(e.target.value)})}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Emplacement Magasin</label>
+                  <input 
+                    type="text" 
+                    placeholder="Zone-Rayon-Niveau"
+                    className="input-field h-14 font-bold uppercase"
+                    value={editingArticle.location}
+                    onChange={(e) => setEditingArticle({...editingArticle, location: e.target.value})}
+                    required
+                  />
+                </div>
+                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
+                  <input 
+                    type="checkbox" 
+                    id="isActive"
+                    className="w-6 h-6 text-sky-600 border-slate-300 rounded-lg focus:ring-sky-500"
+                    checked={editingArticle.active}
+                    onChange={(e) => setEditingArticle({...editingArticle, active: e.target.checked})}
+                  />
+                  <label htmlFor="isActive" className="text-xs font-black text-slate-700 uppercase tracking-widest select-none cursor-pointer">Statut Article Actif</label>
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-4 pt-8 border-t border-slate-100">
+                <button 
+                  type="button" 
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-8 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                >
+                  Annuler
+                </button>
+                <button type="submit" className="btn bg-sky-600 text-white shadow-xl shadow-sky-200 h-14 px-10 rounded-2xl group font-black uppercase text-[10px] tracking-widest flex items-center gap-3">
+                  <Save className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" /> Enregistrer la Fiche
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
+      <NotificationCenter notifications={notifications} />
+    </div>
+  );
+}
+
+// --- Helper Components for Catalog ---
+
+function CategoryCard({ cat, count, activeType, onClick }: { cat: string, count: number, activeType: string, onClick: () => void, key?: any }) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "w-full text-left p-10 bg-white border border-slate-100 rounded-[3rem] transition-all flex flex-col gap-6 overflow-hidden relative group shadow-sm",
+        activeType === 'ENGINS' 
+          ? "hover:border-sky-500 hover:shadow-[0_40px_80px_rgba(8,145,213,0.18)]" 
+          : "hover:border-red-500 hover:shadow-[0_40px_80px_rgba(220,38,38,0.12)]"
+      )}
+    >
+      <div className="absolute -top-24 -right-24 w-64 h-64 bg-sky-500/5 blur-[80px] group-hover:bg-sky-500/15 transition-all duration-700 pointer-events-none" />
+      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-red-600/5 blur-[80px] group-hover:bg-red-600/10 transition-all duration-700 pointer-events-none" />
+      <div className="flex justify-between items-start relative z-10">
+        <div className={cn(
+          "w-16 h-16 bg-slate-50 text-slate-400 group-hover:text-white rounded-[1.8rem] flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 shadow-sm",
+          activeType === 'ENGINS' ? "group-hover:bg-sky-600 group-hover:shadow-sky-300" : "group-hover:bg-red-600 group-hover:shadow-red-300"
+        )}>
+          <Layers className="w-8 h-8" />
+        </div>
+        <span className={cn(
+          "text-[10px] font-black px-5 py-2.5 rounded-full border shadow-sm uppercase tracking-widest",
+          activeType === 'ENGINS' ? "text-sky-600 bg-sky-50 border-sky-100" : "text-red-600 bg-red-50 border-red-100"
+        )}>
+          {count} Références
+        </span>
+      </div>
+      <div className="relative z-10">
+        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.25em] group-hover:text-sky-500 transition-colors mb-2">Structure Master</p>
+        <h4 className="font-black text-slate-900 text-2xl group-hover:text-slate-950 transition-colors tracking-tighter leading-tight">{cat}</h4>
+      </div>
+      <div className={cn(
+        "flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0 relative z-10",
+        activeType === 'ENGINS' ? "text-sky-600" : "text-red-600"
+      )}>
+         <span className="text-[10px] font-black uppercase tracking-[0.2em]">Parcourir</span>
+         <ChevronDown className="w-5 h-5 -rotate-90" />
+      </div>
+    </button>
+  );
+}
+
+function CatalogCard({ item, isManaging, onImport, onEdit, onDelete }: { 
+  item: CatalogItem, 
+  isManaging: boolean, 
+  onImport: (item: CatalogItem) => void, 
+  onEdit: (item: CatalogItem) => void,
+  onDelete: (id: string) => void
+}) {
+  return (
+    <div className={cn(
+      "group relative w-full flex flex-col p-8 bg-white border border-slate-100 rounded-[2.5rem] transition-all text-left overflow-hidden",
+      !isManaging ? "hover:border-sky-500 hover:shadow-2xl cursor-pointer" : ""
+    )}
+    onClick={() => !isManaging && onImport(item)}
+    >
+      <div className="absolute inset-x-0 top-0 h-1 bg-sky-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="flex justify-between items-start mb-4 relative z-10">
+         <p className="font-mono text-[11px] font-black text-slate-300 uppercase tracking-[0.25em] group-hover:text-sky-500 transition-colors">#{item.reference}</p>
+         <span className="text-[9px] font-black text-sky-600 bg-sky-50 px-3 py-1 rounded-lg border border-sky-100 uppercase tracking-widest truncate max-w-[150px]">
+           {item.subComponent || item.component || 'Standard'}
+         </span>
+      </div>
+      <p className="font-black text-slate-950 group-hover:text-sky-900 transition-colors text-xl leading-tight mb-8 relative z-10">{item.designation}</p>
+      
+      <div className="flex items-center gap-2 mb-4">
+        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 uppercase tracking-widest">
+          {formatCurrency(item.price || 0)}
+        </span>
+      </div>
+
+      <div className="flex flex-col gap-2 mb-8 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
+         <div className="flex items-center gap-2">
+           <Database className="w-3 h-3" /> {item.functionalCategory}
+         </div>
+         <div className="flex items-center gap-2">
+           <BookOpen className="w-3 h-3" /> {item.subCategory}
+         </div>
+      </div>
+
+      <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between relative z-10">
+         <div className="flex items-center gap-3">
+           <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
+           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Master Reference</p>
+         </div>
+         {!isManaging && (
+           <div className="flex items-center gap-2 text-sky-600 text-[10px] font-black uppercase tracking-[0.2em] group-hover:translate-x-1 transition-transform">
+             Importer <Plus className="w-3.5 h-3.5" />
+           </div>
+         )}
+      </div>
+
+      {isManaging && (
+        <div className="absolute top-6 right-6 flex gap-2">
+          <button 
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onEdit(item); }}
+            className="w-10 h-10 bg-white text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-xl border border-emerald-100"
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+          <button 
+            type="button"
+            onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
+            className="w-10 h-10 bg-white text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ----------------------------------------
+
