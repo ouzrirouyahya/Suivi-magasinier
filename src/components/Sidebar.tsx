@@ -80,13 +80,16 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
       </div>
 
       <div className="p-8 pb-4 relative z-10">
-        <h1 className="text-3xl font-black tracking-tighter flex items-center gap-0.5 shiny-logo drop-shadow-sm">
-          <span className="logo-hydro">HYDRO</span>
-          <span className="logo-mines">MINES</span>
+        <h1 className="text-2xl font-black tracking-tighter flex flex-col shiny-logo drop-shadow-sm">
+          <div className="flex items-center gap-0.5">
+            <span className="logo-hydro">HYDRO</span>
+            <span className="logo-mines">MINES</span>
+          </div>
+          <span className="text-[11px] text-slate-500 font-bold uppercase tracking-[0.1em] mt-1">Suivi magasinier</span>
         </h1>
-        <div className="flex items-center gap-2 mt-2">
+        <div className="flex items-center gap-2 mt-3">
           <div className="h-[2px] w-8 bg-sky-500 rounded-full"></div>
-          <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">Version 2.0 ERP</span>
+          <span className="text-[10px] text-slate-400 font-black uppercase tracking-[0.3em]">Version 2.0</span>
         </div>
       </div>
 

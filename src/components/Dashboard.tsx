@@ -182,11 +182,11 @@ export function Dashboard({ site, articles, mouvements, onAction }: DashboardPro
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-6">
         <div>
           <div className="flex items-center gap-2 mb-2">
-            <span className="px-2 py-0.5 bg-sky-100 text-sky-700 text-[9px] font-black uppercase tracking-widest rounded-md border border-sky-200">ERP HYDROMINES v2.0</span>
+            <span className="px-2 py-0.5 bg-sky-100 text-sky-700 text-[9px] font-black uppercase tracking-widest rounded-md border border-sky-200">Hydromines Suivi v2.0</span>
             <span className="text-slate-300">•</span>
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date().toLocaleDateString('fr-MA', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
           </div>
-          <h2 className="text-5xl font-black text-slate-900 tracking-tighter leading-none uppercase">Tableau de Bord</h2>
+          <h2 className="text-3xl font-black text-slate-900 tracking-tighter leading-none uppercase">Tableau de Bord</h2>
           <p className="text-slate-500 font-medium mt-2 text-lg italic">Surveillance en temps réel : <span className="text-sky-600 font-black not-italic">{site}</span></p>
         </div>
         

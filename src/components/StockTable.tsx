@@ -55,8 +55,8 @@ export function StockTable({ type, site, articles, onAction, onManageCatalog }: 
       <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-4xl font-black text-slate-950 tracking-tighter uppercase flex items-center gap-3">
-              <span className="w-2 h-10 bg-sky-600 rounded-full"></span>
+            <h2 className="text-3xl font-black text-slate-950 tracking-tighter uppercase flex items-center gap-3">
+              <span className="w-2 h-8 bg-sky-600 rounded-full"></span>
               Stock {type.replace('_', ' ')}
             </h2>
             <button 
@@ -206,7 +206,7 @@ export function StockTable({ type, site, articles, onAction, onManageCatalog }: 
                     <div className="mt-auto pt-6 border-t border-slate-100/50">
                       <div className="flex items-end justify-between">
                          <div className="text-center">
-                            <p className={cn("text-4xl font-black tracking-tighter leading-none", article.quantity <= article.minStock ? "text-rose-600" : "text-slate-900")}>
+                            <p className={cn("text-2xl font-black tracking-tighter leading-none", article.quantity <= article.minStock ? "text-rose-600" : "text-slate-900")}>
                                {article.quantity}
                             </p>
                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{article.unit}</p>
