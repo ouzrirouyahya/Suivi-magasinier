@@ -73,7 +73,7 @@ export function AuditLogView({ logs }: AuditLogViewProps) {
               <tr>
                 <th>Horodatage</th>
                 <th>Opérateur</th>
-                <th>Royaume</th>
+                <th>Site</th>
                 <th>Action</th>
                 <th>Détails de l'Opération</th>
                 <th className="text-right">Impact Fin.</th>

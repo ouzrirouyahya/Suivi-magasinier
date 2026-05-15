@@ -237,7 +237,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               {type === 'ENTREE' ? "Réception / Bon d'Entrée" : "Sortie / Bon de Consommation"}
             </h2>
             <p className="text-slate-500 font-bold mt-2 flex items-center gap-2">
-              <span className="text-sky-600 font-black">ENREGISTREMENT OFFICIEL</span> • ROYAUME DE {site}
+              <span className="text-sky-600 font-black">ENREGISTREMENT OFFICIEL</span> • SITE DE {site}
             </p>
           </div>
         </div>

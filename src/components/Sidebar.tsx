@@ -39,7 +39,8 @@ export type Page =
   | 'AUDIT_LOG'
   | 'USER_MGMT'
   | 'GESTION_ARTICLES'
-  | 'ALERTES_STOCK';
+  | 'ALERTES_STOCK'
+  | 'REPORTS';
 
 interface SidebarProps {
   currentPage: Page;
@@ -53,7 +54,7 @@ interface SidebarProps {
 export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSignOut }: SidebarProps) {
   const menuItems = [
     { id: 'DASHBOARD', label: 'Tableau de Commande', icon: LayoutDashboard },
-    { id: 'SEP_S', label: 'GESTION DES ROYAUMES', isSeparator: true },
+    { id: 'SEP_S', label: 'SUIVI DES SITES', isSeparator: true },
     { id: 'ALERTES_STOCK', label: 'Alertes Critiques', icon: Activity, activeColor: 'bg-rose-50 text-rose-600 ring-rose-100' },
     { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
     { id: 'STOCK_PERFORATEURS', label: 'Foreuses & Perfos', icon: Drill },
@@ -66,13 +67,14 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
     { id: 'INVENTAIRE', label: 'Audit & Inventaire', icon: ClipboardCheck },
     { id: 'HISTORIQUE', label: 'Archives Flux', icon: HistoryIcon },
     { id: 'SEP_A', label: 'ADMINISTRATION', isSeparator: true },
+    { id: 'REPORTS', label: 'Rapports & Synthèse', icon: ClipboardCheck },
     { id: 'AUDIT_LOG', label: 'Audit Log (Boîte Noire)', icon: ShieldCheck },
     { id: 'USER_MGMT', label: 'Utilisateurs & Registres', icon: Users },
     { id: 'GESTION_ARTICLES', label: 'Catalogue Maître', icon: Settings2 },
   ];
 
   return (
-    <aside className="w-72 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 overflow-y-auto z-50 flex flex-col no-print shadow-xl shadow-slate-200/50">
+    <aside className="w-80 bg-white border-r border-slate-100 h-screen fixed left-0 top-0 overflow-y-auto z-50 flex flex-col no-print shadow-xl shadow-slate-200/50">
       {/* 3D Visual Effect exclusively for the top of the sidebar */}
       <div className="absolute top-0 left-0 right-0 h-56 z-0 pointer-events-none overflow-hidden border-b border-sky-50 shadow-inner">
         <Background3D count={200} opacity={0.8} mouseSensitivity={0.5} rotationSpeed={1.5} size={0.04} />
@@ -80,16 +82,16 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
       </div>
 
       <div className="p-6 pb-2 relative z-10">
-        <h1 className="text-xl font-black tracking-tighter flex flex-col shiny-logo drop-shadow-sm">
+        <h1 className="text-3xl font-black tracking-tighter flex flex-col shiny-logo drop-shadow-sm">
           <div className="flex items-center gap-0.5">
             <span className="logo-hydro">HYDRO</span>
             <span className="logo-mines">MINES</span>
           </div>
-          <span className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.1em] mt-1">Suivi magasinier</span>
+          <span className="text-[16px] text-slate-500 font-bold uppercase tracking-[0.05em] mt-1">Suivi magasinier</span>
         </h1>
         <div className="flex items-center gap-2 mt-2">
           <div className="h-[2px] w-6 bg-sky-500 rounded-full"></div>
-          <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-[0.2em]">v2.0 Sync</span>
+          <span className="text-[13px] text-slate-400 font-extrabold uppercase tracking-[0.2em]">v2.0 Sync</span>
         </div>
       </div>
 
@@ -99,11 +101,11 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
             <MapPin className="w-5 h-5" />
           </div>
           <div className="flex-1">
-            <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">ROYAUME ACTIF</label>
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest block mb-0.5">SITE ACTIF</label>
             <select 
               value={currentSite}
               onChange={(e) => setSite(e.target.value as SiteCode)}
-              className="w-full bg-transparent text-xs font-black text-slate-800 outline-none cursor-pointer appearance-none"
+              className="w-full bg-transparent text-sm font-black text-slate-800 outline-none cursor-pointer appearance-none"
             >
               {SITES.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
             </select>
@@ -116,7 +118,7 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
         {menuItems.map((item) => {
           if (item.isSeparator) {
             return (
-              <div key={item.id} className="px-4 pt-6 pb-2 text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] flex items-center gap-2">
+              <div key={item.id} className="px-4 pt-6 pb-2 text-[14px] font-black text-slate-300 uppercase tracking-[0.3em] flex items-center gap-2">
                 {item.label}
               </div>
             );
@@ -130,7 +132,7 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
               key={item.id}
               onClick={() => setPage(item.id as Page)}
               className={cn(
-                "group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-xs font-bold transition-all w-full text-left relative",
+                "group flex items-center gap-3.5 px-4 py-3 rounded-2xl text-base font-bold transition-all w-full text-left relative",
                 isActive 
                   ? (item.activeColor || "bg-sky-50 text-sky-600 shadow-sm ring-1 ring-sky-100") 
                   : "text-slate-500 hover:text-sky-500 hover:bg-slate-50/50"
@@ -159,10 +161,10 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-black text-slate-800 truncate uppercase tracking-tighter">
+            <p className="text-sm font-black text-slate-800 truncate uppercase tracking-tighter">
               {user?.displayName || (user?.email?.split('@')[0]) || 'Utilisateur'}
             </p>
-            <p className="text-[9px] text-slate-400 font-bold truncate uppercase tracking-widest">Opérateur</p>
+            <p className="text-[11px] text-slate-400 font-bold truncate uppercase tracking-widest">Opérateur</p>
           </div>
           <button 
             onClick={onSignOut}

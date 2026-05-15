@@ -65,7 +65,7 @@ export function StockAlertView({ articles, currentSite, onAction }: StockAlertVi
                 </div>
                 {site === currentSite && (
                    <span className="px-4 py-1.5 bg-sky-100 text-sky-700 text-[10px] font-black tracking-widest uppercase rounded-full border border-sky-200">
-                     Votre Royaume Actuel
+                     Votre Site Actuel
                    </span>
                 )}
               </div>

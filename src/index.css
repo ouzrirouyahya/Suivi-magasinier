@@ -10,7 +10,7 @@
 
 @layer base {
   html {
-    font-size: 11px;
+    font-size: 13px;
   }
   body {
     @apply bg-[#FBFBFD] text-slate-900 antialiased font-sans selection:bg-sky-100 selection:text-sky-900;

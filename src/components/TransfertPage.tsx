@@ -80,7 +80,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
         <div>
           <h2 className="text-base font-black text-slate-900 tracking-tighter uppercase leading-none">Gestion des Transferts</h2>
           <p className="text-slate-500 font-bold mt-2 uppercase text-[10px] tracking-widest italic flex items-center gap-2">
-            <Truck className="w-4 h-4 text-sky-500" /> Flux Logistics Inter-Royaumes
+            <Truck className="w-4 h-4 text-sky-500" /> Flux Logistiques Inter-Sites
           </p>
         </div>
         {!isCreating && (

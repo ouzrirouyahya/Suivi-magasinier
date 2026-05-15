@@ -300,7 +300,7 @@ export function useStorage() {
   };
 
   const completeTransfert = async (transfertId: string, recepteur: string) => {
-    try {
+    const promise = (async () => {
       const tRef = doc(db, 'transferts', transfertId);
       const transfert = transferts.find(t => t.id === transfertId);
 
@@ -320,15 +320,25 @@ export function useStorage() {
             recepteur 
           });
         });
-        logAction('TRANSFERT_IN', `Transfert ${transfert.reference} réceptionné`, transfert.targetSite);
+        await logAction('TRANSFERT_IN', `Transfert ${transfert.reference} réceptionné`, transfert.targetSite);
       }
+    })();
+
+    toast.promise(promise, {
+      loading: 'Finalisation du transfert...',
+      success: 'Transfert réceptionné avec succès !',
+      error: 'Erreur lors de la réception'
+    });
+
+    try {
+      await promise;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `transferts/${transfertId}`);
     }
   };
 
   const saveInventaire = async (inventaire: Inventaire) => {
-    try {
+    const promise = (async () => {
       const id = inventaire.id || generateId();
       await setDoc(doc(db, 'inventaires', id), cleanObject({ ...inventaire, id }));
       if (inventaire.status === 'VALIDE') {
@@ -341,8 +351,18 @@ export function useStorage() {
             });
           }
         });
-        logAction('INVENTAIRE', `Inventaire validé pour ${inventaire.site}`, inventaire.site);
+        await logAction('INVENTAIRE', `Inventaire validé pour ${inventaire.site}`, inventaire.site);
       }
+    })();
+
+    toast.promise(promise, {
+      loading: 'Enregistrement de l\'inventaire...',
+      success: 'Inventaire synchronisé et stock mis à jour !',
+      error: 'Erreur d\'inventaire'
+    });
+
+    try {
+      await promise;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, 'inventaires');
     }
@@ -380,13 +400,23 @@ export function useStorage() {
   };
 
   const toggleUser = async (userId: string) => {
-    try {
+    const promise = (async () => {
       const userRef = doc(db, 'accounts', userId);
       const user = accounts.find(u => u.id === userId);
       if (user) {
         await setDoc(userRef, cleanObject({ ...user, active: !user.active }));
-        logAction('USER_MGMT', `Statut utilisateur ${user.email} changé`, 'SMI');
+        await logAction('USER_MGMT', `Statut utilisateur ${user.email} changé`, 'SMI');
       }
+    })();
+
+    toast.promise(promise, {
+      loading: 'Mise à jour utilisateur...',
+      success: 'Statut utilisateur synchronisé !',
+      error: 'Erreur de mise à jour'
+    });
+
+    try {
+      await promise;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `accounts/${userId}`);
     }

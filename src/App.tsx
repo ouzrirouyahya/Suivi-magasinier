@@ -17,6 +17,7 @@ import { InventairePage } from './components/InventairePage';
 import { AuditLogView } from './components/AuditLogView';
 import { UserAdmin } from './components/UserAdmin';
 import { StockAlertView } from './components/StockAlertView';
+import { ReportPage } from './components/ReportPage';
 import LoginPage from './components/LoginPage';
 import { useStorage } from './hooks/useStorage';
 import { Article, SiteCode } from './types';
@@ -256,6 +257,9 @@ export default function App() {
             setAgents={setAgents}
           />
         );
+
+      case 'REPORTS':
+        return <ReportPage />;
         
       default:
         return <Dashboard site={currentSite} articles={articles} mouvements={mouvements} onAction={setCurrentPage} />;
@@ -273,7 +277,7 @@ export default function App() {
         onSignOut={handleSignOut}
       />
       
-      <main className="flex-1 ml-72 p-8 transition-all duration-300 relative min-h-screen">
+      <main className="flex-1 ml-80 p-8 transition-all duration-300 relative min-h-screen">
         {/* Global Toolbar */}
         <div className="max-w-7xl mx-auto mb-8 no-print">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/40 backdrop-blur-3xl p-4 rounded-[2rem] border border-white shadow-2xl shadow-slate-200/50">
