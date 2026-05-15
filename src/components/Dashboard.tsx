@@ -186,8 +186,8 @@ export function Dashboard({ site, articles, mouvements, onAction }: DashboardPro
             <span className="text-slate-300">•</span>
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date().toLocaleDateString('fr-MA', { weekday: 'long', day: 'numeric', month: 'long' })}</span>
           </div>
-          <h2 className="text-3xl font-black text-slate-900 tracking-tighter leading-none uppercase">Tableau de Bord</h2>
-          <p className="text-slate-500 font-medium mt-2 text-lg italic">Surveillance en temps réel : <span className="text-sky-600 font-black not-italic">{site}</span></p>
+          <h2 className="text-base font-black text-slate-900 tracking-tighter leading-none uppercase">Tableau de Bord</h2>
+          <p className="text-slate-500 font-bold mt-1 text-[10px] uppercase tracking-widest italic">Surveillance : <span className="text-sky-600 font-extrabold not-italic">{site}</span></p>
         </div>
         
         <div className="flex items-center gap-4 hidden md:flex">

@@ -470,7 +470,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <header className="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-slate-100">
         <div>
-          <h2 className="text-3xl font-black text-slate-950 tracking-tighter uppercase">Catalogue Articles</h2>
+          <h2 className="text-base font-black text-slate-950 tracking-tighter uppercase">Catalogue Articles</h2>
           <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Gouvernance des références techniques du site {site}</p>
         </div>
         <div className="flex gap-4">

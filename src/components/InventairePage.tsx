@@ -104,7 +104,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-20 mission-control-bg min-h-screen p-8">
       <header className="flex items-center justify-between">
         <div>
-          <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">Contrôle Inventaire</h2>
+          <h2 className="text-base font-black text-slate-900 tracking-tighter uppercase leading-none">Contrôle Inventaire</h2>
           <p className="text-slate-500 font-bold mt-2 uppercase text-[10px] tracking-widest italic flex items-center gap-2">
             <ClipboardCheck className="w-4 h-4 text-sky-500" /> Audit du Stock Réel vs Système
           </p>

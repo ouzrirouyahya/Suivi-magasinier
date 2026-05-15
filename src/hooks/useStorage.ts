@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
+import { toast } from 'sonner';
 
 export function useStorage() {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -221,7 +222,7 @@ export function useStorage() {
   };
 
   const addMouvement = async (mouvement: Mouvement) => {
-    try {
+    const promise = (async () => {
       await runTransaction(db, async (transaction) => {
         const movementId = mouvement.id || generateId();
         const mRef = doc(db, 'mouvements', movementId);
@@ -250,15 +251,25 @@ export function useStorage() {
         }
 
         transaction.set(mRef, cleanObject({ ...mouvement, id: movementId }));
-        logAction(mouvement.type, `${mouvement.items.length} items | Réf: ${mouvement.reference}`, mouvement.site, totalValue);
+        await logAction(mouvement.type, `${mouvement.items.length} items | Réf: ${mouvement.reference}`, mouvement.site, totalValue);
       });
+    })();
+
+    toast.promise(promise, {
+      loading: 'Synchronisation du mouvement...',
+      success: 'Opération enregistrée avec succès !',
+      error: (err) => `Erreur : ${err.message || 'Échec de synchronisation'}`
+    });
+
+    try {
+      await promise;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, 'mouvements/transaction');
     }
   };
 
   const addTransfert = async (transfert: Transfert) => {
-    try {
+    const promise = (async () => {
       const id = transfert.id || generateId();
       await setDoc(doc(db, 'transferts', id), cleanObject({ ...transfert, id }));
       
@@ -272,7 +283,17 @@ export function useStorage() {
           }
         }
       });
-      logAction('TRANSFERT_OUT', `Transfert ${transfert.reference} vers ${transfert.targetSite}`, transfert.sourceSite);
+      await logAction('TRANSFERT_OUT', `Transfert ${transfert.reference} vers ${transfert.targetSite}`, transfert.sourceSite);
+    })();
+
+    toast.promise(promise, {
+      loading: 'Enregistrement du transfert...',
+      success: 'Transfert enregistré et stock déduit.',
+      error: 'Erreur lors du transfert'
+    });
+
+    try {
+      await promise;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, 'transferts');
     }
@@ -328,10 +349,20 @@ export function useStorage() {
   };
 
   const saveArticle = async (article: Article) => {
-    try {
+    const promise = (async () => {
       const id = article.id || generateId();
       await setDoc(doc(db, 'articles', id), cleanObject({ ...article, id }));
-      logAction('SAVE_ARTICLE', `Article ${article.ref} sauvegardé`, article.site);
+      await logAction('SAVE_ARTICLE', `Article ${article.ref} sauvegardé`, article.site);
+    })();
+
+    toast.promise(promise, {
+      loading: 'Sauvegarde de l\'article...',
+      success: 'Article synchronisé !',
+      error: 'Erreur de sauvegarde'
+    });
+
+    try {
+      await promise;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `articles/${article.id}`);
     }
@@ -367,9 +398,19 @@ export function useStorage() {
   const setCatalogInternal = (c: CatalogItem[]) => c.forEach(item => setDoc(doc(db, 'catalog', item.id), cleanObject(item)));
 
   const saveCatalogItem = async (item: CatalogItem) => {
-    try {
+    const promise = (async () => {
       await setDoc(doc(db, 'catalog', item.id), cleanObject(item));
-      logAction('CATALOG_UPDATE', `Item ${item.reference} sauvegardé au master`, 'SMI');
+      await logAction('CATALOG_UPDATE', `Item ${item.reference} sauvegardé au master`, 'SMI');
+    })();
+
+    toast.promise(promise, {
+      loading: 'Mise à jour du catalogue...',
+      success: 'Catalogue Master synchronisé !',
+      error: 'Erreur catalogue'
+    });
+
+    try {
+      await promise;
     } catch (e) {
       handleFirestoreError(e, OperationType.WRITE, `catalog/${item.id}`);
     }

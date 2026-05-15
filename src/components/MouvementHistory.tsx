@@ -242,7 +242,7 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
             <div id="printable-area" className="p-12">
               <div className="flex justify-between items-start mb-12 border-b-4 border-slate-900 pb-8">
                 <div>
-                  <h1 className="text-3xl font-black tracking-tighter mb-2">HYDROMINES SUIVI MAGASINIER</h1>
+                  <h1 className="text-base font-black tracking-tighter mb-1 uppercase">HYDROMINES SUIVI MAGASINIER</h1>
                   <p className="text-sm font-bold text-slate-500 uppercase tracking-[0.3em]">Official Logistics Document</p>
                   <div className="mt-4 flex items-center gap-4">
                     <div className="px-3 py-1 bg-slate-900 text-white rounded-lg text-xs font-black uppercase tracking-widest">{site}</div>

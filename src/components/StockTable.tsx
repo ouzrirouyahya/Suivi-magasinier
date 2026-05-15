@@ -55,8 +55,8 @@ export function StockTable({ type, site, articles, onAction, onManageCatalog }: 
       <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-3xl font-black text-slate-950 tracking-tighter uppercase flex items-center gap-3">
-              <span className="w-2 h-8 bg-sky-600 rounded-full"></span>
+            <h2 className="text-base font-black text-slate-950 tracking-tighter uppercase flex items-center gap-2">
+              <span className="w-1.5 h-6 bg-sky-600 rounded-full"></span>
               Stock {type.replace('_', ' ')}
             </h2>
             <button 

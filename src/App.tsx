@@ -23,6 +23,7 @@ import { Article, SiteCode } from './types';
 import { Loader2, Search } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
+import { Toaster } from 'sonner';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
@@ -326,6 +327,7 @@ export default function App() {
           onClose={() => setSelectedArticle(null)} 
         />
       )}
+      <Toaster position="top-right" expand={true} richColors closeButton />
     </div>
   );
 }

@@ -233,7 +233,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             {type === 'ENTREE' ? <ArrowDownLeft className="w-8 h-8" /> : <ArrowUpRight className="w-8 h-8" />}
           </div>
           <div>
-            <h2 className="text-3xl font-black text-slate-950 tracking-tight leading-none uppercase">
+            <h2 className="text-base font-black text-slate-950 tracking-tight leading-none uppercase">
               {type === 'ENTREE' ? "Réception / Bon d'Entrée" : "Sortie / Bon de Consommation"}
             </h2>
             <p className="text-slate-500 font-bold mt-2 flex items-center gap-2">
