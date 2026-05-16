@@ -13,12 +13,12 @@ Pour que le déploiement automatique fonctionne depuis GitHub, vous devez config
    - Allez sur votre dépôt GitHub.
    - Cliquez sur **Settings** -> **Secrets and variables** -> **Actions**.
    - Cliquez sur **New repository secret**.
-   - Nom du secret : `FIREBASE_SERVICE_ACCOUNT_GEN_LANG_CLIENT_0804590974`
+   - Nom du secret : `FIREBASE_SERVICE_ACCOUNT_HYDRO_SUIVI_MAGASINIER`
    - Valeur du secret : Copiez-collez tout le contenu du fichier JSON téléchargé à l'étape 1.
 
 3. **Déployer :**
    - Une fois le secret ajouté, faites un "push" sur la branche `main`.
-   - GitHub Actions lancera automatiquement le build (`npm run build`) et déploiera l'application sur `https://gen-lang-client-0804590974.web.app/`.
+   - GitHub Actions lancera automatiquement le build (`npm run build`) et déploiera l'application sur `https://hydro-suivi-magasinier.web.app/`.
 
 ---
 **Note :** J'ai déjà configuré les fichiers `.github/workflows/firebase-hosting-merge.yml` et `firebase.json` pour vous.
