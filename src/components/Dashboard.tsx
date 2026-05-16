@@ -49,8 +49,14 @@ export function Dashboard({ site, articles, mouvements, onAction }: DashboardPro
 
   // KPIs
   const totalArticles = siteArticles.length;
-  const stockValue = siteArticles.reduce((acc, curr) => acc + (curr.quantity * curr.price), 0);
-  const lowStockCount = siteArticles.filter(a => a.quantity <= a.minStock).length;
+  const stockValue = siteArticles.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price || 0)), 0);
+  const lowStockCount = siteArticles.filter(a => (a.quantity || 0) <= (a.minStock || 0)).length;
+  
+  // New Metric: Value at Risk (Total value of items in low stock or rupture)
+  const valueAtRisk = siteArticles
+    .filter(a => (a.quantity || 0) <= (a.minStock || 0))
+    .reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price || 0)), 0);
+
   const stockHealthPercent = totalArticles > 0 ? Math.round(((totalArticles - lowStockCount) / totalArticles) * 100) : 100;
   
   const today = new Date().toISOString().split('T')[0];
@@ -64,13 +70,17 @@ export function Dashboard({ site, articles, mouvements, onAction }: DashboardPro
     .slice(0, 5)
     .map(a => ({ name: a.designation, value: a.quantity * a.price }));
 
-  // Chart 1: Spend over time (Monthly)
-  const months = ['Jan', 'Féb', 'Mar', 'Avr', 'Mai', 'Juin'];
-  const chartData = months.map((m, i) => ({
+  // Chart 1: Spend over time (Current Year)
+  const currentYearForChart = new Date().getFullYear();
+  const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
+  const chartData = months.slice(0, new Date().getMonth() + 1).map((m, i) => ({
     name: m,
     value: siteMouvements
-      .filter(mov => mov.type === 'SORTIE' && new Date(mov.date).getMonth() === i)
-      .reduce((acc, mov) => acc + mov.items.reduce((sum, item) => sum + (item.quantity * item.price), 0), 0)
+      .filter(mov => {
+        const d = new Date(mov.date);
+        return mov.type === 'SORTIE' && d.getMonth() === i && d.getFullYear() === currentYearForChart;
+      })
+      .reduce((acc, mov) => acc + mov.items.reduce((sum, item) => sum + ((item.quantity || 0) * (item.price || 0)), 0), 0)
   }));
 
   // Pareto Analysis (ABC Classification)
@@ -170,9 +180,9 @@ export function Dashboard({ site, articles, mouvements, onAction }: DashboardPro
 
   const stats = [
     { label: 'Valeur Immobilisée', value: formatCurrency(stockValue), icon: DollarSign, color: 'text-sky-600', bg: 'bg-sky-50' },
-    { label: 'Ruptures Stock', value: lowStockCount, icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', alert: lowStockCount > 0 },
-    { label: 'Précision Stock (ABC)', value: `A:${abcData.A} B:${abcData.B} C:${abcData.C}`, icon: Activity, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { label: 'Flux du Jour', value: formatCurrency(spendToday), icon: Zap, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { label: 'Valeur en Risque', value: formatCurrency(valueAtRisk), icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', alert: valueAtRisk > (stockValue * 0.1) },
+    { label: 'Ruptures Stock', value: lowStockCount, icon: Package, color: 'text-amber-600', bg: 'bg-amber-50', alert: lowStockCount > 0 },
+    { label: 'Flux du Jour', value: formatCurrency(spendToday), icon: Zap, color: 'text-emerald-600', bg: 'bg-emerald-50' },
   ];
 
   const recentMovements = siteMouvements.slice(0, 8);

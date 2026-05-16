@@ -40,7 +40,8 @@ export type Page =
   | 'USER_MGMT'
   | 'GESTION_ARTICLES'
   | 'ALERTES_STOCK'
-  | 'REPORTS';
+  | 'REPORTS'
+  | 'SEARCH_RESULTS';
 
 interface SidebarProps {
   currentPage: Page;

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Search, 
   Filter, 
@@ -19,30 +19,59 @@ import { cn, formatCurrency } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 
 interface StockTableProps {
-  type: ArticleType;
+  type: ArticleType | 'ALL';
   site: SiteCode;
   articles: Article[];
+  initialSearch?: string;
   onAction?: (id: string, action: 'IN' | 'OUT') => void;
   onManageCatalog?: () => void;
 }
 
-export function StockTable({ type, site, articles, onAction, onManageCatalog }: StockTableProps) {
-  const [search, setSearch] = useState('');
-  const [showGlobal, setShowGlobal] = useState(false);
+export function StockTable({ type, site, articles, initialSearch = '', onAction, onManageCatalog }: StockTableProps) {
+  const [search, setSearch] = useState(initialSearch);
+  const [showGlobal, setShowGlobal] = useState(initialSearch.length > 0);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('GRID');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'RUPTURE' | 'CRITIQUE' | 'OPTIMAL'>('ALL');
+  const [locationFilter, setLocationFilter] = useState('');
+  
+  // Sync search state with prop when it changes (global search)
+  useEffect(() => {
+    setSearch(initialSearch);
+    if (initialSearch.length > 0) {
+      setShowGlobal(true);
+    }
+  }, [initialSearch]);
 
   const filteredArticles = articles.filter(a => {
     const matchesSite = showGlobal || a.site === site;
-    const matchesType = a.type === type;
-    const matchesSearch = !search || 
-                        a.designation.toLowerCase().includes(search.toLowerCase()) || 
-                        a.ref.toLowerCase().includes(search.toLowerCase());
+    const matchesType = type === 'ALL' || a.type === type;
+    
+    // Normalize search and searchable text to handle accents and case
+    const normalizedSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const searchableText = [
+      a.designation,
+      a.ref,
+      a.category,
+      a.functionalCategory,
+      a.component,
+      a.subComponent || '',
+      a.location || ''
+    ].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    const matchesSearch = !search || searchableText.includes(normalizedSearch);
     const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
-    return matchesSite && matchesType && matchesSearch && matchesCategory;
+    
+    // Multi-criteria
+    const status = a.quantity === 0 ? 'RUPTURE' : (a.quantity <= a.minStock ? 'CRITIQUE' : 'OPTIMAL');
+    const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+    const matchesLocation = !locationFilter || (a.location || '').toLowerCase().includes(locationFilter.toLowerCase());
+
+    return matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation;
   });
 
   const categories = Array.from(new Set(articles.filter(a => a.type === type && a.site === site).map(a => a.category)));
+  const locations = Array.from(new Set(articles.filter(a => a.type === type && a.site === site).map(a => a.location))).filter(Boolean);
 
   const getStockStatus = (article: Article) => {
     if (article.quantity === 0) return { label: 'RUPTURE', class: 'bg-rose-500 text-white', icon: AlertTriangle };
@@ -57,7 +86,7 @@ export function StockTable({ type, site, articles, onAction, onManageCatalog }: 
           <div className="flex items-center gap-3">
             <h2 className="text-base font-black text-slate-950 tracking-tighter uppercase flex items-center gap-2">
               <span className="w-1.5 h-6 bg-sky-600 rounded-full"></span>
-              Stock {type.replace('_', ' ')}
+              {type === 'ALL' ? 'Résultats de Recherche' : `Stock ${type.replace('_', ' ')}`}
             </h2>
             <button 
               onClick={onManageCatalog}
@@ -123,17 +152,47 @@ export function StockTable({ type, site, articles, onAction, onManageCatalog }: 
             {showGlobal ? "Vision Globale : ON" : "Vérifier Autres Sites"}
           </button>
         </div>
-        <div className="w-full md:w-72 relative">
-          <Filter className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
-          <select 
-            className="input-field pl-14 h-14 appearance-none cursor-pointer bg-white/40 border-slate-200/50 font-bold text-slate-700"
-            value={categoryFilter}
-            onChange={(e) => setCategoryFilter(e.target.value)}
-          >
-            <option value="ALL">Tout le Catalogue</option>
-            {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-          </select>
-          <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+        <div className="w-full lg:w-auto flex flex-wrap items-center gap-4">
+          <div className="relative">
+            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+            <select 
+              className="pl-12 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-500 appearance-none"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value)}
+            >
+              <option value="ALL">Toutes Catégories</option>
+              {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+          </div>
+
+          <div className="relative">
+            <AlertTriangle className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+            <select 
+              className="pl-12 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-500 appearance-none"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as any)}
+            >
+              <option value="ALL">Tous les États</option>
+              <option value="OPTIMAL">Stock Optimal</option>
+              <option value="CRITIQUE">Seuil Critique</option>
+              <option value="RUPTURE">Rupture</option>
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+          </div>
+
+          <div className="relative">
+            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+            <select 
+              className="pl-12 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-500 appearance-none"
+              value={locationFilter}
+              onChange={(e) => setLocationFilter(e.target.value)}
+            >
+              <option value="">Tous les Emplacements</option>
+              {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
+            </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
+          </div>
         </div>
       </div>
 

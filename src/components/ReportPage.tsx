@@ -48,20 +48,20 @@ export function ReportPage() {
   const { articles, mouvements, transferts, currentUser } = useStorage();
   const printRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SITES' | 'CRITICAL'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SITES' | 'CRITICAL' | 'CONSOLIDATION'>('OVERVIEW');
+  const [siteSearch, setSiteSearch] = useState('');
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'value', direction: 'desc' });
 
   const analytics = useMemo(() => {
-    // Filter data by month
-    const filteredMouvements = mouvements.filter(m => m && m.date && m.date.startsWith(selectedMonth));
-    const filteredTransferts = transferts.filter(t => t && t.date && t.date.startsWith(selectedMonth));
+    // Filter data by month with strict type checking
+    const filteredMouvements = mouvements.filter(m => m && m.date && typeof m.date === 'string' && m.date.startsWith(selectedMonth));
+    const filteredTransferts = transferts.filter(t => t && t.date && typeof t.date === 'string' && t.date.startsWith(selectedMonth));
     
-    // Note: articles are current state, so we can't easily "backdate" them without historical stock tracking
-    // but we can filter the movements and trends.
-
+    // Safety check for empty data - return clean initial state
     if (!articles.length && !filteredMouvements.length) return {
       totalArticles: articles.length,
-      totalStockValue: articles.reduce((sum, a) => sum + ((a.quantity || 0) * (a.price || 0)), 0),
-      lowStockCount: articles.filter(a => (a.quantity || 0) <= (a.minStock || 0)).length,
+      totalStockValue: 0,
+      lowStockCount: 0,
       siteStats: SITES.map(s => ({ site: s.code, label: s.label, value: 0, count: 0, critical: 0 })),
       distributionData: [],
       topConsumed: [],
@@ -76,30 +76,48 @@ export function ReportPage() {
     const artMap = new Map<string, Article>();
     articles.forEach(a => artMap.set(a.id, a));
 
-    const totalArticles = articles.length || 1;
-    const totalStockValue = articles.reduce((sum, a) => sum + ((a.quantity || 0) * (a.price || 0)), 0);
-    const lowStockItems = articles.filter(a => (a.quantity || 0) <= (a.minStock || 0));
+    // Calculate total values with NaN guards
+    const totalStockValue = articles.reduce((sum, a) => {
+      const q = typeof a.quantity === 'number' && !isNaN(a.quantity) ? a.quantity : 0;
+      const p = typeof a.price === 'number' && !isNaN(a.price) ? a.price : 0;
+      return sum + (q * p);
+    }, 0);
 
-    // Site Breakdown (Current State)
+    const lowStockItems = articles.filter(a => {
+      const q = typeof a.quantity === 'number' && !isNaN(a.quantity) ? a.quantity : 0;
+      const m = typeof a.minStock === 'number' && !isNaN(a.minStock) ? a.minStock : 0;
+      return q <= m;
+    });
+
+    // Site Breakdown Analysis
     const siteStats = SITES.map(s => {
       const siteArts = articles.filter(a => a.site === s.code);
-      const value = siteArts.reduce((sum, a) => sum + ((a.quantity || 0) * (a.price || 0)), 0);
+      const value = siteArts.reduce((sum, a) => {
+        const q = typeof a.quantity === 'number' && !isNaN(a.quantity) ? a.quantity : 0;
+        const p = typeof a.price === 'number' && !isNaN(a.price) ? a.price : 0;
+        return sum + (q * p);
+      }, 0);
       return { 
         site: s.code, 
         label: s.label, 
         value: isNaN(value) ? 0 : value, 
         count: siteArts.length,
-        critical: siteArts.filter(a => (a.quantity || 0) <= (a.minStock || 0)).length
+        critical: siteArts.filter(a => {
+          const q = typeof a.quantity === 'number' && !isNaN(a.quantity) ? a.quantity : 0;
+          const m = typeof a.minStock === 'number' && !isNaN(a.minStock) ? a.minStock : 0;
+          return q <= m;
+        }).length
       };
     }).sort((a, b) => b.value - a.value);
 
-    // Distribution by Type (Current State)
+    // Distribution by Type Analysis
     const typeMap: Record<string, number> = {};
     articles.forEach(a => {
-      const qty = typeof a.quantity === 'number' && !isNaN(a.quantity) ? a.quantity : 0;
-      const price = typeof a.price === 'number' && !isNaN(a.price) ? a.price : 0;
-      typeMap[a.type] = (typeMap[a.type] || 0) + (qty * price);
+      const q = typeof a.quantity === 'number' && !isNaN(a.quantity) ? a.quantity : 0;
+      const p = typeof a.price === 'number' && !isNaN(a.price) ? a.price : 0;
+      typeMap[a.type] = (typeMap[a.type] || 0) + (q * p);
     });
+    
     const distributionData = Object.entries(typeMap).map(([name, value]) => ({ 
       name, 
       value: isNaN(value) ? 0 : value 
@@ -122,8 +140,10 @@ export function ReportPage() {
             type: art?.type || 'AUTRES'
           };
         }
-        consumptionMap[item.articleId].qty += item.quantity || 0;
-        consumptionMap[item.articleId].value += (item.quantity || 0) * (item.price || 0);
+        const qty = typeof item.quantity === 'number' && !isNaN(item.quantity) ? item.quantity : 0;
+        const price = typeof item.price === 'number' && !isNaN(item.price) ? item.price : 0;
+        consumptionMap[item.articleId].qty += qty;
+        consumptionMap[item.articleId].value += (qty * price);
       });
     });
 
@@ -132,10 +152,8 @@ export function ReportPage() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
 
-    // Activity Trends (Adjusted for Selected Month if needed, but let's keep 14 days logic or adapt to month)
-    // If it's the current month, show last 14 days. If it's a past month, show the whole month.
+    // Activity Trends Analysis
     const isCurrentMonth = selectedMonth === new Date().toISOString().slice(0, 7);
-    
     const trendDays = isCurrentMonth ? 14 : 31;
     const lastN = Array.from({ length: trendDays }).map((_, i) => {
       const d = new Date(`${selectedMonth}-01`);
@@ -163,7 +181,7 @@ export function ReportPage() {
       };
     }).filter(Boolean).reverse() as { name: string, entrees: number, sorties: number }[];
 
-    // Value entries/sorties totals for today or period
+    // Value entries/sorties totals
     const now = new Date().toISOString().split('T')[0];
     const dailyStats = filteredMouvements.filter(m => m.date.startsWith(now)).reduce((acc, m) => {
       const val = m.items.reduce((sum, i) => sum + ((i.quantity || 0) * (i.price || 0)), 0);
@@ -181,12 +199,6 @@ export function ReportPage() {
       }, 0);
       return sum + tVal;
     }, 0);
-
-    const safeArticles = articles.map(a => ({
-      ...a,
-      quantity: typeof a.quantity === 'number' && !isNaN(a.quantity) ? a.quantity : 0,
-      minStock: typeof a.minStock === 'number' && !isNaN(a.minStock) ? a.minStock : 0
-    }));
 
     const sortedLowStock = lowStockItems.map(a => ({
       ...a,
@@ -215,6 +227,25 @@ export function ReportPage() {
       lowStockItems: sortedLowStock
     };
   }, [articles, mouvements, transferts, currentUser?.role, selectedMonth]);
+
+  const exportConsolidationData = () => {
+    if (!analytics) return;
+    const header = "Site,Label,Valeur Stock,Nombre Articles,Alertes Critiques,% Valeur Totale\n";
+    const rows = analytics.siteStats.map(s => {
+      const weight = ((s.value / (analytics.totalStockValue || 1)) * 100).toFixed(2);
+      return `${s.site},"${s.label}",${s.value.toFixed(2)},${s.count},${s.critical},${weight}%`;
+    }).join("\n");
+    
+    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `consolidation_${selectedMonth}_hydromines.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   if (currentUser?.role !== 'ADMIN') {
     return (
@@ -272,20 +303,12 @@ export function ReportPage() {
         <div className="flex items-center gap-4">
           <div className="flex items-center bg-white border border-slate-200 rounded-2xl shadow-sm p-1.5 no-print">
              <button 
-              onClick={() => {
-                const data = analytics.siteStats.map(s => `${s.label},${s.site},${s.value},${s.count}`).join('\n');
-                const blob = new Blob([`Site,Code,Valeur,Articles\n${data}`], { type: 'text/csv' });
-                const url = window.URL.createObjectURL(blob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = `Hydromines_Rapport_Sites_${new Date().toISOString().split('T')[0]}.csv`;
-                a.click();
-              }}
+              onClick={exportConsolidationData}
               className="px-4 py-2.5 hover:bg-slate-50 text-slate-400 hover:text-sky-600 rounded-xl transition-all cursor-pointer flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-              title="Exporter CSV"
+              title="Exporter Consolidation CSV"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">CSV</span>
+              <span className="hidden sm:inline">Exporter CSV</span>
             </button>
             <div className="w-[1px] h-4 bg-slate-200 mx-2" />
             <button 
@@ -303,8 +326,9 @@ export function ReportPage() {
           <div className="flex bg-slate-100 p-1.5 rounded-[1.5rem] border border-slate-200 shadow-inner z-30 no-print">
             {[
               { id: 'OVERVIEW', label: 'Vue Globale', icon: LayoutGrid },
-              { id: 'SITES', label: 'Performances Sites', icon: MapPin },
-              { id: 'CRITICAL', label: 'Points Critiques', icon: AlertCircle },
+              { id: 'SITES', label: 'Tableau de Bord', icon: MapPin },
+              { id: 'CONSOLIDATION', label: 'Consolidation', icon: BarChart3 },
+              { id: 'CRITICAL', label: 'Alertes', icon: AlertCircle },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -388,6 +412,19 @@ export function ReportPage() {
                 <div className="mt-6 flex items-center gap-2">
                   <Truck className="w-4 h-4 text-sky-500 opacity-50" />
                   <span className="text-[9px] font-black text-sky-600 uppercase tracking-widest">{formatCurrency(analytics.inTransitValue)} Immo.</span>
+                </div>
+              </div>
+
+              <div className="card-kpi bg-rose-50 border-rose-100 shadow-xl group hover:border-rose-200 transition-colors">
+                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-2">Valeur en Risque (Ruptures)</p>
+                <p className="text-3xl font-black text-rose-700 tracking-tighter leading-none">
+                  {formatCurrency(analytics.lowStockItems.reduce((sum, i) => sum + ((i.quantity || 0) * (i.price || 0)), 0))}
+                </p>
+                <div className="mt-6 flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-500 opacity-50" />
+                  <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">
+                    {analytics.lowStockCount} Articles concernés
+                  </span>
                 </div>
               </div>
             </section>
@@ -567,6 +604,163 @@ export function ReportPage() {
                    </div>
                  )}
                </div>
+            </div>
+          </div>
+        )}
+
+        {/* CONSOLIDATION TABLE VIEW */}
+        {activeTab === 'CONSOLIDATION' && (
+          <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-700">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
+                  <BarChart3 className="w-6 h-6 text-sky-500" /> Consolidation Analytique par Site
+                </h3>
+                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Audit financier et volumétrique consolidé</p>
+              </div>
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 shadow-sm" />
+                  <input 
+                    type="text"
+                    placeholder="Filtrer un site..."
+                    value={siteSearch}
+                    onChange={(e) => setSiteSearch(e.target.value)}
+                    className="pl-11 pr-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-sky-500 outline-none w-64 shadow-sm"
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+              {/* ANALYSIS INSIGHTS */}
+              <div className="lg:col-span-1 space-y-6 no-print">
+                <div className="card glass p-6 border-sky-100 bg-sky-50/30">
+                  <h4 className="text-[10px] font-black text-sky-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <Activity className="w-4 h-4" /> Analyse des Risques
+                  </h4>
+                  <div className="space-y-4">
+                    {analytics.siteStats.filter(s => (s.critical / (s.count || 1)) > 0.15).map(s => (
+                      <div key={s.site} className="p-3 bg-white rounded-xl border border-rose-100 shadow-sm">
+                        <p className="text-[10px] font-black text-rose-600 uppercase mb-1">{s.site} - Risque Élevé</p>
+                        <p className="text-[11px] font-bold text-slate-500 leading-tight">
+                          {( (s.critical / (s.count || 1)) * 100).toFixed(1)}% des articles sont en alerte critique.
+                        </p>
+                      </div>
+                    ))}
+                    {analytics.siteStats.filter(s => (s.critical / (s.count || 1)) > 0.15).length === 0 && (
+                      <p className="text-[10px] font-bold text-slate-400 italic">Aucune anomalie de risque détectée.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="card glass p-6 border-emerald-100 bg-emerald-50/30">
+                  <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4" /> Sites les plus Sains
+                  </h4>
+                  <div className="space-y-4">
+                    {analytics.siteStats.filter(s => s.critical === 0 && s.count > 0).slice(0, 2).map(s => (
+                      <div key={s.site} className="p-3 bg-white rounded-xl border border-emerald-100 shadow-sm">
+                        <p className="text-[10px] font-black text-emerald-600 uppercase mb-1">{s.site} - Optimal</p>
+                        <p className="text-[11px] font-bold text-slate-500 leading-tight">Stock parfaitement régulé (0 alertes).</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+
+              {/* CONSOLIDATION TABLE */}
+              <div className="lg:col-span-3 card glass shadow-2xl overflow-hidden border-slate-100 bg-white">
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-slate-50 border-b border-slate-100">
+                        {['Site', 'Localisation', 'V. Totale Stock', 'Articles', 'Alertes Critiques', 'Poids Val (%)'].map((label, idx) => {
+                          const keys = ['site', 'label', 'value', 'count', 'critical', 'value'];
+                          const key = keys[idx];
+                          return (
+                            <th 
+                              key={label}
+                              onClick={() => {
+                                setSortConfig({
+                                  key: key,
+                                  direction: sortConfig.key === key && sortConfig.direction === 'desc' ? 'asc' : 'desc'
+                                });
+                              }}
+                              className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest cursor-pointer hover:text-sky-600 transition-colors"
+                            >
+                              <div className="flex items-center gap-2">
+                                {label}
+                                {sortConfig.key === key && (
+                                  <TrendingUp className={cn("w-3 h-3 transition-transform", sortConfig.direction === 'asc' ? "rotate-180" : "")} />
+                                )}
+                              </div>
+                            </th>
+                          );
+                        })}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-50">
+                      {analytics.siteStats
+                        .filter(s => 
+                          s.label.toLowerCase().includes(siteSearch.toLowerCase()) || 
+                          s.site.toLowerCase().includes(siteSearch.toLowerCase())
+                        )
+                        .sort((a: any, b: any) => {
+                          const valA = a[sortConfig.key];
+                          const valB = b[sortConfig.key];
+                          if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
+                          if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
+                          return 0;
+                        })
+                        .map((site) => (
+                        <tr key={site.site} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="px-6 py-5">
+                            <span className="px-3 py-1 bg-slate-900 text-white text-[10px] font-black rounded-lg uppercase shadow-lg group-hover:scale-110 transition-transform inline-block">
+                              {site.site}
+                            </span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className="text-xs font-black text-slate-900 uppercase">{site.label}</span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className="text-xs font-black text-slate-950">{formatCurrency(site.value)}</span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <span className="text-xs font-bold text-slate-600">{site.count} Réf.</span>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="flex items-center gap-2">
+                              {site.critical > 0 ? (
+                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full border border-rose-100 text-[9px] font-black uppercase">
+                                  <AlertCircle className="w-3 h-3" /> {site.critical} Alertes
+                                </span>
+                              ) : (
+                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-[9px] font-black uppercase">
+                                  <CheckCircle2 className="w-3 h-3" /> Optimal
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-6 py-5">
+                            <div className="w-24">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className="text-[9px] font-black text-slate-400">{( (site.value / analytics.totalStockValue) * 100).toFixed(1)}%</span>
+                              </div>
+                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-sky-500 rounded-full transition-all duration-1000" 
+                                  style={{ width: `${(site.value / analytics.totalStockValue) * 100}%` }} 
+                                />
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           </div>
         )}

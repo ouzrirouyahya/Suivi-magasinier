@@ -34,6 +34,7 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
+  const [globalSearch, setGlobalSearch] = useState('');
   
   const { 
     articles, 
@@ -113,6 +114,7 @@ export default function App() {
             type="ENGINS" 
             site={currentSite} 
             articles={articles} 
+            initialSearch={globalSearch}
             onAction={(id, action) => {
               setSelectedArticleId(id);
               setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
@@ -127,6 +129,7 @@ export default function App() {
             type="PERFORATEURS" 
             site={currentSite} 
             articles={articles} 
+            initialSearch={globalSearch}
             onAction={(id, action) => {
               setSelectedArticleId(id);
               setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
@@ -141,6 +144,7 @@ export default function App() {
             type="CONSOMMABLES" 
             site={currentSite} 
             articles={articles} 
+            initialSearch={globalSearch}
             onAction={(id, action) => {
               setSelectedArticleId(id);
               setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
@@ -261,6 +265,21 @@ export default function App() {
       case 'REPORTS':
         return <ReportPage />;
         
+      case 'SEARCH_RESULTS':
+        return (
+          <StockTable 
+            type="ALL"
+            site={currentSite}
+            articles={articles}
+            initialSearch={globalSearch}
+            onAction={(id, action) => {
+              setSelectedArticleId(id);
+              setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
+            }}
+            onManageCatalog={() => setCurrentPage('GESTION_ARTICLES')}
+          />
+        );
+        
       default:
         return <Dashboard site={currentSite} articles={articles} mouvements={mouvements} onAction={setCurrentPage} />;
     }
@@ -290,10 +309,18 @@ export default function App() {
                  type="text" 
                  placeholder="Recherche Rapide (Réf, Désignation, ID Document...)"
                  className="w-full bg-white/80 h-14 pl-16 pr-8 rounded-2xl text-xs font-bold outline-none border border-slate-100 focus:border-sky-200 transition-all focus:ring-4 focus:ring-sky-500/5 placeholder:text-slate-300 placeholder:italic"
+                 value={globalSearch}
+                 onChange={(e) => {
+                   setGlobalSearch(e.target.value);
+                   if (e.target.value.length >= 2) {
+                     if (currentPage !== 'SEARCH_RESULTS') {
+                        setCurrentPage('SEARCH_RESULTS');
+                     }
+                   }
+                 }}
                  onKeyDown={(e) => {
                    if (e.key === 'Enter') {
-                     // Simple jump to Search results or list
-                     console.log("Search trigger");
+                      console.log("Search trigger");
                    }
                  }}
                />

@@ -17,7 +17,7 @@ import {
   Droplets
 } from 'lucide-react';
 import { Article, SiteCode, Inventaire } from '../types';
-import { cn, generateId } from '../lib/utils';
+import { cn, generateId, formatCurrency } from '../lib/utils';
 
 interface InventairePageProps {
   currentSite: SiteCode;
@@ -203,10 +203,11 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                           const sessionItem = activeSession.items.find(i => i.articleId === article.id);
                           if (!sessionItem) return null;
                           const hasError = sessionItem.difference !== 0;
+                          const financialDiff = sessionItem.difference * (article.price || 0);
 
                           return (
                             <tr key={article.id} className={cn("transition-colors group", hasError ? "bg-amber-50/30" : "hover:bg-slate-50/50")}>
-                              <td className="px-8 py-6 pl-12 border-l-4 border-transparent group-hover:border-sky-400 transition-all">
+                               <td className="px-8 py-6 pl-12 border-l-4 border-transparent group-hover:border-sky-400 transition-all">
                                  <p className="font-black text-slate-900 leading-none">{article.designation}</p>
                                  <p className="text-[10px] font-mono font-bold text-slate-400 mt-1 uppercase tracking-widest">{article.ref} • {article.location || 'NON LOCALISÉ'}</p>
                                  {article.component && (
@@ -214,9 +215,14 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                                  )}
                               </td>
                               <td className="px-8 py-6 text-center">
-                                 <span className="px-3 py-1 bg-slate-100 rounded-lg font-mono font-black text-slate-600 text-sm">
-                                   {isNaN(sessionItem.theoricQuantity) ? 0 : sessionItem.theoricQuantity}
-                                 </span>
+                                 <div className="flex flex-col items-center">
+                                   <span className="px-3 py-1 bg-slate-100 rounded-lg font-mono font-black text-slate-600 text-sm">
+                                     {isNaN(sessionItem.theoricQuantity) ? 0 : sessionItem.theoricQuantity}
+                                   </span>
+                                   <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
+                                     {formatCurrency((sessionItem.theoricQuantity || 0) * (article.price || 0))}
+                                   </span>
+                                 </div>
                               </td>
                               <td className="px-8 py-6 text-center">
                                  <input 
@@ -230,13 +236,23 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                                  />
                               </td>
                               <td className="px-8 py-6 text-center">
-                                 <span className={cn(
-                                   "text-sm font-black flex items-center justify-center gap-1.5",
-                                   (sessionItem.difference || 0) > 0 ? "text-emerald-600" : (sessionItem.difference || 0) < 0 ? "text-rose-600" : "text-slate-400"
-                                 )}>
-                                   {(sessionItem.difference || 0) > 0 ? '+' : ''}{isNaN(sessionItem.difference) ? 0 : sessionItem.difference}
-                                   {hasError && <AlertCircle className="w-3.5 h-3.5" />}
-                                 </span>
+                                 <div className="flex flex-col items-center gap-1">
+                                   <span className={cn(
+                                     "text-sm font-black flex items-center justify-center gap-1.5",
+                                     (sessionItem.difference || 0) > 0 ? "text-emerald-600" : (sessionItem.difference || 0) < 0 ? "text-rose-600" : "text-slate-400"
+                                   )}>
+                                     {(sessionItem.difference || 0) > 0 ? '+' : ''}{isNaN(sessionItem.difference) ? 0 : sessionItem.difference}
+                                     {hasError && <AlertCircle className="w-3.5 h-3.5" />}
+                                   </span>
+                                   {hasError && (
+                                     <span className={cn(
+                                       "text-[9px] font-black uppercase tracking-widest",
+                                       financialDiff > 0 ? "text-emerald-500" : "text-rose-500"
+                                     )}>
+                                       {financialDiff > 0 ? '+' : ''}{formatCurrency(financialDiff)}
+                                     </span>
+                                   )}
+                                 </div>
                               </td>
                               <td className="px-8 py-6">
                                  <input 

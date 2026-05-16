@@ -259,15 +259,19 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                     <p className="text-lg font-black text-slate-900 leading-none">{t.items.length}</p>
                   </div>
                   {t.status === 'EN_TRANSIT' && t.targetSite === currentSite && (
-                    <button 
-                      onClick={() => {
-                        const name = prompt('Nom du réceptionnaire :');
-                        if (name) onCompleteTransfert(t.id, name);
-                      }}
-                      className="btn btn-primary h-12 rounded-xl text-[10px] tracking-widest shadow-sky-200"
-                    >
-                      Réceptionner le Convoi
-                    </button>
+                    <div className="flex flex-col items-center gap-2">
+                      <p className="text-[9px] font-black text-rose-500 uppercase animate-pulse">Signature Requise</p>
+                      <button 
+                        onClick={() => {
+                          const name = prompt('Nom complet pour signature électronique (Réceptionnaire) :');
+                          if (name) onCompleteTransfert(t.id, name);
+                        }}
+                        className="btn btn-primary h-12 rounded-xl text-[10px] tracking-widest shadow-sky-200 group"
+                      >
+                        <FileText className="w-4 h-4 text-sky-300 group-hover:rotate-12 transition-transform" />
+                        Confirmer & Signer
+                      </button>
+                    </div>
                   )}
                   {t.status === 'RECU' && (
                     <div className="text-right flex items-center gap-3 bg-emerald-50 px-4 py-2 rounded-2xl border border-emerald-100">

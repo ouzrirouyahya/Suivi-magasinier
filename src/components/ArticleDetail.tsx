@@ -112,7 +112,7 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                   <InfoItem icon={Activity} label="Valeur Unitaire" value={formatCurrency(article.price)} />
                 </div>
               </div>
-              
+
               <div className="card p-6 border-neutral-100 shadow-none">
                 <h4 className="text-xs font-bold uppercase text-neutral-500 mb-4">Consommation (6 mois)</h4>
                 <div className="h-40">
