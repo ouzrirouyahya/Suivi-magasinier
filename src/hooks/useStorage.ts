@@ -54,7 +54,7 @@ export function useStorage() {
 
     const uid = auth.currentUser.uid;
     console.log('useStorage: User authenticated, fetching account:', uid);
-    const unsubUser = onSnapshot(doc(db, 'accounts', uid), (snap) => {
+    const unsubUser = onSnapshot(doc(db, 'accounts', uid), async (snap) => {
       if (snap.exists()) {
         const userData = { id: snap.id, ...snap.data() } as UserAccount;
         console.log('useStorage: Account found:', userData.email, 'Active:', userData.active);
@@ -62,12 +62,25 @@ export function useStorage() {
         setIsLoaded(true);
       } else {
         console.log('useStorage: Account not found, auto-provisioning...');
-        // Auto-provision
+        
+        let role: 'ADMIN' | 'MAGASINIER' = 'MAGASINIER';
+        try {
+          const accountsRef = collection(db, 'accounts');
+          const accountsSnap = await getDocs(query(accountsRef, limit(1)));
+          const isFirstUser = accountsSnap.empty;
+          
+          if (isFirstUser || auth.currentUser?.email === 'ouzrirouyahya@gmail.com' || auth.currentUser?.email === 'hydro.magasinier@gmail.com') {
+            role = 'ADMIN';
+          }
+        } catch (e) {
+          console.error("Error checking first user:", e);
+        }
+
         const newUser: UserAccount = {
           id: uid,
           email: auth.currentUser?.email || '',
           name: auth.currentUser?.displayName || 'Utilisateur',
-          role: auth.currentUser?.email === 'ouzrirouyahya@gmail.com' ? 'ADMIN' : 'MAGASINIER',
+          role: role,
           active: true,
           createdAt: new Date().toISOString()
         };

@@ -1,6 +1,11 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
 import { getFirestore } from 'firebase/firestore';
+
+/**
+ * CONFIGURATION PRODUCTION - HYDRO-SUIVI-MAGASINIER
+ * Mise à jour le: 16/05/2026
+ */
 const firebaseConfig = {
   apiKey: "AIzaSyCPZ4AvxoPaQzA2UqxJm9mNT5N65pGiPnw",
   authDomain: "hydro-suivi-magasinier.firebaseapp.com",
@@ -15,3 +20,8 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
+
+// Forcer la langue en Français pour les popups
+auth.languageCode = 'fr';
+
+export default app;
