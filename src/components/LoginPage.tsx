@@ -12,9 +12,20 @@ const LoginPage: React.FC = () => {
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Login failed:", error);
-      alert("La connexion a échoué. Veuillez réessayer.");
+      
+      let message = "La connexion a échoué. Veuillez réessayer.";
+      
+      if (error.code === 'auth/unauthorized-domain') {
+        message = `Domaine non autorisé : ${window.location.hostname}. \n\nVeuillez l'ajouter dans la console Firebase (Authentification > Paramètres > Domaines autorisés).`;
+      } else if (error.code === 'auth/popup-blocked') {
+        message = "La fenêtre de connexion a été bloquée par votre navigateur.";
+      } else if (error.code === 'auth/cancelled-popup-request') {
+        return; // Ignore if user just closed the popup
+      }
+      
+      alert(message);
     }
   };
 
