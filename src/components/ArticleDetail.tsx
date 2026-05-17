@@ -115,8 +115,8 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
 
               <div className="card p-6 border-neutral-100 shadow-none">
                 <h4 className="text-xs font-bold uppercase text-neutral-500 mb-4">Consommation (6 mois)</h4>
-                <div className="h-40">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="h-40 min-h-[160px]">
+                  <ResponsiveContainer width="100%" height="100%" minHeight={160} minWidth={0} debounce={50}>
                     <AreaChart data={last6Months}>
                       <defs>
                         <linearGradient id="colorVal" x1="0" y1="0" x2="0" y2="1">

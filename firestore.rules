@@ -12,7 +12,7 @@ service cloud.firestore {
     }
     
     function isValidId(id) {
-      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+      return id is string && id.size() > 0 && id.size() <= 128;
     }
     
     function isOwner(userId) {
@@ -20,13 +20,19 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'ADMIN';
+      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
+      return isSignedIn() && (
+        request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
+        (exists(path) && get(path).data.role == 'ADMIN')
+      );
     }
 
     function isActive() {
-      return isSignedIn() && 
-             get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.active == true;
+      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
+      return isSignedIn() && (
+        request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
+        (exists(path) && get(path).data.active == true)
+      );
     }
 
     // Public/Metadata collections: Read by any signed-in user
@@ -50,19 +56,23 @@ service cloud.firestore {
     }
 
     // Accounts: 
-    // - Anyone signed in can read their OWN doc
-    // - Listing the collection is restricted to Admins
+    // - Anyone signed in can get (needed for login check)
+    // - Create for self-provisioning
+    // - List restricted to ADMIN
+    // - Update restricted to owner (no role change) or admin
     match /accounts/{userId} {
-      allow get: if (isOwner(userId) || isAdmin()) && isValidId(userId);
+      allow get, create: if isSignedIn() && isValidId(userId);
       allow list: if isAdmin();
-      allow create: if isOwner(userId) && isValidId(userId); // Allow users to bootstrap their own profile
-      allow update: if (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role)) && isValidId(userId); // Owner can update but not change role
+      allow update: if (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role)) && isValidId(userId);
     }
 
     // Others
     match /auditLogs/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); }
     match /transferts/{id} { allow read: if isSignedIn(); allow write: if isActive(); }
     match /inventaires/{id} { allow read, write: if isActive(); }
+    match /distributions/{id} { allow read, write: if isActive(); }
+    match /purchaseRequests/{id} { allow read, write: if isActive(); }
+    match /anomalyReports/{id} { allow read, write: if isActive(); }
   }
 }
 

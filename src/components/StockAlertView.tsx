@@ -36,9 +36,9 @@ export function StockAlertView({ articles, currentSite, onAction }: StockAlertVi
              <AlertCircle className="w-6 h-6" />
            </div>
            <div>
-             <h2 className="text-base font-black text-slate-950 tracking-tighter uppercase leading-none">Centre d'Alertes</h2>
-             <p className="text-rose-600 font-extrabold uppercase text-[10px] tracking-widest mt-1">
-               {lowStockArticles.length} Ruptures de stock détectées sur le réseau
+             <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Centre d'Alertes</h2>
+             <p className="text-xl text-rose-600 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">
+               {lowStockArticles.length} Ruptures de stock critiques détectées sur le réseau
              </p>
            </div>
         </div>

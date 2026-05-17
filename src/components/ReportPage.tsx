@@ -269,77 +269,76 @@ export function ReportPage() {
   const COLORS = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
-    <div className="space-y-8 pb-32 animate-in fade-in duration-1000">
+    <div className="space-y-4 pb-16 animate-in fade-in duration-700">
       {/* IMPROVED HEADER */}
-      <div className="flex flex-col xl:flex-row items-center justify-between gap-8 no-print">
-        <div className="flex items-center gap-6">
-          <div className="relative w-20 h-20 bg-slate-950 rounded-[2.5rem] flex items-center justify-center shadow-2xl overflow-hidden group">
+      <div className="flex flex-col xl:flex-row items-center justify-between gap-4 no-print">
+        <div className="flex items-center gap-3">
+          <div className="relative w-12 h-12 bg-slate-950 rounded-xl flex items-center justify-center shadow-lg overflow-hidden group">
             <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <TrendingUp className="w-10 h-10 text-white relative z-10" />
+            <TrendingUp className="w-6 h-6 text-white relative z-10" />
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-1.5 line-height-none">
-              <span className="text-[10px] font-black tracking-tighter uppercase mr-1">
+            <div className="flex items-center gap-3 mb-2 leading-none">
+              <span className="text-sm font-black tracking-tighter uppercase mr-2">
                 <span className="text-sky-500">HYDRO</span>
                 <span className="text-rose-700">MINES</span>
               </span>
-              <span className="text-slate-300 tracking-tighter opacity-50">•</span>
-              <div className="flex items-center gap-2 no-print">
+              <span className="text-slate-300 tracking-tighter opacity-50">|</span>
+              <div className="flex items-center gap-3 no-print">
                 <input 
                   type="month" 
                   value={selectedMonth}
                   onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="text-[10px] bg-slate-100 hover:bg-white border-0 focus:ring-0 rounded-lg font-black text-slate-500 uppercase tracking-widest cursor-pointer transition-colors"
+                  className="text-base bg-slate-100 px-3 py-1 hover:bg-white border-0 focus:ring-0 rounded-lg font-black text-slate-500 uppercase tracking-widest cursor-pointer transition-colors"
                 />
               </div>
             </div>
-            <h1 className="text-3xl font-black text-slate-950 tracking-tighter uppercase leading-none">Gestion de Stock & Magasinage</h1>
-            <p className="text-slate-500 font-bold mt-2 text-[10px] uppercase tracking-widest italic flex items-center gap-2">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Console de Supervision Magasinière
+            <h1 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Rapports & Consolidation</h1>
+            <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">
+              Console de Supervision et d'Analyse Globale
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-4">
-          <div className="flex items-center bg-white border border-slate-200 rounded-2xl shadow-sm p-1.5 no-print">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm p-1 no-print">
              <button 
               onClick={exportConsolidationData}
-              className="px-4 py-2.5 hover:bg-slate-50 text-slate-400 hover:text-sky-600 rounded-xl transition-all cursor-pointer flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+              className="px-3 py-1.5 hover:bg-slate-50 text-slate-400 hover:text-sky-600 rounded-lg transition-all cursor-pointer flex items-center gap-2 text-xs font-black uppercase tracking-widest"
               title="Exporter Consolidation CSV"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">Exporter CSV</span>
+              <span className="hidden sm:inline">CSV</span>
             </button>
-            <div className="w-[1px] h-4 bg-slate-200 mx-2" />
+            <div className="w-[1px] h-4 bg-slate-200 mx-1" />
             <button 
               onClick={() => {
                 window.focus();
                 window.print();
               }}
-              className="flex items-center gap-2 px-6 py-2.5 bg-slate-950 text-white rounded-xl shadow-xl hover:bg-slate-800 active:scale-95 transition-all font-black text-[10px] uppercase tracking-widest cursor-pointer z-30"
+              className="flex items-center gap-2 px-4 py-1.5 bg-slate-950 text-white rounded-lg shadow-sm hover:bg-slate-800 active:scale-95 transition-all font-black text-xs uppercase tracking-widest cursor-pointer z-30"
             >
               <Printer className="w-4 h-4 text-sky-400" /> 
               <span>PDF</span>
             </button>
           </div>
 
-          <div className="flex bg-slate-100 p-1.5 rounded-[1.5rem] border border-slate-200 shadow-inner z-30 no-print">
+          <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner z-30 no-print">
             {[
-              { id: 'OVERVIEW', label: 'Vue Globale', icon: LayoutGrid },
-              { id: 'SITES', label: 'Tableau de Bord', icon: MapPin },
-              { id: 'CONSOLIDATION', label: 'Consolidation', icon: BarChart3 },
+              { id: 'OVERVIEW', label: 'Global', icon: LayoutGrid },
+              { id: 'SITES', label: 'Sites', icon: MapPin },
+              { id: 'CONSOLIDATION', label: 'Audit', icon: BarChart3 },
               { id: 'CRITICAL', label: 'Alertes', icon: AlertCircle },
             ].map(tab => (
               <button
                 key={tab.id}
                 onClick={() => {
-                  console.log('Switching to tab:', tab.id);
                   setActiveTab(tab.id as any);
                 }}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all cursor-pointer",
+                  "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer",
                   activeTab === tab.id 
-                    ? "bg-white text-slate-950 shadow-md border border-slate-100" 
+                    ? "bg-white text-slate-950 shadow-sm border border-slate-100" 
                     : "text-slate-400 hover:text-slate-600 hover:bg-slate-200/50"
                 )}
               >
@@ -369,68 +368,35 @@ export function ReportPage() {
 
         {/* --- GLOBAL VIEW (EVERYTHING) --- */}
         {activeTab === 'OVERVIEW' && (
-          <div className="space-y-12">
+          <div className="space-y-6">
             {/* EXECUTIVE KPI GRID */}
-            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <div className="card-kpi bg-slate-950 text-white border-0 shadow-2xl relative overflow-hidden group">
-                <p className="text-[10px] font-black uppercase tracking-widest opacity-60 mb-2">Valeur Consolidée du Stock</p>
-                <p className="text-3xl font-black tracking-tighter leading-none">{formatCurrency(analytics.totalStockValue)}</p>
-                <div className="mt-6 flex items-center gap-2">
-                  <span className="text-[9px] font-black px-2 py-0.5 bg-sky-500/20 text-sky-300 rounded uppercase">Groupe SMI</span>
+            <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+              <div className="card bg-slate-950 text-white p-8 rounded-[2rem] border-0 shadow-lg relative overflow-hidden group">
+                <p className="text-lg font-black uppercase tracking-tighter opacity-60 mb-3">Valeur Consolidée</p>
+                <p className="text-5xl font-black tracking-tighter leading-none">{formatCurrency(analytics.totalStockValue)}</p>
+              </div>
+
+              <div className="card bg-white p-8 rounded-[2rem] border-slate-100 shadow-sm group hover:border-sky-100 transition-colors">
+                <p className="text-lg font-black text-slate-400 uppercase tracking-tighter mb-3">Sorties Jour</p>
+                <div className="flex items-baseline gap-3">
+                  <p className="text-5xl font-black text-rose-600 tracking-tighter leading-none">{formatCurrency(analytics.dailyStats.out)}</p>
+                  <ArrowDownRight className="w-8 h-8 text-rose-500" />
                 </div>
               </div>
 
-              <div className="card-kpi bg-white border-slate-100 shadow-xl group hover:border-sky-100 transition-colors">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Consommation Aujourd'hui</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-3xl font-black text-rose-600 tracking-tighter leading-none">{formatCurrency(analytics.dailyStats.out)}</p>
-                  <ArrowDownRight className="w-4 h-4 text-rose-500" />
-                </div>
-                <div className="mt-6">
-                  <div className="flex items-center gap-2">
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Mouvements de Sorties Actifs</span>
-                  </div>
-                </div>
+              <div className="card bg-white p-8 rounded-[2rem] border-slate-100 shadow-sm group hover:border-amber-100 transition-colors">
+                <p className="text-lg font-black text-slate-400 uppercase tracking-tighter mb-3">Alertes Critiques</p>
+                <p className="text-5xl font-black text-amber-600 tracking-tighter leading-none">{analytics.lowStockCount || 0}</p>
               </div>
 
-              <div className="card-kpi bg-white border-slate-100 shadow-xl group hover:border-amber-100 transition-colors">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Alertes Critiques</p>
-                <p className="text-3xl font-black text-amber-600 tracking-tighter leading-none">{analytics.lowStockCount || 0}</p>
-                <div className="mt-6">
-                   <div className="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                     <div 
-                        className="bg-amber-500 h-full transition-all duration-1000" 
-                        style={{ width: `${Math.min(100, analytics.totalArticles > 0 ? (analytics.lowStockCount/analytics.totalArticles)*100 : 0)}%` }} 
-                     />
-                   </div>
-                </div>
-              </div>
-
-              <div className="card-kpi bg-white border-slate-100 shadow-xl group hover:border-sky-100 transition-colors">
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Opérations en Transit</p>
-                <p className="text-3xl font-black text-sky-600 tracking-tighter leading-none">{analytics.inTransit.length}</p>
-                <div className="mt-6 flex items-center gap-2">
-                  <Truck className="w-4 h-4 text-sky-500 opacity-50" />
-                  <span className="text-[9px] font-black text-sky-600 uppercase tracking-widest">{formatCurrency(analytics.inTransitValue)} Immo.</span>
-                </div>
-              </div>
-
-              <div className="card-kpi bg-rose-50 border-rose-100 shadow-xl group hover:border-rose-200 transition-colors">
-                <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-2">Valeur en Risque (Ruptures)</p>
-                <p className="text-3xl font-black text-rose-700 tracking-tighter leading-none">
-                  {formatCurrency(analytics.lowStockItems.reduce((sum, i) => sum + ((i.quantity || 0) * (i.price || 0)), 0))}
-                </p>
-                <div className="mt-6 flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 text-rose-500 opacity-50" />
-                  <span className="text-[9px] font-black text-rose-600 uppercase tracking-widest">
-                    {analytics.lowStockCount} Articles concernés
-                  </span>
-                </div>
+              <div className="card bg-white p-8 rounded-[2rem] border-slate-100 shadow-sm group hover:border-sky-100 transition-colors">
+                <p className="text-lg font-black text-slate-400 uppercase tracking-tighter mb-3">En Transit</p>
+                <p className="text-5xl font-black text-sky-600 tracking-tighter leading-none">{analytics.inTransit.length}</p>
               </div>
             </section>
 
             {/* CHARTS & ANALYTICS ROW */}
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
               {/* Main Evolution Chart */}
               <div className="lg:col-span-8 card glass p-8 shadow-2xl relative overflow-hidden backdrop-blur-none bg-white/70">
                  <div className="flex items-center justify-between mb-10">
@@ -448,9 +414,9 @@ export function ReportPage() {
                      </div>
                    </div>
                  </div>
-                 <div className="h-[350px]">
-                   <ResponsiveContainer width="100%" height="100%">
-                     <AreaChart data={analytics.last14Days} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                 <div className="h-[350px] min-h-[350px]">
+                   <ResponsiveContainer width="100%" height="100%" minHeight={350} minWidth={0} debounce={50}>
+                     <AreaChart data={analytics.last14Days} margin={{ top: 10, right: 10, left: 40, bottom: 0 }}>
                        <defs>
                          <linearGradient id="colorEn" x1="0" y1="0" x2="0" y2="1">
                            <stop offset="5%" stopColor="#10b981" stopOpacity={0.2}/>
@@ -476,11 +442,11 @@ export function ReportPage() {
 
               {/* Distribution Pie Chart */}
               <div className="lg:col-span-4 card glass p-8 shadow-2xl flex flex-col backdrop-blur-none bg-white/70">
-                <h3 className="text-base font-black text-slate-900 uppercase tracking-tighter mb-8">
+                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-8">
                   Distribution par Type
                 </h3>
-                <div className="h-[240px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
+                <div className="h-[240px] w-full min-h-[240px]">
+                  <ResponsiveContainer width="100%" height="100%" minHeight={240} minWidth={0} debounce={50}>
                     <PieChart>
                       <Pie
                         data={analytics.distributionData}
@@ -501,14 +467,14 @@ export function ReportPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="mt-8 space-y-3 w-full max-h-[180px] overflow-y-auto pr-2 custom-scrollbar">
+                <div className="mt-8 space-y-4 w-full max-h-[200px] overflow-y-auto pr-2 custom-scrollbar">
                   {analytics.distributionData.sort((a,b) => b.value - a.value).map((item, index) => (
                     <div key={item.name} className="flex justify-between items-center group">
                       <div className="flex items-center gap-3">
-                        <div className="w-2.5 h-2.5 rounded-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest truncate max-w-[120px]">{item.name}</span>
+                        <div className="w-3.5 h-3.5 rounded-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }} />
+                        <span className="text-xl font-black text-slate-400 uppercase tracking-widest truncate max-w-[200px]">{item.name}</span>
                       </div>
-                      <span className="text-[11px] font-black text-slate-900">{formatCurrency(item.value)}</span>
+                      <span className="text-2xl font-black text-slate-900">{formatCurrency(item.value)}</span>
                     </div>
                   ))}
                 </div>
@@ -517,30 +483,30 @@ export function ReportPage() {
 
             {/* SUMMARY INFO ROW */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-               {/* Site Performance Summary Mini-Table */}
+               {/* Site Performance Summary Mini */}
                <div className="card glass p-8 shadow-xl">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-sky-500" /> Bilan Financier par Site
+                  <div className="flex items-center justify-between mb-10">
+                    <h3 className="text-2xl font-black text-slate-900 uppercase tracking-widest flex items-center gap-4">
+                      <MapPin className="w-8 h-8 text-sky-500" /> Bilan Financier par Site
                     </h3>
-                    <button onClick={() => setActiveTab('SITES')} className="text-[9px] font-black text-sky-600 uppercase tracking-widest hover:underline no-print">Détails Complets</button>
+                    <button onClick={() => setActiveTab('SITES')} className="text-lg font-black text-sky-600 uppercase tracking-widest hover:underline no-print">Détails Complets</button>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-6">
                     {analytics.siteStats.slice(0, 5).map((site) => (
-                      <div key={site.site} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-slate-100 hover:border-sky-200 transition-colors">
+                      <div key={site.site} className="flex items-center justify-between p-6 bg-slate-50/50 rounded-3xl border border-slate-100 hover:border-sky-200 transition-colors">
                         <div className="flex items-center gap-4">
-                          <span className="w-10 h-10 flex items-center justify-center bg-white rounded-lg text-[10px] font-black text-slate-400 border border-slate-100 uppercase">{site.site}</span>
+                          <span className="w-10 h-10 flex items-center justify-center bg-white rounded-xl text-[10px] font-black text-slate-400 border border-slate-100 uppercase">{site.site}</span>
                           <div>
-                            <p className="text-[11px] font-black text-slate-900 uppercase truncate max-w-[150px]">{site.label}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{site.count} Réf.</p>
+                            <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[250px]">{site.label}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{site.count} Réf.</p>
                           </div>
                         </div>
                         <div className="text-right">
                           <p className="text-sm font-black text-slate-950">{formatCurrency(site.value)}</p>
-                          <div className="flex items-center justify-end gap-1 mt-1">
-                            {site.critical > 0 && <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />}
-                            <span className={cn("text-[8px] font-black uppercase", site.critical > 0 ? "text-rose-500" : "text-emerald-500")}>
-                              {site.critical} Alertes
+                          <div className="flex items-center justify-end gap-1.5 mt-1">
+                            {site.critical > 0 && <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />}
+                            <span className={cn("text-[10px] font-black uppercase", site.critical > 0 ? "text-rose-500" : "text-emerald-500")}>
+                               {site.critical} Alertes
                             </span>
                           </div>
                         </div>
@@ -549,22 +515,22 @@ export function ReportPage() {
                   </div>
                </div>
 
-               {/* Top Consumed Items Mini-Table */}
+               {/* Top Consumed Items Mini */}
                <div className="card glass p-8 shadow-xl">
-                  <div className="flex items-center justify-between mb-6">
-                    <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                       <TrendingUp className="w-4 h-4 text-rose-500" /> Top Consommation Sorties
+                  <div className="flex items-center justify-between mb-8">
+                    <h3 className="text-base font-black text-slate-900 uppercase tracking-widest flex items-center gap-4">
+                       <TrendingUp className="w-5 h-5 text-rose-500" /> Top Consommation Sorties
                     </h3>
-                    <button onClick={() => setActiveTab('CRITICAL')} className="text-[9px] font-black text-sky-600 uppercase tracking-widest hover:underline no-print">Top 10 Complet</button>
+                    <button onClick={() => setActiveTab('CRITICAL')} className="text-sm font-black text-sky-600 uppercase tracking-widest hover:underline no-print">Top 10 Complet</button>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-5">
                     {analytics.topConsumed.slice(0, 5).map((item, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-3 bg-slate-50/50 rounded-xl border border-slate-100 hover:border-rose-200 transition-colors">
-                        <div className="flex items-center gap-4">
-                          <span className="w-8 h-8 flex items-center justify-center bg-white rounded-lg text-xs font-black text-rose-500 border border-slate-100">0{idx+1}</span>
-                          <div className="truncate max-w-[200px]">
-                            <p className="text-[11px] font-black text-slate-900 uppercase truncate">{item.name}</p>
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.ref} • {item.qty} {item.unit}</p>
+                      <div key={item.ref} className="flex items-center justify-between p-4 bg-slate-50/50 rounded-2xl border border-slate-100 hover:border-rose-200 transition-colors">
+                        <div className="flex items-center gap-5">
+                          <span className="w-10 h-10 flex items-center justify-center bg-white rounded-xl text-sm font-black text-rose-500 border border-slate-100">0{idx+1}</span>
+                          <div className="truncate max-w-[250px]">
+                            <p className="text-sm font-black text-slate-900 uppercase truncate">{item.name}</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.ref} • {item.qty} {item.unit}</p>
                           </div>
                         </div>
                         <p className="text-sm font-black text-rose-600">{formatCurrency(item.value)}</p>
@@ -576,30 +542,30 @@ export function ReportPage() {
 
             {/* CRITICAL STOCK ALERTS (New in Overview) */}
             <div className="card glass p-8 shadow-xl border-rose-100">
-               <div className="flex items-center justify-between mb-6">
-                 <h3 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
-                   <AlertCircle className="w-4 h-4 text-rose-500" /> Urgences de Réapprovisionnement
+               <div className="flex items-center justify-between mb-8">
+                 <h3 className="text-base font-black text-slate-900 uppercase tracking-widest flex items-center gap-3">
+                   <AlertCircle className="w-5 h-5 text-rose-500" /> Urgences de Réapprovisionnement
                  </h3>
-                 <button onClick={() => setActiveTab('CRITICAL')} className="text-[9px] font-black text-rose-600 uppercase tracking-widest hover:underline no-print">Gérer les Alertes</button>
+                 <button onClick={() => setActiveTab('CRITICAL')} className="text-sm font-black text-rose-600 uppercase tracking-widest hover:underline no-print">Gérer les Alertes</button>
                </div>
-               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                  {analytics.lowStockItems.slice(0, 6).map((item) => (
-                   <div key={item.id} className="flex items-center justify-between p-4 bg-rose-50/20 rounded-2xl border border-rose-100 group transition-all">
-                     <div className="flex items-center gap-4">
-                        <div className="w-8 h-8 bg-white rounded-lg flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-100 uppercase">{item.site.slice(0,3)}</div>
+                   <div key={item.id} className="flex items-center justify-between p-5 bg-rose-50/20 rounded-2xl border border-rose-100 group transition-all">
+                     <div className="flex items-center gap-5">
+                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-xs font-black text-slate-400 border border-slate-100 uppercase">{item.site.slice(0,3)}</div>
                         <div>
-                          <p className="text-[10px] font-black text-slate-900 uppercase truncate max-w-[120px]">{item.designation}</p>
-                          <p className="text-[8px] font-bold text-slate-400 uppercase tracking-[0.2em]">{item.ref}</p>
+                          <p className="text-sm font-black text-slate-900 uppercase truncate max-w-[150px]">{item.designation}</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-[0.2em]">{item.ref}</p>
                         </div>
                      </div>
                      <div className="text-right">
                        <p className="text-sm font-black text-rose-600 leading-none">{item.quantity}</p>
-                       <p className="text-[8px] font-bold text-slate-400 uppercase">Min: {item.minStock}</p>
+                       <p className="text-[10px] font-bold text-slate-400 uppercase">Min: {item.minStock}</p>
                      </div>
                    </div>
                  ))}
                  {analytics.lowStockItems.length === 0 && (
-                   <div className="col-span-full py-8 text-center bg-emerald-50 rounded-2xl border border-emerald-100 italic text-emerald-600 font-bold text-xs uppercase tracking-widest">
+                   <div className="col-span-full py-12 text-center bg-emerald-50 rounded-2xl border border-emerald-100 italic text-emerald-600 font-bold text-lg uppercase tracking-widest">
                      Félicitations • Aucun article en rupture critique
                    </div>
                  )}
@@ -613,20 +579,20 @@ export function ReportPage() {
           <div className="space-y-8 animate-in slide-in-from-bottom-5 duration-700">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 no-print">
               <div>
-                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
                   <BarChart3 className="w-6 h-6 text-sky-500" /> Consolidation Analytique par Site
                 </h3>
                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Audit financier et volumétrique consolidé</p>
               </div>
               <div className="flex items-center gap-4">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 shadow-sm" />
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
                   <input 
                     type="text"
                     placeholder="Filtrer un site..."
                     value={siteSearch}
                     onChange={(e) => setSiteSearch(e.target.value)}
-                    className="pl-11 pr-6 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold focus:ring-2 focus:ring-sky-500 outline-none w-64 shadow-sm"
+                    className="pl-12 pr-6 h-12 bg-white border border-slate-200 rounded-xl text-lg font-bold focus:ring-2 focus:ring-sky-500 outline-none w-80 shadow-sm"
                   />
                 </div>
               </div>
@@ -687,12 +653,12 @@ export function ReportPage() {
                                   direction: sortConfig.key === key && sortConfig.direction === 'desc' ? 'asc' : 'desc'
                                 });
                               }}
-                              className="px-6 py-5 text-[10px] font-black text-slate-500 uppercase tracking-widest cursor-pointer hover:text-sky-600 transition-colors"
+                              className="px-6 py-6 text-sm font-black text-slate-500 uppercase tracking-widest cursor-pointer hover:text-sky-600 transition-colors"
                             >
                               <div className="flex items-center gap-2">
                                 {label}
                                 {sortConfig.key === key && (
-                                  <TrendingUp className={cn("w-3 h-3 transition-transform", sortConfig.direction === 'asc' ? "rotate-180" : "")} />
+                                  <TrendingUp className={cn("w-4 h-4 transition-transform", sortConfig.direction === 'asc' ? "rotate-180" : "")} />
                                 )}
                               </div>
                             </th>
@@ -708,46 +674,46 @@ export function ReportPage() {
                         )
                         .sort((a: any, b: any) => {
                           const valA = a[sortConfig.key];
-                          const valB = b[sortConfig.key];
+                           const valB = b[sortConfig.key];
                           if (valA < valB) return sortConfig.direction === 'asc' ? -1 : 1;
                           if (valA > valB) return sortConfig.direction === 'asc' ? 1 : -1;
                           return 0;
                         })
                         .map((site) => (
                         <tr key={site.site} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="px-6 py-5">
-                            <span className="px-3 py-1 bg-slate-900 text-white text-[10px] font-black rounded-lg uppercase shadow-lg group-hover:scale-110 transition-transform inline-block">
+                          <td className="px-6 py-6">
+                            <span className="px-4 py-1.5 bg-slate-900 text-white text-xs font-black rounded-lg uppercase shadow-lg group-hover:scale-110 transition-transform inline-block">
                               {site.site}
                             </span>
                           </td>
-                          <td className="px-6 py-5">
-                            <span className="text-xs font-black text-slate-900 uppercase">{site.label}</span>
+                          <td className="px-6 py-6">
+                            <span className="text-base font-black text-slate-900 uppercase">{site.label}</span>
                           </td>
-                          <td className="px-6 py-5">
-                            <span className="text-xs font-black text-slate-950">{formatCurrency(site.value)}</span>
+                          <td className="px-6 py-6">
+                            <span className="text-base font-black text-slate-950">{formatCurrency(site.value)}</span>
                           </td>
-                          <td className="px-6 py-5">
-                            <span className="text-xs font-bold text-slate-600">{site.count} Réf.</span>
+                          <td className="px-6 py-6">
+                            <span className="text-base font-bold text-slate-600">{site.count} Réf.</span>
                           </td>
-                          <td className="px-6 py-5">
+                          <td className="px-6 py-6">
                             <div className="flex items-center gap-2">
                               {site.critical > 0 ? (
-                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-full border border-rose-100 text-[9px] font-black uppercase">
-                                  <AlertCircle className="w-3 h-3" /> {site.critical} Alertes
+                                <span className="flex items-center gap-2 px-3 py-1 bg-rose-50 text-rose-600 rounded-full border border-rose-100 text-xs font-black uppercase">
+                                  <AlertCircle className="w-4 h-4" /> {site.critical} Alertes
                                 </span>
                               ) : (
-                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-[9px] font-black uppercase">
-                                  <CheckCircle2 className="w-3 h-3" /> Optimal
+                                <span className="flex items-center gap-2 px-3 py-1 bg-emerald-50 text-emerald-600 rounded-full border border-emerald-100 text-xs font-black uppercase">
+                                  <CheckCircle2 className="w-4 h-4" /> Optimal
                                 </span>
                               )}
                             </div>
                           </td>
-                          <td className="px-6 py-5">
-                            <div className="w-24">
-                              <div className="flex items-center justify-between mb-1.5">
-                                <span className="text-[9px] font-black text-slate-400">{( (site.value / analytics.totalStockValue) * 100).toFixed(1)}%</span>
+                          <td className="px-6 py-6">
+                            <div className="w-32">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-black text-slate-400">{( (site.value / analytics.totalStockValue) * 100).toFixed(1)}%</span>
                               </div>
-                              <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                              <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                                 <div 
                                   className="h-full bg-sky-500 rounded-full transition-all duration-1000" 
                                   style={{ width: `${(site.value / analytics.totalStockValue) * 100}%` }} 
@@ -785,9 +751,9 @@ export function ReportPage() {
                 </h4>
                 <div className="text-[9px] font-black text-slate-400 uppercase tracking-widest italic no-print">Valeur des Articles en Stock par Site d'Exploitation</div>
               </div>
-              <div className="h-[400px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={analytics.siteStats} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+              <div className="h-[400px] min-h-[400px]">
+                <ResponsiveContainer width="100%" height="100%" minHeight={400} minWidth={0} debounce={50}>
+                  <BarChart data={analytics.siteStats} margin={{ top: 20, right: 30, left: 40, bottom: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                     <XAxis 
                       dataKey="site" 
@@ -889,29 +855,29 @@ export function ReportPage() {
         {activeTab === 'CRITICAL' && (
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
             <div className="card glass p-8 shadow-2xl">
-               <h3 className="text-base font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
-                 <Package className="w-5 h-5 text-sky-500" /> Articles à Forte Consommation (Top 10)
+               <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-10 flex items-center gap-4">
+                 <Package className="w-7 h-7 text-sky-500" /> Articles à Forte Consommation (Top 10)
                </h3>
-               <div className="table-container rounded-3xl border border-slate-100 h-[600px] overflow-y-auto">
+               <div className="table-container rounded-3xl border border-slate-100 h-[650px] overflow-y-auto">
                  <table className="data-table">
                    <thead className="sticky top-0 bg-white z-10">
                      <tr>
-                       <th>Article / Réf</th>
-                       <th className="text-center">Qte Sortie</th>
-                       <th className="text-right">Valeur</th>
+                       <th className="py-5 px-6 text-sm">Article / Réf</th>
+                       <th className="text-center py-5 px-6 text-sm">Qte Sortie</th>
+                       <th className="text-right py-5 px-6 text-sm">Valeur</th>
                      </tr>
-                   </thead>
+                    </thead>
                    <tbody className="divide-y divide-slate-100">
-                     {analytics.topConsumed.map((item, idx) => (
-                       <tr key={idx} className="hover:bg-slate-50 transition-colors">
-                         <td className="px-6 py-4">
-                           <div className="flex flex-col">
-                             <span className="text-xs font-black text-slate-900 uppercase truncate max-w-[250px]">{item.name}</span>
-                             <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.ref} • {item.type}</span>
+                     {analytics.topConsumed.map((item) => (
+                       <tr key={item.ref} className="hover:bg-slate-50 transition-colors">
+                         <td className="px-6 py-6">
+                           <div className="flex flex-col gap-1">
+                             <span className="text-base font-black text-slate-900 uppercase truncate max-w-[300px]">{item.name}</span>
+                             <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.ref} • {item.type}</span>
                            </div>
                          </td>
-                         <td className="px-6 py-4 text-center font-black text-slate-700 text-xs">{item.qty} {item.unit}</td>
-                         <td className="px-6 py-4 text-right font-black text-rose-600 text-xs">{formatCurrency(item.value)}</td>
+                         <td className="px-6 py-6 text-center font-black text-slate-700 text-lg">{item.qty} {item.unit}</td>
+                         <td className="px-6 py-6 text-right font-black text-rose-600 text-lg">{formatCurrency(item.value)}</td>
                        </tr>
                      ))}
                    </tbody>
@@ -920,28 +886,28 @@ export function ReportPage() {
             </div>
 
             <div className="card glass p-8 shadow-2xl border-rose-100 backdrop-blur-none bg-white">
-               <h3 className="text-base font-black text-slate-900 uppercase tracking-tighter mb-8 flex items-center gap-3">
-                 <AlertCircle className="w-5 h-5 text-rose-500" /> Priorités Ravitaillement (Stock Critiques)
+               <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-10 flex items-center gap-4">
+                 <AlertCircle className="w-7 h-7 text-rose-500" /> Priorités Ravitaillement (Stock Critiques)
                </h3>
-               <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2 custom-scrollbar no-print-scroll">
+               <div className="space-y-5 max-h-[650px] overflow-y-auto pr-2 custom-scrollbar no-print-scroll">
                  {analytics.lowStockItems.length > 0 ? analytics.lowStockItems.map((item) => (
-                   <div key={item.id} className="flex items-center justify-between p-4 bg-rose-50/20 rounded-2xl border border-rose-100 group hover:border-rose-300 transition-all">
-                     <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-[10px] font-black text-slate-400 border border-slate-100">{item.site.slice(0,3)}</div>
+                   <div key={item.id} className="flex items-center justify-between p-6 bg-rose-50/20 rounded-2xl border border-rose-100 group hover:border-rose-300 transition-all">
+                     <div className="flex items-center gap-5">
+                        <div className="w-12 h-12 bg-white rounded-xl flex items-center justify-center text-xs font-black text-slate-400 border border-slate-100">{item.site.slice(0,3)}</div>
                         <div>
-                          <p className="text-xs font-black text-slate-900 uppercase">{item.designation}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{item.ref} • {item.location}</p>
+                          <p className="text-base font-black text-slate-900 uppercase">{item.designation}</p>
+                          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">{item.ref} • {item.location}</p>
                         </div>
                      </div>
                      <div className="text-right">
-                       <p className="text-lg font-black text-rose-600 leading-none">{item.quantity}</p>
-                       <p className="text-[9px] font-bold text-slate-400 uppercase">Seuil: {item.minStock}</p>
+                       <p className="text-3xl font-black text-rose-600 leading-none">{item.quantity}</p>
+                       <p className="text-xs font-bold text-slate-400 uppercase mt-1">Seuil: {item.minStock}</p>
                      </div>
                    </div>
                  )) : (
-                   <div className="py-20 text-center opacity-40">
-                     <CheckCircle2 className="w-12 h-12 mx-auto mb-4 text-emerald-500" />
-                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Aucune alerte critique</p>
+                   <div className="py-24 text-center opacity-40">
+                     <CheckCircle2 className="w-16 h-16 mx-auto mb-6 text-emerald-500" />
+                     <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Aucune alerte critique</p>
                    </div>
                  )}
                </div>

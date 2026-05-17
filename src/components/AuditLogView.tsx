@@ -24,10 +24,10 @@ export function AuditLogView({ logs }: AuditLogViewProps) {
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
-          <h2 className="text-3xl font-black text-slate-950 flex items-center gap-3 lowercase">
-            <ShieldCheck className="w-8 h-8 text-sky-500" /> Audit Log <span className="text-slate-300 font-medium">/ La Boîte Noire</span>
+          <h2 className="text-5xl font-black text-slate-950 flex items-center gap-4 tracking-tighter uppercase leading-none">
+            <ShieldCheck className="w-16 h-16 text-sky-500" /> Audit Log
           </h2>
-          <p className="text-slate-500 font-medium mt-1">Traçabilité totale des opérations critiques en temps réel</p>
+          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-4 opacity-70">Traçabilité totale des opérations critiques en temps réel</p>
         </div>
 
         <div className="flex items-center gap-4">

@@ -5,13 +5,14 @@ import { Article, StockType, SiteCode, CatalogItem } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { MASTER_CATALOG } from '../catalogData';
 import Papa from 'papaparse';
+import { toast } from 'sonner';
 
 interface ArticleManagementProps {
   site: SiteCode;
   articles: Article[];
   catalog: CatalogItem[];
   saveCatalogItem?: (item: CatalogItem) => Promise<void>;
-  setCatalog: (catalog: CatalogItem[] | ((prev: CatalogItem[]) => CatalogItem[])) => void;
+  deleteCatalogItem?: (id: string) => Promise<void>;
   onSave: (article: Article) => void;
   onDelete: (id: string) => void;
 }
@@ -57,7 +58,7 @@ function NotificationCenter({ notifications }: { notifications: { id: string, me
   );
 }
 
-export function ArticleManagement({ site, articles, catalog, saveCatalogItem, setCatalog, onSave, onDelete }: ArticleManagementProps) {
+export function ArticleManagement({ site, articles, catalog, saveCatalogItem, deleteCatalogItem, onSave, onDelete }: ArticleManagementProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingArticle, setEditingArticle] = useState<Partial<Article> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -65,7 +66,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
   const [activeCatalogType, setActiveCatalogType] = useState<StockType>('ENGINS');
   const [catalogSearch, setCatalogSearch] = useState('');
   
-  // Dynamic Catalog State - Removed internal state, using props
+  // Dynamic Catalog State
   const [isManagingCatalog, setIsManagingCatalog] = useState(false);
   const [editingCatalogItem, setEditingCatalogItem] = useState<Partial<CatalogItem> | null>(null);
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
@@ -170,12 +171,12 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
   const [isImporting, setIsImporting] = useState(false);
   const [importProgress, setImportProgress] = useState(0);
   
-    const handleCsvUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const handleCsvUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
       const file = event.target.files?.[0];
       if (!file) return;
 
       const confirmReplacement = confirm(
-        `AVERTISSEMENT : L'importation d'un nouveau fichier va remplacer les données actuelles du catalogue ${activeCatalogType === 'ENGINS' ? 'ST2G/ST2D' : 'Perforateurs'}.\n\nVoulez-vous continuer ?`
+        `AVERTISSEMENT : L'importation d'un nouveau fichier va ajouter ces données au catalogue ${activeCatalogType === 'ENGINS' ? 'ST2G/ST2D' : 'Perforateurs'}.\n\nVoulez-vous continuer ?`
       );
 
       if (!confirmReplacement) {
@@ -317,12 +318,13 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
             }
           };
 
-          const finalizeImport = () => {
+          const finalizeImport = async () => {
              if (newItems.length > 0) {
-               setCatalog(prev => {
-                 const otherTypeItems = prev.filter(item => item.suggestedType !== activeCatalogType);
-                 return [...otherTypeItems, ...newItems];
-               });
+               if (saveCatalogItem) {
+                 for (const item of newItems) {
+                   await saveCatalogItem(item);
+                 }
+               }
                setNavPath([]);
                setCatalogSearch('');
                setImportProgress(100);
@@ -352,20 +354,30 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
       });
     };
 
-  const deleteCatalogBranch = (scope: 'CATEGORY' | 'SUBCATEGORY' | 'COMPONENT', value: string) => {
+  const handleDeleteCatalogBranch = async (scope: 'CATEGORY' | 'SUBCATEGORY' | 'COMPONENT', value: string) => {
     if (!confirm(`Êtes-vous sûr de vouloir supprimer toute la branche "${value}" ?`)) return;
 
-    setCatalog(prev => prev.filter(item => {
-      if (scope === 'CATEGORY') return item.functionalCategory !== value;
-      if (scope === 'SUBCATEGORY') return item.subCategory !== value || item.functionalCategory !== navPath[0]?.value;
-      if (scope === 'COMPONENT') return item.component !== value || item.subCategory !== navPath[1]?.value || item.functionalCategory !== navPath[0]?.value;
-      return true;
-    }));
+    const itemsToDelete = catalog.filter(item => {
+      if (scope === 'CATEGORY') return item.functionalCategory === value;
+      if (scope === 'SUBCATEGORY') return item.subCategory === value && item.functionalCategory === navPath[0]?.value;
+      if (scope === 'COMPONENT') return item.component === value && item.subCategory === navPath[1]?.value && item.functionalCategory === navPath[0]?.value;
+      return false;
+    });
+
+    if (deleteCatalogItem) {
+      for (const item of itemsToDelete) {
+        await deleteCatalogItem(item.id);
+      }
+      addNotification(`${itemsToDelete.length} références supprimées`, "success");
+    }
   };
 
-  const deleteCatalogItem = (id: string) => {
+  const handleDeleteCatalogItem = async (id: string) => {
     if (!confirm('Supprimer cette référence du catalogue ?')) return;
-    setCatalog(prev => prev.filter(item => item.id !== id));
+    if (deleteCatalogItem) {
+      await deleteCatalogItem(id);
+      addNotification("Référence supprimée du master", "success");
+    }
   };
 
   const handleSaveCatalogItem = async () => {
@@ -468,21 +480,21 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <header className="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-slate-100">
+      <header className="flex flex-col md:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
-          <h2 className="text-base font-black text-slate-950 tracking-tighter uppercase">Catalogue Articles</h2>
-          <p className="text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em] mt-1">Gouvernance des références techniques du site {site}</p>
+          <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Catalogue Articles</h2>
+          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">Gouvernance des références techniques du site {site}</p>
         </div>
-        <div className="flex gap-4">
+        <div className="flex gap-2">
           <button 
             onClick={() => {
               setActiveCatalogType('ENGINS');
               setIsCatalogOpen(true);
             }} 
-            className="btn bg-white text-sky-600 border-2 border-sky-100 hover:border-sky-600 shadow-xl h-14 px-8 rounded-2xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-3 relative overflow-hidden"
+            className="btn bg-white text-sky-600 border border-sky-100 hover:border-sky-600 shadow-sm h-9 px-3 rounded-lg transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-1.5 relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-sky-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Database className="w-5 h-5 group-hover:scale-110 transition-transform relative z-10" /> 
+            <Database className="w-3.5 h-3.5 group-hover:scale-110 transition-transform relative z-10" /> 
             <span className="relative z-10">Catalogue ST2G/ST2D</span>
           </button>
           
@@ -491,92 +503,92 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
               setActiveCatalogType('PERFORATEURS');
               setIsCatalogOpen(true);
             }} 
-            className="btn bg-white text-red-700 border-2 border-red-100 hover:border-red-700 shadow-xl h-14 px-8 rounded-2xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-3 relative overflow-hidden"
+            className="btn bg-white text-red-700 border border-red-100 hover:border-red-700 shadow-sm h-9 px-3 rounded-lg transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-1.5 relative overflow-hidden"
           >
             <div className="absolute inset-0 bg-red-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <Layers className="w-5 h-5 group-hover:scale-110 transition-transform relative z-10" /> 
-            <span className="relative z-10">Catalogue Perforateurs</span>
+            <Layers className="w-3.5 h-3.5 group-hover:scale-110 transition-transform relative z-10" /> 
+            <span className="relative z-10">Catalogue Perfo</span>
           </button>
 
-          <button onClick={handleCreate} className="btn bg-slate-950 text-white hover:bg-sky-600 shadow-2xl h-14 px-8 rounded-2xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-3">
-            <Plus className="w-5 h-5 group-hover:rotate-90 transition-transform duration-500" /> Ajouter Manuel
+          <button onClick={handleCreate} className="btn bg-slate-950 text-white hover:bg-sky-600 shadow-sm h-9 px-4 rounded-lg transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-1.5">
+            <Plus className="w-3.5 h-3.5 group-hover:rotate-90 transition-transform duration-500" /> Ajouter
           </button>
         </div>
       </header>
 
-      <div className="card glass p-6 shadow-2xl ring-1 ring-slate-900/5">
+      <div className="card glass p-4 shadow-xl ring-1 ring-slate-900/5">
         <div className="relative">
-          <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
           <input 
             type="text" 
             placeholder="Rechercher une nomenclature (REF, OEM, Designation)..." 
-            className="input-field pl-14 h-14 text-base bg-white/40 border-slate-200/50"
+            className="input-field pl-11 h-10 text-sm bg-white/40 border-slate-200/50 rounded-xl font-black tracking-tight"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      <div className="table-container glass border-0 shadow-2xl ring-1 ring-slate-900/5 overflow-hidden">
-        <table className="data-table w-full">
+      <div className="table-container glass border-0 shadow-xl ring-1 ring-slate-900/5 overflow-hidden rounded-xl">
+        <table className="w-full text-left">
           <thead>
             <tr>
-              <th className="px-8 py-6">Référence & Désignation</th>
-              <th className="px-8 py-6">Classification</th>
-              <th className="px-8 py-6 text-right">Prix Unit.</th>
-              <th className="px-8 py-6 text-right">Seuil Alerte</th>
-              <th className="px-8 py-6">Localisation</th>
-              <th className="px-8 py-6">Statut</th>
-              <th className="px-8 py-6 text-center">Actions</th>
+              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Référence & Désignation</th>
+              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Classification</th>
+              <th className="px-6 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Prix Unit.</th>
+              <th className="px-6 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Seuil Alerte</th>
+              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Localisation</th>
+              <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Statut</th>
+              <th className="px-6 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100/50">
             {filteredArticles.map(article => (
               <tr key={article.id} className="group hover:bg-white/60 transition-all duration-300">
-                <td className="px-8 py-6">
-                  <p className="font-mono text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">#{article.ref}</p>
-                  <p className="font-black text-slate-900 text-base leading-tight">{article.designation}</p>
+                <td className="px-6 py-4">
+                  <p className="font-mono text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">#{article.ref}</p>
+                  <p className="font-black text-slate-900 text-sm leading-tight">{article.designation}</p>
                   {article.component && (
-                    <div className="flex items-center gap-2 mt-2">
+                    <div className="flex items-center gap-2 mt-1.5">
                        <Layers className="w-3 h-3 text-sky-400" />
-                       <p className="text-[9px] font-bold text-sky-600 uppercase tracking-tight">
+                       <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest">
                          {article.functionalCategory} / {article.component}
                        </p>
                     </div>
                   )}
                 </td>
-                <td className="px-8 py-6">
+                <td className="px-6 py-4">
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg w-fit border border-sky-100 uppercase tracking-tighter">
+                    <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-100 uppercase tracking-widest">
                       {article.type}
                     </span>
                     <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{article.category}</span>
                   </div>
                 </td>
-                <td className="px-8 py-6 text-right">
-                  <p className="text-base font-black text-emerald-600">{formatCurrency(article.price)}</p>
+                <td className="px-6 py-4 text-right">
+                  <p className="text-sm font-black text-emerald-600">{formatCurrency(article.price)}</p>
                 </td>
-                <td className="px-8 py-6 text-right">
-                  <p className="text-base font-black text-slate-900">{article.minStock} <span className="text-[10px] text-slate-400 uppercase">{article.unit}</span></p>
+                <td className="px-6 py-4 text-right">
+                  <p className="text-sm font-black text-slate-950">{article.minStock} <span className="text-[10px] text-slate-400 uppercase">{article.unit}</span></p>
                 </td>
-                <td className="px-8 py-6">
-                  <span className="font-bold text-slate-600 text-sm">{article.location}</span>
+                <td className="px-6 py-4 text-left">
+                  <span className="font-black text-slate-600 text-sm">{article.location}</span>
                 </td>
-                <td className="px-8 py-6">
+                <td className="px-6 py-4">
                   <span className={cn(
-                    "px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest border shadow-sm",
+                    "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border",
                     article.active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-100"
                   )}>
                     {article.active ? 'Opérationnel' : 'Archivé'}
                   </span>
                 </td>
-                <td className="px-8 py-6">
-                  <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                    <button onClick={() => handleEdit(article)} className="p-3 bg-white shadow-xl border border-slate-100 text-sky-600 rounded-2xl hover:scale-110 active:scale-95 transition-all">
-                      <Pencil className="w-5 h-5" />
+                <td className="px-6 py-4">
+                  <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(article)} className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors">
+                      <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => onDelete(article.id)} className="p-3 bg-white shadow-xl border border-slate-100 text-rose-600 rounded-2xl hover:scale-110 active:scale-95 transition-all">
-                      <Trash2 className="w-5 h-5" />
+                    <button onClick={() => onDelete(article.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </td>
@@ -588,39 +600,39 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
 
       {isCatalogOpen && (
          <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-xl z-[110] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[4rem] shadow-[0_0_100px_rgba(8,145,213,0.3)] w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
-            <header className="px-12 py-10 border-b border-slate-100 flex items-center justify-between bg-white relative z-10">
-              <div className="flex items-center gap-8">
+          <div className="bg-white rounded-[2rem] shadow-[0_0_100px_rgba(8,145,213,0.3)] w-full max-w-6xl h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95 duration-500 border border-white/20">
+            <header className="px-10 py-6 border-b border-slate-100 flex items-center justify-between bg-white relative z-10">
+              <div className="flex items-center gap-6">
                 <div className={cn(
-                  "p-5 rounded-[2rem] shadow-lg transition-all duration-500 hover:scale-110",
+                  "p-3 rounded-2xl shadow-md transition-all duration-500 hover:scale-110",
                   activeCatalogType === 'ENGINS' 
                     ? "bg-sky-50 text-sky-600 shadow-sky-100" 
                     : "bg-red-50 text-red-600 shadow-red-100"
                 )}>
-                   {activeCatalogType === 'ENGINS' ? <Database className="w-8 h-8" /> : <Layers className="w-8 h-8" />}
+                   {activeCatalogType === 'ENGINS' ? <Database className="w-6 h-6" /> : <Layers className="w-6 h-6" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-3 mb-1">
-                    <div className="shiny-logo px-4 py-1 rounded-2xl bg-white border border-slate-50 transition-all shadow-sm">
-                      <h3 className="text-3xl font-black tracking-tighter uppercase flex items-center">
+                    <div className="shiny-logo px-3 py-1 rounded-xl bg-white border border-slate-50 transition-all shadow-sm">
+                      <h3 className="text-lg font-black tracking-tighter uppercase flex items-center">
                         <span className="text-sky-500">Hydro</span>
                         <span className="text-red-700">Mines</span>
                       </h3>
                     </div>
-                    <span className="mx-3 w-1.5 h-6 bg-slate-200 rounded-full" />
-                    <span className="text-slate-900 font-black text-3xl uppercase tracking-tighter">
+                    <span className="mx-2 w-1.5 h-6 bg-slate-200 rounded-full" />
+                    <span className="text-slate-900 font-black text-lg uppercase tracking-tighter leading-none">
                       {activeCatalogType === 'ENGINS' ? 'ST2G / ST2D' : 'Perforateurs'}
                     </span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <button onClick={() => resetNav(0)} className="text-[11px] font-black text-slate-400 hover:text-sky-600 uppercase tracking-[0.2em] transition-colors">Accueil</button>
+                    <button onClick={() => resetNav(0)} className="text-xs font-black text-slate-400 hover:text-sky-600 uppercase tracking-[0.2em] transition-colors">Accueil</button>
                     {navPath.map((node, i) => (
-                      <React.Fragment key={i}>
-                        <ChevronDown className="w-3 h-3 text-slate-200 -rotate-90" />
+                      <React.Fragment key={`${node.level}-${node.value}`}>
+                        <ChevronDown className="w-3.5 h-3.5 text-slate-200 -rotate-90" />
                         <button 
                           onClick={() => resetNav(i + 1)}
                           className={cn(
-                            "text-[11px] font-black uppercase tracking-[0.2em] transition-all",
+                            "text-xs font-black uppercase tracking-[0.2em] transition-all",
                             i === navPath.length - 1 ? "text-sky-600 scale-105" : "text-slate-400 hover:text-sky-600"
                           )}
                         >
@@ -631,7 +643,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-6">
+              <div className="flex items-center gap-4">
                 <button 
                   onClick={() => {
                     if (isManagingCatalog) {
@@ -640,68 +652,60 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
                     setIsManagingCatalog(!isManagingCatalog);
                   }}
                   className={cn(
-                    "flex items-center gap-3 px-6 h-12 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] transition-all shadow-sm",
+                    "flex items-center gap-3 px-6 h-12 rounded-xl font-black uppercase text-xs tracking-[0.2em] transition-all shadow-sm",
                     isManagingCatalog 
-                      ? "bg-emerald-600 text-white ring-4 ring-emerald-500/20" 
+                      ? "bg-emerald-600 text-white ring-2 ring-emerald-500/20" 
                       : "bg-slate-50 text-slate-500 hover:bg-slate-100"
                   )}
                 >
-                  {isManagingCatalog ? <Save className="w-4 h-4 animate-bounce" /> : <Pencil className="w-4 h-4" />}
-                  {isManagingCatalog ? 'Valider & Synchroniser' : 'Gérer Base'}
+                  {isManagingCatalog ? <Save className="w-5 h-5 animate-bounce" /> : <Pencil className="w-5 h-5" />}
+                  {isManagingCatalog ? 'Valider' : 'Gérer'}
                 </button>
                 <button 
                   onClick={() => {
-                    if (confirm("Voulez-vous réinitialiser ce catalogue avec les données d'usine (Master) ? Vos modifications locales seront perdues.")) {
-                      setCatalog(prev => {
-                        const others = prev.filter(i => i.suggestedType !== activeCatalogType);
-                        const masters = MASTER_CATALOG.filter(i => i.suggestedType === activeCatalogType);
-                        return [...others, ...masters];
-                      });
-                      setNavPath([]);
-                      setCatalogSearch('');
-                    }
+                    toast.info("Fonctionnalité de réinitialisation désactivée. Utilisez l'importation CSV pour mettre à jour le catalogue.");
                   }}
-                  className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all"
+                  className="w-12 h-12 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 hover:text-amber-600 hover:bg-amber-50 transition-all"
                   title="Réinitialiser"
                 >
                   <BookOpen className="w-5 h-5" />
                 </button>
                 <button 
-                  onClick={() => {
+                   onClick={() => {
                     setIsCatalogOpen(false);
                     setNavPath([]);
                     setCatalogSearch('');
                     setIsManagingCatalog(false);
                   }} 
-                  className="w-14 h-14 rounded-[1.5rem] bg-slate-100 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all duration-300 hover:rotate-90"
+                  className="w-12 h-12 rounded-xl bg-slate-100 flex items-center justify-center text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-all duration-300 hover:rotate-90"
                 >
-                  <X className="w-8 h-8" />
+                  <X className="w-6 h-6" />
                 </button>
               </div>
             </header>
             
-            <div className="p-12 pb-0 border-b border-slate-100 bg-slate-50/20">
-               <div className="flex flex-col md:flex-row gap-6 mb-8">
+            <div className="px-10 py-6 pb-0 border-b border-slate-100 bg-slate-50/20">
+               <div className="flex flex-col md:flex-row gap-4 mb-6">
                   <div className="relative flex-1 group">
-                    <div className="absolute inset-0 bg-sky-500/5 rounded-3xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-xl" />
-                    <Search className="absolute left-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 relative z-10" />
+                    <div className="absolute inset-0 bg-sky-500/5 rounded-2xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-lg" />
+                    <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 relative z-10" />
                     <input 
                       type="text" 
-                      placeholder="RECHERCHE AVANCÉE : Tapez une réf, un nom ou une classification..." 
-                      className="input-field pl-16 h-16 text-lg bg-white border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/5 relative z-10 rounded-3xl font-medium tracking-tight shadow-sm"
+                      placeholder="RECHERCHE AVANCÉE (REF, DESIGNATION...)" 
+                      className="input-field pl-14 h-14 text-lg bg-white border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/5 relative z-10 rounded-2xl font-black tracking-tight shadow-sm"
                       value={catalogSearch}
                       onChange={(e) => setCatalogSearch(e.target.value)}
                     />
                     {catalogSearch && (
                       <button 
                          onClick={() => setCatalogSearch('')}
-                         className="absolute right-6 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-50 rounded-xl transition-colors z-20"
+                         className="absolute right-5 top-1/2 -translate-y-1/2 p-2 hover:bg-slate-50 rounded-xl transition-colors z-20"
                       >
                         <X className="w-5 h-5 text-slate-300" />
                       </button>
                     )}
                   </div>
-                  <div className="flex gap-4">
+                  <div className="flex gap-3">
                     <button 
                       onClick={() => {
                         setEditingCatalogItem({ 
@@ -713,26 +717,26 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
                         });
                         setIsCatalogModalOpen(true);
                       }}
-                      className="flex items-center gap-3 px-8 h-16 bg-slate-900 text-white rounded-3xl font-black uppercase text-[10px] tracking-widest hover:bg-sky-600 transition-all shadow-xl active:scale-95"
+                      className="flex items-center gap-3 px-8 h-14 bg-slate-950 text-white rounded-2xl font-black uppercase text-xs tracking-widest hover:bg-sky-600 transition-all shadow-xl active:scale-95 whitespace-nowrap"
                     >
-                      <Plus className="w-6 h-6" /> Ajouter au Master
+                      <Plus className="w-6 h-6" /> Nouveau
                     </button>
 
                     <label className={cn(
-                      "flex items-center gap-4 px-8 h-16 rounded-3xl cursor-pointer transition-all font-black uppercase text-[11px] tracking-[0.2em] whitespace-nowrap border-2 shadow-sm",
+                      "flex items-center gap-3 px-8 h-14 rounded-2xl cursor-pointer transition-all font-black uppercase text-xs tracking-[0.2em] whitespace-nowrap border shadow-sm",
                       isImporting 
                         ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" 
-                        : "bg-white text-emerald-600 border-emerald-100 hover:border-emerald-500 hover:shadow-[0_10px_30px_rgba(16,185,129,0.15)]"
+                        : "bg-white text-emerald-600 border-emerald-100 hover:border-emerald-500 hover:shadow-lg"
                     )}>
                       {isImporting ? (
-                        <div className="flex items-center gap-4">
+                        <div className="flex items-center gap-3">
                           <div className="w-5 h-5 border-3 border-emerald-600 border-t-transparent rounded-full animate-spin" />
-                          Traitement CSV...
+                          CSV...
                         </div>
                       ) : (
                         <>
                           <FileUp className="w-6 h-6" />
-                          Importer CSV
+                          Import CSV
                         </>
                       )}
                       <input 
@@ -747,7 +751,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
                </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto p-12 bg-slate-50/20 relative">
+            <div className="flex-1 overflow-y-auto p-6 bg-slate-50/20 relative">
                {isImporting && (
                  <div className="absolute inset-0 z-[100] bg-white/98 backdrop-blur-2xl flex flex-col items-center justify-center animate-in fade-in duration-700">
                     <div className="w-40 h-40 relative mb-12">
@@ -811,18 +815,12 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
                         
                         <button
                           onClick={() => {
-                            if (confirm("Voulez-vous réinitialiser ce catalogue avec les données d'usine (Master) ? Vos données actuelles pour ce catalogue seront écrasées.")) {
-                              const masters = MASTER_CATALOG.filter(i => i.suggestedType === activeCatalogType);
-                              if (setCatalog) {
-                                const others = catalog.filter(i => i.suggestedType !== activeCatalogType);
-                                setCatalog([...others, ...masters]);
-                              }
-                            }
+                            toast.warning("Importez vos données via CSV pour initialiser le catalogue.");
                           }}
                           className="px-10 py-5 bg-sky-500 text-white rounded-[1.5rem] font-black text-xs uppercase tracking-widest hover:bg-sky-600 transition-all shadow-xl shadow-sky-500/30 active:scale-95 flex items-center gap-3"
                         >
                           <BookOpen className="w-4 h-4" />
-                          Charger les données d'usine
+                          Charger les données
                         </button>
                       </div>
                     ) : (
@@ -860,10 +858,10 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
                         </button>
                         {isManagingCatalog && (
                           <button 
-                            onClick={() => deleteCatalogBranch('SUBCATEGORY', sub)}
-                            className="absolute -top-3 -right-3 w-10 h-10 bg-white text-rose-500 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100 z-20"
+                            onClick={() => handleDeleteCatalogBranch('SUBCATEGORY', sub)}
+                            className="absolute -top-3 -right-3 w-8 h-8 bg-white text-rose-500 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all shadow-lg border border-rose-100 z-20"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -902,10 +900,10 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
                         </button>
                         {isManagingCatalog && (
                           <button 
-                            onClick={() => deleteCatalogBranch('COMPONENT', comp)}
-                            className="absolute -top-3 -right-3 w-10 h-10 bg-white text-rose-500 rounded-xl flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100 z-20"
+                            onClick={() => handleDeleteCatalogBranch('COMPONENT', comp)}
+                            className="absolute -top-3 -right-3 w-8 h-8 bg-white text-rose-500 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 hover:bg-rose-500 hover:text-white transition-all shadow-lg border border-rose-100 z-20"
                           >
-                            <Trash2 className="w-4 h-4" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </button>
                         )}
                       </div>
@@ -1023,21 +1021,21 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
                             </div>
                           </button>
                           {isManagingCatalog && (
-                            <div className="absolute top-6 right-6 flex gap-3">
+                            <div className="absolute top-4 right-4 flex gap-2">
                               <button 
                                 onClick={() => {
                                   setEditingCatalogItem(item);
                                   setIsCatalogModalOpen(true);
                                 }}
-                                className="w-12 h-12 bg-white text-amber-600 rounded-2xl flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all shadow-xl border border-amber-100"
+                                className="w-8 h-8 bg-white text-amber-600 rounded-lg flex items-center justify-center hover:bg-amber-600 hover:text-white transition-all shadow-lg border border-amber-100"
                               >
-                                <Pencil className="w-5 h-5" />
+                                <Pencil className="w-3.5 h-3.5" />
                               </button>
                               <button 
-                                onClick={() => deleteCatalogItem(item.id)}
-                                className="w-12 h-12 bg-white text-rose-500 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100"
+                                onClick={() => handleDeleteCatalogItem(item.id)}
+                                className="w-8 h-8 bg-white text-rose-500 rounded-lg flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-lg border border-rose-100"
                               >
-                                <Trash2 className="w-5 h-5" />
+                                <Trash2 className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           )}
@@ -1151,162 +1149,162 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, se
 
       {isModalOpen && editingArticle && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-300 border border-white/20 ring-1 ring-slate-950/10 flex flex-col max-h-[95vh]">
-            <header className="px-10 py-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-300">
+            <header className="px-10 py-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
               <div>
-                <h3 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">
-                  {articles.some(a => a.id === editingArticle.id) ? 'Modifier Reference' : 'Nouvelle Nomenclature'}
+                <h3 className="text-3xl font-black text-slate-950 uppercase tracking-tighter">
+                   {articles.some(a => a.id === editingArticle.id) ? 'Modifier Reference' : 'Nouvelle Nomenclature'}
                 </h3>
-                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">Veuillez remplir les spécifications techniques</p>
+                <p className="text-xs font-black text-slate-400 uppercase tracking-widest mt-2">Veuillez remplir les spécifications techniques</p>
               </div>
               <button 
                 onClick={() => setIsModalOpen(false)} 
-                className="w-12 h-12 rounded-2xl bg-white shadow-lg border border-slate-100 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:rotate-90 transition-all duration-500"
+                className="w-14 h-14 rounded-2xl bg-white shadow-xl border border-slate-100 flex items-center justify-center text-slate-400 hover:text-rose-600 hover:rotate-90 transition-all duration-500"
               >
-                <X className="w-6 h-6" />
+                <X className="w-8 h-8" />
               </button>
             </header>
             
-            <form onSubmit={handleSave} className="p-10 space-y-8 overflow-y-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Désignation de l'article</label>
+            <form onSubmit={handleSave} className="p-12 space-y-10 overflow-y-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                <div className="space-y-3 md:col-span-2">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Désignation de l'article</label>
                   <input 
                     type="text" 
-                    className="input-field h-14 font-black text-lg"
+                    className="input-field h-16 font-black text-2xl px-6"
                     placeholder="Ex: BARRE CONIQUE 1.8M"
                     value={editingArticle.designation}
                     onChange={(e) => setEditingArticle({...editingArticle, designation: e.target.value})}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Référence OEM / Fabricant</label>
+                <div className="space-y-3">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Référence OEM / Fabricant</label>
                   <input 
                     type="text" 
-                    className="input-field h-14 font-bold"
+                    className="input-field h-16 font-black text-xl px-6"
                     placeholder="Ex: SMI-MOT-99"
                     value={editingArticle.ref}
                     onChange={(e) => setEditingArticle({...editingArticle, ref: e.target.value})}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Famille d'article</label>
+                <div className="space-y-3">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Famille d'article</label>
                   <div className="relative">
                     <select 
-                      className="input-field h-14 appearance-none font-bold cursor-pointer"
+                      className="input-field h-16 appearance-none font-black text-lg px-6 cursor-pointer"
                       value={editingArticle.type}
                       onChange={(e) => setEditingArticle({...editingArticle, type: e.target.value as StockType})}
                     >
                       <option value="ENGINS">Pièces Engins</option>
-                      <option value="PERFORATEURS">Perforation (Tiges/Taillants)</option>
+                      <option value="PERFORATEURS">Perfo (Tiges/Taillants)</option>
                       <option value="CONSOMMABLES">Consommables Généraux</option>
-                      <option value="EPI">Equipements Protection (EPI)</option>
+                      <option value="EPI">Protection (EPI)</option>
                     </select>
-                    <ChevronDown className="absolute right-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300 pointer-events-none" />
+                    <ChevronDown className="absolute right-6 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300 pointer-events-none" />
                   </div>
                 </div>
-                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-8 p-6 bg-slate-50 rounded-3xl border border-slate-100">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Composant Principal</label>
+                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-10 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-100">
+                  <div className="space-y-3">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Composant Principal</label>
                     <input 
                       type="text" 
-                      className="input-field h-12 text-sm"
+                      className="input-field h-14 text-base px-6 shadow-inner"
                       placeholder="Ex: Bloc moteur, Piston..."
                       value={editingArticle.component || ''}
                       onChange={(e) => setEditingArticle({...editingArticle, component: e.target.value})}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sous-Composant</label>
+                  <div className="space-y-3">
+                    <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Sous-Composant</label>
                     <input 
                       type="text" 
-                      className="input-field h-12 text-sm"
+                      className="input-field h-14 text-base px-6 shadow-inner"
                       placeholder="Ex: Coussinet, Segment..."
                       value={editingArticle.subComponent || ''}
                       onChange={(e) => setEditingArticle({...editingArticle, subComponent: e.target.value})}
                     />
                   </div>
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Sous-Catégorie</label>
+                <div className="space-y-3">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Sous-Catégorie</label>
                   <input 
                     type="text" 
                     placeholder="Ex: Hydraulique, Moteur..."
-                    className="input-field h-14 font-bold"
+                    className="input-field h-16 font-black text-lg px-6"
                     value={editingArticle.category}
                     onChange={(e) => setEditingArticle({...editingArticle, category: e.target.value})}
                     required
                   />
                 </div>
-                 <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Unité de mesure</label>
+                 <div className="space-y-3">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Unité de mesure</label>
                   <input 
                     type="text" 
                     placeholder="Pcs, Kg, Kit..."
-                    className="input-field h-14 font-bold uppercase"
+                    className="input-field h-16 font-black text-lg px-6 uppercase"
                     value={editingArticle.unit}
                     onChange={(e) => setEditingArticle({...editingArticle, unit: e.target.value})}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Seuil d'alerte critique</label>
+                <div className="space-y-3">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Seuil d'alerte critique</label>
                   <input 
                     type="number" 
-                    className="input-field h-14 font-black"
+                    className="input-field h-16 font-black text-3xl px-6 text-rose-600"
                     value={editingArticle.minStock}
                     onChange={(e) => setEditingArticle({...editingArticle, minStock: Number(e.target.value)})}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-sky-600 uppercase tracking-widest ml-1">Prix Standard HT (MAD) *</label>
+                <div className="space-y-3">
+                  <label className="text-xs font-black text-sky-600 uppercase tracking-widest ml-1">Prix Standard HT (MAD) *</label>
                   <input 
                     type="number" 
                     step="0.01"
                     min="0"
                     placeholder="1200.00"
-                    className="input-field h-14 font-black border-sky-200 bg-sky-50/50 focus:border-sky-500 text-sky-700 text-xl"
+                    className="input-field h-16 font-black border-sky-200 bg-sky-50/50 focus:border-sky-500 text-sky-700 text-3xl px-6"
                     value={editingArticle.price === 0 ? '' : editingArticle.price}
                     onChange={(e) => setEditingArticle({...editingArticle, price: e.target.value === '' ? 0 : Number(e.target.value)})}
                     required
                   />
                 </div>
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Emplacement Magasin</label>
+                <div className="space-y-3">
+                  <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Emplacement Magasin</label>
                   <input 
                     type="text" 
                     placeholder="Zone-Rayon-Niveau"
-                    className="input-field h-14 font-bold uppercase"
+                    className="input-field h-16 font-black text-lg px-6 uppercase"
                     value={editingArticle.location}
                     onChange={(e) => setEditingArticle({...editingArticle, location: e.target.value})}
                     required
                   />
                 </div>
-                <div className="flex items-center gap-4 bg-slate-50 p-4 rounded-2xl border border-slate-100 shadow-inner">
+                <div className="flex items-center gap-6 bg-slate-50 p-6 rounded-3xl border border-slate-100 shadow-inner">
                   <input 
                     type="checkbox" 
                     id="isActive"
-                    className="w-6 h-6 text-sky-600 border-slate-300 rounded-lg focus:ring-sky-500"
+                    className="w-8 h-8 text-sky-600 border-slate-300 rounded-xl focus:ring-sky-500"
                     checked={editingArticle.active}
                     onChange={(e) => setEditingArticle({...editingArticle, active: e.target.checked})}
                   />
-                  <label htmlFor="isActive" className="text-xs font-black text-slate-700 uppercase tracking-widest select-none cursor-pointer">Statut Article Actif</label>
+                  <label htmlFor="isActive" className="text-sm font-black text-slate-700 uppercase tracking-widest select-none cursor-pointer">Statut Article Actif</label>
                 </div>
               </div>
 
-              <div className="flex justify-end gap-4 pt-8 border-t border-slate-100">
+              <div className="flex justify-end gap-6 pt-10 border-t border-slate-100">
                 <button 
                   type="button" 
                   onClick={() => setIsModalOpen(false)}
-                  className="px-8 py-4 font-black uppercase text-[10px] tracking-widest text-slate-400 hover:text-slate-600 transition-colors"
+                  className="px-10 py-5 font-black uppercase text-xs tracking-[0.2em] text-slate-400 hover:text-slate-600 transition-colors"
                 >
                   Annuler
                 </button>
-                <button type="submit" className="btn bg-sky-600 text-white shadow-xl shadow-sky-200 h-14 px-10 rounded-2xl group font-black uppercase text-[10px] tracking-widest flex items-center gap-3">
-                  <Save className="w-4 h-4 group-hover:-translate-y-0.5 transition-transform" /> Enregistrer la Fiche
+                <button type="submit" className="btn bg-slate-950 text-white shadow-2xl h-16 px-12 rounded-2xl group font-black uppercase text-xs tracking-widest flex items-center gap-4 hover:bg-sky-600">
+                  <Save className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" /> Enregistrer la Fiche
                 </button>
               </div>
             </form>
@@ -1326,38 +1324,38 @@ function CategoryCard({ cat, count, activeType, onClick }: { cat: string, count:
     <button
       onClick={onClick}
       className={cn(
-        "w-full text-left p-10 bg-white border border-slate-100 rounded-[3rem] transition-all flex flex-col gap-6 overflow-hidden relative group shadow-sm",
+        "w-full text-left p-12 bg-white border border-slate-100 rounded-[3.5rem] transition-all flex flex-col gap-8 overflow-hidden relative group shadow-sm",
         activeType === 'ENGINS' 
-          ? "hover:border-sky-500 hover:shadow-[0_40px_80px_rgba(8,145,213,0.18)]" 
-          : "hover:border-red-500 hover:shadow-[0_40px_80px_rgba(220,38,38,0.12)]"
+          ? "hover:border-sky-500 hover:shadow-[0_45px_90px_rgba(8,145,213,0.2)]" 
+          : "hover:border-red-500 hover:shadow-[0_45px_90px_rgba(220,38,38,0.15)]"
       )}
     >
-      <div className="absolute -top-24 -right-24 w-64 h-64 bg-sky-500/5 blur-[80px] group-hover:bg-sky-500/15 transition-all duration-700 pointer-events-none" />
-      <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-red-600/5 blur-[80px] group-hover:bg-red-600/10 transition-all duration-700 pointer-events-none" />
+      <div className="absolute -top-32 -right-32 w-80 h-80 bg-sky-500/5 blur-[100px] group-hover:bg-sky-500/15 transition-all duration-700 pointer-events-none" />
+      <div className="absolute -bottom-32 -left-32 w-80 h-80 bg-red-600/5 blur-[100px] group-hover:bg-red-600/10 transition-all duration-700 pointer-events-none" />
       <div className="flex justify-between items-start relative z-10">
         <div className={cn(
-          "w-16 h-16 bg-slate-50 text-slate-400 group-hover:text-white rounded-[1.8rem] flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 shadow-sm",
+          "w-20 h-20 bg-slate-50 text-slate-400 group-hover:text-white rounded-[2.5rem] flex items-center justify-center transition-all duration-500 group-hover:scale-110 group-hover:rotate-6 shadow-sm",
           activeType === 'ENGINS' ? "group-hover:bg-sky-600 group-hover:shadow-sky-300" : "group-hover:bg-red-600 group-hover:shadow-red-300"
         )}>
-          <Layers className="w-8 h-8" />
+          <Layers className="w-10 h-10" />
         </div>
         <span className={cn(
-          "text-[10px] font-black px-5 py-2.5 rounded-full border shadow-sm uppercase tracking-widest",
+          "text-sm font-black px-6 py-3 rounded-full border shadow-sm uppercase tracking-widest",
           activeType === 'ENGINS' ? "text-sky-600 bg-sky-50 border-sky-100" : "text-red-600 bg-red-50 border-red-100"
         )}>
           {count} Références
         </span>
       </div>
       <div className="relative z-10">
-        <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.25em] group-hover:text-sky-500 transition-colors mb-2">Structure Master</p>
-        <h4 className="font-black text-slate-900 text-2xl group-hover:text-slate-950 transition-colors tracking-tighter leading-tight">{cat}</h4>
+        <p className="text-sm font-black text-slate-400 uppercase tracking-[0.25em] group-hover:text-sky-500 transition-colors mb-3">Structure Master</p>
+        <h4 className="font-black text-slate-900 text-3xl group-hover:text-slate-950 transition-colors tracking-tighter leading-tight">{cat}</h4>
       </div>
       <div className={cn(
-        "flex items-center gap-3 opacity-0 group-hover:opacity-100 transition-all -translate-x-4 group-hover:translate-x-0 relative z-10",
+        "flex items-center gap-4 opacity-0 group-hover:opacity-100 transition-all -translate-x-6 group-hover:translate-x-0 relative z-10",
         activeType === 'ENGINS' ? "text-sky-600" : "text-red-600"
       )}>
-         <span className="text-[10px] font-black uppercase tracking-[0.2em]">Parcourir</span>
-         <ChevronDown className="w-5 h-5 -rotate-90" />
+         <span className="text-xs font-black uppercase tracking-[0.2em]">Parcourir</span>
+         <ChevronDown className="w-6 h-6 -rotate-90" />
       </div>
     </button>
   );
@@ -1372,62 +1370,62 @@ function CatalogCard({ item, isManaging, onImport, onEdit, onDelete }: {
 }) {
   return (
     <div className={cn(
-      "group relative w-full flex flex-col p-8 bg-white border border-slate-100 rounded-[2.5rem] transition-all text-left overflow-hidden",
+      "group relative w-full flex flex-col p-10 bg-white border border-slate-100 rounded-[3rem] transition-all text-left overflow-hidden",
       !isManaging ? "hover:border-sky-500 hover:shadow-2xl cursor-pointer" : ""
     )}
     onClick={() => !isManaging && onImport(item)}
     >
-      <div className="absolute inset-x-0 top-0 h-1 bg-sky-500 opacity-0 group-hover:opacity-100 transition-opacity" />
-      <div className="flex justify-between items-start mb-4 relative z-10">
-         <p className="font-mono text-[11px] font-black text-slate-300 uppercase tracking-[0.25em] group-hover:text-sky-500 transition-colors">#{item.reference}</p>
-         <span className="text-[9px] font-black text-sky-600 bg-sky-50 px-3 py-1 rounded-lg border border-sky-100 uppercase tracking-widest truncate max-w-[150px]">
+      <div className="absolute inset-x-0 top-0 h-1.5 bg-sky-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+      <div className="flex justify-between items-start mb-6 relative z-10">
+         <p className="font-mono text-sm font-black text-slate-400 uppercase tracking-[0.25em] group-hover:text-sky-500 transition-colors">#{item.reference}</p>
+         <span className="text-[10px] font-black text-sky-600 bg-sky-50 px-4 py-1.5 rounded-xl border border-sky-100 uppercase tracking-widest truncate max-w-[180px]">
            {item.subComponent || item.component || 'Standard'}
          </span>
       </div>
-      <p className="font-black text-slate-950 group-hover:text-sky-900 transition-colors text-xl leading-tight mb-8 relative z-10">{item.designation}</p>
+      <p className="font-black text-slate-950 group-hover:text-sky-900 transition-colors text-2xl leading-tight mb-10 relative z-10">{item.designation}</p>
       
-      <div className="flex items-center gap-2 mb-4">
-        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100 uppercase tracking-widest">
+      <div className="flex items-center gap-3 mb-6">
+        <span className="text-xs font-black text-emerald-600 bg-emerald-50 px-4 py-1.5 rounded-xl border border-emerald-100 uppercase tracking-widest">
           {formatCurrency(item.price || 0)}
         </span>
       </div>
 
-      <div className="flex flex-col gap-2 mb-8 text-[9px] font-bold text-slate-400 uppercase tracking-widest">
-         <div className="flex items-center gap-2">
-           <Database className="w-3 h-3" /> {item.functionalCategory}
+      <div className="flex flex-col gap-3 mb-10 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+         <div className="flex items-center gap-3">
+           <Database className="w-4 h-4" /> {item.functionalCategory}
          </div>
-         <div className="flex items-center gap-2">
-           <BookOpen className="w-3 h-3" /> {item.subCategory}
+         <div className="flex items-center gap-3">
+           <BookOpen className="w-4 h-4" /> {item.subCategory}
          </div>
       </div>
 
-      <div className="mt-auto pt-6 border-t border-slate-50 flex items-center justify-between relative z-10">
-         <div className="flex items-center gap-3">
-           <div className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse"></div>
-           <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Master Reference</p>
+      <div className="mt-auto pt-8 border-t border-slate-50 flex items-center justify-between relative z-10">
+         <div className="flex items-center gap-4">
+           <div className="w-3.5 h-3.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(16,185,129,0.4)]"></div>
+           <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Master Reference</p>
          </div>
          {!isManaging && (
-           <div className="flex items-center gap-2 text-sky-600 text-[10px] font-black uppercase tracking-[0.2em] group-hover:translate-x-1 transition-transform">
-             Importer <Plus className="w-3.5 h-3.5" />
+           <div className="flex items-center gap-2 text-sky-600 text-xs font-black uppercase tracking-[0.2em] group-hover:translate-x-2 transition-transform">
+             Importer <Plus className="w-4 h-4" />
            </div>
          )}
       </div>
 
       {isManaging && (
-        <div className="absolute top-6 right-6 flex gap-2">
+        <div className="absolute top-8 right-8 flex gap-3">
           <button 
             type="button"
             onClick={(e) => { e.stopPropagation(); onEdit(item); }}
-            className="w-10 h-10 bg-white text-emerald-600 rounded-xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-xl border border-emerald-100"
+            className="w-12 h-12 bg-white text-emerald-600 rounded-2xl flex items-center justify-center hover:bg-emerald-600 hover:text-white transition-all shadow-xl border border-emerald-100"
           >
-            <Pencil className="w-4 h-4" />
+            <Pencil className="w-5 h-5" />
           </button>
           <button 
             type="button"
             onClick={(e) => { e.stopPropagation(); onDelete(item.id); }}
-            className="w-10 h-10 bg-white text-rose-500 rounded-xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100"
+            className="w-12 h-12 bg-white text-rose-500 rounded-2xl flex items-center justify-center hover:bg-rose-500 hover:text-white transition-all shadow-xl border border-rose-100"
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-5 h-5" />
           </button>
         </div>
       )}

@@ -76,11 +76,11 @@
   }
   
   .glass {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl rounded-3xl;
+    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl;
   }
 
   .btn {
-    @apply inline-flex items-center justify-center px-6 py-2.5 rounded-2xl font-bold transition-all focus:outline-none focus:ring-4 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-xs uppercase tracking-widest;
+    @apply inline-flex items-center justify-center px-2 py-1 rounded-xl font-bold transition-all focus:outline-none focus:ring-4 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed text-[10px] uppercase tracking-widest;
   }
   .btn-primary {
     @apply bg-sky-600 text-white hover:bg-sky-700 focus:ring-sky-500 shadow-lg shadow-sky-200 hover:-translate-y-0.5 active:translate-y-0;
@@ -93,11 +93,11 @@
   }
   
   .card {
-    @apply bg-white border border-slate-200/60 rounded-3xl shadow-lg ring-1 ring-slate-900/5 overflow-hidden transition-all duration-300 hover:shadow-xl;
+    @apply bg-white border border-slate-200/60 rounded-2xl shadow-lg ring-1 ring-slate-900/5 overflow-hidden transition-all duration-300 hover:shadow-xl p-3;
   }
   
   .table-container {
-    @apply overflow-x-auto border border-slate-200/60 rounded-2xl bg-white shadow-sm;
+    @apply overflow-x-auto border border-slate-200/60 rounded-xl bg-white shadow-sm;
   }
   
   .data-table {
@@ -105,15 +105,15 @@
   }
   
   .data-table th {
-    @apply px-6 py-4 bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100;
+    @apply px-4 py-2 bg-slate-50/50 text-[9px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100;
   }
   
   .data-table td {
-    @apply px-6 py-4 border-b border-slate-50 text-sm font-medium text-slate-600;
+    @apply px-4 py-2 border-b border-slate-50 text-xs font-medium text-slate-600;
   }
-
+  
   .input-field {
-    @apply w-full bg-slate-50 border border-slate-200 rounded-2xl px-4 py-3 text-sm outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all font-semibold placeholder:text-slate-400;
+    @apply w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-1.5 text-xs outline-none focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500 transition-all font-semibold placeholder:text-slate-400;
   }
 }
 

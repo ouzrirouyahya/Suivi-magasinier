@@ -18,9 +18,12 @@ import { AuditLogView } from './components/AuditLogView';
 import { UserAdmin } from './components/UserAdmin';
 import { StockAlertView } from './components/StockAlertView';
 import { ReportPage } from './components/ReportPage';
+import { RestockModule } from './components/RestockModule';
+import { AIAnalytics } from './components/AIAnalytics';
+import { AIChatExpert } from './components/AIChatExpert';
 import LoginPage from './components/LoginPage';
 import { useStorage } from './hooks/useStorage';
-import { Article, SiteCode } from './types';
+import { Article, SiteCode, PurchaseRequest } from './types';
 import { Loader2, Search } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
@@ -57,16 +60,17 @@ export default function App() {
     agents,
     catalog,
     saveCatalogItem,
-    setEngins,
-    setPerfos,
-    setAgents,
-    setCatalog
+    deleteCatalogItem,
+    setEngin,
+    setPerfo,
+    setAgent,
+    purchaseRequests,
+    addPurchaseRequest,
+    updatePRStatus
   } = useStorage();
 
   useEffect(() => {
-    console.log('App: Setting up auth listener');
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      console.log('App: Auth state changed', currentUser?.email);
       setUser(currentUser);
       setIsAuthLoading(false);
     });
@@ -82,7 +86,7 @@ export default function App() {
       <div className="h-screen w-screen flex items-center justify-center bg-white">
         <div className="text-center space-y-6">
           <div className="w-16 h-16 border-4 border-sky-100 border-t-sky-600 rounded-full animate-spin mx-auto"></div>
-          <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-[10px] animate-pulse">Initialisation Sécurité...</p>
+          <p className="text-slate-400 font-black uppercase tracking-[0.3em] text-lg animate-pulse">Initialisation Sécurité...</p>
         </div>
       </div>
     );
@@ -97,7 +101,7 @@ export default function App() {
       <div className="h-screen w-screen flex items-center justify-center bg-slate-50">
         <div className="text-center space-y-4">
           <Loader2 className="w-10 h-10 text-sky-600 animate-spin mx-auto" />
-          <p className="text-slate-500 font-bold uppercase tracking-widest animate-pulse">Initialisation Système Magasinier...</p>
+          <p className="text-slate-500 font-bold uppercase tracking-widest text-lg animate-pulse">Initialisation Système Magasinier...</p>
         </div>
       </div>
     );
@@ -227,7 +231,7 @@ export default function App() {
             articles={articles} 
             catalog={catalog}
             saveCatalogItem={saveCatalogItem}
-            setCatalog={setCatalog}
+            deleteCatalogItem={deleteCatalogItem}
             onSave={saveArticle} 
             onDelete={deleteArticle} 
           />
@@ -254,17 +258,44 @@ export default function App() {
             accounts={accounts} 
             onToggleStatus={toggleUser} 
             engins={engins}
-            setEngins={setEngins}
+            onSetEngin={setEngin}
             perfos={perfos}
-            setPerfos={setPerfos}
+            onSetPerfo={setPerfo}
             agents={agents}
-            setAgents={setAgents}
+            onSetAgent={setAgent}
           />
         );
 
       case 'REPORTS':
         return <ReportPage />;
         
+      case 'RESTOCK_MGMT':
+        return (
+          <RestockModule 
+            site={currentSite}
+            articles={articles}
+            purchaseRequests={purchaseRequests}
+            onCreatePR={(items) => {
+              const pr: PurchaseRequest = {
+                id: '', // Hook will generate
+                site: currentSite,
+                date: new Date().toISOString(),
+                status: 'BROUILLON',
+                items,
+                createdBy: user?.email || '',
+              };
+              addPurchaseRequest(pr);
+            }}
+            onUpdatePRStatus={updatePRStatus}
+          />
+        );
+
+      case 'AI_ANALYTICS':
+        return <AIAnalytics site={currentSite} articles={articles} mouvements={mouvements} />;
+
+      case 'AI_CHAT_EXPERT':
+        return <AIChatExpert site={currentSite} articles={articles} />;
+
       case 'SEARCH_RESULTS':
         return (
           <StockTable 
@@ -296,19 +327,19 @@ export default function App() {
         onSignOut={handleSignOut}
       />
       
-      <main className="flex-1 ml-80 p-8 transition-all duration-300 relative min-h-screen">
+      <main className="flex-grow p-8 transition-all duration-300 relative min-h-screen">
         {/* Global Toolbar */}
-        <div className="max-w-7xl mx-auto mb-8 no-print">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/40 backdrop-blur-3xl p-4 rounded-[2rem] border border-white shadow-2xl shadow-slate-200/50">
+        <div className="max-w-[1600px] mx-auto mb-3 no-print">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white/40 backdrop-blur-3xl p-1.5 rounded-xl border border-white shadow-xl shadow-slate-200/30">
             <div className="relative flex-1 group">
-               <div className="absolute left-6 top-1/2 -translate-y-1/2 flex items-center gap-2">
-                 <Search className="w-4 h-4 text-slate-400 group-hover:text-sky-500 transition-colors" />
-                 <div className="h-4 w-[1px] bg-slate-200" />
+               <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                 <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-500 transition-colors" />
+                 <div className="h-3 w-[1px] bg-slate-200" />
                </div>
                <input 
                  type="text" 
-                 placeholder="Recherche Rapide (Réf, Désignation, ID Document...)"
-                 className="w-full bg-white/80 h-14 pl-16 pr-8 rounded-2xl text-xs font-bold outline-none border border-slate-100 focus:border-sky-200 transition-all focus:ring-4 focus:ring-sky-500/5 placeholder:text-slate-300 placeholder:italic"
+                 placeholder="Recherche Rapide..."
+                 className="w-full bg-white/80 h-10 pl-14 pr-8 rounded-xl text-sm font-bold outline-none border border-slate-100 focus:border-sky-200 transition-all focus:ring-4 focus:ring-sky-500/5 placeholder:text-slate-300"
                  value={globalSearch}
                  onChange={(e) => {
                    setGlobalSearch(e.target.value);
@@ -318,35 +349,27 @@ export default function App() {
                      }
                    }
                  }}
-                 onKeyDown={(e) => {
-                   if (e.key === 'Enter') {
-                      console.log("Search trigger");
-                   }
-                 }}
                />
-               <div className="absolute right-6 top-1/2 -translate-y-1/2 hidden md:block">
-                  <span className="text-[9px] font-black bg-slate-100 text-slate-400 px-2 py-1 rounded-md tracking-widest border border-slate-200/50">⌘ K</span>
-               </div>
             </div>
             
-            <div className="flex items-center gap-3 px-2">
-               <div className="h-10 w-[1px] bg-slate-200 mx-2 hidden md:block" />
+            <div className="flex items-center gap-2 px-1">
+               <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
                <div className="flex flex-col items-end">
-                 <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Valeur {currentSite}</p>
-                 <p className="text-sm font-black text-slate-900 mt-1">
+                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none opacity-70">Valeur Stock</p>
+                 <p className="text-sm font-black text-slate-900 mt-0.5">
                    {new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(
                      articles.filter(a => a.site === currentSite).reduce((sum, a) => sum + (a.quantity * a.price), 0)
                    )}
                  </p>
                </div>
-               <div className="w-10 h-10 rounded-xl bg-sky-50 text-sky-600 flex items-center justify-center font-black text-xs shadow-inner">
+               <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-black text-xs shadow-inner">
                  {articles.filter(a => a.site === currentSite).length}
                </div>
             </div>
           </div>
         </div>
 
-        <div className="max-w-7xl mx-auto">
+        <div className="max-w-[1600px] mx-auto">
           {renderPage()}
         </div>
       </main>

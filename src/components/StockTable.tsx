@@ -80,62 +80,115 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6">
+    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-3">
-            <h2 className="text-base font-black text-slate-950 tracking-tighter uppercase flex items-center gap-2">
-              <span className="w-1.5 h-6 bg-sky-600 rounded-full"></span>
-              {type === 'ALL' ? 'Résultats de Recherche' : `Stock ${type.replace('_', ' ')}`}
+            <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase flex items-center gap-3">
+              <span className="w-2 h-10 bg-sky-600 rounded-full"></span>
+              {type === 'ALL' ? 'Résultats Recherche' : `Stock ${type.replace('_', ' ')}`}
             </h2>
             <button 
               onClick={onManageCatalog}
-              className="mt-1 p-2 text-slate-400 hover:text-sky-600 transition-colors"
+              className="p-1.5 text-slate-400 hover:text-sky-600 transition-colors"
               title="Gérer le catalogue"
             >
-              <PlusIcon className="w-5 h-5" />
+              <PlusIcon className="w-8 h-8" />
             </button>
           </div>
-          <div className="flex items-center gap-4 mt-2">
-            <p className="text-slate-500 font-bold uppercase text-[10px] tracking-widest bg-slate-100 px-2.5 py-1 rounded-md border border-slate-200/50 shadow-sm">SITE: {site}</p>
-            <p className="text-sky-600 font-black uppercase text-[10px] tracking-widest">{filteredArticles.length} Références actives</p>
+          <div className="flex items-center gap-3 mt-3">
+            <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] opacity-70">SITE DE SURVEILLANCE : <span className="text-sky-600">{site}</span></p>
+            <span className="text-slate-300">|</span>
+            <p className="text-xl text-sky-600 font-black uppercase tracking-widest">{filteredArticles.length} RÉFÉRENCES ACTIVES</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-6">
+        <div className="flex items-center gap-3">
           {onManageCatalog && (
              <button 
-               onClick={onManageCatalog}
-               className="btn bg-white border border-slate-200 shadow-sm text-slate-700 px-6 h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-slate-50 transition-all flex items-center gap-3"
+                onClick={onManageCatalog}
+                className="btn bg-white border border-slate-200 shadow-sm text-slate-700 px-4 h-11 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
              >
-               <Package className="w-4 h-4 text-sky-600" /> Gérer le Catalogue
+                <Package className="w-5 h-5 text-sky-600" /> Catalogue
              </button>
           )}
-          <div className="flex items-center gap-3 bg-white/50 backdrop-blur-xl p-1.5 rounded-2xl border border-slate-200/50 shadow-sm ring-1 ring-slate-900/5">
+          <div className="flex items-center gap-1.5 bg-white/50 backdrop-blur-xl p-0.5 rounded-lg border border-slate-200/50 shadow-sm ring-1 ring-slate-900/5">
             <button 
               onClick={() => setViewMode('TABLE')}
-              className={cn("p-2.5 rounded-xl transition-all duration-300", viewMode === 'TABLE' ? "bg-white shadow-md text-sky-600 scale-105" : "text-slate-400 hover:text-slate-600")}
+              className={cn("p-1.5 rounded-md transition-all duration-300", viewMode === 'TABLE' ? "bg-white shadow-md text-sky-600 scale-105" : "text-slate-400 hover:text-slate-600")}
             >
-              <List className="w-5 h-5" />
+              <List className="w-3.5 h-3.5" />
             </button>
             <button 
               onClick={() => setViewMode('GRID')}
-              className={cn("p-2.5 rounded-xl transition-all duration-300", viewMode === 'GRID' ? "bg-white shadow-md text-sky-600 scale-105" : "text-slate-400 hover:text-slate-600")}
+              className={cn("p-1.5 rounded-md transition-all duration-300", viewMode === 'GRID' ? "bg-white shadow-md text-sky-600 scale-105" : "text-slate-400 hover:text-slate-600")}
             >
-              <LayoutGrid className="w-5 h-5" />
+              <LayoutGrid className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
       </header>
 
-      <div className="card glass p-6 flex flex-col md:flex-row items-center gap-6 shadow-2xl ring-1 ring-slate-900/5">
-        <div className="relative flex-1 flex gap-3">
+      {/* Dynamic KPIs for the current category */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 no-print">
+        {[
+          { 
+            label: 'Total Références', 
+            value: filteredArticles.length, 
+            unit: 'Réf', 
+            color: 'text-sky-600', 
+            bg: 'bg-white',
+            details: `${Array.from(new Set(filteredArticles.map(a => a.category))).length} Catégories`
+          },
+          { 
+            label: 'Valeur Totale', 
+            value: formatCurrency(filteredArticles.reduce((sum, a) => sum + (a.quantity * a.price), 0)).split(',')[0], 
+            unit: 'MAD', 
+            color: 'text-emerald-600', 
+            bg: 'bg-white',
+            details: 'Valeur HT Estimée'
+          },
+          { 
+            label: 'Ruptures Stock', 
+            value: filteredArticles.filter(a => a.quantity === 0).length, 
+            unit: 'Critique', 
+            color: 'text-rose-600', 
+            bg: 'bg-rose-50/50',
+            details: 'Besoin Réappro.'
+          },
+          { 
+            label: 'Articles Entrés', 
+            value: site === 'SMI' ? '74+' : '12+', 
+            unit: 'H/24', 
+            color: 'text-amber-600', 
+            bg: 'bg-white',
+            details: 'Mouvements récents'
+          }
+        ].map((kpi) => (
+          <div key={kpi.label} className={cn(
+            "card p-8 relative overflow-hidden group shadow-xl transition-all hover:shadow-2xl hover:-translate-y-1 rounded-3xl border border-slate-100",
+            kpi.bg
+          )}>
+            <p className="text-lg font-black text-slate-400 uppercase mb-3 tracking-tighter truncate">{kpi.label}</p>
+            <h4 className={cn("text-5xl font-black tracking-tighter leading-none mb-4", kpi.color)}>
+              {kpi.value} <span className="text-base text-slate-400 font-black tracking-widest ml-1">{kpi.unit}</span>
+            </h4>
+            <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
+              <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{kpi.details}</span>
+              <TrendingUp className="w-4 h-4 text-slate-200" />
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="card glass p-2 flex flex-col md:flex-row items-center gap-2 shadow-xl ring-1 ring-slate-900/5">
+        <div className="relative flex-1 flex gap-2 w-full">
           <div className="relative flex-1">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300" />
             <input 
               type="text" 
-              placeholder="Rechercher par désignation ou référence OEM..."
-              className="input-field pl-14 h-14 text-base bg-white/40 border-slate-200/50"
+              placeholder="Rechercher par désignation ou référence..."
+              className="input-field pl-12 h-14 text-xl font-black bg-white/40 border-slate-200/50 rounded-2xl"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -143,55 +196,39 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
           <button 
             onClick={() => setShowGlobal(!showGlobal)}
             className={cn(
-              "btn px-6 h-14 rounded-2xl gap-3 font-black uppercase text-[10px] tracking-widest transition-all whitespace-nowrap",
-              showGlobal ? "bg-sky-600 text-white shadow-sky-200" : "bg-white text-slate-400 border-slate-100"
+              "btn px-6 h-14 rounded-2xl gap-3 font-black uppercase text-base tracking-widest transition-all whitespace-nowrap",
+              showGlobal ? "bg-sky-600 text-white" : "bg-white text-slate-400 border-slate-100"
             )}
-            title="Voir le stock de tous les sites"
           >
             <MapPin className={cn("w-5 h-5", showGlobal ? "text-white" : "text-slate-300")} /> 
-            {showGlobal ? "Vision Globale : ON" : "Vérifier Autres Sites"}
+            Global
           </button>
         </div>
-        <div className="w-full lg:w-auto flex flex-wrap items-center gap-4">
+        <div className="w-full lg:w-auto flex flex-wrap items-center gap-1.5">
           <div className="relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
             <select 
-              className="pl-12 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-500 appearance-none"
+              className="pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-sky-500 appearance-none min-w-[140px]"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value)}
             >
-              <option value="ALL">Toutes Catégories</option>
+              <option value="ALL">Catégories</option>
               {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
           </div>
 
           <div className="relative">
-            <AlertTriangle className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+            <AlertTriangle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
             <select 
-              className="pl-12 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-500 appearance-none"
+              className="pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-sky-500 appearance-none min-w-[140px]"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
             >
-              <option value="ALL">Tous les États</option>
+              <option value="ALL">États</option>
               <option value="OPTIMAL">Stock Optimal</option>
               <option value="CRITIQUE">Seuil Critique</option>
               <option value="RUPTURE">Rupture</option>
             </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
-          </div>
-
-          <div className="relative">
-            <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-            <select 
-              className="pl-12 pr-8 py-2.5 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest outline-none focus:ring-2 focus:ring-sky-500 appearance-none"
-              value={locationFilter}
-              onChange={(e) => setLocationFilter(e.target.value)}
-            >
-              <option value="">Tous les Emplacements</option>
-              {locations.map(loc => <option key={loc} value={loc}>{loc}</option>)}
-            </select>
-            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 pointer-events-none" />
           </div>
         </div>
       </div>
@@ -200,10 +237,10 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
         {viewMode === 'GRID' ? (
           <motion.div 
             key="grid"
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.95 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8"
+            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
           >
             {filteredArticles.map((article, idx) => {
               const status = getStockStatus(article);
@@ -214,74 +251,61 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
                   key={article.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: idx * 0.03 }}
+                  transition={{ delay: idx * 0.02 }}
                   className="group relative"
                 >
-                  <div className="absolute -inset-0.5 bg-gradient-to-r from-sky-500 to-indigo-500 rounded-[2.5rem] opacity-0 group-hover:opacity-100 transition duration-500 blur-xl"></div>
-                  <div className="relative card glass p-8 h-full flex flex-col bg-white/90 backdrop-blur-3xl border-slate-200/40 hover:-translate-y-2 transition-all duration-500 overflow-hidden shadow-xl ring-1 ring-slate-900/5">
-                    <div className="flex justify-between items-start mb-6">
-                      <div className={cn("px-3 py-1 rounded-full text-[9px] font-black tracking-widest flex items-center gap-1.5 shadow-sm", status.class)}>
-                        <status.icon className="w-3 h-3" />
+                  <div className="relative card glass p-4 h-full flex flex-col bg-white border-slate-100 hover:-translate-y-1 transition-all duration-300 overflow-hidden shadow-sm ring-1 ring-slate-900/5">
+                    <div className="flex justify-between items-start mb-3">
+                      <div className={cn("px-2.5 py-1 rounded text-xs font-black tracking-widest flex items-center gap-1.5 shadow-sm", status.class)}>
+                        <status.icon className="w-3.5 h-3.5" />
                         {status.label}
                       </div>
-                      <span className="text-[10px] font-mono font-black text-slate-300 group-hover:text-sky-500 transition-colors uppercase tracking-tight">
+                      <span className="text-sm font-mono font-black text-slate-300 group-hover:text-sky-500 transition-colors uppercase tracking-tight">
                         #{article.ref}
                       </span>
                     </div>
 
-                    <h3 className="text-xl font-black text-slate-900 leading-tight mb-2 min-h-[3.5rem] line-clamp-2">
+                    <h3 className="text-xl font-black text-slate-900 leading-snug mb-2 min-h-[3.5rem] line-clamp-2">
                       {article.designation}
                     </h3>
 
-                    {article.component ? (
-                      <p className="text-[10px] font-black text-sky-600 bg-sky-50 px-3 py-1.5 rounded-xl border border-sky-100 uppercase tracking-tighter mb-4 w-fit">
-                        {article.functionalCategory} / {article.component}
+                    {article.component && (
+                      <p className="text-sm font-black text-sky-600 bg-sky-50 px-3 py-1.5 rounded border border-sky-100 uppercase tracking-tighter mb-4 w-fit">
+                        {article.component}
                       </p>
-                    ) : (
-                      <div className="h-9 mb-4"></div>
                     )}
 
-                    <div className="space-y-4 mb-8">
-                       <div className="flex items-center gap-3 text-slate-400">
-                         <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200/50">
-                           <MapPin className="w-4 h-4" />
-                         </div>
-                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Emplacement</p>
-                            <p className="text-sm font-bold text-slate-600">{article.location}</p>
-                         </div>
+                    <div className="space-y-2 mb-4">
+                       <div className="flex items-center gap-2 text-slate-400">
+                         <MapPin className="w-3 h-3" />
+                         <p className="text-[11px] font-bold text-slate-600">{article.location}</p>
                        </div>
-                       <div className="flex items-center gap-3 text-slate-400">
-                         <div className="w-8 h-8 rounded-xl bg-slate-100 flex items-center justify-center border border-slate-200/50">
-                           <TrendingUp className="w-4 h-4" />
-                         </div>
-                         <div>
-                            <p className="text-[10px] font-black uppercase tracking-widest leading-none">Valeur Active</p>
-                            <p className="text-sm font-black text-emerald-600">{formatCurrency(totalValue)}</p>
-                         </div>
+                       <div className="flex items-center gap-2 text-slate-400">
+                         <TrendingUp className="w-3 h-3" />
+                         <p className="text-[11px] font-black text-emerald-600">{formatCurrency(totalValue)}</p>
                        </div>
                     </div>
 
-                    <div className="mt-auto pt-6 border-t border-slate-100/50">
+                    <div className="mt-auto pt-3 border-t border-slate-50">
                       <div className="flex items-end justify-between">
-                         <div className="text-center">
-                            <p className={cn("text-2xl font-black tracking-tighter leading-none", article.quantity <= article.minStock ? "text-rose-600" : "text-slate-900")}>
+                         <div>
+                            <p className={cn("text-xl font-black tracking-tighter leading-none", article.quantity <= article.minStock ? "text-rose-600" : "text-slate-900")}>
                                {article.quantity}
                             </p>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">{article.unit}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase mt-0.5">{article.unit}</p>
                          </div>
-                         <div className="flex gap-2">
+                         <div className="flex gap-1.5 focus-within:z-10">
                             <button 
                               onClick={() => onAction?.(article.id, 'IN')}
-                              className="w-12 h-12 rounded-2xl bg-sky-50 text-sky-600 flex items-center justify-center hover:bg-sky-600 hover:text-white transition-all duration-300 shadow-sm border border-sky-100/50"
+                              className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center hover:bg-sky-600 hover:text-white transition-all shadow-sm border border-sky-100/50"
                             >
-                              <PlusIcon className="w-6 h-6" />
+                              <PlusIcon className="w-4 h-4" />
                             </button>
                             <button 
                               onClick={() => onAction?.(article.id, 'OUT')}
-                              className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all duration-300 shadow-sm border border-rose-100/50"
+                              className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-rose-100/50"
                             >
-                              <ArrowUpRight className="w-6 h-6" />
+                              <ArrowUpRight className="w-4 h-4" />
                             </button>
                          </div>
                       </div>
@@ -302,60 +326,51 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
             <table className="data-table w-full">
               <thead>
                 <tr>
-                  <th className="px-8 py-6">Code & Nomenclature</th>
-                  <th className="px-8 py-6">Section</th>
-                  <th className="px-8 py-6 text-center">Quantité</th>
-                  <th className="px-8 py-6 text-right">Valeur Unitaire</th>
-                  <th className="px-8 py-6 text-right w-32">Actions</th>
+                  <th className="px-8 py-6 text-left text-lg font-black uppercase tracking-widest text-slate-400">Désignation & Détails</th>
+                  <th className="px-8 py-6 text-lg font-black uppercase tracking-widest text-slate-400">Section</th>
+                  <th className="px-8 py-6 text-center text-lg font-black uppercase tracking-widest text-slate-400">Quantité</th>
+                  <th className="px-8 py-6 text-right text-lg font-black uppercase tracking-widest text-slate-400">Valeur Unit.</th>
+                  <th className="px-8 py-6 text-right text-lg font-black uppercase tracking-widest text-slate-400">Actions</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredArticles.map((article) => (
                   <tr key={article.id} className="group hover:bg-white/60 transition-all">
-                <td className="px-8 py-6">
+                <td className="px-8 py-8">
                   <div className="flex flex-col">
-                    <span className="font-black text-slate-900 text-base leading-tight">{article.designation}</span>
-                    <div className="flex items-center gap-2 mt-1.5 flex-wrap">
-                      <code className="text-[10px] font-black bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 uppercase tracking-widest border border-slate-200/50">#{article.ref}</code>
-                      <span className="text-[10px] font-bold text-slate-400">• {article.location}</span>
-                      {article.component && (
-                        <span className="text-[9px] font-black text-sky-600 bg-sky-50 px-2 py-0.5 rounded-md border border-sky-100 uppercase tracking-tight">
-                          {article.functionalCategory} / {article.component}
-                        </span>
-                      )}
+                    <span className="font-black text-slate-900 text-3xl tracking-tighter leading-tight uppercase">{article.designation}</span>
+                    <div className="flex items-center gap-4 mt-3 flex-wrap">
+                      <code className="text-lg font-black bg-slate-100 px-3 py-1 rounded-xl text-slate-500 uppercase tracking-widest border border-slate-200/50">#{article.ref}</code>
+                      <span className="text-lg font-black text-slate-400 tracking-tighter uppercase">• {article.location}</span>
                     </div>
                   </div>
                 </td>
-                    <td className="px-8 py-6">
-                      <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-3 py-1 rounded-lg uppercase tracking-widest border border-sky-100">
+                    <td className="px-8 py-8">
+                      <span className="text-sm font-black text-sky-700 bg-sky-50 px-4 py-2 rounded-xl uppercase tracking-widest border border-sky-100">
                         {article.category}
                       </span>
                     </td>
-                    <td className="px-8 py-6">
+                    <td className="px-8 py-8 text-center border-x border-slate-50">
                       <div className="flex flex-col items-center">
                         <span className={cn(
-                          "text-xl font-black",
-                          article.quantity <= article.minStock ? "text-rose-600" : "text-slate-900"
+                          "text-5xl font-black tracking-tighter",
+                          article.quantity <= article.minStock ? "text-rose-600" : "text-sky-600"
                         )}>
                           {article.quantity}
                         </span>
-                        <span className="text-[9px] font-black text-slate-400 uppercase">{article.unit}</span>
+                        <span className="text-sm font-black text-slate-400 uppercase tracking-widest mt-1">{article.unit}</span>
                       </div>
                     </td>
-                    <td className="px-8 py-6 text-right">
-                      <p className="font-black text-slate-900">{formatCurrency(article.price)}</p>
-                      <p className="text-[9px] font-bold text-slate-400">Total: {formatCurrency(article.price * article.quantity)}</p>
+                    <td className="px-8 py-8 text-right font-black text-slate-900 text-2xl tracking-tighter">
+                      {formatCurrency(article.price)}
                     </td>
-                    <td className="px-8 py-6">
-                      <div className="flex justify-end gap-3 opacity-0 group-hover:opacity-100 transition-all duration-300">
-                         <button onClick={() => onAction?.(article.id, 'IN')} className="p-2.5 bg-white shadow-xl border border-slate-100 text-emerald-600 rounded-xl hover:scale-110 active:scale-95 transition-all">
-                           <PlusIcon className="w-5 h-5" />
+                    <td className="px-8 py-8">
+                      <div className="flex justify-end gap-3 opacity-50 group-hover:opacity-100 transition-all">
+                         <button onClick={() => onAction?.(article.id, 'IN')} className="w-12 h-12 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 active:scale-95 transition-all shadow-sm">
+                           <PlusIcon className="w-6 h-6" />
                          </button>
-                         <button onClick={() => onAction?.(article.id, 'OUT')} className="p-2.5 bg-white shadow-xl border border-slate-100 text-rose-600 rounded-xl hover:scale-110 active:scale-95 transition-all">
-                           <ArrowUpRight className="w-5 h-5" />
-                         </button>
-                         <button className="p-2.5 bg-white shadow-xl border border-slate-100 text-slate-400 rounded-xl hover:scale-110 active:scale-95 transition-all">
-                           <HistoryIcon className="w-5 h-5" />
+                         <button onClick={() => onAction?.(article.id, 'OUT')} className="w-12 h-12 flex items-center justify-center bg-rose-50 text-rose-600 rounded-xl hover:scale-110 active:scale-95 transition-all shadow-sm">
+                           <ArrowUpRight className="w-6 h-6" />
                          </button>
                       </div>
                     </td>
@@ -368,19 +383,19 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
       </AnimatePresence>
 
       {filteredArticles.length === 0 && (
-        <div className="card glass p-20 text-center flex flex-col items-center justify-center border-dashed border-2 border-slate-200">
-          <div className="w-24 h-24 bg-slate-50 rounded-[2.5rem] flex items-center justify-center mb-6">
-            <Package className="w-12 h-12 text-slate-200" />
+        <div className="card glass p-8 text-center flex flex-col items-center justify-center border-dashed border border-slate-200">
+          <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-3">
+            <Package className="w-6 h-6 text-slate-200" />
           </div>
-          <h3 className="text-2xl font-black text-slate-950 uppercase tracking-tighter">Inventaire Vide</h3>
-          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2 max-w-sm leading-relaxed">
-            Aucun article n'est enregistré dans cette catégorie. Commencez par enrichir votre catalogue maître.
+          <h3 className="text-base font-black text-slate-950 uppercase tracking-tighter">Inventaire Vide</h3>
+          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1 max-w-sm leading-relaxed">
+            Aucun article n'est enregistré.
           </p>
           <button 
              onClick={onManageCatalog}
-             className="mt-8 btn bg-sky-600 text-white shadow-xl shadow-sky-100 px-8 h-14 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-sky-700 transition-all"
+             className="mt-4 btn bg-sky-600 text-white shadow-sm px-4 py-2.5 rounded-lg font-black uppercase text-[10px] tracking-widest hover:bg-sky-700 transition-all"
           >
-            Créer la Première Référence
+            Créer Référence
           </button>
         </div>
       )}

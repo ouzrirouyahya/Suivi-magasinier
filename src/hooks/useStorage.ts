@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Article, Mouvement, DistributionEPI, AuditLog, UserAccount, Transfert, Inventaire, EnginMaster, PerfoMaster, AgentMaster, CatalogItem } from '../types';
+import { Article, Mouvement, DistributionEPI, AuditLog, UserAccount, Transfert, Inventaire, EnginMaster, PerfoMaster, AgentMaster, CatalogItem, PurchaseRequest, AnomalyReport } from '../types';
 import { INITIAL_ARTICLES, INITIAL_MOUVEMENTS, INITIAL_ENGINS, INITIAL_PERFOS, INITIAL_AGENTS } from '../demoData';
 import { MASTER_CATALOG, CATALOG_VERSION } from '../catalogData';
 import { generateId, handleFirestoreError, OperationType, cleanObject } from '../lib/utils';
@@ -10,6 +10,7 @@ import {
   setDoc, 
   doc, 
   runTransaction,
+  writeBatch,
   orderBy,
   limit,
   serverTimestamp,
@@ -32,6 +33,8 @@ export function useStorage() {
   const [agents, setAgents] = useState<AgentMaster[]>([]);
   const [catalog, setCatalog] = useState<CatalogItem[]>([]);
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
+  const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
+  const [anomalyReports, setAnomalyReports] = useState<AnomalyReport[]>([]);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [authStateReady, setAuthStateReady] = useState(false);
@@ -53,15 +56,12 @@ export function useStorage() {
     }
 
     const uid = auth.currentUser.uid;
-    console.log('useStorage: User authenticated, fetching account:', uid);
     const unsubUser = onSnapshot(doc(db, 'accounts', uid), async (snap) => {
       if (snap.exists()) {
         const userData = { id: snap.id, ...snap.data() } as UserAccount;
-        console.log('useStorage: Account found:', userData.email, 'Active:', userData.active);
         setCurrentUser(userData);
         setIsLoaded(true);
       } else {
-        console.log('useStorage: Account not found, auto-provisioning...');
         
         let role: 'ADMIN' | 'MAGASINIER' = 'MAGASINIER';
         try {
@@ -73,7 +73,7 @@ export function useStorage() {
             role = 'ADMIN';
           }
         } catch (e) {
-          console.error("Error checking first user:", e);
+          // Fallback
         }
 
         const newUser: UserAccount = {
@@ -90,24 +90,20 @@ export function useStorage() {
 
         setDoc(doc(db, 'accounts', uid), cleanObject(newUser))
           .then(() => {
-            console.log('useStorage: Auto-provisioning success');
             setIsLoaded(true);
           })
           .catch(err => {
-            console.error('useStorage: Auto-provisioning error', err);
             handleFirestoreError(err, OperationType.WRITE, `accounts/${uid}`);
             setIsLoaded(true); 
           });
       }
     }, (err) => {
-      console.error('useStorage: onSnapshot error', err);
       // Even on error, we must set isLoaded to true to allow the app to show login or error state
       setIsLoaded(true); 
     });
 
     const loadTimeout = setTimeout(() => {
       setIsLoaded(true);
-      console.warn('useStorage: Load timeout reached.');
     }, 6000);
 
     return () => {
@@ -123,31 +119,12 @@ export function useStorage() {
     const unsubs: (() => void)[] = [];
 
     const setupDataListeners = async () => {
-      // --- MIGRATION CHECK ---
-      const migrationDone = localStorage.getItem('hydromines_migrated_to_firebase_v2');
-      if (!migrationDone && currentUser?.role === 'ADMIN') {
-        const collectionsToMigrate = ['articles', 'mouvements', 'transferts', 'inventaires', 'auditLogs'];
-        try {
-          for (const col of collectionsToMigrate) {
-            const oldData = localStorage.getItem(`hydromines_${col}`);
-            if (oldData) {
-              const parsed = JSON.parse(oldData);
-              for (const item of parsed) {
-                if (item.id) {
-                  await setDoc(doc(db, col, item.id), cleanObject(item), { merge: true });
-                }
-              }
-            }
-          }
-          localStorage.setItem('hydromines_migrated_to_firebase_v2', 'true');
-          console.log('Migration complète terminée');
-        } catch (e) { console.error('Erreur migration:', e); }
-      }
-      // -----------------------
-
       const safeOnSnapshot = (ref: any, setter: (data: any) => void, path: string, type: OperationType = OperationType.LIST) => {
         return onSnapshot(ref, (snapshot: any) => {
-          const data = snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() }));
+          const data = snapshot.docs.map((doc: any) => {
+            const d = doc.data();
+            return { id: doc.id, ...d };
+          }).filter((d: any) => !d.deleted); // Filter out soft-deleted items
           setter(data);
         }, (err) => {
           if (err.code !== 'permission-denied' || auth.currentUser) {
@@ -155,6 +132,103 @@ export function useStorage() {
           }
         });
       };
+
+      // 1. Migration from LocalStorage
+      const migrateFromLocal = async () => {
+        const collectionsToMigrate = ['articles', 'mouvements', 'transferts', 'inventaires', 'engins', 'perfos', 'agents', 'catalog', 'distributions'];
+        
+        // Only admins can migrate accounts
+        if (currentUser?.role === 'ADMIN') {
+          collectionsToMigrate.push('accounts');
+        }
+
+        let migratedCount = 0;
+        
+        for (const col of collectionsToMigrate) {
+          const localKey = `hydromines_${col}`;
+          const localData = localStorage.getItem(localKey);
+          if (localData) {
+            try {
+              const items = JSON.parse(localData);
+              if (Array.isArray(items) && items.length > 0) {
+                const batch = writeBatch(db);
+                let count = 0;
+                for (const item of items) {
+                  if (item.id) {
+                    const ref = doc(db, col, item.id);
+                    batch.set(ref, cleanObject(item), { merge: true });
+                    count++;
+                    if (count >= 400) {
+                      await batch.commit();
+                      count = 0;
+                    }
+                  }
+                }
+                if (count > 0) await batch.commit();
+                migratedCount += items.length;
+              }
+              localStorage.removeItem(localKey);
+            } catch (e) {
+              // If migration fails for a collection, we keep it in local storage to try later
+            }
+          }
+        }
+      };
+
+      // 2. Seeding (Only if empty or version changed)
+      const seedIfEmpty = async (colName: string, initialData: any[]) => {
+        try {
+          const snap = await getDocs(query(collection(db, colName), limit(1)));
+          let shouldSeed = snap.empty;
+          
+          if (colName === 'catalog') {
+            const metaRef = doc(db, 'metadata', 'catalog_version');
+            const metaSnap = await getDoc(metaRef);
+            const currentVer = metaSnap.exists() ? metaSnap.data().version : null;
+            
+            if (currentVer !== CATALOG_VERSION) {
+              shouldSeed = true;
+            }
+          }
+
+          if (shouldSeed) {
+            const batch = writeBatch(db);
+            let count = 0;
+            for (const item of initialData) {
+              const ref = doc(db, colName, item.id || generateId());
+              batch.set(ref, cleanObject(item));
+              count++;
+              if (count >= 400) {
+                await batch.commit();
+                count = 0;
+              }
+            }
+            if (count > 0) await batch.commit();
+            
+            if (colName === 'catalog') {
+              await setDoc(doc(db, 'metadata', 'catalog_version'), { version: CATALOG_VERSION });
+            }
+          }
+        } catch (e) {
+          // Silent fallback
+        }
+      };
+
+      // Migration and Seeding logic
+      const runMigrationsAndSeeding = async () => {
+        // Migration from LocalStorage (for everyone who has local data)
+        await migrateFromLocal();
+
+        // Seeding (Articles, Catalog, Engins, etc.) 
+        // We seed if empty so that every site has initial data if it's a fresh install
+        await seedIfEmpty('articles', INITIAL_ARTICLES);
+        await seedIfEmpty('catalog', MASTER_CATALOG);
+        await seedIfEmpty('engins', INITIAL_ENGINS);
+        await seedIfEmpty('perfos', INITIAL_PERFOS);
+        await seedIfEmpty('agents', INITIAL_AGENTS);
+      };
+
+      runMigrationsAndSeeding();
 
       unsubs.push(safeOnSnapshot(collection(db, 'articles'), setArticles, 'articles'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'mouvements'), orderBy('date', 'desc'), limit(500)), setMouvements, 'mouvements'));
@@ -165,50 +239,12 @@ export function useStorage() {
       unsubs.push(safeOnSnapshot(collection(db, 'engins'), setEngins, 'engins'));
       unsubs.push(safeOnSnapshot(collection(db, 'perfos'), setPerfos, 'perfos'));
       unsubs.push(safeOnSnapshot(collection(db, 'agents'), setAgents, 'agents'));
+      unsubs.push(safeOnSnapshot(collection(db, 'distributions'), setDistributions, 'distributions'));
+      unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
+      unsubs.push(safeOnSnapshot(collection(db, 'anomalyReports'), setAnomalyReports, 'anomalyReports'));
 
       if (currentUser.role === 'ADMIN') {
         unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));
-      }
-
-      // Seeding (Only if empty or version changed)
-      const seedIfEmpty = async (colName: string, initialData: any[]) => {
-        try {
-          const snap = await getDocs(query(collection(db, colName), limit(1)));
-          
-          let shouldSeed = snap.empty;
-          
-          // Special case for catalog versioning
-          if (colName === 'catalog') {
-            const metaRef = doc(db, 'metadata', 'catalog_version');
-            const metaSnap = await getDoc(metaRef);
-            const currentVer = metaSnap.exists() ? metaSnap.data().version : null;
-            
-            if (currentVer !== CATALOG_VERSION) {
-              console.log(`useStorage: Catalog version mismatch (${currentVer} vs ${CATALOG_VERSION}). Forcing refresh...`);
-              shouldSeed = true;
-              // Reset meta version immediately to avoid multiple triggers
-              await setDoc(metaRef, { version: CATALOG_VERSION });
-            }
-          }
-
-          if (shouldSeed) {
-            console.log(`useStorage: Seeding ${colName} with ${initialData.length} items...`);
-            for (const item of initialData) {
-              await setDoc(doc(db, colName, item.id), cleanObject(item));
-            }
-            console.log(`useStorage: Seeding ${colName} complete.`);
-          }
-        } catch (e) {
-          console.error(`useStorage: Seeding ${colName} failed:`, e);
-        }
-      };
-
-      if (currentUser.role === 'ADMIN') {
-        seedIfEmpty('articles', INITIAL_ARTICLES);
-        seedIfEmpty('catalog', MASTER_CATALOG);
-        seedIfEmpty('engins', INITIAL_ENGINS);
-        seedIfEmpty('perfos', INITIAL_PERFOS);
-        seedIfEmpty('agents', INITIAL_AGENTS);
       }
     };
 
@@ -404,8 +440,14 @@ export function useStorage() {
   const deleteArticle = async (id: string) => {
     try {
       const art = articles.find(a => a.id === id);
-      if (art && confirm('Confirmer la suppression ?')) {
-        // Soft delete logic could go here
+      if (art && confirm(`Confirmer la suppression de ${art.designation} (${art.ref}) ?`)) {
+        const artRef = doc(db, 'articles', id);
+        // Direct deletion from Firestore
+        await setDoc(artRef, { ...art, deleted: true, deletedAt: new Date().toISOString() });
+        // Alternatively, hard delete if preferred, but soft delete is safer.
+        // await deleteDoc(artRef); 
+        await logAction('DELETE_ARTICLE', `Article ${art.ref} supprimé (soft delete)`, art.site);
+        toast.success('Article supprimé avec succès');
       }
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `articles/${id}`);
@@ -435,14 +477,42 @@ export function useStorage() {
     }
   };
 
-  const setEnginsInternal = (e: EnginMaster[]) => e.forEach(item => setDoc(doc(db, 'engins', item.id), cleanObject(item)));
-  const setPerfosInternal = (p: PerfoMaster[]) => p.forEach(item => setDoc(doc(db, 'perfos', item.id), cleanObject(item)));
-  const setAgentsInternal = (a: AgentMaster[]) => a.forEach(item => setDoc(doc(db, 'agents', item.id), cleanObject(item)));
-  const setCatalogInternal = (c: CatalogItem[]) => c.forEach(item => setDoc(doc(db, 'catalog', item.id), cleanObject(item)));
+  const setEngin = async (id: string, engin: Partial<EnginMaster> | null) => {
+    try {
+      const ref = doc(db, 'engins', id);
+      if (engin === null) {
+        await setDoc(ref, { deleted: true, deletedAt: new Date().toISOString() }, { merge: true });
+      } else {
+        await setDoc(ref, cleanObject({ ...engin, id }), { merge: true });
+      }
+    } catch (e) { handleFirestoreError(e, OperationType.WRITE, `engins/${id}`); }
+  };
+
+  const setPerfo = async (id: string, perfo: Partial<PerfoMaster> | null) => {
+    try {
+      const ref = doc(db, 'perfos', id);
+      if (perfo === null) {
+        await setDoc(ref, { deleted: true, deletedAt: new Date().toISOString() }, { merge: true });
+      } else {
+        await setDoc(ref, cleanObject({ ...perfo, id }), { merge: true });
+      }
+    } catch (e) { handleFirestoreError(e, OperationType.WRITE, `perfos/${id}`); }
+  };
+
+  const setAgent = async (id: string, agent: Partial<AgentMaster> | null) => {
+    try {
+      const ref = doc(db, 'agents', id);
+      if (agent === null) {
+        await setDoc(ref, { deleted: true, deletedAt: new Date().toISOString() }, { merge: true });
+      } else {
+        await setDoc(ref, cleanObject({ ...agent, id }), { merge: true });
+      }
+    } catch (e) { handleFirestoreError(e, OperationType.WRITE, `agents/${id}`); }
+  };
 
   const saveCatalogItem = async (item: CatalogItem) => {
     const promise = (async () => {
-      await setDoc(doc(db, 'catalog', item.id), cleanObject(item));
+      await setDoc(doc(db, 'catalog', item.id), cleanObject(item), { merge: true });
       await logAction('CATALOG_UPDATE', `Item ${item.reference} sauvegardé au master`, 'SMI');
     })();
 
@@ -461,18 +531,41 @@ export function useStorage() {
 
   const deleteCatalogItem = async (id: string) => {
     try {
-      // In a real app we might want a hard delete ref in firestore
-      // For now we trust the list sync from onSnapshot
+      const item = catalog.find(i => i.id === id);
+      if (item && confirm(`Supprimer ${item.designation} du catalogue maître ?`)) {
+        await setDoc(doc(db, 'catalog', id), { deleted: true, deletedAt: new Date().toISOString() }, { merge: true });
+        await logAction('CATALOG_DELETE', `Item ${item.reference} supprimé du master`, 'SMI');
+        toast.success('Référence retirée du catalogue');
+      }
     } catch (e) {
       handleFirestoreError(e, OperationType.DELETE, `catalog/${id}`);
+    }
+  };
+
+  const addPurchaseRequest = async (pr: PurchaseRequest) => {
+    try {
+      const id = pr.id || generateId();
+      await setDoc(doc(db, 'purchaseRequests', id), cleanObject({ ...pr, id }));
+      await logAction('RESTOCK_PR', `Demande d'achat ${id} créée`, pr.site);
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, 'purchaseRequests');
+    }
+  };
+
+  const updatePRStatus = async (id: string, status: PurchaseRequest['status']) => {
+    try {
+      await setDoc(doc(db, 'purchaseRequests', id), { status }, { merge: true });
+      await logAction('PR_STATUS_UPDATE', `DA ${id} changée en ${status}`, 'SMI');
+    } catch (e) {
+      handleFirestoreError(e, OperationType.WRITE, `purchaseRequests/${id}`);
     }
   };
 
   return { 
     articles, mouvements, distributions, auditLogs, accounts, currentUser,
     addMouvement, addTransfert, completeTransfert, saveInventaire, saveArticle, deleteArticle, toggleUser,
-    isLoaded, transferts, inventaires, engins, perfos, agents, catalog, saveCatalogItem,
-    setEngins: setEnginsInternal, setPerfos: setPerfosInternal, setAgents: setAgentsInternal, setCatalog: setCatalogInternal
+    isLoaded, transferts, inventaires, engins, perfos, agents, catalog, saveCatalogItem, deleteCatalogItem,
+    setEngin, setPerfo, setAgent, purchaseRequests, anomalyReports, addPurchaseRequest, updatePRStatus
   };
 }
 

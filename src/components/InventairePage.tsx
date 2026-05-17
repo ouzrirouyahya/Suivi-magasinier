@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Article, SiteCode, Inventaire } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
+import { toast } from 'sonner';
 
 interface InventairePageProps {
   currentSite: SiteCode;
@@ -98,21 +99,21 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     if (!activeSession) return;
     onSaveInventaire({ ...activeSession });
     setActiveSession(null);
-    alert('Inventaire sauvegardé en brouillon.');
+    toast.success('Inventaire sauvegardé en brouillon.');
   };
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-20 mission-control-bg min-h-screen p-8">
-      <header className="flex items-center justify-between">
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-24 mission-control-bg p-12 flex-1">
+      <header className="flex items-center justify-between mb-10">
         <div>
-          <h2 className="text-base font-black text-slate-900 tracking-tighter uppercase leading-none">Contrôle Inventaire</h2>
-          <p className="text-slate-500 font-bold mt-2 uppercase text-[10px] tracking-widest italic flex items-center gap-2">
-            <ClipboardCheck className="w-4 h-4 text-sky-500" /> Audit du Stock Réel vs Système
+          <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Contrôle Inventaire</h2>
+          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">
+            Audit du Stock Réel vs Système d'Information
           </p>
         </div>
         {!activeSession && (
-          <div className="flex flex-wrap gap-4 justify-end">
-            <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm gap-2">
+          <div className="flex flex-wrap gap-6 justify-end items-center">
+            <div className="flex bg-white p-3 rounded-2xl border border-slate-100 shadow-sm gap-3">
               {[
                 { id: 'ENGINS', label: 'Engins', icon: Truck },
                 { id: 'PERFORATEURS', label: 'Foreuses', icon: Drill },
@@ -121,18 +122,18 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                 <button
                   key={t.id}
                   onClick={() => startInventory('TOURNANT', t.id)}
-                  className="px-4 py-2 hover:bg-sky-50 text-sky-700 rounded-xl transition-all flex items-center gap-2 group"
+                  className="px-6 py-3 hover:bg-sky-50 text-sky-700 rounded-[1.25rem] transition-all flex items-center gap-4 group"
                 >
-                  <t.icon className="w-4 h-4 text-sky-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-[10px] font-black uppercase tracking-widest">{t.label}</span>
+                  <t.icon className="w-8 h-8 text-sky-400 group-hover:scale-110 transition-transform" />
+                  <span className="text-sm font-black uppercase tracking-widest">{t.label}</span>
                 </button>
               ))}
             </div>
             <button 
               onClick={() => startInventory('ANNUEL')}
-              className="btn btn-primary h-14 px-8 rounded-2xl gap-2 shadow-sky-200"
+              className="btn btn-primary h-16 px-12 rounded-2xl gap-4 shadow-xl text-lg uppercase tracking-widest font-black"
             >
-              <Archive className="w-5 h-5" /> Grand Inventaire Annuel
+              <Archive className="w-7 h-7" /> Annuel
             </button>
           </div>
         )}
@@ -140,60 +141,61 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
 
       {activeSession ? (
         <div className="space-y-8">
-          <div className="card glass p-8 sticky top-8 z-40 bg-white/90 backdrop-blur-xl border-sky-100 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex items-center gap-6">
-              <div className="w-16 h-16 rounded-3xl bg-sky-600 text-white flex items-center justify-center shadow-lg shadow-sky-200">
-                <PackageCheck className="w-8 h-8" />
+          <div className="card glass p-10 sticky top-4 z-40 bg-white/95 backdrop-blur-2xl border-sky-100 flex flex-col xl:flex-row items-center justify-between gap-10 shadow-2xl shadow-sky-950/5">
+            <div className="flex items-center gap-8">
+              <div className="w-20 h-20 rounded-[2.5rem] bg-sky-600 text-white flex items-center justify-center shadow-2xl shadow-sky-600/30">
+                <PackageCheck className="w-10 h-10" />
               </div>
               <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter leading-none">Session en cours</h3>
-                <div className="flex items-center gap-4 mt-2">
-                   <span className="text-[10px] font-black px-2 py-0.5 bg-sky-100 text-sky-700 rounded-lg uppercase tracking-widest">{activeSession.type}</span>
-                   <span className="text-xs font-bold text-slate-400 flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> {new Date(activeSession.date).toLocaleDateString()}</span>
+                <h3 className="text-3xl font-black uppercase tracking-tighter leading-none text-slate-950">Session en cours</h3>
+                <div className="flex items-center gap-6 mt-3">
+                   <span className="text-xs font-black px-4 py-1.5 bg-sky-100 text-sky-700 rounded-xl uppercase tracking-widest">{activeSession.type}</span>
+                   <span className="text-base font-bold text-slate-500 flex items-center gap-2.5"><Calendar className="w-5 h-5 text-sky-400" /> {new Date(activeSession.date).toLocaleDateString()}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex-1 max-w-md w-full relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-300" />
+            <div className="flex-1 max-w-xl w-full relative group">
+              <div className="absolute inset-0 bg-sky-500/5 rounded-xl opacity-0 group-focus-within:opacity-100 transition-opacity blur-lg" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 relative z-10" />
               <input 
                 type="text" 
-                placeholder="Scanner une référence ou filtrer..."
-                className="input-field pl-12 bg-white"
+                placeholder="RECHERCHER OU SCANNER UNE RÉFÉRENCE..."
+                className="input-field h-10 pl-11 text-xs bg-white relative z-10 border-slate-200 focus:border-sky-500 font-black tracking-tight rounded-xl"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
-            <div className="flex gap-4 shrink-0">
-               <button onClick={handleSaveDraft} className="btn btn-secondary px-8 h-12 rounded-xl text-[10px] tracking-widest">Suspendre (Brouillon)</button>
-               <button onClick={handleValidate} className="btn btn-primary px-10 h-12 rounded-xl text-[10px] tracking-widest shadow-sky-200">Valider l'Inventaire</button>
+            <div className="flex gap-2 shrink-0">
+               <button onClick={handleSaveDraft} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm">Suspendre</button>
+               <button onClick={handleValidate} className="btn btn-primary px-8 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase shadow-xl shadow-sky-500/20">Valider</button>
             </div>
           </div>
 
-          <div className="card glass overflow-hidden">
+          <div className="card glass overflow-hidden border-slate-100 shadow-xl">
             <div className="table-container border-0 rounded-none overflow-visible">
               <table className="data-table">
                 <thead>
-                  <tr>
-                    <th>Référence & Désignation</th>
-                    <th className="text-center w-32">Théorique</th>
-                    <th className="text-center w-40">Compté Réel</th>
-                    <th className="text-center w-32">Écart</th>
-                    <th>Observations / Justification</th>
+                  <tr className="bg-slate-50/50">
+                    <th className="py-4 pl-6 text-xs font-black uppercase tracking-widest text-slate-400">Référence & Désignation</th>
+                    <th className="py-4 text-center w-24 text-xs font-black uppercase tracking-widest text-slate-400">Théorique</th>
+                    <th className="py-4 text-center w-32 text-xs font-black uppercase tracking-widest text-slate-400">Compté Réel</th>
+                    <th className="py-4 text-center w-24 text-xs font-black uppercase tracking-widest text-slate-400">Écart</th>
+                    <th className="py-4 pr-6 text-xs font-black uppercase tracking-widest text-slate-400">Observations / Justification</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {/* Grouped Table Rows */}
                   {Array.from(new Set(filteredArticles.map(a => a.functionalCategory || a.category || 'SANS CATÉGORIE'))).map(catName => (
                     <React.Fragment key={catName}>
-                      <tr className="bg-slate-50 shadow-inner">
-                        <td colSpan={5} className="px-8 py-3">
-                           <div className="flex items-center gap-3">
-                              <Database className="w-4 h-4 text-sky-600" />
-                              <span className="text-[11px] font-black text-slate-900 uppercase tracking-[0.2em]">{catName}</span>
+                      <tr className="bg-slate-50/80">
+                        <td colSpan={5} className="px-6 py-4">
+                           <div className="flex items-center gap-4">
+                              <Database className="w-5 h-5 text-sky-600" />
+                              <span className="text-sm font-black text-slate-900 uppercase tracking-widest">{catName}</span>
                               <div className="h-px bg-slate-200 flex-1"></div>
-                              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{filteredArticles.filter(a => (a.functionalCategory || a.category || 'SANS CATÉGORIE') === catName).length} Articles</span>
+                              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest bg-white px-3 py-1 rounded-full border border-slate-100 shadow-sm">{filteredArticles.filter(a => (a.functionalCategory || a.category || 'SANS CATÉGORIE') === catName).length} Articles</span>
                            </div>
                         </td>
                       </tr>
@@ -203,65 +205,61 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                           const sessionItem = activeSession.items.find(i => i.articleId === article.id);
                           if (!sessionItem) return null;
                           const hasError = sessionItem.difference !== 0;
-                          const financialDiff = sessionItem.difference * (article.price || 0);
 
                           return (
-                            <tr key={article.id} className={cn("transition-colors group", hasError ? "bg-amber-50/30" : "hover:bg-slate-50/50")}>
-                               <td className="px-8 py-6 pl-12 border-l-4 border-transparent group-hover:border-sky-400 transition-all">
-                                 <p className="font-black text-slate-900 leading-none">{article.designation}</p>
-                                 <p className="text-[10px] font-mono font-bold text-slate-400 mt-1 uppercase tracking-widest">{article.ref} • {article.location || 'NON LOCALISÉ'}</p>
+                            <tr key={article.id} className={cn("transition-all duration-300 group", hasError ? "bg-amber-50/40" : "hover:bg-slate-50/70")}>
+                               <td className="px-6 py-4 border-l-4 border-transparent group-hover:border-sky-500 transition-all">
+                                 <p className="font-black text-slate-900 text-sm leading-tight mb-1">{article.designation}</p>
+                                 <div className="flex items-center gap-3">
+                                   <p className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">{article.ref}</p>
+                                   <span className="w-1 h-3 bg-slate-200 rounded-full" />
+                                   <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                      <Filter className="w-3.5 h-3.5" /> {article.location || 'BUREAU'}
+                                   </p>
+                                 </div>
                                  {article.component && (
-                                   <p className="text-[9px] font-black text-sky-500 uppercase tracking-tighter mt-1">{article.component} {article.subComponent ? `/ ${article.subComponent}` : ''}</p>
+                                   <p className="text-[10px] font-black text-sky-500 uppercase tracking-widest mt-1.5 opacity-70">{article.component}</p>
                                  )}
                               </td>
-                              <td className="px-8 py-6 text-center">
+                              <td className="px-4 py-4 text-center">
                                  <div className="flex flex-col items-center">
-                                   <span className="px-3 py-1 bg-slate-100 rounded-lg font-mono font-black text-slate-600 text-sm">
+                                   <span className="px-3 py-1.5 bg-slate-100 rounded-lg font-mono font-black text-slate-600 text-sm border border-slate-50 shadow-sm min-w-[60px]">
                                      {isNaN(sessionItem.theoricQuantity) ? 0 : sessionItem.theoricQuantity}
-                                   </span>
-                                   <span className="text-[9px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
-                                     {formatCurrency((sessionItem.theoricQuantity || 0) * (article.price || 0))}
                                    </span>
                                  </div>
                               </td>
-                              <td className="px-8 py-6 text-center">
+                              <td className="px-4 py-4 text-center">
                                  <input 
                                     type="number"
                                     className={cn(
-                                      "w-24 px-4 py-2 rounded-xl font-black text-lg text-center outline-none transition-all",
-                                      hasError ? "bg-amber-100 text-amber-800 ring-2 ring-amber-400" : "bg-slate-100 focus:bg-white focus:ring-4 focus:ring-sky-500/10"
+                                      "w-20 h-10 rounded-lg font-black text-sm text-center outline-none transition-all shadow-sm",
+                                      hasError ? "bg-white text-rose-600 ring-2 ring-rose-500" : "bg-white border border-slate-200 text-slate-900 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500"
                                     )}
                                     value={isNaN(sessionItem.countedQuantity) ? '' : sessionItem.countedQuantity}
                                     onChange={(e) => updateCount(article.id, Number(e.target.value))}
                                  />
                               </td>
-                              <td className="px-8 py-6 text-center">
+                              <td className="px-4 py-4 text-center">
                                  <div className="flex flex-col items-center gap-1">
                                    <span className={cn(
-                                     "text-sm font-black flex items-center justify-center gap-1.5",
-                                     (sessionItem.difference || 0) > 0 ? "text-emerald-600" : (sessionItem.difference || 0) < 0 ? "text-rose-600" : "text-slate-400"
+                                     "text-xs font-black flex items-center justify-center gap-1 px-2.5 py-1 rounded-lg",
+                                     (sessionItem.difference || 0) > 0 ? "text-emerald-700 bg-emerald-50" : (sessionItem.difference || 0) < 0 ? "text-rose-700 bg-rose-50" : "text-slate-400"
                                    )}>
                                      {(sessionItem.difference || 0) > 0 ? '+' : ''}{isNaN(sessionItem.difference) ? 0 : sessionItem.difference}
-                                     {hasError && <AlertCircle className="w-3.5 h-3.5" />}
                                    </span>
-                                   {hasError && (
-                                     <span className={cn(
-                                       "text-[9px] font-black uppercase tracking-widest",
-                                       financialDiff > 0 ? "text-emerald-500" : "text-rose-500"
-                                     )}>
-                                       {financialDiff > 0 ? '+' : ''}{formatCurrency(financialDiff)}
-                                     </span>
-                                   )}
                                  </div>
                               </td>
-                              <td className="px-8 py-6">
-                                 <input 
-                                    type="text"
-                                    placeholder="Raison de l'écart..."
-                                    className="w-full bg-transparent border-b border-slate-200 py-1 text-xs font-semibold focus:border-sky-500 outline-none"
-                                    value={sessionItem.justification || ''}
-                                    onChange={(e) => updateJustification(article.id, e.target.value)}
-                                 />
+                              <td className="px-6 py-4 pr-6">
+                                 <div className="relative group/input">
+                                   <input 
+                                      type="text"
+                                      placeholder="Notez l'origine de l'écart ici..."
+                                      className="w-full bg-white border-b-2 border-slate-100 py-2 text-sm font-bold text-slate-600 focus:border-sky-400 outline-none transition-all group-hover/input:border-slate-300 placeholder:opacity-50"
+                                      value={sessionItem.justification || ''}
+                                      onChange={(e) => updateJustification(article.id, e.target.value)}
+                                   />
+                                   <ArrowRightLeft className="absolute right-0 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 group-hover/input:text-sky-300 transition-colors" />
+                                 </div>
                               </td>
                             </tr>
                           );
@@ -274,58 +272,86 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
           </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-           <div className="card glass p-8 flex flex-col items-center justify-center text-center space-y-6 bg-white/40">
-             <div className="w-20 h-20 rounded-full bg-slate-50 flex items-center justify-center text-slate-300">
-                <FileText className="w-10 h-10" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+           <div className="card glass p-12 flex flex-col items-center justify-center text-center space-y-10 bg-white/40 shadow-xl border-slate-100">
+             <div className="w-28 h-28 rounded-full bg-slate-50 flex items-center justify-center text-slate-200 shadow-inner">
+                <FileText className="w-14 h-14" />
              </div>
              <div>
-                <h3 className="text-xl font-black uppercase tracking-tighter">Historique des Inventaires</h3>
-                <p className="text-xs font-bold text-slate-400 mt-2 uppercase tracking-widest">Consultez les audits passés et les ajustements de stock</p>
+                <h3 className="text-3xl font-black uppercase tracking-tighter text-slate-950">Historique des Inventaires</h3>
+                <p className="text-base font-bold text-slate-400 mt-3 uppercase tracking-widest leading-relaxed">Consultez les audits passés et les ajustements de stock sur {currentSite}</p>
              </div>
-             <div className="w-full space-y-3">
+             <div className="w-full space-y-4 pt-6">
                 {inventaires.filter(i => i.site === currentSite).map(inv => (
-                  <div key={inv.id} className="p-4 bg-white rounded-2xl border border-slate-100 flex items-center justify-between group hover:border-sky-200 transition-all">
-                    <div className="flex items-center gap-3">
-                       <ClipboardCheck className="w-5 h-5 text-sky-500" />
+                  <div key={inv.id} className="p-6 bg-white rounded-[2rem] border border-slate-100 flex items-center justify-between group hover:border-sky-400 hover:shadow-xl transition-all duration-300 cursor-pointer">
+                    <div className="flex items-center gap-6">
+                       <div className="w-14 h-14 rounded-2xl bg-sky-50 flex items-center justify-center text-sky-500 group-hover:bg-sky-600 group-hover:text-white transition-all">
+                          <ClipboardCheck className="w-7 h-7" />
+                       </div>
                        <div className="text-left">
-                         <p className="text-xs font-black text-slate-900 uppercase">{inv.type} — {new Date(inv.date).toLocaleDateString()}</p>
-                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{inv.status}</p>
+                         <p className="text-sm font-black text-slate-900 uppercase tracking-tight">{inv.type} — {new Date(inv.date).toLocaleDateString()}</p>
+                         <p className="text-xs text-slate-400 font-black uppercase tracking-[0.2em] mt-1 flex items-center gap-2">
+                           <span className={cn(
+                             "w-2 h-2 rounded-full ring-2 ring-white",
+                             inv.status === 'VALIDE' ? "bg-emerald-500" : "bg-amber-500"
+                           )} />
+                           {inv.status}
+                         </p>
                        </div>
                     </div>
-                    <CheckCircle2 className="w-5 h-5 text-emerald-500 opacity-0 group-hover:opacity-100 transition-opacity" />
+                    <CheckCircle2 className="w-8 h-8 text-emerald-500 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0" />
                   </div>
                 ))}
-                {inventaires.length === 0 && <p className="py-10 text-[10px] font-black text-slate-300 uppercase tracking-widest">Aucun historique disponible</p>}
+                {inventaires.filter(i => i.site === currentSite).length === 0 && (
+                  <div className="py-20 flex flex-col items-center gap-4">
+                    <History className="w-12 h-12 text-slate-100" />
+                    <p className="text-xs font-black text-slate-300 uppercase tracking-[0.3em]">Aucun historique archivé</p>
+                  </div>
+                )}
              </div>
            </div>
 
-           <div className="space-y-6">
-              <div className="card glass p-8 bg-sky-950 text-white border-sky-800 shadow-2xl shadow-sky-900/20">
-                 <h3 className="text-lg font-black uppercase tracking-tighter mb-4 flex items-center gap-3">
-                   <Filter className="w-5 h-5" /> Rappel Médecine Stock
+           <div className="space-y-10">
+              <div className="card glass p-12 bg-slate-950 text-white border-slate-800 shadow-2xl shadow-slate-900/40 relative overflow-hidden group">
+                 <div className="absolute top-0 right-0 w-64 h-64 bg-sky-500/10 blur-[100px] -mr-32 -mt-32 group-hover:bg-sky-500/20 transition-all duration-700" />
+                 <h3 className="text-2xl font-black uppercase tracking-tighter mb-6 flex items-center gap-4 relative z-10">
+                   <AlertCircle className="w-8 h-8 text-sky-400" /> Rappel Audit Stock
                  </h3>
-                 <p className="text-slate-300 text-xs font-medium leading-relaxed">
-                   Un inventaire tournant doit être effectué chaque semaine pour les articles à forte valeur (Pareto A). 
-                   L'inventaire annuel est obligatoire avant la clôture de l'exercice fiscal.
+                 <p className="text-slate-300 text-base font-medium leading-relaxed relative z-10">
+                   Un inventaire tournant doit être effectué chaque semaine pour les articles à forte valeur stratégique. 
+                   <br/><br/>
+                   L'inventaire annuel est obligatoire avant toute clôture comptable pour garantir l'intégrité du bilan de {currentSite}.
                  </p>
-                 <div className="mt-6 flex items-center gap-3 p-4 bg-white/5 rounded-2xl border border-white/10">
-                    <AlertCircle className="w-6 h-6 text-sky-400" />
-                    <p className="text-[10px] font-black uppercase tracking-widest text-sky-200">24 articles n'ont pas été comptés depuis +30 jours</p>
+                 <div className="mt-10 flex items-center gap-6 p-6 bg-white/5 rounded-[2rem] border border-white/10 relative z-10 hover:bg-white/10 transition-colors">
+                    <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center text-amber-400">
+                       <AlertCircle className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <p className="text-[11px] font-black uppercase tracking-[0.2em] text-sky-300 mb-1">Alerte de Retard</p>
+                      <p className="text-sm font-black text-white uppercase tracking-widest">24 articles non audités depuis +30j</p>
+                    </div>
                  </div>
               </div>
 
-              <div className="card glass p-8 bg-white/40">
-                 <h3 className="text-lg font-black uppercase tracking-tighter mb-4 flex items-center gap-3">
-                   <ArrowRightLeft className="w-5 h-5 text-sky-600" /> Flux de Réglage
+              <div className="card glass p-12 bg-white/70 backdrop-blur-3xl shadow-xl border-slate-100">
+                 <h3 className="text-2xl font-black uppercase tracking-tighter mb-8 flex items-center gap-4">
+                   <ArrowRightLeft className="w-8 h-8 text-sky-600" /> Indicateur de Précision
                  </h3>
-                 <div className="space-y-4">
-                    <div className="flex justify-between items-center text-xs">
-                       <span className="font-bold text-slate-500">Précision Stock Actuelle</span>
-                       <span className="font-black text-sky-600">98.4%</span>
+                 <div className="space-y-8">
+                    <div className="flex justify-between items-end">
+                       <div className="space-y-1">
+                         <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Taux de fiabilité réel</p>
+                         <p className="text-5xl font-black text-slate-950 tracking-tighter">98.4<span className="text-sky-600 text-3xl">%</span></p>
+                       </div>
+                       <span className="text-emerald-500 font-black text-sm flex items-center gap-1 mb-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">+0.5% (Mois)</span>
                     </div>
-                    <div className="w-full h-2 bg-slate-100 rounded-full overflow-hidden">
-                       <div className="h-full bg-sky-500 w-[98.4%]"></div>
+                    <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner ring-4 ring-slate-50">
+                       <div className="h-full bg-sky-500 w-[98.4%] relative">
+                          <div className="absolute inset-0 bg-white/20 animate-pulse" />
+                       </div>
+                    </div>
+                    <div className="pt-4 flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
+                       <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Objectif KPI : 99.5%
                     </div>
                  </div>
               </div>

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import * as THREE from 'three';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
+import { toast } from 'sonner';
 
 import { Background3D } from './Background3D';
 
@@ -13,8 +14,6 @@ const LoginPage: React.FC = () => {
     try {
       await signInWithPopup(auth, googleProvider);
     } catch (error: any) {
-      console.error("Login failed:", error);
-      
       let message = "La connexion a échoué. Veuillez réessayer.";
       
       if (error.code === 'auth/unauthorized-domain') {
@@ -25,7 +24,7 @@ const LoginPage: React.FC = () => {
         return; // Ignore if user just closed the popup
       }
       
-      alert(message);
+      toast.error(message);
     }
   };
 
@@ -53,7 +52,7 @@ const LoginPage: React.FC = () => {
   }, []);
 
   return (
-    <div className="fixed inset-0 min-h-screen bg-white overflow-hidden font-sans select-none">
+    <div className="fixed inset-0 min-h-screen bg-white overflow-hidden font-sans select-none" style={{ fontSize: '16px' }}>
       {/* 3D Background - White with Red/Blue Points */}
       <div className="absolute inset-0 z-[1] opacity-60">
         <Background3D count={1000} opacity={0.6} size={0.05} />

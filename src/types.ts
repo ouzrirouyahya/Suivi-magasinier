@@ -166,3 +166,32 @@ export interface AuditLog {
   details: string;
   amount?: number;
 }
+
+export interface PurchaseRequest {
+  id: string;
+  site: SiteCode;
+  date: string;
+  status: 'BROUILLON' | 'ENVOYE' | 'VALIDE' | 'COMMANDE' | 'RECU';
+  items: {
+    articleId: string;
+    quantity: number;
+    lastPrice?: number;
+    estimatedPrice?: number;
+  }[];
+  notes?: string;
+  createdBy: string;
+  reference?: string;
+}
+
+export interface AnomalyReport {
+  id: string;
+  site: SiteCode;
+  timestamp: string;
+  type: 'CONSUMPTION_PATTERN' | 'STOCK_INCOHERENCE' | 'FREQUENT_CHANGE';
+  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  description: string;
+  articleId?: string;
+  machineId?: string;
+  suggestedAction?: string;
+  status: 'NEW' | 'INVESTIGATING' | 'RESOLVED' | 'DISMISSED';
+}
