@@ -59,10 +59,25 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
         })
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Server Error" }));
+        throw new Error(errorData.error || `HTTP Error ${response.status}`);
+      }
+
       const data = await response.json();
       setMessages([...newMessages, { role: 'assistant', content: data.message }]);
     } catch (error) {
-      setMessages([...newMessages, { role: 'assistant', content: "Désolé, j'ai rencontré une erreur technique." }]);
+      console.error('Gemini Chat Error:', error);
+      const errorMessage = error instanceof Error ? error.message : "Erreur technique";
+      let displayMessage = "Désolé, j'ai rencontré une erreur technique.";
+      
+      if (errorMessage.includes("GEMINI_API_KEY")) {
+        displayMessage = "L'Expert Gemini n'est pas configuré (Clé API manquante dans les secrets).";
+      } else if (errorMessage.includes("Unexpected token") || errorMessage.includes("JSON")) {
+        displayMessage = "Erreur de communication avec le serveur AI (Réponse invalide).";
+      }
+      
+      setMessages([...newMessages, { role: 'assistant', content: displayMessage }]);
     } finally {
       setLoading(false);
     }

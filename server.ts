@@ -111,7 +111,9 @@ async function startServer() {
       
       res.json({ message: responseText });
     } catch (error) {
-      res.status(500).json({ error: "Failed to chat with expert" });
+      console.error("Gemini Chat Error:", error);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      res.status(500).json({ error: "Failed to chat with expert", details: errorMessage });
     }
   });
 

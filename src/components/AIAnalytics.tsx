@@ -3,6 +3,8 @@ import { Brain, Sparkles, AlertTriangle, TrendingUp, History, PlayCircle, Loader
 import { SiteCode, Article, Mouvement, AnomalyReport } from '../types';
 import { cn } from '../lib/utils';
 
+import { toast } from 'sonner';
+
 interface AIAnalyticsProps {
   site: SiteCode;
   articles: Article[];
@@ -39,14 +41,23 @@ export function AIAnalytics({ site, articles, mouvements }: AIAnalyticsProps) {
         })
       });
 
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: "Erreur serveur" }));
+        throw new Error(errorData.error || `Erreur ${response.status}`);
+      }
+
       const result = await response.json();
       if (type === 'ANOMALIES') {
         setAnomalies(result.anomalies || []);
+        toast.success('Analyse des anomalies terminée');
       } else {
         setPredictions(result.predictions || []);
+        toast.success('Audit prédictif terminé');
       }
     } catch (error) {
-      // Error handled silently
+      console.error('AI Analytics Error:', error);
+      const msg = error instanceof Error ? error.message : "Erreur technique";
+      toast.error(`Échec de l'analyse : ${msg}`);
     } finally {
       setAnalyzing(false);
     }
