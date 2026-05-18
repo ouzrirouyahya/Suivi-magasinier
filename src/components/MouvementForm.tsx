@@ -31,6 +31,7 @@ interface MouvementFormProps {
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
   const [date] = useState(new Date().toISOString());
   const [reference, setReference] = useState('');
+  const [beneficiaire, setBeneficiaire] = useState('');
   const [entityName, setEntityName] = useState(''); 
   const [mecanicien, setMecanicien] = useState(''); 
   const [targetEngin, setTargetEngin] = useState(''); 
@@ -119,6 +120,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       reference,
       vendeur: type === 'ENTREE' ? entityName : undefined,
       demandeur: (type === 'SORTIE' && isEpiOrOutils) ? entityName : undefined,
+      beneficiaire: (type === 'SORTIE') ? (beneficiaire || entityName) : undefined,
       mecanicien: resolvedMecanicien ? `${resolvedMecanicien.firstname} ${resolvedMecanicien.lastname}` : mecanicien,
       engin: resolvedEngin ? resolvedEngin.code : targetEngin,
       perforateur: resolvedPerfo ? resolvedPerfo.code : targetPerfo,
@@ -183,21 +185,92 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             </div>
           </div>
 
-          {type === 'SORTIE' && isMachineRelated && (
-            <div className="md:col-span-2 p-4 bg-slate-50 rounded-2xl border border-slate-200 grid grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-sky-600 uppercase tracking-widest ml-1">Référence Machine</label>
-                <select className="input-field h-10 text-xs font-black px-4" value={categoryFilter === 'ENGINS' ? targetEngin : targetPerfo} onChange={(e) => categoryFilter === 'ENGINS' ? setTargetEngin(e.target.value) : setTargetPerfo(e.target.value)} required>
-                  <option value="">Sélectionner une machine...</option>
-                  {categoryFilter === 'ENGINS' ? siteEngins.map(e => <option key={e.id} value={e.id}>{e.code}</option>) : sitePerfos.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
-                </select>
+          {type === 'SORTIE' && (
+            <div className="md:col-span-2 p-6 bg-indigo-50 border border-indigo-100 rounded-3xl shadow-inner grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {isMachineRelated ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Référence Machine</label>
+                    <select className="input-field h-12 text-sm font-black px-4 bg-white" value={categoryFilter === 'ENGINS' ? targetEngin : targetPerfo} onChange={(e) => categoryFilter === 'ENGINS' ? setTargetEngin(e.target.value) : setTargetPerfo(e.target.value)} required>
+                      <option value="">SÉLECTIONNER UNE MACHINE...</option>
+                      {categoryFilter === 'ENGINS' ? siteEngins.map(e => <option key={e.id} value={e.id}>{e.code}</option>) : sitePerfos.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
+                    </select>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Mécanicien / Opérateur</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                      <select className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white" value={mecanicien} onChange={(e) => setMecanicien(e.target.value)} required>
+                        <option value="">SÉLECTIONNER UN AGENT...</option>
+                        {agents.filter(a => a.site === site).map(a => <option key={a.id} value={a.id}>{a.lastname} {a.firstname} ({a.service})</option>)}
+                      </select>
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Type d'Intervention</label>
+                    <select className="input-field h-12 text-sm font-black px-4 bg-white" value={interventionType} onChange={(e) => setInterventionType(e.target.value as any)}>
+                      <option value="ROUTINE">MAINTENANCE ROUTINE</option>
+                      <option value="PREVENTIF">PRÉVENTIF (VISITE)</option>
+                      <option value="CORRECTIF">CORRECTIF (PANNE)</option>
+                      <option value="PROPRIO">TRAVAUX PROPRIÉTAIRE</option>
+                    </select>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="space-y-2 lg:col-span-2">
+                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Bénéficiaire / Demandeur</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                      <input 
+                        type="text" 
+                        className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase" 
+                        placeholder="NOM DU BÉNÉFICIAIRE..." 
+                        value={beneficiaire} 
+                        onChange={(e) => setBeneficiaire(e.target.value)}
+                        required
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Service</label>
+                    <input 
+                      type="text" 
+                      className="input-field h-12 text-sm font-black px-4 bg-white uppercase" 
+                      placeholder="EX: FOND, SURFACE..." 
+                      value={service} 
+                      onChange={(e) => setService(e.target.value)}
+                    />
+                  </div>
+                </>
+              )}
+            </div>
+          )}
+
+          {type === 'ENTREE' && (
+            <div className="md:col-span-2 p-6 bg-emerald-50 border border-emerald-100 rounded-3xl shadow-inner grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Origine / Fournisseur</label>
+                <div className="relative">
+                  <Truck className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-400" />
+                  <input 
+                    type="text" 
+                    className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase" 
+                    placeholder="FOURNISSEUR OU SITE D'ORIGINE..." 
+                    value={entityName} 
+                    onChange={(e) => setEntityName(e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black text-sky-600 uppercase tracking-widest ml-1">Opérateur / Mécanicien</label>
-                <select className="input-field h-10 text-xs font-black px-4" value={mecanicien} onChange={(e) => setMecanicien(e.target.value)} required>
-                  <option value="">Sélectionner un agent...</option>
-                  {agents.filter(a => a.site === site).map(a => <option key={a.id} value={a.id}>{a.lastname} {a.firstname}</option>)}
-                </select>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">N° Bon de Livraison / Référence</label>
+                <input 
+                  type="text" 
+                  className="input-field h-12 text-sm font-black px-4 bg-white uppercase" 
+                  placeholder="EX: BL-2024-XXX" 
+                  value={reference} 
+                  onChange={(e) => setReference(e.target.value)}
+                />
               </div>
             </div>
           )}

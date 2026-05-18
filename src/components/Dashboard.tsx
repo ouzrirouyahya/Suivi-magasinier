@@ -14,7 +14,13 @@ import {
   ShieldCheck as ShieldIcon,
   BarChart3,
   PieChart as PieIcon,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Brain,
+  CheckCircle,
+  Camera,
+  Fingerprint,
+  FileText,
+  Calendar
 } from 'lucide-react';
 import { 
   AreaChart, 
@@ -38,12 +44,13 @@ interface DashboardProps {
   site: SiteCode;
   articles: Article[];
   mouvements: Mouvement[];
+  isAdmin: boolean;
   onAction: (page: any) => void;
 }
 
 const COLORS = ['#0ea5e9', '#991b1b', '#10b981', '#f59e0b', '#6366f1'];
 
-export function Dashboard({ site, articles, mouvements, onAction }: DashboardProps) {
+export function Dashboard({ site, articles, mouvements, isAdmin, onAction }: DashboardProps) {
   const { 
     totalArticles, 
     stockValue, 
@@ -200,10 +207,13 @@ export function Dashboard({ site, articles, mouvements, onAction }: DashboardPro
   [mouvements, site]);
 
   const stats = [
-    { label: 'Valeur Immobilisée', value: formatCurrency(stockValue), icon: DollarSign, color: 'text-sky-600', bg: 'bg-sky-50' },
-    { label: 'Valeur en Risque', value: formatCurrency(valueAtRisk), icon: AlertCircle, color: 'text-rose-600', bg: 'bg-rose-50', alert: valueAtRisk > (stockValue * 0.1) },
-    { label: 'Ruptures Stock', value: lowStockCount, icon: Package, color: 'text-amber-600', bg: 'bg-amber-50', alert: lowStockCount > 0 },
-    { label: 'Flux du Jour', value: formatCurrency(spendToday), icon: Zap, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { label: 'Valeur Immobilisée', value: formatCurrency(stockValue), icon: DollarSign, color: 'text-sky-600', bg: 'bg-sky-50', alert: false },
+    { label: 'Indice de Santé', value: '88/100', icon: ShieldIcon, color: 'text-emerald-600', bg: 'bg-emerald-50', alert: false },
+    ...(isAdmin ? [
+      { label: 'Audit FBI', value: 'Lancer', icon: Fingerprint, color: 'text-rose-600', bg: 'bg-rose-50', action: 'AI_FRAUD', alert: false },
+      { label: 'Rapport Hebdo', value: 'Prêt', icon: Calendar, color: 'text-sky-600', bg: 'bg-sky-50', action: 'AI_REPORTS', alert: false },
+      { label: 'IA Achats', value: 'Optimiser', icon: Zap, color: 'text-indigo-600', bg: 'bg-indigo-50', action: 'AI_PROCUREMENT', alert: false },
+    ] : [])
   ];
 
   return (
@@ -272,10 +282,18 @@ export function Dashboard({ site, articles, mouvements, onAction }: DashboardPro
         {stats.map((stat) => (
           <div 
             key={stat.label} 
-            onClick={() => stat.label === 'Ruptures Stock' ? onAction('ALERTES_STOCK') : null}
+            onClick={() => {
+              if (stat.label === 'Ruptures Stock') onAction('ALERTES_STOCK');
+              if (stat.action === 'AI_COMPLIANCE') onAction({ page: 'AI_ANALYTICS', tab: 'COMPLIANCE' });
+              if (stat.action === 'AI_FRAUD') onAction({ page: 'AI_ANALYTICS', tab: 'FRAUD' });
+              if (stat.action === 'AI_REPORTS') onAction({ page: 'AI_ANALYTICS', tab: 'REPORT_CENTER' });
+              if (stat.action === 'AI_PROCUREMENT') onAction({ page: 'AI_ANALYTICS', tab: 'PROCUREMENT' });
+              if (stat.action === 'AI_VISION') onAction({ page: 'AI_ANALYTICS', tab: 'VISION' });
+            }}
             className={cn(
               "card glass p-8 rounded-3xl border-l-[6px] border-slate-100 transition-all duration-300 hover:translate-y-[-4px] h-full",
-              stat.alert ? "border-rose-500 bg-rose-50/20 cursor-pointer shadow-md shadow-rose-100/50" : "shadow-sm"
+              stat.alert ? "border-rose-500 bg-rose-50/20 cursor-pointer shadow-md shadow-rose-100/50" : 
+              stat.action ? "border-indigo-500 bg-indigo-50/20 cursor-pointer hover:shadow-indigo-100/50" : "shadow-sm"
             )}
           >
             <div className="flex items-center justify-between mb-4">

@@ -45,6 +45,7 @@ export type Page =
   | 'ALERTES_STOCK'
   | 'REPORTS'
   | 'RESTOCK_MGMT'
+  | 'IA_CHECKLIST'
   | 'AI_ANALYTICS'
   | 'AI_CHAT_EXPERT'
   | 'SEARCH_RESULTS';
@@ -55,16 +56,17 @@ interface SidebarProps {
   currentSite: SiteCode;
   setSite: (site: SiteCode) => void;
   user: User | null;
+  isAdmin: boolean;
   onSignOut: () => void;
 }
 
-export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSignOut }: SidebarProps) {
+export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAdmin, onSignOut }: SidebarProps) {
   const menuItems = [
     { id: 'DASHBOARD', label: 'Tableau de Commande', icon: LayoutDashboard },
     { id: 'SEP_S', label: 'SUIVI DES SITES', isSeparator: true },
     { id: 'ALERTES_STOCK', label: 'Alertes Critiques', icon: Activity, activeColor: 'bg-rose-50 text-rose-600 ring-rose-100' },
     { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
-    { id: 'STOCK_PERFORATEURS', label: 'Foreuses & Perfos', icon: Drill },
+    { id: 'STOCK_PERFORATEURS', label: 'Perforateurs', icon: Drill },
     { id: 'STOCK_CONSOMMABLES', label: 'Consommables', icon: Droplets },
     { id: 'STOCK_EPI', label: 'Protection (EPI)', icon: Shield },
     { id: 'SEP_M', label: 'GESTION DES STOCKS', isSeparator: true },
@@ -72,13 +74,16 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
     { id: 'BON_SORTIE', label: 'Sorties', icon: ArrowUpRight, activeColor: 'text-rose-700' },
     { id: 'TRANSFERT', label: 'Transferts', icon: RefreshCw },
     { id: 'INVENTAIRE', label: 'Audit / Inventaire', icon: ClipboardCheck },
-    { id: 'HISTORIQUE', label: 'Archives Flux', icon: HistoryIcon },
+    { id: 'TRACEABILITY', label: 'Traçabilité Totale', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },
     { id: 'RESTOCK_MGMT', label: 'Ravitaillement', icon: ShoppingCart, activeColor: 'bg-amber-50 text-amber-600 ring-amber-100' },
-    { id: 'AI_ANALYTICS', label: 'Vision IA', icon: Brain, activeColor: 'bg-indigo-50 text-indigo-600 ring-indigo-100' },
-    { id: 'AI_CHAT_EXPERT', label: 'Expert Gemini', icon: MessageSquare, activeColor: 'bg-indigo-900 text-white shadow-xl shadow-indigo-200' },
+    ...(isAdmin ? [
+      { id: 'SEP_IA', label: 'IA HYDROMINES (FBI)', isSeparator: true },
+      { id: 'IA_CHECKLIST', label: 'Check-list Prod', icon: ClipboardCheck, activeColor: 'bg-emerald-950 text-white shadow-xl' },
+      { id: 'AI_ANALYTICS', label: 'Intelligence Artificielle', icon: Brain, activeColor: 'bg-slate-900 text-white shadow-2xl ring-slate-800' },
+      { id: 'AI_CHAT_EXPERT', label: 'Assistant Expert IA', icon: MessageSquare, activeColor: 'bg-sky-900 text-white shadow-xl shadow-sky-200' },
+    ] : []),
     { id: 'SEP_A', label: 'ADMINISTRATION', isSeparator: true },
     { id: 'REPORTS', label: 'Synthèse', icon: ClipboardCheck },
-    { id: 'AUDIT_LOG', label: 'Audit Log', icon: ShieldCheck },
     { id: 'USER_MGMT', label: 'Utilisateurs', icon: Users },
     { id: 'GESTION_ARTICLES', label: 'Catalogue Maître', icon: Settings2 },
   ];
@@ -161,7 +166,15 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, onSi
         })}
       </nav>
       
-      <div className="p-4 border-t border-slate-50 relative z-10">
+      <div className="p-4 border-t border-slate-50 relative z-10 flex flex-col gap-4">
+        <div className="flex items-center justify-between px-1">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Connecté au Cloud</span>
+          </div>
+          <RefreshCw className="w-3 h-3 text-slate-300" />
+        </div>
+
         <div className="card-mini bg-slate-50/80 rounded-xl p-2.5 flex items-center gap-3 border border-slate-100/50">
           <div className="w-10 h-10 rounded-lg bg-white flex items-center justify-center font-black text-sky-600 text-sm shadow-sm border border-slate-100 overflow-hidden">
             {user?.photoURL ? (

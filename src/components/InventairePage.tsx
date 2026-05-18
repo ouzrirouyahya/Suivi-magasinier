@@ -116,7 +116,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
             <div className="flex bg-white p-3 rounded-2xl border border-slate-100 shadow-sm gap-3">
               {[
                 { id: 'ENGINS', label: 'Engins', icon: Truck },
-                { id: 'PERFORATEURS', label: 'Foreuses', icon: Drill },
+                { id: 'PERFORATEURS', label: 'Perforateurs', icon: Drill },
                 { id: 'CONSOMMABLES', label: 'Conso', icon: Droplets },
               ].map(t => (
                 <button

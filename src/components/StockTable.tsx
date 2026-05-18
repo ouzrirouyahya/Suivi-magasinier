@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useMemo, memo, useState, useEffect } from 'react';
 import { 
   Search, 
   Filter, 
@@ -27,7 +27,7 @@ interface StockTableProps {
   onManageCatalog?: () => void;
 }
 
-export function StockTable({ type, site, articles, initialSearch = '', onAction, onManageCatalog }: StockTableProps) {
+export const StockTable = memo(({ type, site, articles, initialSearch = '', onAction, onManageCatalog }: StockTableProps) => {
   const [search, setSearch] = useState(initialSearch);
   const [showGlobal, setShowGlobal] = useState(initialSearch.length > 0);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -35,7 +35,6 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'RUPTURE' | 'CRITIQUE' | 'OPTIMAL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('');
   
-  // Sync search state with prop when it changes (global search)
   useEffect(() => {
     setSearch(initialSearch);
     if (initialSearch.length > 0) {
@@ -43,32 +42,32 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
     }
   }, [initialSearch]);
 
-  const filteredArticles = articles.filter(a => {
-    const matchesSite = showGlobal || a.site === site;
-    const matchesType = type === 'ALL' || a.type === type;
-    
-    // Normalize search and searchable text to handle accents and case
-    const normalizedSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-    const searchableText = [
-      a.designation,
-      a.ref,
-      a.category,
-      a.functionalCategory,
-      a.component,
-      a.subComponent || '',
-      a.location || ''
-    ].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const filteredArticles = useMemo(() => {
+    return articles.filter(a => {
+      const matchesSite = showGlobal || a.site === site;
+      const matchesType = type === 'ALL' || a.type === type;
+      
+      const normalizedSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      const searchableText = [
+        a.designation,
+        a.ref,
+        a.category,
+        a.functionalCategory,
+        a.component,
+        a.subComponent || '',
+        a.location || ''
+      ].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    const matchesSearch = !search || searchableText.includes(normalizedSearch);
-    const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
-    
-    // Multi-criteria
-    const status = a.quantity === 0 ? 'RUPTURE' : (a.quantity <= a.minStock ? 'CRITIQUE' : 'OPTIMAL');
-    const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
-    const matchesLocation = !locationFilter || (a.location || '').toLowerCase().includes(locationFilter.toLowerCase());
+      const matchesSearch = !search || searchableText.includes(normalizedSearch);
+      const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
+      
+      const status = a.quantity === 0 ? 'RUPTURE' : (a.quantity <= a.minStock ? 'CRITIQUE' : 'OPTIMAL');
+      const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
+      const matchesLocation = !locationFilter || (a.location || '').toLowerCase().includes(locationFilter.toLowerCase());
 
-    return matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation;
-  });
+      return matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation;
+    });
+  }, [articles, site, type, search, showGlobal, categoryFilter, statusFilter, locationFilter]);
 
   const categories = Array.from(new Set(articles.filter(a => a.type === type && a.site === site).map(a => a.category)));
   const locations = Array.from(new Set(articles.filter(a => a.type === type && a.site === site).map(a => a.location))).filter(Boolean);
@@ -401,4 +400,4 @@ export function StockTable({ type, site, articles, initialSearch = '', onAction,
       )}
     </div>
   );
-}
+});

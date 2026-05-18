@@ -45,9 +45,27 @@
         "active": { "type": "boolean" }
       },
       "required": ["id", "email", "role"]
+    },
+    "AIReport": {
+      "title": "AI Report",
+      "description": "Rapport d'analyse IA persistant (Quotidien, Hebdo, etc.)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "site": { "type": "string" },
+        "type": { "type": "string", "enum": ["DAILY", "WEEKLY", "MONTHLY", "QUARTERLY", "ANNUAL"] },
+        "generatedAt": { "type": "string" },
+        "data": { "type": "object" },
+        "stats": { "type": "object" }
+      },
+      "required": ["id", "site", "type", "generatedAt", "data"]
     }
   },
   "firestore": {
+    "/reports/{reportId}": {
+      "schema": "AIReport",
+      "description": "Stockage des analyses IA générées automatiquement"
+    },
     "/articles/{articleId}": {
       "schema": "Article",
       "description": "Collection principale des stocks"

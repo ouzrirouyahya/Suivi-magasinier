@@ -88,6 +88,8 @@ export interface Mouvement {
   service?: string;
   engin?: string;
   perforateur?: string;
+  beneficiaire?: string; // Nom de la personne qui reçoit l'EPI ou l'article
+  referenceEngin?: string; // Référence de l'engin pour plus de précision
   targetSite?: SiteCode; // For transfers
   status: 'BROUILLON' | 'VALIDE' | 'EN_TRANSIT' | 'COMPLETE';
   effectiveDemandeur?: string;

@@ -21,6 +21,7 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
     const matchesSearch = m.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
                           (m.vendeur?.toLowerCase().includes(searchTerm.toLowerCase())) ||
                           (m.demandeur?.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                          (m.beneficiaire?.toLowerCase().includes(searchTerm.toLowerCase())) ||
                           (m.reference?.toLowerCase().includes(searchTerm.toLowerCase()));
     
     const matchesType = typeFilter === 'ALL' || m.type === typeFilter;
@@ -46,7 +47,9 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
       'Type Flux', 
       'Référence Doc', 
       'Statut', 
-      'Tiers (Vendeur/Demandeur)', 
+      'Vendeur/Fournisseur',
+      'Demandeur/Affectation',
+      'Bénéficiaire Final',
       'Détail Articles (Désignation [Qté])', 
       'Service Affecté', 
       'Equipement (Engin/Perfo)', 
@@ -60,7 +63,9 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
       escape(m.type),
       escape(m.reference || ''),
       escape(m.status || 'VALIDE'),
-      escape(m.vendeur || m.demandeur || ''),
+      escape(m.vendeur || ''),
+      escape(m.demandeur || ''),
+      escape(m.beneficiaire || ''),
       escape(m.items.map(item => {
         const article = articles.find(a => a.id === item.articleId);
         return `${article?.designation || 'Art. Inconnu'} (${item.quantity})`;
@@ -202,10 +207,17 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
                     </div>
                   </td>
                   <td className="px-8 py-10">
-                    <p className="font-black text-slate-950 text-xl uppercase tracking-tight mb-1">{m.vendeur || m.demandeur}</p>
-                    <div className="flex items-center gap-2">
-                       <LayoutGrid className="w-3.5 h-3.5 text-slate-300" />
-                       <p className="text-sm text-slate-400 font-black uppercase tracking-widest">{m.service || 'AUTRE'}</p>
+                    <p className="font-black text-slate-950 text-xl uppercase tracking-tight mb-1">
+                      {m.beneficiaire || m.vendeur || m.demandeur || '---'}
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {m.beneficiaire && (m.demandeur || m.vendeur) && (
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Origine: {m.vendeur || m.demandeur}</p>
+                      )}
+                      <div className="flex items-center gap-2">
+                        <LayoutGrid className="w-3.5 h-3.5 text-slate-300" />
+                        <p className="text-sm text-slate-400 font-black uppercase tracking-widest">{m.service || 'AUTRE'}</p>
+                      </div>
                     </div>
                   </td>
                   <td className="px-8 py-10">
@@ -281,9 +293,20 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
 
               <div className="grid grid-cols-2 gap-16 mb-16">
                 <div className="space-y-6 text-lg">
-                  <h3 className="font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3">Destinataire / Tiers</h3>
-                  <p className="text-3xl font-black text-slate-900 uppercase">{selectedMouvement.vendeur || selectedMouvement.demandeur}</p>
-                  <p className="font-black text-xl text-sky-600">SERVICE: {selectedMouvement.service || 'MAGASIN'}</p>
+                  <h3 className="font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3">Tiers & Bénéficiaire</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <p className="text-slate-400 font-black text-sm uppercase">Bénéficiaire / Demandeur</p>
+                      <p className="text-3xl font-black text-slate-900 uppercase">{selectedMouvement.beneficiaire || selectedMouvement.demandeur || 'N/A'}</p>
+                    </div>
+                    {selectedMouvement.vendeur && (
+                      <div>
+                        <p className="text-slate-400 font-black text-sm uppercase">Fournisseur / Origine</p>
+                        <p className="text-xl font-black text-slate-700 uppercase">{selectedMouvement.vendeur}</p>
+                      </div>
+                    )}
+                    <p className="font-black text-xl text-sky-600">SERVICE: {selectedMouvement.service || 'MAGASIN'}</p>
+                  </div>
                 </div>
                 <div className="space-y-6 text-lg">
                   <h3 className="font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-3">Équipement & Responsable</h3>

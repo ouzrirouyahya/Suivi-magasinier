@@ -3,71 +3,59 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { Sidebar, Page } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
-import { StockTable } from './components/StockTable';
-import { MouvementForm } from './components/MouvementForm';
-import { MouvementHistory } from './components/MouvementHistory';
-import { ArticleManagement } from './components/ArticleManagement';
-import { ArticleDetail } from './components/ArticleDetail';
-import { EpiTracking } from './components/EpiTracking';
-import { TransfertPage } from './components/TransfertPage';
-import { InventairePage } from './components/InventairePage';
-import { AuditLogView } from './components/AuditLogView';
-import { UserAdmin } from './components/UserAdmin';
-import { StockAlertView } from './components/StockAlertView';
-import { ReportPage } from './components/ReportPage';
-import { RestockModule } from './components/RestockModule';
-import { AIAnalytics } from './components/AIAnalytics';
-import { AIChatExpert } from './components/AIChatExpert';
+
+// Lazy loaded components
+const StockTable = lazy(() => import('./components/StockTable').then(m => ({ default: m.StockTable })));
+const MouvementForm = lazy(() => import('./components/MouvementForm').then(m => ({ default: m.MouvementForm })));
+const ArticleManagement = lazy(() => import('./components/ArticleManagement').then(m => ({ default: m.ArticleManagement })));
+const EpiTracking = lazy(() => import('./components/EpiTracking').then(m => ({ default: m.EpiTracking })));
+const TransfertPage = lazy(() => import('./components/TransfertPage').then(m => ({ default: m.TransfertPage })));
+const InventairePage = lazy(() => import('./components/InventairePage').then(m => ({ default: m.InventairePage })));
+const StockAlertView = lazy(() => import('./components/StockAlertView').then(m => ({ default: m.StockAlertView })));
+const ReportPage = lazy(() => import('./components/ReportPage').then(m => ({ default: m.ReportPage })));
+const RestockModule = lazy(() => import('./components/RestockModule').then(m => ({ default: m.RestockModule })));
+const AIAnalytics = lazy(() => import('./components/AIAnalytics').then(m => ({ default: m.AIAnalytics })));
+const AIChatExpert = lazy(() => import('./components/AIChatExpert').then(m => ({ default: m.AIChatExpert })));
+const ProductionChecklist = lazy(() => import('./components/ProductionChecklist').then(m => ({ default: m.ProductionChecklist })));
+const TraceabilityCenter = lazy(() => import('./components/TraceabilityCenter').then(m => ({ default: m.TraceabilityCenter })));
+const ArticleDetail = lazy(() => import('./components/ArticleDetail').then(m => ({ default: m.ArticleDetail })));
+
+// Shared Components
 import LoginPage from './components/LoginPage';
-import { useStorage } from './hooks/useStorage';
+import { PageLoading } from './components/common/PageLoading';
+import { HydrominesSecurityAlert } from './components/common/HydrominesSecurityAlert';
+import { Toolbar } from './components/layout/Toolbar';
+
+// Context & Types
+import { useInventory } from './context/InventoryContext';
 import { Article, SiteCode, PurchaseRequest } from './types';
-import { Loader2, Search } from 'lucide-react';
+import { Loader2 } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
-import { Toaster } from 'sonner';
+import { toast } from 'sonner';
 
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
+  const [showAdminAlert, setShowAdminAlert] = useState(false);
   const [currentSite, setCurrentSite] = useState<SiteCode>('SMI');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [aiTab, setAiTab] = useState<'DASHBOARD' | 'ANOMALIES' | 'PREDICTIONS' | 'FINANCIAL' | 'COMPLIANCE' | 'PROCUREMENT' | 'MECHANIC' | 'VISION' | 'FRAUD' | 'REPORT_CENTER'>('DASHBOARD');
   
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [globalSearch, setGlobalSearch] = useState('');
   
   const { 
-    articles, 
-    mouvements, 
-    distributions, 
-    addMouvement, 
-    addTransfert,
-    completeTransfert,
-    saveInventaire,
-    saveArticle, 
-    deleteArticle,
-    auditLogs,
-    accounts,
-    toggleUser,
-    isLoaded,
-    transferts,
-    inventaires,
-    engins,
-    perfos,
-    agents,
-    catalog,
-    saveCatalogItem,
-    deleteCatalogItem,
-    setEngin,
-    setPerfo,
-    setAgent,
-    purchaseRequests,
-    addPurchaseRequest,
-    updatePRStatus
-  } = useStorage();
+    articles, mouvements, distributions, auditLogs, transferts, inventaires,
+    engins, perfos, agents, catalog, accounts, purchaseRequests, isLoaded,
+    addMouvement, addTransfert, completeTransfert, saveInventaire, saveArticle, 
+    deleteArticle, setEngin, setPerfo, setAgent, saveCatalogItem, 
+    deleteCatalogItem, addPurchaseRequest, updatePRStatus
+  } = useInventory();
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -107,52 +95,49 @@ export default function App() {
     );
   }
 
+  const isAdmin = accounts.find(a => a.email === user?.email)?.role === 'ADMIN';
+
+  const navigateToMouvement = (id: string, type: 'IN' | 'OUT') => {
+    setSelectedArticleId(id);
+    setCurrentPage(type === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
+  };
+
   const renderPage = () => {
     switch (currentPage) {
       case 'DASHBOARD':
-        return <Dashboard site={currentSite} articles={articles} mouvements={mouvements} onAction={setCurrentPage} />;
+        return <Dashboard 
+          site={currentSite} 
+          articles={articles} 
+          mouvements={mouvements} 
+          isAdmin={isAdmin}
+          onAction={(page) => {
+            if (typeof page === 'object' && page.page === 'AI_ANALYTICS') {
+              if (!isAdmin) {
+                toast.error("Accès réservé aux administrateurs");
+                return;
+              }
+              setAiTab(page.tab);
+              setCurrentPage('AI_ANALYTICS');
+            } else {
+              setCurrentPage(page);
+            }
+          }} 
+        />;
       
       case 'STOCK_ENGINS':
-        return (
-          <StockTable 
-            type="ENGINS" 
-            site={currentSite} 
-            articles={articles} 
-            initialSearch={globalSearch}
-            onAction={(id, action) => {
-              setSelectedArticleId(id);
-              setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
-            }}
-            onManageCatalog={() => setCurrentPage('GESTION_ARTICLES')}
-          />
-        );
-      
       case 'STOCK_PERFORATEURS':
-        return (
-          <StockTable 
-            type="PERFORATEURS" 
-            site={currentSite} 
-            articles={articles} 
-            initialSearch={globalSearch}
-            onAction={(id, action) => {
-              setSelectedArticleId(id);
-              setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
-            }}
-            onManageCatalog={() => setCurrentPage('GESTION_ARTICLES')}
-          />
-        );
-      
       case 'STOCK_CONSOMMABLES':
+      case 'SEARCH_RESULTS':
+        const stockType = currentPage === 'STOCK_ENGINS' ? 'ENGINS' : 
+                          currentPage === 'STOCK_PERFORATEURS' ? 'PERFORATEURS' : 
+                          currentPage === 'STOCK_CONSOMMABLES' ? 'CONSOMMABLES' : 'ALL';
         return (
           <StockTable 
-            type="CONSOMMABLES" 
+            type={stockType} 
             site={currentSite} 
             articles={articles} 
             initialSearch={globalSearch}
-            onAction={(id, action) => {
-              setSelectedArticleId(id);
-              setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
-            }}
+            onAction={navigateToMouvement}
             onManageCatalog={() => setCurrentPage('GESTION_ARTICLES')}
           />
         );
@@ -161,29 +146,10 @@ export default function App() {
         return <EpiTracking site={currentSite} articles={articles} distributions={distributions} />;
       
       case 'BON_ENTREE':
-        return (
-          <MouvementForm 
-            type="ENTREE" 
-            site={currentSite}
-            articles={articles}
-            catalog={catalog}
-            engins={engins}
-            perfos={perfos}
-            agents={agents}
-            initialArticleId={selectedArticleId || undefined}
-            onArticleCreate={saveArticle}
-            onSubmit={(m) => {
-              addMouvement(m);
-              setSelectedArticleId(null);
-              setCurrentPage('HISTORIQUE');
-            }} 
-          />
-        );
-      
       case 'BON_SORTIE':
         return (
           <MouvementForm 
-            type="SORTIE" 
+            type={currentPage === 'BON_ENTREE' ? 'ENTREE' : 'SORTIE'} 
             site={currentSite}
             articles={articles}
             catalog={catalog}
@@ -195,7 +161,7 @@ export default function App() {
             onSubmit={(m) => {
               addMouvement(m);
               setSelectedArticleId(null);
-              setCurrentPage('HISTORIQUE');
+              setCurrentPage('TRACEABILITY');
             }} 
           />
         );
@@ -221,10 +187,17 @@ export default function App() {
           />
         );
 
-      case 'HISTORIQUE':
-        return <MouvementHistory site={currentSite} mouvements={mouvements} articles={articles} />;
+      case 'TRACEABILITY':
+        return (
+          <TraceabilityCenter 
+            site={currentSite} 
+            logs={auditLogs} 
+            mouvements={mouvements} 
+            articles={articles} 
+          />
+        );
       
-     case 'GESTION_ARTICLES':
+      case 'GESTION_ARTICLES':
         return (
           <ArticleManagement 
             site={currentSite}
@@ -234,35 +207,6 @@ export default function App() {
             deleteCatalogItem={deleteCatalogItem}
             onSave={saveArticle} 
             onDelete={deleteArticle} 
-          />
-        );
-
-      case 'AUDIT_LOG':
-        return <AuditLogView logs={auditLogs} />;
-
-      case 'ALERTES_STOCK':
-        return (
-          <StockAlertView 
-            articles={articles} 
-            currentSite={currentSite}
-            onAction={(id, action) => {
-              setSelectedArticleId(id);
-              setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
-            }}
-          />
-        );
-
-      case 'USER_MGMT':
-        return (
-          <UserAdmin 
-            accounts={accounts} 
-            onToggleStatus={toggleUser} 
-            engins={engins}
-            onSetEngin={setEngin}
-            perfos={perfos}
-            onSetPerfo={setPerfo}
-            agents={agents}
-            onSetAgent={setAgent}
           />
         );
 
@@ -291,87 +235,84 @@ export default function App() {
         );
 
       case 'AI_ANALYTICS':
-        return <AIAnalytics site={currentSite} articles={articles} mouvements={mouvements} />;
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('DASHBOARD');
+          return null;
+        }
+        return <AIAnalytics 
+          site={currentSite} 
+          articles={articles} 
+          mouvements={mouvements} 
+          agents={agents} 
+          initialTab={aiTab} 
+        />;
 
       case 'AI_CHAT_EXPERT':
-        return <AIChatExpert site={currentSite} articles={articles} />;
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('DASHBOARD');
+          return null;
+        }
+        return <AIChatExpert site={currentSite} articles={articles} mouvements={mouvements} agents={agents} />;
 
-      case 'SEARCH_RESULTS':
-        return (
-          <StockTable 
-            type="ALL"
-            site={currentSite}
-            articles={articles}
-            initialSearch={globalSearch}
-            onAction={(id, action) => {
-              setSelectedArticleId(id);
-              setCurrentPage(action === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
-            }}
-            onManageCatalog={() => setCurrentPage('GESTION_ARTICLES')}
-          />
-        );
+      case 'IA_CHECKLIST':
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('DASHBOARD');
+          return null;
+        }
+        return <ProductionChecklist />;
+
+      case 'ALERTES_STOCK':
+        return <StockAlertView site={currentSite} articles={articles} onAction={navigateToMouvement} />;
         
       default:
-        return <Dashboard site={currentSite} articles={articles} mouvements={mouvements} onAction={setCurrentPage} />;
+        return <Dashboard site={currentSite} articles={articles} mouvements={mouvements} onAction={setCurrentPage} isAdmin={isAdmin} />;
     }
   };
 
   return (
     <div className="min-h-screen bg-slate-50 flex relative overflow-hidden">
+      {showAdminAlert && <HydrominesSecurityAlert onClose={() => setShowAdminAlert(false)} />}
+      
       <Sidebar 
         currentPage={currentPage} 
-        setPage={setCurrentPage} 
+        setPage={(page) => {
+          if ((page === 'AI_ANALYTICS' || page === 'AI_CHAT_EXPERT') && !isAdmin) {
+            setShowAdminAlert(true);
+            return;
+          }
+          setCurrentPage(page);
+        }} 
         currentSite={currentSite}
         setSite={setCurrentSite}
         user={user}
+        isAdmin={isAdmin}
         onSignOut={handleSignOut}
       />
       
       <main className="flex-grow p-8 transition-all duration-300 relative min-h-screen">
-        {/* Global Toolbar */}
-        <div className="max-w-[1600px] mx-auto mb-3 no-print">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white/40 backdrop-blur-3xl p-1.5 rounded-xl border border-white shadow-xl shadow-slate-200/30">
-            <div className="relative flex-1 group">
-               <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-                 <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-500 transition-colors" />
-                 <div className="h-3 w-[1px] bg-slate-200" />
-               </div>
-               <input 
-                 type="text" 
-                 placeholder="Recherche Rapide..."
-                 className="w-full bg-white/80 h-10 pl-14 pr-8 rounded-xl text-sm font-bold outline-none border border-slate-100 focus:border-sky-200 transition-all focus:ring-4 focus:ring-sky-500/5 placeholder:text-slate-300"
-                 value={globalSearch}
-                 onChange={(e) => {
-                   setGlobalSearch(e.target.value);
-                   if (e.target.value.length >= 2) {
-                     if (currentPage !== 'SEARCH_RESULTS') {
-                        setCurrentPage('SEARCH_RESULTS');
-                     }
-                   }
-                 }}
-               />
-            </div>
-            
-            <div className="flex items-center gap-2 px-1">
-               <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
-               <div className="flex flex-col items-end">
-                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none opacity-70">Valeur Stock</p>
-                 <p className="text-sm font-black text-slate-900 mt-0.5">
-                   {new Intl.NumberFormat('fr-MA', { style: 'currency', currency: 'MAD', maximumFractionDigits: 0 }).format(
-                     articles.filter(a => a.site === currentSite).reduce((sum, a) => sum + (a.quantity * a.price), 0)
-                   )}
-                 </p>
-               </div>
-               <div className="w-9 h-9 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-black text-xs shadow-inner">
-                 {articles.filter(a => a.site === currentSite).length}
-               </div>
-            </div>
-          </div>
-        </div>
+        <Suspense fallback={<PageLoading />}>
+          <Toolbar 
+            globalSearch={globalSearch}
+            setGlobalSearch={(val) => {
+              setGlobalSearch(val);
+              if (val.length >= 2 && currentPage !== 'SEARCH_RESULTS') {
+                setCurrentPage('SEARCH_RESULTS');
+              }
+            }}
+            articles={articles}
+            currentSite={currentSite}
+            onSearchFocus={() => {
+               if (currentPage !== 'SEARCH_RESULTS') setCurrentPage('SEARCH_RESULTS');
+            }}
+          />
 
-        <div className="max-w-[1600px] mx-auto">
-          {renderPage()}
-        </div>
+          <div className="max-w-[1600px] mx-auto">
+            {renderPage()}
+          </div>
+        </Suspense>
       </main>
 
       {selectedArticle && (
@@ -381,8 +322,6 @@ export default function App() {
           onClose={() => setSelectedArticle(null)} 
         />
       )}
-      <Toaster position="top-right" expand={true} richColors closeButton />
     </div>
   );
 }
-

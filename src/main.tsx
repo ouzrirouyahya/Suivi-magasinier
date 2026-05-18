@@ -3,8 +3,14 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+import { InventoryProvider } from './context/InventoryContext.tsx';
+import { Toaster } from 'sonner';
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <App />
+    <InventoryProvider>
+      <Toaster position="top-right" richColors closeButton />
+      <App />
+    </InventoryProvider>
   </StrictMode>,
 );

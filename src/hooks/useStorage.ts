@@ -300,6 +300,24 @@ export function useStorage() {
         }
 
         transaction.set(mRef, cleanObject({ ...mouvement, id: movementId }));
+
+        // Auto-create DistributionEPI for EPI tracking if category is EPI and type is SORTIE
+        if (mouvement.type === 'SORTIE' && mouvement.category === 'EPI') {
+          for (const item of mouvement.items) {
+            const distId = generateId();
+            const dist: DistributionEPI = {
+              id: distId,
+              site: mouvement.site,
+              agentName: mouvement.beneficiaire || mouvement.demandeur || 'ANONYME',
+              service: mouvement.service || 'AUTRE',
+              articleId: item.articleId,
+              date: mouvement.date,
+              quantity: item.quantity
+            };
+            transaction.set(doc(db, 'distributions', distId), cleanObject(dist));
+          }
+        }
+
         await logAction(mouvement.type, `${mouvement.items.length} items | Réf: ${mouvement.reference}`, mouvement.site, totalValue);
       });
     })();

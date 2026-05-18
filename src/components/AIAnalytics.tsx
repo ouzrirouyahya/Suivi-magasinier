@@ -1,250 +1,247 @@
-import React from 'react';
-import { Brain, Sparkles, AlertTriangle, TrendingUp, History, PlayCircle, Loader2, CheckCircle, ShieldAlert, Package } from 'lucide-react';
-import { SiteCode, Article, Mouvement, AnomalyReport } from '../types';
+import React, { useMemo, useCallback, memo } from 'react';
+import { Brain, Sparkles, AlertTriangle, TrendingUp, History, PlayCircle, Loader2, CheckCircle, ShieldAlert, Package, Users, Activity, ShieldCheck, Fingerprint, FileText, Download, Calendar, Drill, FileDown } from 'lucide-react';
+import { SiteCode, Article, Mouvement, AnomalyReport, AgentMaster } from '../types';
 import { cn } from '../lib/utils';
-
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
+
+// Services
+import { aiService } from '../services/aiService';
+import { reportService } from '../services/reportService';
+
+// Subcomponents
+import { ReportCenter } from './analytics/ReportCenter';
+import { AuditDashboard } from './analytics/AuditDashboard';
+import { AnomaliesView } from './analytics/AnomaliesView';
 
 interface AIAnalyticsProps {
   site: SiteCode;
   articles: Article[];
   mouvements: Mouvement[];
+  agents: AgentMaster[];
+  initialTab?: 'DASHBOARD' | 'ANOMALIES' | 'PREDICTIONS' | 'FINANCIAL' | 'COMPLIANCE' | 'PROCUREMENT' | 'MECHANIC' | 'FRAUD' | 'REPORT_CENTER';
 }
 
-export function AIAnalytics({ site, articles, mouvements }: AIAnalyticsProps) {
+export const AIAnalytics = memo(({ site, articles, mouvements, agents, initialTab }: AIAnalyticsProps) => {
   const [analyzing, setAnalyzing] = React.useState(false);
-  const [activeTab, setActiveTab] = React.useState<'ANOMALIES' | 'PREDICTIONS'>('ANOMALIES');
+  const [activeTab, setActiveTab] = React.useState<'DASHBOARD' | 'ANOMALIES' | 'PREDICTIONS' | 'FINANCIAL' | 'COMPLIANCE' | 'PROCUREMENT' | 'MECHANIC' | 'FRAUD' | 'REPORT_CENTER'>(initialTab || 'DASHBOARD');
+  const [selectedReport, setSelectedReport] = React.useState<any>(null);
+  const [reports, setReports] = React.useState<any[]>([]);
+  const [loadingReports, setLoadingReports] = React.useState(true);
+
+  // States for analysis data
   const [anomalies, setAnomalies] = React.useState<AnomalyReport[]>([]);
   const [predictions, setPredictions] = React.useState<any[]>([]);
+  const [financialLeaks, setFinancialLeaks] = React.useState<any[]>([]);
+  const [healthScore, setHealthScore] = React.useState<number | null>(null);
+  const [complianceIssues, setComplianceIssues] = React.useState<any[]>([]);
+  const [procurementPlan, setProcurementPlan] = React.useState<any[]>([]);
+  const [agentInsights, setAgentInsights] = React.useState<any[]>([]);
+  const [fraudAudit, setFraudAudit] = React.useState<{ fraudScore: number, threats: any[] } | null>(null);
+  
+  React.useEffect(() => {
+    fetchLatestReports();
+  }, [site]);
 
-  const runAnalysis = async (type: 'ANOMALIES' | 'PREDICTIONS') => {
-    setAnalyzing(true);
+  const fetchLatestReports = async () => {
+    setLoadingReports(true);
     try {
-      const siteMouvements = mouvements.filter(m => m.site === site).slice(0, 50); // Send recent 50 movements
-      const siteArticles = articles.filter(a => a.site === site);
-
-      const response = await fetch('/api/ai/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          promptType: type,
-          data: {
-            articles: siteArticles.map(a => ({ id: a.id, designation: a.designation, qty: a.quantity, min: a.minStock })),
-            mouvements: siteMouvements.map(m => ({ 
-              date: m.date, 
-              type: m.type, 
-              items: m.items, 
-              engin: m.engin, 
-              perforateur: m.perforateur 
-            }))
-          }
-        })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Erreur serveur" }));
-        throw new Error(errorData.error || `Erreur ${response.status}`);
-      }
-
-      const result = await response.json();
-      if (type === 'ANOMALIES') {
-        setAnomalies(result.anomalies || []);
-        toast.success('Analyse des anomalies terminée');
-      } else {
-        setPredictions(result.predictions || []);
-        toast.success('Audit prédictif terminé');
+      const fetchedReports = await reportService.getLatestReports(site);
+      setReports(fetchedReports);
+      if (fetchedReports.length > 0 && !selectedReport) {
+        loadReportData(fetchedReports[0]);
       }
     } catch (error) {
-      console.error('AI Analytics Error:', error);
-      const msg = error instanceof Error ? error.message : "Erreur technique";
-      toast.error(`Échec de l'analyse : ${msg}`);
+      console.error("Error fetching reports:", error);
+    } finally {
+      setLoadingReports(false);
+    }
+  };
+
+  const loadReportData = useCallback((report: any) => {
+    setSelectedReport(report);
+    const data = report.data;
+    if (data.anomalies) setAnomalies(data.anomalies);
+    if (data.fraudScore !== undefined) setFraudAudit({ fraudScore: data.fraudScore, threats: data.threats || [] });
+    if (data.healthScore) setHealthScore(data.healthScore);
+    if (data.financialLeaks) setFinancialLeaks(data.financialLeaks);
+    if (data.agentInsights) setAgentInsights(data.agentInsights);
+    if (data.procurementPlan) setProcurementPlan(data.procurementPlan);
+    if (data.complianceIssues) setComplianceIssues(data.complianceIssues);
+    if (data.predictions) setPredictions(data.predictions);
+  }, []);
+
+  const runAnalysis = async (type: any) => {
+    setAnalyzing(true);
+    try {
+      const siteMouvements = mouvements.filter(m => m.site === site).slice(0, 150); 
+      const siteArticles = articles.filter(a => a.site === site);
+
+      const promptType = type === 'FINANCIAL' ? 'FINANCIAL_REPORT' : 
+                         type === 'PERFORATEURS' ? 'PERFORATEURS_PERFORMANCE' :
+                         type === 'FRAUD' ? 'FRAUD_DETECTION' : type;
+
+      const data = {
+        articles: siteArticles.map(a => ({ id: a.id, designation: a.designation, qty: a.quantity, min: a.minStock, category: a.category, price: a.price })),
+        mouvements: siteMouvements.map(m => ({ date: m.date, type: m.type, items: m.items, engin: m.engin, perforateur: m.perforateur, beneficiaire: m.beneficiaire, service: m.service, author: m.vendeur || 'unknown' })),
+        agents: agents.map(ag => ({ id: ag.id, name: `${ag.firstname} ${ag.lastname}`, service: ag.service, matricule: ag.matricule }))
+      };
+
+      const result = await aiService.analyze(promptType, data);
+      
+      if (['FRAUD', 'FINANCIAL', 'ANOMALIES'].includes(type)) {
+        await reportService.saveReport(site, type, result);
+        fetchLatestReports();
+      }
+
+      if (type === 'ANOMALIES') setAnomalies(result.anomalies || []);
+      else if (type === 'FINANCIAL') { setFinancialLeaks(result.financialLeaks || []); setHealthScore(result.healthScore || null); }
+      else if (type === 'COMPLIANCE') setComplianceIssues(result.complianceIssues || []);
+      else if (type === 'PROCUREMENT') setProcurementPlan(result.procurementPlan || []);
+      else if (type === 'PERFORATEURS') setAgentInsights(result.agentInsights || []);
+      else if (type === 'FRAUD') setFraudAudit(result);
+      else setPredictions(result.predictions || []);
+
+      toast.success('Analyse terminée avec succès');
+      if (type !== 'DASHBOARD' && type !== 'REPORT_CENTER') setActiveTab(type);
+    } catch (error: any) {
+      toast.error(`Échec de l'analyse : ${error.message}`);
     } finally {
       setAnalyzing(false);
     }
   };
 
-  return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <header className="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-slate-100">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-3xl bg-sky-600 flex items-center justify-center shadow-xl shadow-sky-200">
-            <Brain className="w-10 h-10 text-white" />
-          </div>
-          <div>
-            <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Intelligence Artificielle</h2>
-            <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">Analyse prédictive et détection d'anomalies par Gemini</p>
-          </div>
-        </div>
+  const handleDownloadPDF = async () => {
+    const element = document.getElementById('master-audit-report');
+    if (!element) return;
+    const loadingToast = toast.loading("Génération du Rapport d'Audit...");
+    try {
+      element.style.display = 'block';
+      const canvas = await html2canvas(element, { scale: 2, useCORS: true, logging: false } as any);
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+      pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
+      pdf.save(`HYDROMINES_AUDIT_${site}.pdf`);
+      toast.dismiss(loadingToast);
+      toast.success("Rapport téléchargé");
+    } catch (err) {
+      toast.dismiss(loadingToast);
+      toast.error("Échec de l'export PDF");
+    } finally {
+      element.style.display = 'none';
+    }
+  };
 
-        <div className="flex bg-slate-100 p-1 rounded-2xl">
-          <button 
-            onClick={() => setActiveTab('ANOMALIES')}
-            className={cn(
-              "px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2",
-              activeTab === 'ANOMALIES' ? "bg-white text-sky-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            <ShieldAlert className="w-4 h-4" />
-            Anomalies
-          </button>
-          <button 
-            onClick={() => setActiveTab('PREDICTIONS')}
-            className={cn(
-              "px-6 py-3 rounded-xl text-xs font-black uppercase tracking-widest transition-all flex items-center gap-2",
-              activeTab === 'PREDICTIONS' ? "bg-white text-sky-600 shadow-sm" : "text-slate-500 hover:text-slate-700"
-            )}
-          >
-            <TrendingUp className="w-4 h-4" />
-            Prédictions
-          </button>
+  return (
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-32">
+      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+        <div>
+          <h2 className="text-5xl font-black text-slate-950 flex items-center gap-4 tracking-tighter uppercase leading-none">
+            <Brain className="w-16 h-16 text-sky-500" /> Centre IA Audit
+          </h2>
+          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-4 opacity-70">
+            Surveillance Neuronale & Dépistage de Fraude
+          </p>
+        </div>
+        <div className="flex bg-slate-100 p-1.5 rounded-2xl shadow-inner">
+          {[
+            { id: 'DASHBOARD', label: 'Surveillance', icon: Activity },
+            { id: 'ANOMALIES', label: 'Anomalies', icon: AlertTriangle },
+            { id: 'FRAUD', label: 'FBI Mode', icon: ShieldAlert },
+            { id: 'REPORT_CENTER', label: 'Archives', icon: History },
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id as any)}
+              className={cn(
+                "px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-3",
+                activeTab === tab.id ? "bg-white text-sky-600 shadow-xl" : "text-slate-400 hover:text-slate-600"
+              )}
+            >
+              <tab.icon className="w-4 h-4" /> {tab.label}
+            </button>
+          ))}
         </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <div className="lg:col-span-1 space-y-6">
-          <div className="card p-8 bg-slate-900 text-white border-none shadow-2xl">
-            <h4 className="text-xl font-black uppercase tracking-widest mb-4">Lancer l'Audit</h4>
-            <p className="text-slate-400 text-sm font-bold leading-relaxed mb-8">
-              L'IA analyse vos schémas de consommation pour identifier les gaspillages ou les pannes répétitives.
-            </p>
-            <button 
-              disabled={analyzing}
-              onClick={() => runAnalysis(activeTab)}
-              className="w-full btn bg-sky-500 hover:bg-sky-400 text-white h-14 rounded-2xl font-black uppercase text-xs tracking-widest flex items-center justify-center gap-3 disabled:opacity-50 transition-all active:scale-95"
-            >
-              {analyzing ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Analyse en cours...
-                </>
-              ) : (
-                <>
-                  <PlayCircle className="w-5 h-5" />
-                  Démarrer l'Analyse
-                </>
-              )}
-            </button>
-          </div>
+      <div className="pt-4">
+        {activeTab === 'DASHBOARD' && (
+          <AuditDashboard 
+            analyzing={analyzing} 
+            onRun={runAnalysis} 
+            onDownload={handleDownloadPDF} 
+            healthScore={healthScore} 
+            fraudScore={fraudAudit?.fraudScore || null} 
+            anomaliesCount={anomalies.length}
+          />
+        )}
 
-          <div className="card p-6 border-slate-100">
-            <h5 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Statistiques IA</h5>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-bold text-slate-600">Points analysés</span>
-                <span className="font-black">1.2k</span>
-              </div>
-              <div className="flex justify-between items-center">
-                <span className="text-sm font-bold text-slate-600">Précision Modèle</span>
-                <span className="font-black text-emerald-600 text-lg">94%</span>
-              </div>
-            </div>
-          </div>
-        </div>
+        {activeTab === 'ANOMALIES' && (
+          <AnomaliesView anomalies={anomalies} analyzing={analyzing} />
+        )}
 
-        <div className="lg:col-span-3">
-          {analyzing ? (
-            <div className="card p-32 flex flex-col items-center justify-center text-center">
-              <div className="relative">
-                <div className="w-24 h-24 rounded-full border-4 border-sky-100 border-t-sky-500 animate-spin" />
-                <Brain className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 text-sky-500" />
-              </div>
-              <h3 className="text-3xl font-black text-slate-900 uppercase mt-8 tracking-tighter">Traitement des Données</h3>
-              <p className="text-lg text-slate-400 font-bold mt-2">Gemini analyse les corrélations temporelles et techniques...</p>
-            </div>
-          ) : activeTab === 'ANOMALIES' ? (
-            <div className="space-y-4">
-              {anomalies.length === 0 ? (
-                <div className="card p-20 flex flex-col items-center justify-center border-dashed border-2 border-slate-200 opacity-50">
-                  <CheckCircle className="w-16 h-16 text-emerald-500 mb-6" />
-                  <h3 className="text-2xl font-black text-slate-900 uppercase">Aucune Anomalie Détectée</h3>
-                  <p className="text-sm text-slate-500 font-bold mt-2">Relancez une analyse pour vérifier les derniers mouvements.</p>
-                </div>
-              ) : (
-                anomalies.map((anom, idx) => (
-                  <div key={anom.id || `anomaly-${idx}`} className="card p-8 border-l-8 border-l-rose-500 shadow-xl overflow-hidden relative group">
-                    <AlertTriangle className="absolute -top-4 -right-4 w-24 h-24 text-rose-500/5 group-hover:scale-110 transition-transform" />
-                    <div className="flex justify-between items-start mb-4">
-                      <div className="flex items-center gap-3">
-                        <span className={cn(
-                          "px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest",
-                          anom.severity === 'CRITICAL' ? "bg-rose-100 text-rose-600" :
-                          anom.severity === 'HIGH' ? "bg-orange-100 text-orange-600" :
-                          "bg-amber-100 text-amber-600"
-                        )}>
-                          ALERTE {anom.severity}
-                        </span>
-                        <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{anom.type}</span>
-                      </div>
-                      <span className="text-[10px] font-black text-slate-300 uppercase">ID: #{anom.id.slice(0,8)}</span>
-                    </div>
-                    
-                    <h4 className="text-2xl font-black text-slate-950 tracking-tighter leading-tight mb-4 uppercase">
-                      {anom.machineId ? `ALERTE SUR ${anom.machineId}` : 'ALERTE CONSOMMATION'}
-                    </h4>
-                    
-                    <p className="text-lg text-slate-600 font-bold leading-relaxed mb-6">
-                      {anom.description}
-                    </p>
+        {activeTab === 'REPORT_CENTER' && (
+          <ReportCenter 
+            reports={reports} 
+            loading={loadingReports} 
+            selectedReport={selectedReport} 
+            onSelect={loadReportData} 
+            onDownload={handleDownloadPDF} 
+          />
+        )}
 
-                    <div className="bg-slate-50 p-6 rounded-2xl border border-slate-100">
-                      <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest mb-2 flex items-center gap-2">
-                        <Sparkles className="w-3 h-3" /> Action Recommandée par l'IA
-                      </p>
-                      <p className="text-slate-900 font-black text-lg tracking-tight">
-                        {anom.suggestedAction}
-                      </p>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {predictions.length === 0 ? (
-                <div className="card p-20 flex flex-col items-center justify-center border-dashed border-2 border-slate-200 opacity-50">
-                  <TrendingUp className="w-16 h-16 text-sky-500 mb-6" />
-                  <h3 className="text-2xl font-black text-slate-900 uppercase">Audit Prédictif</h3>
-                  <p className="text-sm text-slate-500 font-bold mt-2">Prédisez les besoins de stock pour les 30 prochains jours.</p>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-4">
-                  {predictions.map((pred, i) => {
-                    if (!pred) return null;
-                    return (
-                      <div key={pred.articleId || `pred-${i}`} className="card p-6 shadow-lg border border-slate-100 hover:border-sky-200 transition-all group">
-                        <div className="flex justify-between items-center">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 rounded-xl bg-sky-50 flex items-center justify-center text-sky-600">
-                              <Package className="w-6 h-6" />
-                            </div>
-                            <div>
-                              <h4 className="font-black text-lg text-slate-950 uppercase leading-none">{pred.articleName || 'Article Inconnu'}</h4>
-                              <p className="text-xs font-black text-slate-400 mt-1">CONFIANCE: {Math.round((pred.confidence || 0) * 100)}%</p>
-                            </div>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Besoin Estimé</p>
-                            <p className="text-3xl font-black text-sky-600 tracking-tighter">+{pred.predictedNeed || 0}</p>
-                          </div>
+        {activeTab === 'FRAUD' && (
+          <div className="space-y-8 animate-in zoom-in duration-500">
+             {!fraudAudit ? (
+               <div className="card p-32 text-center bg-rose-50 border-rose-100 flex flex-col items-center">
+                  <ShieldAlert className="w-20 h-20 text-rose-500 mb-6 animate-pulse" />
+                  <h3 className="text-3xl font-black text-slate-950 uppercase">Audit de Fraude requis</h3>
+                  <button 
+                    disabled={analyzing}
+                    onClick={() => runAnalysis('FRAUD')} 
+                    className="mt-8 btn bg-rose-600 text-white px-12 h-14 rounded-xl font-black uppercase tracking-widest shadow-xl disabled:opacity-50"
+                  >
+                    {analyzing ? <Loader2 className="w-5 h-5 animate-spin" /> : "Scanner les Menaces"}
+                  </button>
+               </div>
+             ) : (
+                <div className="grid grid-cols-1 gap-6">
+                   {fraudAudit.threats.map((threat, idx) => (
+                     <div key={idx} className="card p-8 bg-white border-l-8 border-rose-600 shadow-2xl flex items-center gap-8 group hover:border-rose-400 transition-all">
+                        <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
+                           <Fingerprint className="w-8 h-8" />
                         </div>
-                        <div className="mt-4 pt-4 border-t border-slate-50">
-                          <p className="text-sm text-slate-500 font-bold leading-relaxed">
-                            <span className="text-sky-600 font-black">RAISON :</span> {pred.reasoning || 'Analyse en cours...'}
-                          </p>
-                          <div className="mt-4 flex items-center justify-between">
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Date Rec. Commande : {pred.suggestedPurchaseDate || 'N/A'}</p>
-                            <button className="text-[10px] font-black text-sky-600 uppercase tracking-widest hover:underline">Ajouter à la DA</button>
-                          </div>
+                        <div className="flex-1">
+                           <div className="flex items-center gap-3 mb-2">
+                             <span className="text-[10px] font-black bg-rose-600 text-white px-3 py-1 rounded-full uppercase tracking-widest">{threat.type}</span>
+                             <span className="text-xs font-black text-slate-400">Utilisateur: {threat.userConcerned}</span>
+                           </div>
+                           <h4 className="text-xl font-black text-slate-950 uppercase tracking-tight mb-2">{threat.logic}</h4>
+                           <p className="text-sm font-bold text-slate-500 italic">Preuve: {threat.evidence}</p>
                         </div>
-                      </div>
-                    );
-                  })}
+                     </div>
+                   ))}
                 </div>
-              )}
-            </div>
-          )}
-        </div>
+             )}
+          </div>
+        )}
+      </div>
+
+      {/* Hidden Export Template */}
+      <div id="master-audit-report" style={{ display: 'none', padding: '40px', background: 'white', width: '800px' }}>
+         <div style={{ borderBottom: '5px solid #0ea5e9', paddingBottom: '20px', marginBottom: '40px' }}>
+            <h1 style={{ fontSize: '32px', fontWeight: '900', color: '#0f172a', textTransform: 'uppercase' }}>Rapport d'Audit Hydromines</h1>
+            <p style={{ fontWeight: 'bold', color: '#64748b' }}>Site: {site} | Date: {new Date().toLocaleDateString()}</p>
+         </div>
+         {selectedReport?.data && (
+           <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'monospace', fontSize: '10px', color: '#334155' }}>
+             {JSON.stringify(selectedReport.data, null, 2)}
+           </div>
+         )}
       </div>
     </div>
   );
-}
+});

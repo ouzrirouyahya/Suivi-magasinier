@@ -11,8 +11,12 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function isEmailVerified() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+    
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128;
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches("^[a-zA-Z0-9_\\-]+$");
     }
     
     function isOwner(userId) {
@@ -29,7 +33,7 @@ service cloud.firestore {
 
     function isActive() {
       let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
-      return isSignedIn() && (
+      return isEmailVerified() && (
         request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
         (exists(path) && get(path).data.active == true)
       );
@@ -73,6 +77,7 @@ service cloud.firestore {
     match /distributions/{id} { allow read, write: if isActive(); }
     match /purchaseRequests/{id} { allow read, write: if isActive(); }
     match /anomalyReports/{id} { allow read, write: if isActive(); }
+    match /reports/{id} { allow read: if isActive(); allow write: if isActive() && (isAdmin() || request.auth.token.email in ['ouzrirouyahya@gmail.com']); }
   }
 }
 

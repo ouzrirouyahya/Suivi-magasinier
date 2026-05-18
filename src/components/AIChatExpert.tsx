@@ -1,5 +1,5 @@
 import React from 'react';
-import { Send, Sparkles, User, Brain, Bot, Wrench, Shield, ChevronRight } from 'lucide-react';
+import { Send, Sparkles, User, Brain, Bot, Wrench, Shield, ChevronRight, AlertCircle } from 'lucide-react';
 import { SiteCode, Article } from '../types';
 import { cn } from '../lib/utils';
 
@@ -17,7 +17,7 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
   const [messages, setMessages] = React.useState<Message[]>([
     { 
       role: 'assistant', 
-      content: "Bonjour ! Je suis votre assistant expert Gemini pour Hydromines. Spécialiste des mines souterraines et des équipements Montabert (T23/T28), je suis là pour vous aider dans la gestion de votre magasin et la maintenance. Posez-moi vos questions sur les pièces ou les engins !" 
+      content: "Bonjour ! Je suis l'expert IA dédié à l'univers Hydromines. Spécialiste des opérations minières souterraines et des équipements Montabert, je vous accompagne dans la gestion de stock et la maintenance technique de votre parc engins. Posez-moi vos questions !" 
     }
   ]);
   const [input, setInput] = React.useState('');
@@ -60,8 +60,8 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({ error: "Server Error" }));
-        throw new Error(errorData.error || `HTTP Error ${response.status}`);
+        const errorData = await response.json().catch(() => ({ error: "Erreur Serveur (HTML retourné au lieu de JSON)" }));
+        throw new Error(errorData.details || errorData.error || `HTTP Error ${response.status}`);
       }
 
       const data = await response.json();
@@ -72,9 +72,13 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
       let displayMessage = "Désolé, j'ai rencontré une erreur technique.";
       
       if (errorMessage.includes("GEMINI_API_KEY")) {
-        displayMessage = "L'Expert Gemini n'est pas configuré (Clé API manquante dans les secrets).";
-      } else if (errorMessage.includes("Unexpected token") || errorMessage.includes("JSON")) {
-        displayMessage = "Erreur de communication avec le serveur AI (Réponse invalide).";
+        displayMessage = "L'Expert Gemini n'est pas configuré (Clé API manquante).";
+      } else if (errorMessage.includes("Unexpected token") || errorMessage.includes("JSON") || errorMessage.includes("HTML")) {
+        displayMessage = "Erreur de communication : Le serveur a envoyé une réponse invalide. Vérifiez la configuration de déploiement.";
+      } else if (errorMessage.includes("503") || errorMessage.includes("busy")) {
+        displayMessage = "Le service AI est surchargé. Retentez dans quelques instants.";
+      } else {
+        displayMessage = `Erreur : ${errorMessage}`;
       }
       
       setMessages([...newMessages, { role: 'assistant', content: displayMessage }]);
@@ -84,7 +88,7 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
   };
 
   const suggestions = [
-    "Quelles sont les pièces critiques pour un Montabert T28 ?",
+    "Quelles sont les pièces critiques pour un Montabert T23 ?",
     "Donne-moi les références des joints hydrauliques en stock.",
     "Comment optimiser le rangement des forets de 3m ?",
     "Vérifie les niveaux de stock critiques pour le site " + site
@@ -98,6 +102,7 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
             <Brain className="w-10 h-10 text-white" />
           </div>
           <div>
+            <span className="text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1 block">ASSISANT Hydromines app</span>
             <h2 className="text-4xl font-black text-slate-950 tracking-tighter uppercase leading-none">Expert Gemini</h2>
             <p className="text-sm text-indigo-600 font-black uppercase tracking-[0.1em] mt-2 flex items-center gap-2">
                <Sparkles className="w-4 h-4" /> Spécialiste Mines & Maintenance
@@ -108,7 +113,7 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
         <div className="hidden md:flex gap-4">
           <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
              <Wrench className="w-4 h-4 text-slate-400" />
-             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Support T23/T28</span>
+             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest leading-none">Support PERFORATEURS - ENGINS</span>
           </div>
           <div className="px-4 py-2 bg-slate-50 rounded-xl border border-slate-100 flex items-center gap-3">
              <Shield className="w-4 h-4 text-slate-400" />
@@ -116,6 +121,21 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
           </div>
         </div>
       </header>
+      
+      {/* Professional Notification Banner */}
+      <div className="mb-6 animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="bg-amber-50/50 border border-amber-200/50 rounded-2xl p-4 flex items-center gap-4 shadow-sm">
+          <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center flex-shrink-0">
+            <AlertCircle className="w-5 h-5 text-amber-600" />
+          </div>
+          <div className="flex-1">
+            <h4 className="text-[10px] font-black text-amber-800 uppercase tracking-widest leading-none mb-1">Information Utilisation & Quotas</h4>
+            <p className="text-sm font-bold text-amber-900/80 leading-tight">
+              Pour une performance optimale, formulez des requêtes précises. <span className="text-amber-700">Relais automatique actif :</span> En cas de forte affluence, l'IA bascule sur un moteur de secours pour garantir la continuité du service.
+            </p>
+          </div>
+        </div>
+      </div>
 
       <div className="flex-1 flex flex-col md:flex-row gap-8 min-h-0">
         {/* Chat Area */}
@@ -171,7 +191,7 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Votre question à l'expert (ex: Maintenance T28, Stock, Procédures...)"
+                placeholder="Votre question à l'expert (ex: Maintenance T23, Stock, Procédures...)"
                 className="w-full h-16 md:h-20 bg-white border-2 border-indigo-100 rounded-3xl pl-8 pr-28 text-lg md:text-xl font-black text-slate-900 focus:border-indigo-600 outline-none shadow-2xl shadow-indigo-100/20 transition-all"
               />
               <button 
@@ -211,7 +231,7 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
                 <div className="w-8 h-8 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center">
                   <CheckCircle className="w-4 h-4" />
                 </div>
-                <span className="text-xs font-black text-slate-600 uppercase">Documents T23/T28</span>
+                <span className="text-xs font-black text-slate-600 uppercase">Documents Techniques</span>
               </div>
               <div className="flex items-center gap-3">
                 <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center">

@@ -129,20 +129,106 @@
     overflow: visible !important;
   }
   body {
-    background-color: white;
+    background-color: white !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+  aside {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+    margin: 0 !important;
   }
   .card {
     border: 1px solid #e2e8f0 !important;
     box-shadow: none !important;
     break-inside: avoid;
     background-color: white !important;
+    margin-bottom: 2rem !important;
+  }
+  .btn, button {
+    display: none !important;
   }
   .recharts-responsive-container {
     width: 100% !important;
     height: 400px !important;
   }
+}
+
+/* Perfect PDF Template classes */
+.pdf-printable {
+  background: white !important;
+  color: #0f172a !important;
+  width: 800px !important; /* Fixed width for better capture */
+  padding: 40px !important;
+}
+
+.pdf-printable {
+  background-color: #ffffff !important;
+  color: #020617 !important;
+}
+
+.pdf-printable * {
+  border-color: #cbd5e1 !important;
+  color: #0f172a !important;
+  background-image: none !important;
+  box-shadow: none !important;
+  color-scheme: light !important;
+  /* Disable oklch for html2canvas compatibility */
+  outline-color: #cbd5e1 !important;
+  text-decoration-color: #0f172a !important;
+  accent-color: #0284c7 !important;
+  fill: #0284c7 !important;
+  stop-color: #0284c7 !important;
+}
+
+.pdf-printable .card {
+  border: 2px solid #e2e8f0 !important;
+  background-color: #ffffff !important;
+  margin-bottom: 30px !important;
+  break-inside: avoid;
+  padding: 30px !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+.pdf-printable h1, 
+.pdf-printable h2, 
+.pdf-printable h3, 
+.pdf-printable h4,
+.pdf-printable p,
+.pdf-printable b,
+.pdf-printable strong,
+.pdf-printable span {
+  color: #0f172a !important;
+}
+
+.pdf-printable .text-rose-600 { color: #dc2626 !important; }
+.pdf-printable .text-emerald-600 { color: #059669 !important; }
+.pdf-printable .text-sky-600 { color: #0284c7 !important; }
+.pdf-printable .text-amber-600 { color: #d97706 !important; }
+.pdf-printable .text-slate-400 { color: #94a3b8 !important; }
+.pdf-printable .text-slate-500 { color: #64748b !important; }
+.pdf-printable .text-white { color: #ffffff !important; }
+
+.pdf-printable .bg-slate-50 { background-color: #f8fafc !important; }
+.pdf-printable .bg-rose-50 { background-color: #fff1f2 !important; }
+.pdf-printable .bg-rose-600 { background-color: #e11d48 !important; }
+.pdf-printable .bg-emerald-50 { background-color: #ecfdf5 !important; }
+.pdf-printable .bg-emerald-600 { background-color: #059669 !important; }
+.pdf-printable .bg-sky-50 { background-color: #f0f9ff !important; }
+.pdf-printable .bg-sky-600 { background-color: #0284c7 !important; }
+.pdf-printable .bg-amber-50 { background-color: #fffbeb !important; }
+.pdf-printable .bg-slate-900 { background-color: #0f172a !important; }
+.pdf-printable .bg-slate-950 { background-color: #020617 !important; color: #ffffff !important; }
+.pdf-printable .bg-slate-950 * { color: #ffffff !important; }
+
+.pdf-printable button, 
+.pdf-printable .btn,
+.pdf-printable .no-print,
+.pdf-printable .tabs-ui {
+  display: none !important;
 }
 
 .print-only {

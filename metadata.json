@@ -1,6 +1,6 @@
 {
   "name": "HYDROMINES Magasinier",
   "description": "Application de gestion magasinière pour sites miniers. Suivi des stocks, mouvements et transferts inter-sites en temps réel.",
-  "requestFramePermissions": [],
+  "requestFramePermissions": ["camera"],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

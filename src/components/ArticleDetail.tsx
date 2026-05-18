@@ -95,6 +95,34 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                 </div>
               </div>
 
+              <div className="card p-6 border-rose-100 bg-rose-50/30 shadow-none">
+                <h4 className="text-xs font-bold uppercase text-rose-600 mb-4 flex items-center gap-2">
+                   Impact Financier & Rotation
+                </h4>
+                <div className="space-y-4">
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-neutral-500">Valeur Immobilisée</span>
+                    <span className="font-black text-rose-600">{formatCurrency(article.quantity * (article.price || 0))}</span>
+                  </div>
+                  {article.quantity > article.minStock * 2 ? (
+                    <div className="p-3 bg-rose-100 rounded-xl">
+                      <p className="text-[10px] font-black text-rose-700 uppercase tracking-widest mb-1 text-center">Surstockage Détecté</p>
+                      <p className="text-[11px] text-rose-600 font-bold leading-tight">Ce produit dépasse 2x le seuil de sécurité. Immobilisation excessive détectée.</p>
+                    </div>
+                  ) : article.quantity === 0 ? (
+                    <div className="p-3 bg-red-100 rounded-xl">
+                      <p className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1 text-center">Rupture de Stock</p>
+                      <p className="text-[11px] text-red-600 font-bold leading-tight">Risque critique d'arrêt de production.</p>
+                    </div>
+                  ) : (
+                    <div className="p-3 bg-emerald-100 rounded-xl">
+                      <p className="text-[10px] font-black text-emerald-700 uppercase tracking-widest mb-1 text-center">Stock Optimisé</p>
+                      <p className="text-[11px] text-emerald-600 font-bold leading-tight">Niveau sain par rapport aux seuils.</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
               <div className="card p-6 border-neutral-100 shadow-none">
                 <h4 className="text-xs font-bold uppercase text-neutral-500 mb-4 flex items-center gap-2">
                    Fiche Technique
@@ -144,7 +172,7 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                       <th>Date</th>
                       <th>Bon</th>
                       <th>Type</th>
-                      <th>Tiers / Affectation</th>
+                      <th>Tiers / Bénéficiaire</th>
                       <th className="text-right">Quantité</th>
                     </tr>
                   </thead>
@@ -169,8 +197,8 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                                 <span className="font-medium">{m.vendeur}</span>
                               ) : (
                                 <div>
-                                  <span className="font-bold">{m.demandeur}</span>
-                                  <span className="text-neutral-400 ml-1">({m.engin})</span>
+                                  <p className="font-bold">{m.beneficiaire || m.demandeur}</p>
+                                  {m.engin && <p className="text-[10px] text-neutral-400">ENGIN: {m.engin}</p>}
                                 </div>
                               )}
                             </td>
