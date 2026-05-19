@@ -12,7 +12,8 @@ import {
   AgentMaster, 
   CatalogItem, 
   PurchaseRequest, 
-  AnomalyReport 
+  AnomalyReport,
+  MaintenanceLog
 } from '../types';
 import { INITIAL_ARTICLES, INITIAL_MOUVEMENTS, INITIAL_ENGINS, INITIAL_PERFOS, INITIAL_AGENTS } from '../demoData';
 import { MASTER_CATALOG, CATALOG_VERSION } from '../catalogData';
@@ -50,10 +51,12 @@ type InventoryContextType = {
   accounts: UserAccount[];
   purchaseRequests: PurchaseRequest[];
   anomalyReports: AnomalyReport[];
+  maintenanceLogs: MaintenanceLog[];
   currentUser: UserAccount | null;
   isLoaded: boolean;
   notifications: {id: string, type: string, message: string, timestamp: string}[];
   addMouvement: (m: Mouvement) => Promise<void>;
+  addMaintenanceLog: (log: MaintenanceLog) => Promise<void>;
   addTransfert: (t: Transfert) => Promise<void>;
   completeTransfert: (id: string, recepteur: string) => Promise<void>;
   saveInventaire: (i: Inventaire) => Promise<void>;
@@ -85,10 +88,32 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [accounts, setAccounts] = useState<UserAccount[]>([]);
   const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
   const [anomalyReports, setAnomalyReports] = useState<AnomalyReport[]>([]);
+  const [maintenanceLogs, setMaintenanceLogs] = useState<MaintenanceLog[]>([]);
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [authStateReady, setAuthStateReady] = useState(false);
   const [notifications, setNotifications] = useState<{id: string, type: string, message: string, timestamp: string}[]>([]);
+
+  // Persistent Cache for Offline Support
+  useEffect(() => {
+    if (articles.length > 0) localStorage.setItem('hydromines_cache_articles', JSON.stringify(articles));
+    if (catalog.length > 0) localStorage.setItem('hydromines_cache_catalog', JSON.stringify(catalog));
+    if (mouvements.length > 0) localStorage.setItem('hydromines_cache_mouvements', JSON.stringify(mouvements));
+    if (maintenanceLogs.length > 0) localStorage.setItem('hydromines_cache_maintenance', JSON.stringify(maintenanceLogs));
+  }, [articles, catalog, mouvements, maintenanceLogs]);
+
+  // Load cache if offline or slow
+  useEffect(() => {
+    const cachedArticles = localStorage.getItem('hydromines_cache_articles');
+    const cachedCatalog = localStorage.getItem('hydromines_cache_catalog');
+    const cachedMouvements = localStorage.getItem('hydromines_cache_mouvements');
+    const cachedMaintenance = localStorage.getItem('hydromines_cache_maintenance');
+    
+    if (cachedArticles && articles.length === 0) setArticles(JSON.parse(cachedArticles));
+    if (cachedCatalog && catalog.length === 0) setCatalog(JSON.parse(cachedCatalog));
+    if (cachedMouvements && mouvements.length === 0) setMouvements(JSON.parse(cachedMouvements));
+    if (cachedMaintenance && maintenanceLogs.length === 0) setMaintenanceLogs(JSON.parse(cachedMaintenance));
+  }, []);
 
   // Low Stock Detection
   useEffect(() => {
@@ -223,6 +248,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       unsubs.push(safeOnSnapshot(collection(db, 'distributions'), setDistributions, 'distributions'));
       unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
       unsubs.push(safeOnSnapshot(collection(db, 'anomalyReports'), setAnomalyReports, 'anomalyReports'));
+      unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc')), setMaintenanceLogs, 'maintenanceLogs'));
 
       if (currentUser.role === 'ADMIN') {
         unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));
@@ -252,7 +278,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         if (!articleSnap.exists()) throw new Error(`Article ${item.articleId} non trouvé`);
         const article = articleSnap.data() as Article;
         totalValue += item.quantity * article.price;
-        const newQty = (mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN') 
+        const newQty = (mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR') 
           ? article.quantity + item.quantity 
           : article.quantity - item.quantity;
         if (newQty < 0) throw new Error(`Stock insuffisant pour ${article.designation}`);
@@ -261,6 +287,38 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       transaction.set(doc(db, 'mouvements', movementId), cleanObject({ ...mouvement, id: movementId }));
       await logAction(mouvement.type, `Réf: ${mouvement.reference}`, mouvement.site, totalValue);
     });
+  };
+
+  const addMaintenanceLog = async (log: MaintenanceLog) => {
+    const id = log.id || generateId();
+    await runTransaction(db, async (transaction) => {
+      // If maintenance uses parts, update stock
+      if (log.partsUsed && log.partsUsed.length > 0) {
+        for (const part of log.partsUsed) {
+          const articleRef = doc(db, 'articles', part.articleId);
+          const articleSnap = await transaction.get(articleRef);
+          if (articleSnap.exists()) {
+            const article = articleSnap.data() as Article;
+            transaction.update(articleRef, { quantity: article.quantity - part.quantity });
+            
+            // Record a sortie for these parts
+            const mId = generateId();
+            transaction.set(doc(db, 'mouvements', mId), cleanObject({
+              id: mId,
+              site: log.machineType === 'ENGIN' ? (engins.find(e => e.id === log.machineId)?.site || 'SMI') : 'SMI',
+              date: log.date,
+              type: 'SORTIE',
+              reference: `MAINT-${log.id}`,
+              items: [{ articleId: part.articleId, quantity: part.quantity, price: article.price || 0 }],
+              notes: `Utilisé pour maintenance ${log.type} sur ${log.machineId}`,
+              status: 'COMPLETE'
+            }));
+          }
+        }
+      }
+      transaction.set(doc(db, 'maintenanceLogs', id), cleanObject({ ...log, id }));
+    });
+    await logAction('MAINTENANCE', `Machine: ${log.machineId}`, 'SMI', log.cost || 0);
   };
 
   const addTransfert = async (t: Transfert) => {
@@ -328,7 +386,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const value = {
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
-    currentUser, isLoaded, notifications, addMouvement, addTransfert, completeTransfert,
+    maintenanceLogs,
+    currentUser, isLoaded, notifications, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     saveInventaire, saveArticle, deleteArticle, toggleUser, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus
   };

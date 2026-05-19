@@ -14,6 +14,7 @@ import { reportService } from '../services/reportService';
 import { ReportCenter } from './analytics/ReportCenter';
 import { AuditDashboard } from './analytics/AuditDashboard';
 import { AnomaliesView } from './analytics/AnomaliesView';
+import { ForensicIntelligence } from './analytics/ForensicIntelligence';
 
 interface AIAnalyticsProps {
   site: SiteCode;
@@ -38,7 +39,7 @@ export const AIAnalytics = memo(({ site, articles, mouvements, agents, initialTa
   const [complianceIssues, setComplianceIssues] = React.useState<any[]>([]);
   const [procurementPlan, setProcurementPlan] = React.useState<any[]>([]);
   const [agentInsights, setAgentInsights] = React.useState<any[]>([]);
-  const [fraudAudit, setFraudAudit] = React.useState<{ fraudScore: number, threats: any[] } | null>(null);
+  const [fraudAudit, setFraudAudit] = React.useState<any | null>(null);
   
   React.useEffect(() => {
     fetchLatestReports();
@@ -63,7 +64,7 @@ export const AIAnalytics = memo(({ site, articles, mouvements, agents, initialTa
     setSelectedReport(report);
     const data = report.data;
     if (data.anomalies) setAnomalies(data.anomalies);
-    if (data.fraudScore !== undefined) setFraudAudit({ fraudScore: data.fraudScore, threats: data.threats || [] });
+    if (data.fraudScore !== undefined) setFraudAudit(data);
     if (data.healthScore) setHealthScore(data.healthScore);
     if (data.financialLeaks) setFinancialLeaks(data.financialLeaks);
     if (data.agentInsights) setAgentInsights(data.agentInsights);
@@ -84,7 +85,7 @@ export const AIAnalytics = memo(({ site, articles, mouvements, agents, initialTa
 
       const data = {
         articles: siteArticles.map(a => ({ id: a.id, designation: a.designation, qty: a.quantity, min: a.minStock, category: a.category, price: a.price })),
-        mouvements: siteMouvements.map(m => ({ date: m.date, type: m.type, items: m.items, engin: m.engin, perforateur: m.perforateur, beneficiaire: m.beneficiaire, service: m.service, author: m.vendeur || 'unknown' })),
+        mouvements: siteMouvements.map(m => ({ date: m.date, type: m.type, items: m.items, engin: m.engin, perforateur: m.perforateur, beneficiaire: m.beneficiaire, service: m.service, author: m.vendeur || 'unknown', notes: m.notes, motif: m.motif })),
         agents: agents.map(ag => ({ id: ag.id, name: `${ag.firstname} ${ag.lastname}`, service: ag.service, matricule: ag.matricule }))
       };
 
@@ -194,39 +195,11 @@ export const AIAnalytics = memo(({ site, articles, mouvements, agents, initialTa
         )}
 
         {activeTab === 'FRAUD' && (
-          <div className="space-y-8 animate-in zoom-in duration-500">
-             {!fraudAudit ? (
-               <div className="card p-32 text-center bg-rose-50 border-rose-100 flex flex-col items-center">
-                  <ShieldAlert className="w-20 h-20 text-rose-500 mb-6 animate-pulse" />
-                  <h3 className="text-3xl font-black text-slate-950 uppercase">Audit de Fraude requis</h3>
-                  <button 
-                    disabled={analyzing}
-                    onClick={() => runAnalysis('FRAUD')} 
-                    className="mt-8 btn bg-rose-600 text-white px-12 h-14 rounded-xl font-black uppercase tracking-widest shadow-xl disabled:opacity-50"
-                  >
-                    {analyzing ? <Loader2 className="w-5 h-5 animate-spin" /> : "Scanner les Menaces"}
-                  </button>
-               </div>
-             ) : (
-                <div className="grid grid-cols-1 gap-6">
-                   {fraudAudit.threats.map((threat, idx) => (
-                     <div key={idx} className="card p-8 bg-white border-l-8 border-rose-600 shadow-2xl flex items-center gap-8 group hover:border-rose-400 transition-all">
-                        <div className="w-16 h-16 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center shrink-0 group-hover:scale-110 transition-transform">
-                           <Fingerprint className="w-8 h-8" />
-                        </div>
-                        <div className="flex-1">
-                           <div className="flex items-center gap-3 mb-2">
-                             <span className="text-[10px] font-black bg-rose-600 text-white px-3 py-1 rounded-full uppercase tracking-widest">{threat.type}</span>
-                             <span className="text-xs font-black text-slate-400">Utilisateur: {threat.userConcerned}</span>
-                           </div>
-                           <h4 className="text-xl font-black text-slate-950 uppercase tracking-tight mb-2">{threat.logic}</h4>
-                           <p className="text-sm font-bold text-slate-500 italic">Preuve: {threat.evidence}</p>
-                        </div>
-                     </div>
-                   ))}
-                </div>
-             )}
-          </div>
+           <ForensicIntelligence 
+             fraudAudit={fraudAudit} 
+             analyzing={analyzing} 
+             onRun={runAnalysis} 
+           />
         )}
       </div>
 

@@ -64,7 +64,28 @@ export interface CatalogItem {
   source?: 'MASTER' | 'UPLOAD';
 }
 
-export type MouvementType = 'ENTREE' | 'SORTIE' | 'TRANSFERT_OUT' | 'TRANSFERT_IN' | 'AJUSTEMENT';
+export type MouvementType = 'ENTREE' | 'SORTIE' | 'TRANSFERT_OUT' | 'TRANSFERT_IN' | 'AJUSTEMENT' | 'RETOUR';
+
+export interface MaintenanceLog {
+  id: string;
+  machineId: string; // ID for Engin or Perfo
+  machineType: 'ENGIN' | 'PERFO';
+  date: string;
+  type: 'PREVENTIVE' | 'CURATIVE' | 'PREDICTIVE';
+  description: string;
+  hoursCounter?: number;
+  partsUsed: { articleId: string, quantity: number }[];
+  cost?: number;
+  performer: string;
+}
+
+export interface MachineHealth {
+  machineId: string;
+  lastMaintenance: string;
+  nextMaintenanceDue: string;
+  healthScore: number; // 0-100
+  predictionNotes: string;
+}
 
 export interface MouvementItem {
   articleId: string;

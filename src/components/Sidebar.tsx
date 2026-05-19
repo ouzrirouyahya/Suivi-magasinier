@@ -20,7 +20,10 @@ import {
   Activity,
   ShoppingCart,
   Brain,
-  MessageSquare
+  MessageSquare,
+  RotateCcw,
+  Landmark,
+  FileText
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SITES } from '../demoData';
@@ -29,25 +32,25 @@ import { User } from 'firebase/auth';
 import { Background3D } from './Background3D';
 
 export type Page = 
-  | 'DASHBOARD' 
+  | 'COCKPIT' 
   | 'STOCK_ENGINS' 
   | 'STOCK_PERFORATEURS' 
   | 'STOCK_CONSOMMABLES' 
   | 'STOCK_EPI' 
   | 'BON_ENTREE' 
   | 'BON_SORTIE' 
-  | 'TRANSFERT'
   | 'INVENTAIRE'
   | 'HISTORIQUE' 
   | 'AUDIT_LOG'
   | 'USER_MGMT'
   | 'GESTION_ARTICLES'
-  | 'ALERTES_STOCK'
   | 'REPORTS'
   | 'RESTOCK_MGMT'
   | 'IA_CHECKLIST'
-  | 'AI_ANALYTICS'
   | 'AI_CHAT_EXPERT'
+  | 'MAINTENANCE'
+  | 'RETURNS'
+  | 'FINANCE'
   | 'SEARCH_RESULTS';
 
 interface SidebarProps {
@@ -68,9 +71,8 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
   const warningCount = notifications.filter(n => n.type === 'WARNING').length;
 
   const menuItems = [
-    { id: 'DASHBOARD', label: 'Tableau de Commande', icon: LayoutDashboard },
+    { id: 'COCKPIT', label: 'Cockpit Intégré', icon: LayoutDashboard, activeColor: 'bg-sky-900 text-white shadow-xl' },
     { id: 'SEP_S', label: 'SUIVI DES SITES', isSeparator: true },
-    { id: 'ALERTES_STOCK', label: 'Alertes Critiques', icon: Activity, activeColor: 'bg-rose-50 text-rose-600 ring-rose-100', badge: (criticalCount + warningCount) || 0 },
     { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
     { id: 'STOCK_PERFORATEURS', label: 'Perforateurs', icon: Drill },
     { id: 'STOCK_CONSOMMABLES', label: 'Consommables', icon: Droplets },
@@ -78,14 +80,16 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
     { id: 'SEP_M', label: 'GESTION DES STOCKS', isSeparator: true },
     { id: 'BON_ENTREE', label: 'Entrées', icon: ArrowDownLeft, activeColor: 'text-emerald-600' },
     { id: 'BON_SORTIE', label: 'Sorties', icon: ArrowUpRight, activeColor: 'text-rose-700' },
-    { id: 'TRANSFERT', label: 'Transferts', icon: RefreshCw },
     { id: 'INVENTAIRE', label: 'Audit / Inventaire', icon: ClipboardCheck },
     { id: 'TRACEABILITY', label: 'Traçabilité Totale', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },
-    { id: 'RESTOCK_MGMT', label: 'Ravitaillement', icon: ShoppingCart, activeColor: 'bg-amber-50 text-amber-600 ring-amber-100' },
+    { id: 'TRANSFERS_RETURNS', label: 'Transferts & Retours', icon: RotateCcw, activeColor: 'bg-emerald-50 text-emerald-600' },
+    { id: 'RESTOCK_MGMT', label: 'Ravitaillement & Alertes', icon: ShoppingCart, activeColor: 'bg-amber-50 text-amber-600 ring-amber-100', badge: (criticalCount + warningCount) || 0 },
+    { id: 'SEP_OPT', label: 'OPTIMISATION & IA', isSeparator: true },
+    { id: 'MAINTENANCE', label: 'Maintenance IA', icon: Wrench, activeColor: 'bg-indigo-50 text-indigo-600' },
+    { id: 'FINANCE', label: 'Finance & Flux', icon: Landmark, activeColor: 'bg-amber-50 text-amber-600' },
     ...(isAdmin ? [
       { id: 'SEP_IA', label: 'IA HYDROMINES (FBI)', isSeparator: true },
       { id: 'IA_CHECKLIST', label: 'Check-list Prod', icon: ClipboardCheck, activeColor: 'bg-emerald-950 text-white shadow-xl' },
-      { id: 'AI_ANALYTICS', label: 'Intelligence Artificielle', icon: Brain, activeColor: 'bg-slate-900 text-white shadow-2xl ring-slate-800' },
       { id: 'AI_CHAT_EXPERT', label: 'Assistant Expert IA', icon: MessageSquare, activeColor: 'bg-sky-900 text-white shadow-xl shadow-sky-200' },
     ] : []),
     { id: 'SEP_A', label: 'ADMINISTRATION', isSeparator: true },

@@ -27,10 +27,11 @@ interface StockTableProps {
   articles: Article[];
   initialSearch?: string;
   onAction?: (id: string, action: 'IN' | 'OUT') => void;
+  onViewDetail?: (article: Article) => void;
   onManageCatalog?: () => void;
 }
 
-export const StockTable = memo(({ type, site, articles, initialSearch = '', onAction, onManageCatalog }: StockTableProps) => {
+export const StockTable = memo(({ type, site, articles, initialSearch = '', onAction, onViewDetail, onManageCatalog }: StockTableProps) => {
   const [search, setSearch] = useState(initialSearch);
   const [showGlobal, setShowGlobal] = useState(initialSearch.length > 0);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
@@ -265,7 +266,10 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
                   transition={{ delay: idx * 0.02 }}
                   className="group relative"
                 >
-                  <div className="relative card glass p-4 h-full flex flex-col bg-white border-slate-100 hover:-translate-y-1 transition-all duration-300 overflow-hidden shadow-sm ring-1 ring-slate-900/5">
+                  <div 
+                    onClick={() => onViewDetail?.(article)}
+                    className="relative card glass p-4 h-full flex flex-col bg-white border-slate-100 hover:-translate-y-1 transition-all duration-300 overflow-hidden shadow-sm ring-1 ring-slate-900/5 cursor-pointer"
+                  >
                     <div className="flex justify-between items-start mb-3">
                       <div className={cn("px-2.5 py-1 rounded text-xs font-black tracking-widest flex items-center gap-1.5 shadow-sm", status.class)}>
                         <status.icon className="w-3.5 h-3.5" />
@@ -346,7 +350,16 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
               </thead>
               <tbody className="divide-y divide-slate-100">
                 {filteredArticles.map((article) => (
-                  <tr key={article.id} className="group hover:bg-white/60 transition-all">
+                  <tr 
+                    key={article.id} 
+                    className="group hover:bg-white/60 transition-all cursor-pointer"
+                    onClick={(e) => {
+                       // Only trigger if not clicking an action button
+                       if (!(e.target as HTMLElement).closest('button')) {
+                          onViewDetail?.(article);
+                       }
+                    }}
+                  >
                 <td className="px-8 py-8">
                   <div className="flex flex-col">
                     <span className="font-black text-slate-900 text-3xl tracking-tighter leading-tight uppercase">{article.designation}</span>

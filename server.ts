@@ -83,14 +83,33 @@ async function startServer() {
         Réponds uniquement au format JSON.
         Format: { "healthScore": number, "financialLeaks": [{ "id": string, "title": string, "estimatedLoss": string, "impact": "CRITICAL" | "HIGH" | "MEDIUM", "description": string, "recommendation": string }] }`;
       } else if (promptType === 'FRAUD_DETECTION') {
-        systemPrompt = `Tu es une unité d'élite d'audit (type FBI) spécialisée dans la fraude logistique.
-        Analyse les mouvements et le comportement des utilisateurs pour détecter :
-        - 'Saisie Flash' : Plusieurs mouvements complexes créés en moins d'une minute par le même utilisateur (soupçon de remplissage fictif).
-        - 'Vampirisme de stock' : Sorties répétitives de petites quantités qui cachent un vol important.
-        - 'Séquences de Mensonge' : Mouvements annulés puis recréés avec des bénéficiaires différents.
-        - 'Profils Suspects' : Utilisateurs dont les ratios de pertes sont 30% supérieurs à la moyenne.
+        systemPrompt = `Tu es une unité d'élite d'audit légal (Forensic Unit) spécialisée dans la criminalité logistique minière.
+        Analyse les mouvements, les horaires, les auteurs et les beneficiaires pour détecter :
+        1. 'Anomalies Temporelles' : Mouvements saisis à des heures impossibles (ex: 3h du matin sans équipe de nuit déclarée) ou saisis trop rapidement (moins de 10s entre 2 documents complexes).
+        2. 'Vampirisme de Stock' : Sorties répétitives de petites quantités juste en dessous des seuils d'alerte.
+        3. 'Séquences de Mensonge' : Mouvements annulés puis recréés immédiatement avec des modifications subtiles (changement de bénéficiaire ou d'engin).
+        4. 'Profils à Risque' : Ratios de casse/perte 40% supérieurs à la moyenne pour un même type d'engin.
+        5. 'Collusion Suspectée' : Liens répétitifs entre un magasinier spécifique et un mécanicien/foreur spécifique pour des articles à haute valeur.
+        
         Réponds en JSON uniquement.
-        Format: { "fraudScore": number, "threats": [{ "id": string, "type": "CRITICAL" | "SUSPICIOUS", "logic": string, "evidence": string, "userConcerned": string }] }`;
+        Format: { 
+          "fraudScore": number (0-100), 
+          "threatLevel": "CRITICAL" | "HIGH" | "ELEVATED" | "STABLE",
+          "threats": [{ 
+            "id": string, 
+            "type": "FRAUD" | "COMPLIANCE" | "BEHAVIORAL", 
+            "severity": "CRITICAL" | "HIGH" | "MEDIUM",
+            "logic": string (description technique du schéma de fraude détecté), 
+            "evidence": string (preuve factuelle dans les données), 
+            "userConcerned": string,
+            "riskScore": number
+          }],
+          "behavioralInsights": {
+             "speedAnomalies": number,
+             "afterHoursActivity": number,
+             "editingPatterns": string
+          }
+        }`;
       } else if (promptType === 'MECHANIC_PERFORMANCE') {
         systemPrompt = `Tu es un expert en gestion de flotte et capital humain pour Hydromines.
         Analyse la liste des agents fournie et leurs consommations d'articles dans les mouvements (en utilisant le champ 'beneficiaire').

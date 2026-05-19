@@ -46,11 +46,12 @@ interface DashboardProps {
   mouvements: Mouvement[];
   isAdmin: boolean;
   onAction: (page: any) => void;
+  onArticleClick?: (article: Article) => void;
 }
 
 const COLORS = ['#0ea5e9', '#991b1b', '#10b981', '#f59e0b', '#6366f1'];
 
-export function Dashboard({ site, articles, mouvements, isAdmin, onAction }: DashboardProps) {
+export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArticleClick }: DashboardProps) {
   const { 
     totalArticles, 
     stockValue, 
@@ -283,12 +284,12 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction }: Das
           <div 
             key={stat.label} 
             onClick={() => {
-              if (stat.label === 'Ruptures Stock') onAction('ALERTES_STOCK');
-              if (stat.action === 'AI_COMPLIANCE') onAction({ page: 'AI_ANALYTICS', tab: 'COMPLIANCE' });
-              if (stat.action === 'AI_FRAUD') onAction({ page: 'AI_ANALYTICS', tab: 'FRAUD' });
-              if (stat.action === 'AI_REPORTS') onAction({ page: 'AI_ANALYTICS', tab: 'REPORT_CENTER' });
-              if (stat.action === 'AI_PROCUREMENT') onAction({ page: 'AI_ANALYTICS', tab: 'PROCUREMENT' });
-              if (stat.action === 'AI_VISION') onAction({ page: 'AI_ANALYTICS', tab: 'VISION' });
+              if (stat.label === 'Ruptures Stock') onAction('RESTOCK_MGMT');
+              if (stat.action === 'AI_COMPLIANCE') onAction({ page: 'COCKPIT', tab: 'COMPLIANCE' });
+              if (stat.action === 'AI_FRAUD') onAction({ page: 'COCKPIT', tab: 'FRAUD' });
+              if (stat.action === 'AI_REPORTS') onAction({ page: 'COCKPIT', tab: 'REPORT_CENTER' });
+              if (stat.action === 'AI_PROCUREMENT') onAction({ page: 'COCKPIT', tab: 'PROCUREMENT' });
+              if (stat.action === 'AI_VISION') onAction({ page: 'COCKPIT', tab: 'VISION' });
             }}
             className={cn(
               "card glass p-8 rounded-3xl border-l-[6px] border-slate-100 transition-all duration-300 hover:translate-y-[-4px] h-full",
@@ -450,7 +451,17 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction }: Das
             {recentMovements.length > 0 ? recentMovements.map((mov) => {
               const total = mov.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
               return (
-                <div key={mov.id} className="flex items-start gap-3 p-3 rounded-xl hover:bg-white transition-all border border-transparent hover:border-slate-100 group shadow-none hover:shadow-lg">
+                <div 
+                  key={mov.id} 
+                  onClick={() => {
+                    const firstItem = mov.items[0];
+                    if (firstItem) {
+                      const article = articles.find(a => a.id === firstItem.articleId);
+                      if (article) onArticleClick?.(article);
+                    }
+                  }}
+                  className="flex items-start gap-3 p-3 rounded-xl hover:bg-white transition-all border border-transparent hover:border-slate-100 group shadow-none hover:shadow-lg cursor-pointer"
+                >
                   <div className={cn(
                     "p-2.5 rounded-lg flex-shrink-0 transition-transform group-hover:scale-110 shadow-md",
                     mov.type === 'ENTREE' ? "bg-emerald-500 text-white" : "bg-rose-800 text-white"

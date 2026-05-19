@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect, lazy, Suspense } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Sidebar, Page } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 
@@ -22,6 +23,9 @@ const AIChatExpert = lazy(() => import('./components/AIChatExpert').then(m => ({
 const ProductionChecklist = lazy(() => import('./components/ProductionChecklist').then(m => ({ default: m.ProductionChecklist })));
 const TraceabilityCenter = lazy(() => import('./components/TraceabilityCenter').then(m => ({ default: m.TraceabilityCenter })));
 const ArticleDetail = lazy(() => import('./components/ArticleDetail').then(m => ({ default: m.ArticleDetail })));
+const MaintenanceModule = lazy(() => import('./components/MaintenanceModule').then(m => ({ default: m.MaintenanceModule })));
+const ReturnsManagement = lazy(() => import('./components/ReturnsManagement').then(m => ({ default: m.ReturnsManagement })));
+const FinancialDashboard = lazy(() => import('./components/FinancialDashboard').then(m => ({ default: m.FinancialDashboard })));
 
 // Shared Components
 import LoginPage from './components/LoginPage';
@@ -38,7 +42,7 @@ import { auth } from './lib/firebase';
 import { toast } from 'sonner';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
+  const [currentPage, setCurrentPage] = useState<Page>('COCKPIT');
   const [showAdminAlert, setShowAdminAlert] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentSite, setCurrentSite] = useState<SiteCode>('SMI');
@@ -105,25 +109,41 @@ export default function App() {
 
   const renderPage = () => {
     switch (currentPage) {
-      case 'DASHBOARD':
-        return <Dashboard 
-          site={currentSite} 
-          articles={articles} 
-          mouvements={mouvements} 
-          isAdmin={isAdmin}
-          onAction={(page) => {
-            if (typeof page === 'object' && page.page === 'AI_ANALYTICS') {
-              if (!isAdmin) {
-                toast.error("Accès réservé aux administrateurs");
-                return;
-              }
-              setAiTab(page.tab);
-              setCurrentPage('AI_ANALYTICS');
-            } else {
-              setCurrentPage(page);
-            }
-          }} 
-        />;
+      case 'COCKPIT':
+        return (
+          <div className="space-y-12">
+            <Dashboard 
+              site={currentSite} 
+              articles={articles} 
+              mouvements={mouvements} 
+              isAdmin={isAdmin}
+              onArticleClick={setSelectedArticle}
+              onAction={(page) => {
+                if (typeof page === 'object' && page.page === 'AI_ANALYTICS') {
+                  if (!isAdmin) {
+                    toast.error("Accès réservé aux administrateurs");
+                    return;
+                  }
+                  setAiTab(page.tab);
+                  setCurrentPage('COCKPIT');
+                } else {
+                  setCurrentPage(page);
+                }
+              }} 
+            />
+            {isAdmin && (
+              <div className="border-t border-slate-100 pt-12">
+                 <AIAnalytics 
+                   site={currentSite} 
+                   articles={articles} 
+                   mouvements={mouvements} 
+                   agents={agents} 
+                   initialTab={aiTab} 
+                 />
+              </div>
+            )}
+          </div>
+        );
       
       case 'STOCK_ENGINS':
       case 'STOCK_PERFORATEURS':
@@ -139,6 +159,7 @@ export default function App() {
             articles={articles} 
             initialSearch={globalSearch}
             onAction={navigateToMouvement}
+            onViewDetail={setSelectedArticle}
             onManageCatalog={() => setCurrentPage('GESTION_ARTICLES')}
           />
         );
@@ -167,17 +188,6 @@ export default function App() {
           />
         );
       
-      case 'TRANSFERT':
-        return (
-          <TransfertPage 
-            currentSite={currentSite}
-            articles={articles}
-            transferts={transferts}
-            onAddTransfert={addTransfert}
-            onCompleteTransfert={completeTransfert}
-          />
-        );
-
       case 'INVENTAIRE':
         return (
           <InventairePage 
@@ -216,43 +226,34 @@ export default function App() {
         
       case 'RESTOCK_MGMT':
         return (
-          <RestockModule 
-            site={currentSite}
-            articles={articles}
-            purchaseRequests={purchaseRequests}
-            onCreatePR={(items) => {
-              const pr: PurchaseRequest = {
-                id: '', // Hook will generate
-                site: currentSite,
-                date: new Date().toISOString(),
-                status: 'BROUILLON',
-                items,
-                createdBy: user?.email || '',
-              };
-              addPurchaseRequest(pr);
-            }}
-            onUpdatePRStatus={updatePRStatus}
-          />
+          <div className="space-y-12">
+            <StockAlertView site={currentSite} articles={articles} onAction={navigateToMouvement} />
+            <div className="border-t border-slate-100 pt-12">
+              <RestockModule 
+                site={currentSite}
+                articles={articles}
+                purchaseRequests={purchaseRequests}
+                onCreatePR={(items) => {
+                  const pr: PurchaseRequest = {
+                    id: '', // Hook will generate
+                    site: currentSite,
+                    date: new Date().toISOString(),
+                    status: 'BROUILLON',
+                    items,
+                    createdBy: user?.email || '',
+                  };
+                  addPurchaseRequest(pr);
+                }}
+                onUpdatePRStatus={updatePRStatus}
+              />
+            </div>
+          </div>
         );
-
-      case 'AI_ANALYTICS':
-        if (!isAdmin) {
-          setShowAdminAlert(true);
-          setCurrentPage('DASHBOARD');
-          return null;
-        }
-        return <AIAnalytics 
-          site={currentSite} 
-          articles={articles} 
-          mouvements={mouvements} 
-          agents={agents} 
-          initialTab={aiTab} 
-        />;
 
       case 'AI_CHAT_EXPERT':
         if (!isAdmin) {
           setShowAdminAlert(true);
-          setCurrentPage('DASHBOARD');
+          setCurrentPage('COCKPIT');
           return null;
         }
         return <AIChatExpert site={currentSite} articles={articles} mouvements={mouvements} agents={agents} />;
@@ -260,10 +261,44 @@ export default function App() {
       case 'IA_CHECKLIST':
         if (!isAdmin) {
           setShowAdminAlert(true);
-          setCurrentPage('DASHBOARD');
+          setCurrentPage('COCKPIT');
           return null;
         }
         return <ProductionChecklist />;
+
+      case 'TRANSFERS_RETURNS':
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-12"
+          >
+            <TransfertPage 
+              currentSite={currentSite}
+              articles={articles}
+              transferts={transferts}
+              onAddTransfert={addTransfert}
+              onCompleteTransfert={completeTransfert}
+            />
+            <div className="border-t border-slate-100 pt-12">
+              <ReturnsManagement />
+            </div>
+          </motion.div>
+        );
+
+      case 'MAINTENANCE':
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <MaintenanceModule />
+          </motion.div>
+        );
+
+      case 'FINANCE':
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <FinancialDashboard />
+          </motion.div>
+        );
 
       case 'ALERTES_STOCK':
         return <StockAlertView site={currentSite} articles={articles} onAction={navigateToMouvement} />;
@@ -280,7 +315,7 @@ export default function App() {
       <Sidebar 
         currentPage={currentPage} 
         setPage={(page) => {
-          if ((page === 'AI_ANALYTICS' || page === 'AI_CHAT_EXPERT') && !isAdmin) {
+          if ((page === 'AI_CHAT_EXPERT' || page === 'IA_CHECKLIST') && !isAdmin) {
             setShowAdminAlert(true);
             return;
           }
