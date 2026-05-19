@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search } from 'lucide-react';
+import { Search, Menu } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 import { Article, SiteCode } from '../../types';
 
@@ -9,6 +9,7 @@ interface ToolbarProps {
   articles: Article[];
   currentSite: SiteCode;
   onSearchFocus: () => void;
+  onOpenMenu?: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -16,7 +17,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   setGlobalSearch, 
   articles, 
   currentSite,
-  onSearchFocus
+  onSearchFocus,
+  onOpenMenu
 }) => {
   const siteArticles = articles.filter(a => a.site === currentSite);
   const totalValue = siteArticles.reduce((sum, a) => sum + (a.quantity * a.price), 0);
@@ -24,7 +26,15 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   return (
     <div className="max-w-[1600px] mx-auto mb-3 no-print">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white/40 backdrop-blur-3xl p-1.5 rounded-xl border border-white shadow-xl shadow-slate-200/30">
-        <div className="relative flex-1 group">
+        <div className="flex items-center gap-2 flex-1">
+          <button 
+            onClick={onOpenMenu}
+            className="lg:hidden w-10 h-10 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-500 hover:text-sky-600 transition-colors shadow-sm"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+          
+          <div className="relative flex-1 group">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
             <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-500 transition-colors" />
             <div className="h-3 w-[1px] bg-slate-200" />
@@ -42,6 +52,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             }}
           />
         </div>
+      </div>
         
         <div className="flex items-center gap-2 px-1">
           <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />

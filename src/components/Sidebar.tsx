@@ -57,14 +57,20 @@ interface SidebarProps {
   setSite: (site: SiteCode) => void;
   user: User | null;
   isAdmin: boolean;
+  notifications?: {id: string, type: string, message: string, timestamp: string}[];
+  isOpen?: boolean;
+  onClose?: () => void;
   onSignOut: () => void;
 }
 
-export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAdmin, onSignOut }: SidebarProps) {
+export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAdmin, notifications = [], isOpen, onClose, onSignOut }: SidebarProps) {
+  const criticalCount = notifications.filter(n => n.type === 'CRITICAL').length;
+  const warningCount = notifications.filter(n => n.type === 'WARNING').length;
+
   const menuItems = [
     { id: 'DASHBOARD', label: 'Tableau de Commande', icon: LayoutDashboard },
     { id: 'SEP_S', label: 'SUIVI DES SITES', isSeparator: true },
-    { id: 'ALERTES_STOCK', label: 'Alertes Critiques', icon: Activity, activeColor: 'bg-rose-50 text-rose-600 ring-rose-100' },
+    { id: 'ALERTES_STOCK', label: 'Alertes Critiques', icon: Activity, activeColor: 'bg-rose-50 text-rose-600 ring-rose-100', badge: (criticalCount + warningCount) || 0 },
     { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
     { id: 'STOCK_PERFORATEURS', label: 'Perforateurs', icon: Drill },
     { id: 'STOCK_CONSOMMABLES', label: 'Consommables', icon: Droplets },
@@ -89,7 +95,20 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
   ];
 
   return (
-    <aside className="w-[260px] flex-shrink-0 bg-white border-r border-slate-100 h-screen sticky top-0 overflow-y-auto z-50 flex flex-col no-print shadow-xl shadow-slate-200/50">
+    <>
+      {/* Mobile Overlay */}
+      {isOpen && (
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[45] lg:hidden animate-in fade-in duration-300"
+          onClick={onClose}
+        />
+      )}
+      
+      <aside className={cn(
+        "w-[260px] flex-shrink-0 bg-white border-r border-slate-100 h-screen sticky top-0 overflow-y-auto flex flex-col no-print shadow-xl shadow-slate-200/50 transition-all duration-500 ease-in-out z-50",
+        "fixed lg:sticky lg:translate-x-0",
+        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+      )}>
       {/* 3D Visual Effect exclusively for the top of the sidebar */}
       <div className="absolute top-0 left-0 right-0 h-40 z-0 pointer-events-none overflow-hidden border-b border-sky-50 shadow-inner">
         <Background3D count={150} opacity={0.8} mouseSensitivity={0.5} rotationSpeed={1.5} size={0.03} />
@@ -145,7 +164,10 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
           return (
             <button
                key={item.id}
-               onClick={() => setPage(item.id as Page)}
+               onClick={() => {
+                 setPage(item.id as Page);
+                 if (onClose) onClose();
+               }}
                className={cn(
                  "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-all w-full text-left relative",
                  isActive 
@@ -158,6 +180,11 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
                 isActive ? "" : "text-slate-400 group-hover:text-sky-500"
                )} />
               <span className="flex-1 truncate uppercase tracking-[0.05em]">{item.label}</span>
+              {typeof item.badge === 'number' && item.badge > 0 && (
+                <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-lg shadow-rose-200">
+                  {item.badge}
+                </span>
+              )}
               {isActive && (
                 <div className="w-1 h-1 bg-sky-500 rounded-full" />
               )}
@@ -199,6 +226,7 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
         </div>
       </div>
     </aside>
+    </>
   );
 }
 

@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Calendar, Activity, ArrowDownLeft, ArrowUpRight, MapPin, Tag, Package } from 'lucide-react';
+import { X, Calendar, Activity, ArrowDownLeft, ArrowUpRight, MapPin, Tag, Package, QrCode, Printer } from 'lucide-react';
 import { Article, Mouvement } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
+import { QRCodeSVG } from 'qrcode.react';
 import { 
   AreaChart, 
   Area, 
@@ -120,6 +121,25 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                       <p className="text-[11px] text-emerald-600 font-bold leading-tight">Niveau sain par rapport aux seuils.</p>
                     </div>
                   )}
+                </div>
+              </div>
+
+              <div className="card p-6 border-neutral-100 shadow-none bg-neutral-50/20">
+                <h4 className="text-xs font-bold uppercase text-neutral-500 mb-4 flex items-center gap-2">
+                   <QrCode className="w-4 h-4" /> Identification QR Code
+                </h4>
+                <div className="flex flex-col items-center gap-4">
+                  <div className="p-4 bg-white rounded-2xl shadow-sm border border-neutral-100">
+                    <QRCodeSVG 
+                      value={JSON.stringify({ id: article.id, ref: article.ref, site: article.site })}
+                      size={120}
+                      level="H"
+                      includeMargin
+                    />
+                  </div>
+                  <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors">
+                    <Printer className="w-3.5 h-3.5" /> Imprimer l'étiquette
+                  </button>
                 </div>
               </div>
 

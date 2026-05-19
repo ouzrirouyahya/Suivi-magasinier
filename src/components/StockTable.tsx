@@ -12,11 +12,14 @@ import {
   MapPin,
   TrendingUp,
   LayoutGrid,
-  List
+  List,
+  FileDown
 } from 'lucide-react';
 import { Article, ArticleType, SiteCode } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
+import { exportToCSV } from '../lib/exportUtils';
 import { motion, AnimatePresence } from 'motion/react';
+import { toast } from 'sonner';
 
 interface StockTableProps {
   type: ArticleType | 'ALL';
@@ -103,6 +106,15 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
         </div>
 
         <div className="flex items-center gap-3">
+          <button 
+            onClick={() => {
+              exportToCSV(filteredArticles, `STOCKS_${site}_${type}`);
+              toast.success("Inventaire exporté en CSV");
+            }}
+            className="btn bg-white border border-slate-200 shadow-sm text-slate-700 px-4 h-11 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+          >
+            <FileDown className="w-5 h-5 text-emerald-600" /> Export
+          </button>
           {onManageCatalog && (
              <button 
                 onClick={onManageCatalog}

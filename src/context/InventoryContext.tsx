@@ -52,6 +52,7 @@ type InventoryContextType = {
   anomalyReports: AnomalyReport[];
   currentUser: UserAccount | null;
   isLoaded: boolean;
+  notifications: {id: string, type: string, message: string, timestamp: string}[];
   addMouvement: (m: Mouvement) => Promise<void>;
   addTransfert: (t: Transfert) => Promise<void>;
   completeTransfert: (id: string, recepteur: string) => Promise<void>;
@@ -87,6 +88,37 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [authStateReady, setAuthStateReady] = useState(false);
+  const [notifications, setNotifications] = useState<{id: string, type: string, message: string, timestamp: string}[]>([]);
+
+  // Low Stock Detection
+  useEffect(() => {
+    if (!isLoaded || articles.length === 0) return;
+    
+    const lowStockArticles = articles.filter(a => a.quantity <= a.minStock && a.quantity > 0);
+    const criticalArticles = articles.filter(a => a.quantity === 0);
+
+    const newNotifications: any[] = [];
+    
+    if (criticalArticles.length > 0) {
+      newNotifications.push({
+        id: `rupture-${Date.now()}`,
+        type: 'CRITICAL',
+        message: `${criticalArticles.length} articles en rupture totale de stock !`,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    if (lowStockArticles.length > 0) {
+      newNotifications.push({
+        id: `low-${Date.now()}`,
+        type: 'WARNING',
+        message: `${lowStockArticles.length} articles ont atteint le seuil critique.`,
+        timestamp: new Date().toISOString()
+      });
+    }
+
+    setNotifications(newNotifications);
+  }, [articles, isLoaded]);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (user) => {
@@ -296,7 +328,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const value = {
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
-    currentUser, isLoaded, addMouvement, addTransfert, completeTransfert,
+    currentUser, isLoaded, notifications, addMouvement, addTransfert, completeTransfert,
     saveInventaire, saveArticle, deleteArticle, toggleUser, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus
   };

@@ -40,6 +40,7 @@ import { toast } from 'sonner';
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('DASHBOARD');
   const [showAdminAlert, setShowAdminAlert] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentSite, setCurrentSite] = useState<SiteCode>('SMI');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [user, setUser] = useState<User | null>(null);
@@ -51,7 +52,7 @@ export default function App() {
   
   const { 
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
-    engins, perfos, agents, catalog, accounts, purchaseRequests, isLoaded,
+    engins, perfos, agents, catalog, accounts, purchaseRequests, notifications, isLoaded,
     addMouvement, addTransfert, completeTransfert, saveInventaire, saveArticle, 
     deleteArticle, setEngin, setPerfo, setAgent, saveCatalogItem, 
     deleteCatalogItem, addPurchaseRequest, updatePRStatus
@@ -289,6 +290,9 @@ export default function App() {
         setSite={setCurrentSite}
         user={user}
         isAdmin={isAdmin}
+        notifications={notifications}
+        isOpen={sidebarOpen}
+        onClose={() => setSidebarOpen(false)}
         onSignOut={handleSignOut}
       />
       
@@ -307,6 +311,7 @@ export default function App() {
             onSearchFocus={() => {
                if (currentPage !== 'SEARCH_RESULTS') setCurrentPage('SEARCH_RESULTS');
             }}
+            onOpenMenu={() => setSidebarOpen(true)}
           />
 
           <div className="max-w-[1600px] mx-auto">
