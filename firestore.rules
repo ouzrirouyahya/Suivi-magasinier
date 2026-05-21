@@ -1,12 +1,12 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Default deny
+    // 1. Global safety net (Default Deny Catch-All)
     match /{document=**} {
       allow read, write: if false;
     }
 
-    // Helper functions
+    // --- Core Helper Functions ---
     function isSignedIn() {
       return request.auth != null;
     }
@@ -31,6 +31,21 @@ service cloud.firestore {
       );
     }
 
+    function isMaintenanceLocked() {
+      let path = /databases/$(database)/documents/metadata/system_config;
+      return exists(path) && get(path).data.maintenanceMode == true;
+    }
+
+    function hasAccount() {
+      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
+      return exists(path);
+    }
+
+    function getRole() {
+      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
+      return hasAccount() ? get(path).data.role : 'LECTURE_SEULE';
+    }
+
     function isActive() {
       let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
       return isEmailVerified() && (
@@ -39,45 +54,215 @@ service cloud.firestore {
       );
     }
 
-    // Public/Metadata collections: Read by any signed-in user
-    match /catalog/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
-    match /metadata/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
-    match /engins/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
-    match /perfos/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
-    match /agents/{id} { allow read: if isSignedIn(); allow write: if isAdmin() && isValidId(id); }
+    function isAnyRole(roles) {
+      return isActive() && (getRole() in roles);
+    }
 
-    // Articles: Read by all active users, write strictly by active
+    // System-wide write condition with Maintenance Mode protection
+    function canWrite(allowedRoles) {
+      return isAnyRole(allowedRoles) && (!isMaintenanceLocked() || isAdmin());
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // --- Validation Blueprints ---
+
+    function isValidArticle(data) {
+      return data.keys().hasAll(['id', 'site', 'ref', 'designation', 'type', 'quantity', 'minStock', 'active'])
+        && data.quantity is number && data.quantity >= 0
+        && data.minStock is number && data.minStock >= 0
+        && data.active is bool;
+    }
+
+    function isValidMouvement(data) {
+      return data.keys().hasAll(['id', 'site', 'date', 'type', 'items', 'status'])
+        && data.site is string
+        && data.type is string
+        && data.items is list
+        && data.items.size() > 0
+        && data.status is string;
+    }
+
+    function isValidTransfert(data) {
+      return data.keys().hasAll(['id', 'sourceSite', 'targetSite', 'dateEnvoi', 'reference', 'items', 'status'])
+        && data.sourceSite is string
+        && data.targetSite is string
+        && data.sourceSite != data.targetSite
+        && data.items is list
+        && data.status is string;
+    }
+
+    function isValidAccount(data) {
+      return data.keys().hasAll(['id', 'email', 'name', 'role', 'active'])
+        && data.email is string
+        && data.name is string
+        && data.role is string
+        && data.active is bool;
+    }
+
+    function isValidAuditLog(data) {
+      return data.keys().hasAll(['id', 'timestamp', 'userEmail', 'site', 'action', 'details'])
+        && data.userEmail is string
+        && data.site is string
+        && data.action is string;
+    }
+
+    function isValidAnomalyReport(data) {
+      return data.keys().hasAll(['id', 'site', 'timestamp', 'type', 'severity', 'description', 'status'])
+        && data.site is string
+        && data.type is string
+        && data.severity is string
+        && data.status is string;
+    }
+
+    function isValidDeadLetter(data) {
+      return data.keys().hasAll(['dlqId', 'intentId', 'timestamp', 'errorClassification', 'errorMessage', 'status'])
+        && data.dlqId is string
+        && data.intentId is string
+        && data.status is string;
+    }
+
+    function isValidForensicLog(data) {
+      return data.keys().hasAll(['forensicId', 'timestamp', 'severity', 'subsystem', 'message'])
+        && data.forensicId is string
+        && data.severity is string
+        && data.subsystem is string
+        && data.message is string;
+    }
+
+    // --- Match Rules Blocks ---
+
+    // Master Catalog Rules
+    match /catalog/{id} {
+      allow read: if isSignedIn();
+      allow write: if canWrite(['ADMIN']) && isValidId(id);
+    }
+    match /metadata/{id} {
+      allow read: if isSignedIn();
+      allow write: if (isAdmin() || isRole('ADMIN')) && isValidId(id); // System admins bypass canWrite during lockdown
+    }
+    match /engins/{id} {
+      allow read: if isSignedIn();
+      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+    }
+    match /perfos/{id} {
+      allow read: if isSignedIn();
+      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+    }
+    match /agents/{id} {
+      allow read: if isSignedIn();
+      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+    }
+
+    // Stocks/Articles: Protected from non-magasiniers and arbitrary value-poisoning
     match /articles/{articleId} {
       allow read: if isActive();
-      allow write: if isActive() && isValidId(articleId);
+      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(articleId) && isValidArticle(incoming());
+      allow update: if canWrite(['ADMIN', 'MAGASINIER', 'MAINTENANCE']) && isValidId(articleId) && isValidArticle(incoming());
+      allow delete: if canWrite(['ADMIN']) && isValidId(articleId);
     }
 
-    // Mouvements: Read by active, write by active
+    // Transactional Movements: Append-only, never modifiable except by ADMIN, never deletable
     match /mouvements/{id} {
       allow read: if isActive();
-      allow create: if isActive();
-      allow update: if isAdmin();
+      allow create: if canWrite(['ADMIN', 'MAGASINIER', 'MAINTENANCE']) && isValidId(id) && isValidMouvement(incoming());
+      allow update: if canWrite(['ADMIN']) && isValidId(id) && isValidMouvement(incoming());
+      allow delete: if false;
     }
 
-    // Accounts: 
-    // - Anyone signed in can get (needed for login check)
-    // - Create for self-provisioning
-    // - List restricted to ADMIN
-    // - Update restricted to owner (no role change) or admin
+    // Operations and Diagnostics
+    match /maintenanceLogs/{id} {
+      allow read: if isActive();
+      allow create: if canWrite(['ADMIN', 'MAINTENANCE', 'MAGASINIER']) && isValidId(id);
+      allow update: if canWrite(['ADMIN', 'MAINTENANCE']) && isValidId(id);
+      allow delete: if canWrite(['ADMIN']) && isValidId(id);
+    }
+
+    // accounts Management (Zero self promotion RBAC gates)
     match /accounts/{userId} {
       allow get, create: if isSignedIn() && isValidId(userId);
-      allow list: if isAdmin();
-      allow update: if (isAdmin() || (isOwner(userId) && request.resource.data.role == resource.data.role)) && isValidId(userId);
+      allow list: if isActive();
+      allow update: if isValidId(userId) && isSignedIn() && (
+        isAdmin() || (
+          isOwner(userId)
+          && incoming().role == existing().role
+          && incoming().active == existing().active
+        )
+      );
     }
 
-    // Others
-    match /auditLogs/{id} { allow read: if isSignedIn(); allow create: if isSignedIn(); }
-    match /transferts/{id} { allow read: if isSignedIn(); allow write: if isActive(); }
-    match /inventaires/{id} { allow read, write: if isActive(); }
-    match /distributions/{id} { allow read, write: if isActive(); }
-    match /purchaseRequests/{id} { allow read, write: if isActive(); }
-    match /anomalyReports/{id} { allow read, write: if isActive(); }
-    match /reports/{id} { allow read: if isActive(); allow write: if isActive() && (isAdmin() || request.auth.token.email in ['ouzrirouyahya@gmail.com']); }
+    // Secure Transferts
+    match /transferts/{id} {
+      allow read: if isActive();
+      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidTransfert(incoming());
+      allow update: if isValidId(id) && canWrite(['ADMIN', 'MAGASINIER']) && (
+        isAdmin() || (
+          existing().status == 'EN_TRANSIT' &&
+          incoming().status == 'RECU' &&
+          incoming().sourceSite == existing().sourceSite &&
+          incoming().targetSite == existing().targetSite &&
+          incoming().reference == existing().reference
+        )
+      );
+      allow delete: if canWrite(['ADMIN']) && isValidId(id);
+    }
+
+    // Audit logs: Strictly append-only. Immutable once recorded.
+    match /auditLogs/{id} {
+      allow read: if isActive();
+      allow create: if isSignedIn() && isValidId(id) && isValidAuditLog(incoming());
+      allow update, delete: if false;
+    }
+
+    // Inventaires
+    match /inventaires/{id} {
+      allow read: if isActive();
+      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+    }
+
+    // Distributions
+    match /distributions/{id} {
+      allow read: if isActive();
+      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+    }
+
+    // Purchase Requests
+    match /purchaseRequests/{id} {
+      allow read: if isActive();
+      allow write: if canWrite(['ADMIN', 'MAGASINIER', 'DIRECTION']) && isValidId(id);
+    }
+
+    // Anomalies
+    match /anomalyReports/{id} {
+      allow read: if isActive();
+      allow write: if canWrite(['ADMIN', 'MAGASINIER', 'SUPERVISEUR']) && isValidId(id) && isValidAnomalyReport(incoming());
+    }
+
+    // Reports PDF / CSV
+    match /reports/{id} {
+      allow read: if isActive();
+      allow write: if canWrite(['ADMIN']) && isValidId(id);
+    }
+
+    // DLQ Management (SRE Dead Letter Queue) - Read by authorized persons, write append-only, NO DELETE
+    match /deadLetterQueue/{id} {
+      allow read: if isActive();
+      allow create: if isSignedIn() && isValidId(id) && isValidDeadLetter(incoming());
+      allow update: if canWrite(['ADMIN']) && isValidId(id); // Only admins resolve/unblock packets
+      allow delete: if false; // Non-deletable trace integrity
+    }
+
+    // Forensic Log Cloud Mirrors
+    match /forensicLogs/{id} {
+      allow read: if isActive();
+      allow create: if isSignedIn() && isValidId(id) && isValidForensicLog(incoming());
+      allow update, delete: if false;
+    }
   }
 }
-

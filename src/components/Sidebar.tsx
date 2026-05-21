@@ -23,7 +23,8 @@ import {
   MessageSquare,
   RotateCcw,
   Landmark,
-  FileText
+  FileText,
+  Smartphone
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SITES } from '../demoData';
@@ -33,6 +34,7 @@ import { Background3D } from './Background3D';
 
 export type Page = 
   | 'COCKPIT' 
+  | 'FIELD_WORKSPACE'
   | 'STOCK_ENGINS' 
   | 'STOCK_PERFORATEURS' 
   | 'STOCK_CONSOMMABLES' 
@@ -51,6 +53,8 @@ export type Page =
   | 'MAINTENANCE'
   | 'RETURNS'
   | 'FINANCE'
+  | 'FORENSIC'
+  | 'INTELLIGENCE'
   | 'SEARCH_RESULTS';
 
 interface SidebarProps {
@@ -72,6 +76,7 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
 
   const menuItems = [
     { id: 'COCKPIT', label: 'Cockpit Intégré', icon: LayoutDashboard, activeColor: 'bg-sky-900 text-white shadow-xl' },
+    { id: 'FIELD_WORKSPACE', label: 'Poste Opérateur (Terrain)', icon: Smartphone, activeColor: 'bg-gradient-to-r from-sky-900 via-sky-850 to-indigo-900 text-white shadow-xl' },
     { id: 'SEP_S', label: 'SUIVI DES SITES', isSeparator: true },
     { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
     { id: 'STOCK_PERFORATEURS', label: 'Perforateurs', icon: Drill },
@@ -86,6 +91,7 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
     { id: 'RESTOCK_MGMT', label: 'Ravitaillement & Alertes', icon: ShoppingCart, activeColor: 'bg-amber-50 text-amber-600 ring-amber-100', badge: (criticalCount + warningCount) || 0 },
     { id: 'SEP_OPT', label: 'OPTIMISATION & IA', isSeparator: true },
     { id: 'MAINTENANCE', label: 'Maintenance IA', icon: Wrench, activeColor: 'bg-indigo-50 text-indigo-600' },
+    { id: 'INTELLIGENCE', label: 'Intelligence IA v8.0', icon: Brain, activeColor: 'bg-indigo-950 text-white shadow-xl shadow-indigo-100' },
     { id: 'FINANCE', label: 'Finance & Flux', icon: Landmark, activeColor: 'bg-amber-50 text-amber-600' },
     ...(isAdmin ? [
       { id: 'SEP_IA', label: 'IA HYDROMINES (FBI)', isSeparator: true },
@@ -96,6 +102,9 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
     { id: 'REPORTS', label: 'Synthèse', icon: ClipboardCheck },
     { id: 'USER_MGMT', label: 'Utilisateurs', icon: Users },
     { id: 'GESTION_ARTICLES', label: 'Catalogue Maître', icon: Settings2 },
+    ...(isAdmin ? [
+      { id: 'FORENSIC', label: 'Système & Forensic', icon: Activity, activeColor: 'bg-indigo-950 text-white shadow-xl shadow-indigo-100' }
+    ] : []),
   ];
 
   return (

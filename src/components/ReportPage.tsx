@@ -38,14 +38,14 @@ import {
   LineChart,
   Line
 } from 'recharts';
-import { useStorage } from '../hooks/useStorage';
+import { useInventory } from '../context/InventoryContext';
 import { SiteCode } from '../types';
 import { SITES } from '../demoData';
 import { formatCurrency, cn } from '../lib/utils';
 import type { Article, Mouvement } from '../types';
 
 export function ReportPage() {
-  const { articles, mouvements, transferts, currentUser } = useStorage();
+  const { articles, mouvements, transferts, currentUser } = useInventory();
   const printRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState<string>(new Date().toISOString().slice(0, 7)); // YYYY-MM
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SITES' | 'CRITICAL' | 'CONSOLIDATION'>('OVERVIEW');

@@ -26,6 +26,9 @@ const ArticleDetail = lazy(() => import('./components/ArticleDetail').then(m => 
 const MaintenanceModule = lazy(() => import('./components/MaintenanceModule').then(m => ({ default: m.MaintenanceModule })));
 const ReturnsManagement = lazy(() => import('./components/ReturnsManagement').then(m => ({ default: m.ReturnsManagement })));
 const FinancialDashboard = lazy(() => import('./components/FinancialDashboard').then(m => ({ default: m.FinancialDashboard })));
+const ForensicDashboard = lazy(() => import('./components/ForensicDashboard'));
+const IndustrialIntelligenceDashboard = lazy(() => import('./components/IndustrialIntelligenceDashboard'));
+const FieldOperatorWorkspace = lazy(() => import('./components/FieldOperatorWorkspace'));
 
 // Shared Components
 import LoginPage from './components/LoginPage';
@@ -36,7 +39,7 @@ import { Toolbar } from './components/layout/Toolbar';
 // Context & Types
 import { useInventory } from './context/InventoryContext';
 import { Article, SiteCode, PurchaseRequest } from './types';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { toast } from 'sonner';
@@ -59,7 +62,9 @@ export default function App() {
     engins, perfos, agents, catalog, accounts, purchaseRequests, notifications, isLoaded,
     addMouvement, addTransfert, completeTransfert, saveInventaire, saveArticle, 
     deleteArticle, setEngin, setPerfo, setAgent, saveCatalogItem, 
-    deleteCatalogItem, addPurchaseRequest, updatePRStatus
+    deleteCatalogItem, addPurchaseRequest, updatePRStatus,
+    isSafeMode, rcglResult,
+    maintenanceMode, maintenanceReason
   } = useInventory();
 
   useEffect(() => {
@@ -144,6 +149,9 @@ export default function App() {
             )}
           </div>
         );
+      
+      case 'FIELD_WORKSPACE':
+        return <FieldOperatorWorkspace />;
       
       case 'STOCK_ENGINS':
       case 'STOCK_PERFORATEURS':
@@ -300,6 +308,25 @@ export default function App() {
           </motion.div>
         );
 
+      case 'FORENSIC':
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('COCKPIT');
+          return null;
+        }
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <ForensicDashboard />
+          </motion.div>
+        );
+
+      case 'INTELLIGENCE':
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <IndustrialIntelligenceDashboard />
+          </motion.div>
+        );
+
       case 'ALERTES_STOCK':
         return <StockAlertView site={currentSite} articles={articles} onAction={navigateToMouvement} />;
         
@@ -315,7 +342,7 @@ export default function App() {
       <Sidebar 
         currentPage={currentPage} 
         setPage={(page) => {
-          if ((page === 'AI_CHAT_EXPERT' || page === 'IA_CHECKLIST') && !isAdmin) {
+          if ((page === 'AI_CHAT_EXPERT' || page === 'IA_CHECKLIST' || page === 'FORENSIC') && !isAdmin) {
             setShowAdminAlert(true);
             return;
           }
@@ -347,7 +374,109 @@ export default function App() {
                if (currentPage !== 'SEARCH_RESULTS') setCurrentPage('SEARCH_RESULTS');
             }}
             onOpenMenu={() => setSidebarOpen(true)}
+            onNavigateToForensic={() => {
+              if (isAdmin) {
+                setCurrentPage('FORENSIC');
+              } else {
+                toast.error("Le cockpit de télémétrie et de forensic système est réservé aux administrateurs.");
+              }
+            }}
           />
+
+          {maintenanceMode && (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
+              <div className="p-3 bg-amber-500/15 text-amber-600 rounded-lg animate-pulse">
+                <Lock className="w-6 h-6" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-amber-500 text-amber-950 rounded flex items-center gap-1">
+                    <ShieldAlert className="w-3 h-3" /> VERROU DE MAINTENANCE PROTÉGÉ
+                  </span>
+                  {isAdmin ? (
+                    <span className="text-xs text-emerald-600 font-extrabold uppercase tracking-wide">
+                      AUTHENTIFIÉ ADMIN — CONDUITE ET ÉCRITURES CLOUD PERMISES SANS RESTRICTION
+                    </span>
+                  ) : (
+                    <span className="text-xs text-amber-700 font-extrabold uppercase tracking-wide">
+                      MUTATIONS ET ÉCRITURES CENTRALES BLOQUÉES
+                    </span>
+                  )}
+                </div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                  SYSTÈME EN ACCÈS RESTREINT (MAINTENANCE DE SÉCURITÉ)
+                </h3>
+                <p className="text-xs text-slate-600">
+                  L'administrateur système a activé les règles de maintenance d'état de niveau enterprise. Raison : <span className="text-amber-800 font-mono font-bold">{maintenanceReason || "Maintenance de routine / Alignements invariants."}</span>
+                </p>
+                {isAdmin && (
+                  <p className="text-[10px] text-emerald-600 font-bold font-mono uppercase tracking-wider mt-2">
+                    En tant qu'administrateur, vos écritures et corrections contournent ce verrouillage et sont transmises directement à Firestore.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {isSafeMode ? (
+            <div className="bg-red-500/15 border border-red-500/30 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
+              <div className="p-3 bg-red-500/20 text-red-600 rounded-lg animate-bounce">
+                <ShieldAlert className="w-6 h-6" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-600 text-white rounded flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> VERROU DE SÉCURITÉ MAXIMUM (PCV v2.0)
+                  </span>
+                  <span className="text-xs text-red-700 font-extrabold uppercase tracking-wide">
+                    INCOHÉRENCE CRITIQUE DES DONNÉES DÉTECTÉE
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">OPÉRATIONS BLOQUÉES — ALIGNEMENT INCORRECT DU STOCK</h3>
+                <p className="text-xs text-slate-600">
+                  Le validateur de cohérence d'état business (BSV) a interrompu préventivement les écritures car l'intégrité ou l'alignement référentiel de votre snapshot local est compromis. Raison : <span className="text-red-800 font-mono font-bold">{rcglResult.skewDescription || "Erreur de synchronisation inter-collections relative aux mouvements."}</span>.
+                </p>
+                <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600 uppercase tracking-widest pt-3">
+                  <div className="flex items-center gap-1.5 text-red-600 font-bold">
+                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
+                    Alerte Résolution Active...
+                  </div>
+                  <div className="text-slate-500 font-bold">
+                    Score de Confiance : {(rcglResult.confidenceScore * 100).toFixed(1)}% | Dérive : {Math.round(rcglResult.freshnessGapMs / 1000)}s
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : rcglResult.mode !== 'NORMAL' ? (
+            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
+              <div className="p-3 bg-amber-500/15 text-amber-600 rounded-lg">
+                <ShieldAlert className="w-6 h-6 animate-pulse" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2">
+                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-amber-500 text-slate-900 rounded">
+                    DEGRADED DATA MODE
+                  </span>
+                  <span className="text-xs text-amber-700 font-extrabold uppercase tracking-wide">
+                    CONTINUITÉ OPÉRATIONNELLE ESTIMÉE SÛRE
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">DÉRIVE RÉSEAU PASSIVE — ÉCRITURES RETENUES PAR LE VALIDATEUR INVARIANT</h3>
+                <p className="text-xs text-slate-600">
+                  La connexion au serveur est ralentie ou instable, mais l'intégrité logique des stocks est préservée. Le mode <span className="font-bold text-amber-700">"Soft Read"</span> est activé : vous pouvez continuer à travailler. Vos modifications seront validées en temps réel par notre moteur de règles invariant (BSV) avant transmission au serveur Firestore.
+                </p>
+                <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600 uppercase tracking-widest pt-3">
+                  <div className="flex items-center gap-1.5 text-amber-600 font-semibold">
+                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
+                    Fonctionnement autonome opérationnel sous conditions
+                  </div>
+                  <div className="text-slate-500 font-bold">
+                    Confiance : {(rcglResult.confidenceScore * 100).toFixed(1)}% | Latence : {Math.round(rcglResult.freshnessGapMs / 1000)}s
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           <div className="max-w-[1600px] mx-auto">
             {renderPage()}

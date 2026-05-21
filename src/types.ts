@@ -1,4 +1,8 @@
 
+import { Timestamp, FieldValue } from 'firebase/firestore';
+
+export type FirestoreDate = string | Timestamp | FieldValue | any;
+
 export type SiteCode = 'SMI' | 'OUMEJRANE' | 'KOUDIA' | 'BOU-AZZER' | 'OUANSIMI';
 
 export type StockType = 'ENGINS' | 'PERFORATEURS' | 'CONSOMMABLES' | 'EPI' | 'OUTILS_TRAVAUX' | 'AUTRES';
@@ -24,7 +28,7 @@ export interface UserAccount {
   name: string;
   role: 'ADMIN' | 'MAGASINIER';
   active: boolean;
-  createdAt: string;
+  createdAt: FirestoreDate;
 }
 
 export interface Article {
@@ -70,7 +74,7 @@ export interface MaintenanceLog {
   id: string;
   machineId: string; // ID for Engin or Perfo
   machineType: 'ENGIN' | 'PERFO';
-  date: string;
+  date: FirestoreDate;
   type: 'PREVENTIVE' | 'CURATIVE' | 'PREDICTIVE';
   description: string;
   hoursCounter?: number;
@@ -98,7 +102,7 @@ export interface MouvementItem {
 export interface Mouvement {
   id: string; 
   site: SiteCode;
-  date: string;
+  date: FirestoreDate;
   type: MouvementType;
   reference?: string; 
   items: MouvementItem[];
@@ -146,13 +150,15 @@ export interface Transfert {
   id: string;
   sourceSite: SiteCode;
   targetSite: SiteCode;
-  dateEnvoi: string;
-  dateReception?: string;
+  dateEnvoi: FirestoreDate;
+  dateReception?: FirestoreDate;
   reference: string;
   items: MouvementItem[];
-  status: 'EN_TRANSIT' | 'RECU' | 'LITIGE';
+  status: 'PENDING_APPROVAL' | 'IN_TRANSIT' | 'RECEIVED' | 'DISPUTED' | 'CLOSED' | 'EN_TRANSIT' | 'RECU' | 'LITIGE';
   expediteur: string;
   recepteur?: string;
+  disputeReason?: string;
+  receivedItems?: MouvementItem[];
 }
 
 export interface Inventaire {
@@ -182,12 +188,16 @@ export interface DistributionEPI {
 
 export interface AuditLog {
   id: string;
-  timestamp: string;
+  timestamp: FirestoreDate;
   userEmail: string;
   site: SiteCode;
   action: string;
   details: string;
   amount?: number;
+  userId?: string;
+  userRole?: string;
+  deviceInfo?: string;
+  sourcePlatform?: string;
 }
 
 export interface PurchaseRequest {
@@ -209,7 +219,7 @@ export interface PurchaseRequest {
 export interface AnomalyReport {
   id: string;
   site: SiteCode;
-  timestamp: string;
+  timestamp: FirestoreDate;
   type: 'CONSUMPTION_PATTERN' | 'STOCK_INCOHERENCE' | 'FREQUENT_CHANGE';
   severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
   description: string;
