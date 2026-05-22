@@ -1,7 +1,7 @@
 import React from 'react';
-import { Search, Menu, Activity } from 'lucide-react';
+import { Search, Menu, Activity, Bell, Check, CheckSquare, AlertTriangle, Info, ShieldAlert, Clock } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
-import { Article, SiteCode } from '../../types';
+import { Article, SiteCode, AppNotification } from '../../types';
 import { useInventory } from '../../context/InventoryContext';
 
 interface ToolbarProps {
@@ -12,6 +12,7 @@ interface ToolbarProps {
   onSearchFocus: () => void;
   onOpenMenu?: () => void;
   onNavigateToForensic?: () => void;
+  onNavigateTo?: (page: string) => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -21,9 +22,34 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   currentSite,
   onSearchFocus,
   onOpenMenu,
-  onNavigateToForensic
+  onNavigateToForensic,
+  onNavigateTo
 }) => {
-  const { collectSystemMetrics, dlq, networkQuality } = useInventory();
+  const { 
+    collectSystemMetrics, 
+    dlq, 
+    networkQuality, 
+    notifications, 
+    markNotificationAsRead, 
+    markAllNotificationsAsRead 
+  } = useInventory();
+
+  const [notifOpen, setNotifOpen] = React.useState(false);
+  const [filterType, setFilterType] = React.useState<'ALL' | 'CRITICAL' | 'WARNING' | 'INFO'>('ALL');
+
+  const siteNotifications = React.useMemo(() => {
+    return (notifications || []).filter(n => n.siteId === currentSite);
+  }, [notifications, currentSite]);
+
+  const unreadCount = React.useMemo(() => {
+    return siteNotifications.filter(n => !n.isRead).length;
+  }, [siteNotifications]);
+
+  const filteredNotifications = React.useMemo(() => {
+    if (filterType === 'ALL') return siteNotifications;
+    return siteNotifications.filter(n => n.type === filterType);
+  }, [siteNotifications, filterType]);
+
   const siteArticles = articles.filter(a => a.site === currentSite);
   const totalValue = siteArticles.reduce((sum, a) => sum + (a.quantity * a.price), 0);
 
@@ -127,6 +153,165 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                   <span>DLQ:{unresolvedDLQCount}</span>
                 </div>
               </>
+            )}
+          </div>
+
+          <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
+
+          {/* FACEBOOK STYLE NOTIFICATION BELL */}
+          <div className="relative">
+            <button
+              onClick={() => setNotifOpen(!notifOpen)}
+              className="relative p-2 text-slate-500 hover:text-sky-600 hover:bg-slate-50 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+              id="notification-bell"
+            >
+              <Bell className={`w-5 h-5 ${unreadCount > 0 ? "text-sky-600" : ""}`} />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[8px] font-black bg-red-500 text-white rounded-full min-w-4 h-4 flex items-center justify-center border-2 border-white shadow-sm">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+
+            {notifOpen && (
+              <div 
+                className="absolute right-0 mt-2.5 w-80 md:w-96 bg-white border border-slate-150 rounded-2xl shadow-2xl z-50 overflow-hidden text-slate-700 animate-slide-up"
+                id="notification-dropdown"
+              >
+                {/* Header */}
+                <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-1.5">
+                      <Bell className="w-4 h-4 text-sky-500" /> Notifications ({currentSite})
+                    </h4>
+                    <p className="text-[10px] text-slate-400 font-bold">Flux opérationnel filtré</p>
+                  </div>
+                  {unreadCount > 0 && (
+                    <button
+                      onClick={() => markAllNotificationsAsRead(currentSite)}
+                      className="text-[10px] font-extrabold text-sky-600 hover:text-sky-700 hover:underline flex items-center gap-1 pointer-events-auto"
+                    >
+                      <CheckSquare className="w-3.5 h-3.5" /> Tout marquer lu
+                    </button>
+                  )}
+                </div>
+
+                {/* Filter chips */}
+                <div className="px-3 py-2 bg-slate-50/50 border-b border-slate-100 flex items-center gap-1.5 overflow-x-auto">
+                  <button
+                    onClick={() => setFilterType('ALL')}
+                    className={`px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wider uppercase transition-all ${
+                      filterType === 'ALL' ? 'bg-slate-800 text-white' : 'bg-slate-200/60 text-slate-500 hover:bg-slate-200'
+                    }`}
+                  >
+                    Tout ({siteNotifications.length})
+                  </button>
+                  <button
+                    onClick={() => setFilterType('CRITICAL')}
+                    className={`px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wider uppercase transition-all ${
+                      filterType === 'CRITICAL' ? 'bg-rose-600 text-white' : 'bg-rose-50 text-rose-600 border border-rose-100 hover:bg-rose-100/50'
+                    }`}
+                  >
+                    Urgent
+                  </button>
+                  <button
+                    onClick={() => setFilterType('WARNING')}
+                    className={`px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wider uppercase transition-all ${
+                      filterType === 'WARNING' ? 'bg-amber-500 text-amber-950' : 'bg-amber-50 text-amber-600 border border-amber-100 hover:bg-amber-100/50'
+                    }`}
+                  >
+                    Alerte
+                  </button>
+                  <button
+                    onClick={() => setFilterType('INFO')}
+                    className={`px-2 py-0.5 rounded text-[9px] font-extrabold tracking-wider uppercase transition-all ${
+                      filterType === 'INFO' ? 'bg-sky-600 text-white' : 'bg-sky-50 text-sky-600 border border-sky-100 hover:bg-sky-100/50'
+                    }`}
+                  >
+                    Opérations
+                  </button>
+                </div>
+
+                {/* Notification Items */}
+                <div className="max-h-80 overflow-y-auto divide-y divide-slate-100">
+                  {filteredNotifications.length === 0 ? (
+                    <div className="p-8 text-center space-y-2">
+                      <div className="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center mx-auto shadow-inner">
+                        <Check className="w-5 h-5" />
+                      </div>
+                      <p className="text-xs font-black text-slate-700 uppercase tracking-wider">Site en sécurité</p>
+                      <p className="text-[10px] text-slate-400">Aucune notification {filterType !== 'ALL' ? `de type "${filterType}"` : ""} enregistrée.</p>
+                    </div>
+                  ) : (
+                    filteredNotifications.map((notif) => {
+                      const isUnread = !notif.isRead;
+                      return (
+                        <div
+                          key={notif.id}
+                          onClick={() => {
+                            markNotificationAsRead(notif.id);
+                            setNotifOpen(false);
+                            if (notif.actionRoute && onNavigateTo) {
+                              onNavigateTo(notif.actionRoute);
+                            }
+                          }}
+                          className={`p-3.5 flex items-start gap-3 transition-colors cursor-pointer select-none text-left ${
+                            isUnread ? 'bg-sky-50/40 hover:bg-sky-50/80 font-semibold' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          {/* Left severity indicator icon */}
+                          <div className="mt-0.5">
+                            {notif.type === 'CRITICAL' ? (
+                              <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg shadow-sm border border-rose-200">
+                                <ShieldAlert className="w-4 h-4" />
+                              </div>
+                            ) : notif.type === 'WARNING' ? (
+                              <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg shadow-sm border border-amber-200">
+                                <AlertTriangle className="w-4 h-4" />
+                              </div>
+                            ) : (
+                              <div className="p-1.5 bg-sky-100 text-sky-600 rounded-lg shadow-sm border border-sky-200">
+                                <Info className="w-4 h-4" />
+                              </div>
+                            )}
+                          </div>
+
+                          {/* Center Content */}
+                          <div className="flex-1 space-y-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2.5">
+                              <span className={`text-[8px] font-black uppercase px-1.5 py-0.5 rounded border ${
+                                notif.category === 'STOCK' ? 'bg-slate-100 text-slate-600 border-slate-200' :
+                                notif.category === 'TRANSFER' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' :
+                                notif.category === 'SYNC' ? 'bg-sky-50 text-sky-600 border-sky-100' :
+                                notif.category === 'DAILY' ? 'bg-amber-50 text-amber-700 border-amber-100' : 'bg-slate-50 text-slate-500'
+                              }`}>
+                                {notif.category}
+                              </span>
+                              {isUnread && (
+                                <span className="w-2 h-2 rounded-full bg-sky-500 animate-pulse" />
+                              )}
+                            </div>
+                            <p className="text-xs text-slate-700 leading-snug break-words">
+                              {notif.message}
+                            </p>
+                            <div className="flex items-center gap-1.5 text-[9px] text-slate-400 font-mono">
+                              <Clock className="w-3 h-3" />
+                              <span>
+                                {new Date(notif.timestamp).toLocaleString('fr-FR', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  day: '2-digit',
+                                  month: '2-digit'
+                                })}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+              </div>
             )}
           </div>
 

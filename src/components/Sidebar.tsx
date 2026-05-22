@@ -49,12 +49,12 @@ export type Page =
   | 'REPORTS'
   | 'RESTOCK_MGMT'
   | 'IA_CHECKLIST'
-  | 'AI_CHAT_EXPERT'
-  | 'MAINTENANCE'
+  | 'MAGASINIER_IA'
+  | 'AUDIT_INTELLIGENCE'
+  | 'AUTOMATION_WORKFLOWS'
   | 'RETURNS'
   | 'FINANCE'
   | 'FORENSIC'
-  | 'INTELLIGENCE'
   | 'SEARCH_RESULTS';
 
 interface SidebarProps {
@@ -89,22 +89,11 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
     { id: 'TRACEABILITY', label: 'Traçabilité Totale', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },
     { id: 'TRANSFERS_RETURNS', label: 'Transferts & Retours', icon: RotateCcw, activeColor: 'bg-emerald-50 text-emerald-600' },
     { id: 'RESTOCK_MGMT', label: 'Ravitaillement & Alertes', icon: ShoppingCart, activeColor: 'bg-amber-50 text-amber-600 ring-amber-100', badge: (criticalCount + warningCount) || 0 },
-    { id: 'SEP_OPT', label: 'OPTIMISATION & IA', isSeparator: true },
-    { id: 'MAINTENANCE', label: 'Maintenance IA', icon: Wrench, activeColor: 'bg-indigo-50 text-indigo-600' },
-    { id: 'INTELLIGENCE', label: 'Intelligence IA v8.0', icon: Brain, activeColor: 'bg-indigo-950 text-white shadow-xl shadow-indigo-100' },
-    { id: 'FINANCE', label: 'Finance & Flux', icon: Landmark, activeColor: 'bg-amber-50 text-amber-600' },
-    ...(isAdmin ? [
-      { id: 'SEP_IA', label: 'IA HYDROMINES (FBI)', isSeparator: true },
-      { id: 'IA_CHECKLIST', label: 'Check-list Prod', icon: ClipboardCheck, activeColor: 'bg-emerald-950 text-white shadow-xl' },
-      { id: 'AI_CHAT_EXPERT', label: 'Assistant Expert IA', icon: MessageSquare, activeColor: 'bg-sky-900 text-white shadow-xl shadow-sky-200' },
-    ] : []),
+    { id: 'FINANCE', label: 'Flux & Valorisation Stock', icon: Landmark, activeColor: 'bg-amber-50 text-amber-600' },
     { id: 'SEP_A', label: 'ADMINISTRATION', isSeparator: true },
     { id: 'REPORTS', label: 'Synthèse', icon: ClipboardCheck },
     { id: 'USER_MGMT', label: 'Utilisateurs', icon: Users },
     { id: 'GESTION_ARTICLES', label: 'Catalogue Maître', icon: Settings2 },
-    ...(isAdmin ? [
-      { id: 'FORENSIC', label: 'Système & Forensic', icon: Activity, activeColor: 'bg-indigo-950 text-white shadow-xl shadow-indigo-100' }
-    ] : []),
   ];
 
   return (

@@ -228,3 +228,17 @@ export interface AnomalyReport {
   suggestedAction?: string;
   status: 'NEW' | 'INVESTIGATING' | 'RESOLVED' | 'DISMISSED';
 }
+
+export interface AppNotification {
+  id: string;
+  siteId: string;
+  userId?: string;
+  type: 'CRITICAL' | 'WARNING' | 'INFO';
+  category: 'STOCK' | 'TRANSFER' | 'SYNC' | 'SYSTEM' | 'DAILY';
+  message: string;
+  timestamp: string;
+  relatedEntityId?: string;
+  actionRoute: string;
+  isRead: boolean;
+}
+

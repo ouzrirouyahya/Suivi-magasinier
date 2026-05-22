@@ -151,16 +151,16 @@ export function ProductionChecklist() {
       ]
     },
     {
-      title: "Intelligence Artificielle",
+      title: "Automatisation & Traçabilité",
       icon: Terminal,
       color: "text-indigo-600",
       bg: "bg-indigo-50",
       tasks: [
-        { id: 'ai_1', label: "Habilitation des modèles Gemini 1.5 Pro en sécurisé" },
-        { id: 'ai_2', label: "Audit des prompts IA (Injection protection)" },
+        { id: 'ai_1', label: "Sécurisation des clés API et jetons d'intégration" },
+        { id: 'ai_2', label: "Contrôle et validation des filtres d'entrées d'opérations" },
         { id: 'ai_3', label: "Vérification de l'accès restreint Hydromines" },
-        { id: 'ai_4', label: "Validation de l'exactitude des prédicteurs (ML)" },
-        { id: 'ai_5', label: "Configuration des logs d'audit spécifiques IA" }
+        { id: 'ai_4', label: "Validation des équations de calcul de réapprovisionnement" },
+        { id: 'ai_5', label: "Configuration du journal d'audit d'accès et d'opérations" }
       ]
     }
   ];

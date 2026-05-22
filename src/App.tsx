@@ -28,6 +28,9 @@ const ReturnsManagement = lazy(() => import('./components/ReturnsManagement').th
 const FinancialDashboard = lazy(() => import('./components/FinancialDashboard').then(m => ({ default: m.FinancialDashboard })));
 const ForensicDashboard = lazy(() => import('./components/ForensicDashboard'));
 const IndustrialIntelligenceDashboard = lazy(() => import('./components/IndustrialIntelligenceDashboard'));
+const MagasinierIAHydro = lazy(() => import('./components/MagasinierIAHydro').then(m => ({ default: m.MagasinierIAHydro })));
+const AuditIntelligenceMagasin = lazy(() => import('./components/AuditIntelligenceMagasin'));
+const AutomationOrchestrator = lazy(() => import('./components/AutomationOrchestrator'));
 const FieldOperatorWorkspace = lazy(() => import('./components/FieldOperatorWorkspace'));
 
 // Shared Components
@@ -258,13 +261,33 @@ export default function App() {
           </div>
         );
 
-      case 'AI_CHAT_EXPERT':
+      case 'MAGASINIER_IA':
         if (!isAdmin) {
           setShowAdminAlert(true);
           setCurrentPage('COCKPIT');
           return null;
         }
-        return <AIChatExpert site={currentSite} articles={articles} mouvements={mouvements} agents={agents} />;
+        return <MagasinierIAHydro />;
+
+      case 'AUDIT_INTELLIGENCE':
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('COCKPIT');
+          return null;
+        }
+        return <AuditIntelligenceMagasin />;
+
+      case 'AUTOMATION_WORKFLOWS':
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('COCKPIT');
+          return null;
+        }
+        return (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <AutomationOrchestrator />
+          </motion.div>
+        );
 
       case 'IA_CHECKLIST':
         if (!isAdmin) {
@@ -295,6 +318,11 @@ export default function App() {
         );
 
       case 'MAINTENANCE':
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('COCKPIT');
+          return null;
+        }
         return (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
             <MaintenanceModule />
@@ -315,15 +343,8 @@ export default function App() {
           return null;
         }
         return (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
             <ForensicDashboard />
-          </motion.div>
-        );
-
-      case 'INTELLIGENCE':
-        return (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-            <IndustrialIntelligenceDashboard />
           </motion.div>
         );
 
@@ -342,7 +363,7 @@ export default function App() {
       <Sidebar 
         currentPage={currentPage} 
         setPage={(page) => {
-          if ((page === 'AI_CHAT_EXPERT' || page === 'IA_CHECKLIST' || page === 'FORENSIC') && !isAdmin) {
+          if ((page === 'MAGASINIER_IA' || page === 'AUDIT_INTELLIGENCE' || page === 'IA_CHECKLIST' || page === 'FORENSIC') && !isAdmin) {
             setShowAdminAlert(true);
             return;
           }
@@ -381,6 +402,9 @@ export default function App() {
                 toast.error("Le cockpit de télémétrie et de forensic système est réservé aux administrateurs.");
               }
             }}
+            onNavigateTo={(page) => {
+              setCurrentPage(page as any);
+            }}
           />
 
           {maintenanceMode && (
@@ -418,7 +442,7 @@ export default function App() {
             </div>
           )}
 
-          {isSafeMode ? (
+          {isSafeMode && isAdmin ? (
             <div className="bg-red-500/15 border border-red-500/30 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
               <div className="p-3 bg-red-500/20 text-red-600 rounded-lg animate-bounce">
                 <ShieldAlert className="w-6 h-6" />

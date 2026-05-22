@@ -15,7 +15,8 @@ import {
   PurchaseRequest, 
   AnomalyReport,
   MaintenanceLog,
-  SiteCode
+  SiteCode,
+  AppNotification
 } from '../types';
 import { INITIAL_ARTICLES, INITIAL_MOUVEMENTS, INITIAL_ENGINS, INITIAL_PERFOS, INITIAL_AGENTS } from '../demoData';
 import { MASTER_CATALOG, CATALOG_VERSION } from '../catalogData';
@@ -74,7 +75,10 @@ type InventoryContextType = {
   maintenanceLogs: MaintenanceLog[];
   currentUser: UserAccount | null;
   isLoaded: boolean;
-  notifications: {id: string, type: string, message: string, timestamp: string}[];
+  notifications: AppNotification[];
+  addNotification: (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead'>) => Promise<void>;
+  markNotificationAsRead: (id: string) => Promise<void>;
+  markAllNotificationsAsRead: (siteId: SiteCode) => Promise<void>;
   addMouvement: (m: Mouvement) => Promise<void>;
   addMaintenanceLog: (log: MaintenanceLog) => Promise<void>;
   addTransfert: (t: Transfert) => Promise<void>;
@@ -159,7 +163,42 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
   const [authStateReady, setAuthStateReady] = useState(false);
-  const [notifications, setNotifications] = useState<{id: string, type: string, message: string, timestamp: string}[]>([]);
+  const [notifications, setNotifications] = useState<AppNotification[]>([]);
+
+  const addNotification = async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead'>) => {
+    const id = generateSecureUUID();
+    const newNotif: AppNotification = {
+      ...notif,
+      id,
+      timestamp: new Date().toISOString(),
+      isRead: false
+    };
+    try {
+      await setDoc(doc(db, 'notifications', id), cleanObject(newNotif));
+    } catch (err) {
+      console.warn("Failed to write notification to Firestore, saving in local state", err);
+      setNotifications(prev => [newNotif, ...prev]);
+    }
+  };
+
+  const markNotificationAsRead = async (id: string) => {
+    try {
+      await setDoc(doc(db, 'notifications', id), { isRead: true }, { merge: true });
+    } catch (err) {
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    }
+  };
+
+  const markAllNotificationsAsRead = async (siteId: SiteCode) => {
+    const unread = notifications.filter(n => n.siteId === siteId && !n.isRead);
+    for (const notif of unread) {
+      try {
+        await setDoc(doc(db, 'notifications', notif.id), { isRead: true }, { merge: true });
+      } catch (err) {
+        setNotifications(prev => prev.map(n => n.siteId === siteId ? { ...n, isRead: true } : n));
+      }
+    }
+  };
 
   // Mode Protected Maintenance SRE States
   const [maintenanceMode, setMaintenanceMode] = useState<boolean>(false);
@@ -375,36 +414,78 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     RetryQueueFSM.registerResolver('MOUVEMENT', async (payload, intentId) => {
       addTechLog('INFO', `Intention FSM MOUVEMENT démarrée : ${intentId}`);
       await executeMouvementDirect(payload);
+      addNotification({
+        siteId: payload.site || 'SMI',
+        type: 'INFO',
+        category: 'SYNC',
+        message: `Idempotence & Synchro Cloud OK pour mouvement ${intentId.slice(0, 8)}...`,
+        actionRoute: 'TRACEABILITY'
+      });
       return { status: 'SUCCESS_ACK' };
     });
 
     RetryQueueFSM.registerResolver('MAINTENANCE', async (payload, intentId) => {
       addTechLog('INFO', `Intention FSM MAINTENANCE démarrée : ${intentId}`);
       await executeMaintenanceLogDirect(payload);
+      addNotification({
+        siteId: currentUser?.site || 'SMI',
+        type: 'INFO',
+        category: 'SYNC',
+        message: `Rapport de maintenance FSM synchronisé pour machine : ${payload.machineId}`,
+        actionRoute: 'MAINTENANCE'
+      });
       return { status: 'SUCCESS_ACK' };
     });
 
     RetryQueueFSM.registerResolver('TRANSFERT', async (payload, intentId) => {
       addTechLog('INFO', `Intention FSM TRANSFERT démarrée : ${intentId}`);
       await executeTransfertDirect(payload);
+      addNotification({
+        siteId: payload.sourceSite || 'SMI',
+        type: 'INFO',
+        category: 'SYNC',
+        message: `Envoi de transfert synchronisé vers ${payload.targetSite}`,
+        actionRoute: 'TRANSFERS_RETURNS'
+      });
       return { status: 'SUCCESS_ACK' };
     });
 
     RetryQueueFSM.registerResolver('COMPLETE_TRANSFERT', async (payload, intentId) => {
       addTechLog('INFO', `Intention FSM COMPLETE_TRANSFERT démarrée : ${intentId}`);
       await executeCompleteTransfertDirect(payload.id, payload.recepteur, payload.receivedItems, payload.disputeReason);
+      addNotification({
+        siteId: currentUser?.site || 'SMI',
+        type: 'INFO',
+        category: 'SYNC',
+        message: `Réception de transfert synchronisée (ID: ${payload.id.slice(0, 8)})`,
+        actionRoute: 'TRANSFERS_RETURNS'
+      });
       return { status: 'SUCCESS_ACK' };
     });
 
     RetryQueueFSM.registerResolver('APPROVE_TRANSFERT', async (payload, intentId) => {
       addTechLog('INFO', `Intention FSM APPROVE_TRANSFERT démarrée : ${intentId}`);
       await executeApproveTransfertDirect(payload.id, payload.approuvePar);
+      addNotification({
+        siteId: currentUser?.site || 'SMI',
+        type: 'INFO',
+        category: 'SYNC',
+        message: `Approbation de transfert synchronisée avec succès.`,
+        actionRoute: 'TRANSFERS_RETURNS'
+      });
       return { status: 'SUCCESS_ACK' };
     });
 
     RetryQueueFSM.registerResolver('CLOSE_TRANSFERT', async (payload, intentId) => {
       addTechLog('INFO', `Intention FSM CLOSE_TRANSFERT démarrée : ${intentId}`);
       await executeCloseTransfertDirect(payload.id, payload.motifCloture);
+      addNotification({
+        siteId: currentUser?.site || 'SMI',
+        type: 'INFO',
+        category: 'SYNC',
+        message: `Clôture de transfert synchronisée avec succès.`,
+        actionRoute: 'TRANSFERS_RETURNS'
+      });
       return { status: 'SUCCESS_ACK' };
     });
 
@@ -598,13 +679,33 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const unsubs: (() => void)[] = [];
 
     const setupDataListeners = async () => {
-      const safeOnSnapshot = (ref: any, setter: (data: any) => void, path: string) => {
+      const safeOnSnapshot = (ref: any, setter: any, path: string) => {
         return onSnapshot(ref, (snapshot: any) => {
           const data = snapshot.docs.map((doc: any) => {
             const raw = { id: doc.id, ...doc.data() };
             return serializeFirestoreData(raw);
-          }).filter((d: any) => !d.deleted);
-          setter(data);
+          });
+          
+          setter((prev: any[]) => {
+            const safePrev = Array.isArray(prev) ? prev : [];
+            const map = new Map<string, any>(safePrev.map(item => [item.id, item]));
+            data.forEach((item: any) => {
+              if (item.deleted) {
+                map.delete(item.id);
+              } else {
+                map.set(item.id, item);
+              }
+            });
+            const merged = Array.from(map.values());
+            
+            // Handle specific sorting if needed:
+            if (path === 'mouvements' || path === 'maintenanceLogs' || path === 'auditLogs' || path === 'notifications') {
+              const dateField = path === 'auditLogs' || path === 'notifications' ? 'timestamp' : 'date';
+              return merged.sort((a, b) => new Date(b[dateField] || 0).getTime() - new Date(a[dateField] || 0).getTime());
+            }
+            return merged;
+          });
+
           setLastSnapshotTimestamp(Date.now());
         }, (err) => {
           if (err.code !== 'permission-denied') handleFirestoreError(err, OperationType.LIST, path);
@@ -636,8 +737,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       unsubs.push(safeOnSnapshot(collection(db, 'agents'), setAgents, 'agents'));
       unsubs.push(safeOnSnapshot(collection(db, 'distributions'), setDistributions, 'distributions'));
       unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
-      unsubs.push(safeOnSnapshot(collection(db, 'anomalyReports'), setAnomalyReports, 'anomalyReports'));
+      unsubs.push(safeOnSnapshot(query(collection(db, 'anomalyReports')), setAnomalyReports, 'anomalyReports'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc')), setRawMaintenanceLogs, 'maintenanceLogs'));
+      unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), setNotifications, 'notifications'));
 
       if (currentUser.role === 'ADMIN') {
         unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));
@@ -811,6 +913,44 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         updateAvgTxDuration(duration);
         addTechLog('INFO', `Mouvement [${mouvement.type}] enregistré avec succès.`, duration);
         setTxStats(s => ({ ...s, success: s.success + 1 }));
+
+        // Notification for movement validation
+        const itemsMsg = mouvement.items.map(it => {
+          const art = articles.find(a => a.id === it.articleId);
+          return `${mouvement.type === 'ENTREE' ? '+' : '-'}${it.quantity} ${art ? art.designation : 'Article'}`;
+        }).join(', ');
+        
+        addNotification({
+          siteId: mouvement.site,
+          userId: currentUser?.email || 'system',
+          type: 'INFO',
+          category: 'STOCK',
+          message: `Mouvement [${mouvement.type}] validé : ${itemsMsg}`,
+          relatedEntityId: mouvement.items[0]?.articleId,
+          actionRoute: 'TRACEABILITY'
+        });
+
+        // Notifications for threshold alerts
+        for (const item of mouvement.items) {
+          const art = articles.find(a => a.id === item.articleId);
+          if (art) {
+            const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
+            const futureQty = isAddition ? art.quantity + item.quantity : art.quantity - item.quantity;
+            if (futureQty <= art.minStock) {
+              addNotification({
+                siteId: mouvement.site,
+                userId: currentUser?.email || 'system',
+                type: futureQty <= 0 ? 'CRITICAL' : 'WARNING',
+                category: 'STOCK',
+                message: futureQty <= 0 
+                  ? `Rupture de stock critique détectée pour ${art.designation} (Solde: ${futureQty})` 
+                  : `Seuil de réapprovisionnement atteint pour ${art.designation} (Stock: ${futureQty}, Seuil: ${art.minStock})`,
+                relatedEntityId: art.id,
+                actionRoute: 'STOCK_CONSOMMABLES'
+              });
+            }
+          }
+        }
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
@@ -1087,6 +1227,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         updateAvgTxDuration(duration);
         addTechLog('INFO', `Transfert [${t.status || 'PENDING_APPROVAL'}] initialisé pour réf : ${t.reference}`, duration);
         setTxStats(s => ({ ...s, success: s.success + 1 }));
+
+        // Trigger transfer dispatched notifications
+        addNotification({
+          siteId: t.sourceSite,
+          userId: t.expediteur,
+          type: 'INFO',
+          category: 'TRANSFER',
+          message: `Transfert ${t.reference} envoyé vers ${t.targetSite}. STATUS: ${t.status || 'VALIDE'}.`,
+          relatedEntityId: t.id,
+          actionRoute: 'TRANSFERS_RETURNS'
+        });
+        
+        addNotification({
+          siteId: t.targetSite,
+          type: 'WARNING',
+          category: 'TRANSFER',
+          message: `Nouveau transfert ${t.reference} en attente de validation / réception depuis ${t.sourceSite}.`,
+          relatedEntityId: t.id,
+          actionRoute: 'TRANSFERS_RETURNS'
+        });
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
@@ -1430,6 +1590,30 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         updateAvgTxDuration(duration);
         addTechLog('INFO', `Transfert réceptionné avec succès par : ${recepteur}`, duration);
         setTxStats(s => ({ ...s, success: s.success + 1 }));
+
+        // Trigger notifications
+        const isDisputed = !!disputeReason || (receivedItems && sourceT && receivedItems.some((item, idx) => item.quantity !== sourceT.items[idx]?.quantity));
+        addNotification({
+          siteId: sourceT?.sourceSite || 'SMI',
+          type: isDisputed ? 'CRITICAL' : 'INFO',
+          category: 'TRANSFER',
+          message: isDisputed 
+            ? `Litige sur transfert ${sourceT?.reference} : Réceptionné avec écarts par ${recepteur}.`
+            : `Transfert ${sourceT?.reference} réceptionné et complété avec succès par ${recepteur}.`,
+          relatedEntityId: id,
+          actionRoute: 'TRANSFERS_RETURNS'
+        });
+        
+        addNotification({
+          siteId: sourceT?.targetSite || 'SMI',
+          type: isDisputed ? 'WARNING' : 'INFO',
+          category: 'TRANSFER',
+          message: isDisputed 
+            ? `Réception de transfert ${sourceT?.reference} validée avec litige.`
+            : `Réception de transfert ${sourceT?.reference} complétée avec succès.`,
+          relatedEntityId: id,
+          actionRoute: 'TRANSFERS_RETURNS'
+        });
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
@@ -1924,7 +2108,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs,
-    currentUser, isLoaded, notifications, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
+    currentUser, isLoaded, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
     saveInventaire, saveArticle, deleteArticle, toggleUser, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus,

@@ -6,6 +6,7 @@ import { cn, generateId, formatCurrency } from '../lib/utils';
 import { MASTER_CATALOG } from '../catalogData';
 import Papa from 'papaparse';
 import { toast } from 'sonner';
+import { matchArticleSearch } from '../lib/searchUtils';
 
 interface ArticleManagementProps {
   site: SiteCode;
@@ -72,10 +73,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   const [isCatalogModalOpen, setIsCatalogModalOpen] = useState(false);
 
   const filteredArticles = articles.filter(a => 
-    a.site === site &&
-    (a.designation.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    a.ref.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    a.component?.toLowerCase().includes(searchTerm.toLowerCase()))
+    a.site === site && matchArticleSearch(a, searchTerm)
   );
 
   const currentCatalog = React.useMemo(() => 

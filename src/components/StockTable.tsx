@@ -20,6 +20,7 @@ import { cn, formatCurrency } from '../lib/utils';
 import { exportToCSV } from '../lib/exportUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
+import { matchArticleSearch } from '../lib/searchUtils';
 
 interface StockTableProps {
   type: ArticleType | 'ALL';
@@ -51,18 +52,7 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
       const matchesSite = showGlobal || a.site === site;
       const matchesType = type === 'ALL' || a.type === type;
       
-      const normalizedSearch = search.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-      const searchableText = [
-        a.designation,
-        a.ref,
-        a.category,
-        a.functionalCategory,
-        a.component,
-        a.subComponent || '',
-        a.location || ''
-      ].join(' ').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-
-      const matchesSearch = !search || searchableText.includes(normalizedSearch);
+      const matchesSearch = matchArticleSearch(a, search);
       const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
       
       const status = a.quantity === 0 ? 'RUPTURE' : (a.quantity <= a.minStock ? 'CRITIQUE' : 'OPTIMAL');
@@ -73,8 +63,13 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
     });
   }, [articles, site, type, search, showGlobal, categoryFilter, statusFilter, locationFilter]);
 
-  const categories = Array.from(new Set(articles.filter(a => a.type === type && a.site === site).map(a => a.category)));
-  const locations = Array.from(new Set(articles.filter(a => a.type === type && a.site === site).map(a => a.location))).filter(Boolean);
+  const categories = useMemo(() => {
+    return Array.from(new Set(articles.filter(a => (type === 'ALL' || a.type === type) && (showGlobal || a.site === site)).map(a => a.category)));
+  }, [articles, type, site, showGlobal]);
+
+  const locations = useMemo(() => {
+    return Array.from(new Set(articles.filter(a => (type === 'ALL' || a.type === type) && (showGlobal || a.site === site)).map(a => a.location))).filter(Boolean);
+  }, [articles, type, site, showGlobal]);
 
   const getStockStatus = (article: Article) => {
     if (article.quantity === 0) return { label: 'RUPTURE', class: 'bg-rose-500 text-white', icon: AlertTriangle };
@@ -218,18 +213,6 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
         </div>
         <div className="w-full lg:w-auto flex flex-wrap items-center gap-1.5">
           <div className="relative">
-            <Filter className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
-            <select 
-              className="pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-sky-500 appearance-none min-w-[140px]"
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-            >
-              <option value="ALL">Catégories</option>
-              {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-            </select>
-          </div>
-
-          <div className="relative">
             <AlertTriangle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
             <select 
               className="pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-sky-500 appearance-none min-w-[140px]"
@@ -244,6 +227,40 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
           </div>
         </div>
       </div>
+
+      {/* Category filter pills - handled separately (filter buttons only) */}
+      {categories.length > 0 && (
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-50/80 border border-slate-100 rounded-xl px-4 py-2.5">
+          <span className="text-xs font-black text-slate-400 uppercase tracking-widest mr-2 flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-slate-400" /> Filtrer par Catégorie :
+          </span>
+          <button
+            onClick={() => setCategoryFilter('ALL')}
+            className={cn(
+              "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all border",
+              categoryFilter === 'ALL'
+                ? "bg-sky-600 text-white border-sky-600 shadow-sm"
+                : "bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 border-slate-200"
+            )}
+          >
+            Tous
+          </button>
+          {categories.map(cat => (
+            <button
+              key={cat}
+              onClick={() => setCategoryFilter(cat)}
+              className={cn(
+                "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all border",
+                categoryFilter === cat
+                  ? "bg-sky-600 text-white border-sky-600 shadow-sm"
+                  : "bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 border-slate-200"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         {viewMode === 'GRID' ? (
