@@ -32,6 +32,7 @@ const MagasinierIAHydro = lazy(() => import('./components/MagasinierIAHydro').th
 const AuditIntelligenceMagasin = lazy(() => import('./components/AuditIntelligenceMagasin'));
 const AutomationOrchestrator = lazy(() => import('./components/AutomationOrchestrator'));
 const FieldOperatorWorkspace = lazy(() => import('./components/FieldOperatorWorkspace'));
+const VisionIA = lazy(() => import('./components/VisionIA').then(m => ({ default: m.VisionIA })));
 
 // Shared Components
 import LoginPage from './components/LoginPage';
@@ -206,6 +207,7 @@ export default function App() {
             articles={articles}
             inventaires={inventaires}
             onSaveInventaire={saveInventaire}
+            isAdmin={isAdmin}
           />
         );
 
@@ -348,6 +350,18 @@ export default function App() {
           </motion.div>
         );
 
+      case 'VISION_IA':
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('COCKPIT');
+          return null;
+        }
+        return (
+          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
+            <VisionIA currentSite={currentSite} />
+          </motion.div>
+        );
+
       case 'ALERTES_STOCK':
         return <StockAlertView site={currentSite} articles={articles} onAction={navigateToMouvement} />;
         
@@ -363,7 +377,7 @@ export default function App() {
       <Sidebar 
         currentPage={currentPage} 
         setPage={(page) => {
-          if ((page === 'MAGASINIER_IA' || page === 'AUDIT_INTELLIGENCE' || page === 'IA_CHECKLIST' || page === 'FORENSIC') && !isAdmin) {
+          if ((page === 'MAGASINIER_IA' || page === 'AUDIT_INTELLIGENCE' || page === 'IA_CHECKLIST' || page === 'FORENSIC' || page === 'VISION_IA') && !isAdmin) {
             setShowAdminAlert(true);
             return;
           }

@@ -1737,14 +1737,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const deleteArticle = async (id: string) => {
     checkMaintenanceLock();
-    await setDoc(doc(db, 'articles', id), { deleted: true }, { merge: true });
+    await setDoc(doc(db, 'articles', id), { active: false }, { merge: true });
 
     // SRE Immutable Ledger Hook v7.0
-    ImmutableInventoryLedger.appendEntry(`art-del-${id}`, 'ARTICLE_MUTATION', { id, deleted: true });
+    ImmutableInventoryLedger.appendEntry(`art-del-${id}`, 'ARTICLE_MUTATION', { id, active: false });
     setLedgerEntries(ImmutableInventoryLedger.getEntries());
 
     // SRE Automated Snapshot Trigger
-    SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Suppression de l'article ID ${id}`);
+    SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Désactivation logique de l'article ID ${id}`);
     setSnapshots(SnapshotRecoveryEngine.getSnapshots());
   };
 

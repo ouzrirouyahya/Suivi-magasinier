@@ -55,7 +55,10 @@ export type Page =
   | 'RETURNS'
   | 'FINANCE'
   | 'FORENSIC'
-  | 'SEARCH_RESULTS';
+  | 'SEARCH_RESULTS'
+  | 'TRACEABILITY'
+  | 'TRANSFERS_RETURNS'
+  | 'VISION_IA';
 
 interface SidebarProps {
   currentPage: Page;
@@ -75,25 +78,35 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
   const warningCount = notifications.filter(n => n.type === 'WARNING').length;
 
   const menuItems = [
+    // 1. SERVICES OPÉRATEUR / TERRAIN
+    { id: 'SEP_OP', label: 'Espace Opérateur', isSeparator: true },
     { id: 'COCKPIT', label: 'Cockpit Intégré', icon: LayoutDashboard, activeColor: 'bg-sky-900 text-white shadow-xl' },
-    { id: 'FIELD_WORKSPACE', label: 'Poste Opérateur (Terrain)', icon: Smartphone, activeColor: 'bg-gradient-to-r from-sky-900 via-sky-850 to-indigo-900 text-white shadow-xl' },
-    { id: 'SEP_S', label: 'SUIVI DES SITES', isSeparator: true },
+    { id: 'FIELD_WORKSPACE', label: 'Poste Magasinier', icon: Smartphone, activeColor: 'bg-gradient-to-r from-sky-900 via-sky-850 to-indigo-900 text-white shadow-xl font-black' },
+    { id: 'BON_ENTREE', label: 'Entrées en Stock', icon: ArrowDownLeft, activeColor: 'text-emerald-600 hover:text-emerald-700 bg-emerald-50/20' },
+    { id: 'BON_SORTIE', label: 'Sorties de Stock', icon: ArrowUpRight, activeColor: 'text-rose-700 hover:text-rose-800 bg-rose-50/20' },
+
+    // 2. DOMAINES PHYSIQUES / ENTREPÔTS
+    { id: 'SEP_PHYS', label: 'Domaines Physiques', isSeparator: true },
     { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
     { id: 'STOCK_PERFORATEURS', label: 'Perforateurs', icon: Drill },
     { id: 'STOCK_CONSOMMABLES', label: 'Consommables', icon: Droplets },
     { id: 'STOCK_EPI', label: 'Protection (EPI)', icon: Shield },
-    { id: 'SEP_M', label: 'GESTION DES STOCKS', isSeparator: true },
-    { id: 'BON_ENTREE', label: 'Entrées', icon: ArrowDownLeft, activeColor: 'text-emerald-600' },
-    { id: 'BON_SORTIE', label: 'Sorties', icon: ArrowUpRight, activeColor: 'text-rose-700' },
-    { id: 'INVENTAIRE', label: 'Audit / Inventaire', icon: ClipboardCheck },
-    { id: 'TRACEABILITY', label: 'Traçabilité Totale', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },
+
+    // 3. SECONDAIRE / LOGISTIQUE ET FLUX
+    { id: 'SEP_LOG', label: 'Logistique & Reporting', isSeparator: true },
     { id: 'TRANSFERS_RETURNS', label: 'Transferts & Retours', icon: RotateCcw, activeColor: 'bg-emerald-50 text-emerald-600' },
     { id: 'RESTOCK_MGMT', label: 'Ravitaillement & Alertes', icon: ShoppingCart, activeColor: 'bg-amber-50 text-amber-600 ring-amber-100', badge: (criticalCount + warningCount) || 0 },
-    { id: 'FINANCE', label: 'Flux & Valorisation Stock', icon: Landmark, activeColor: 'bg-amber-50 text-amber-600' },
-    { id: 'SEP_A', label: 'ADMINISTRATION', isSeparator: true },
-    { id: 'REPORTS', label: 'Synthèse', icon: ClipboardCheck },
-    { id: 'USER_MGMT', label: 'Utilisateurs', icon: Users },
-    { id: 'GESTION_ARTICLES', label: 'Catalogue Maître', icon: Settings2 },
+    { id: 'INVENTAIRE', label: 'Inventaires Terrain', icon: ClipboardCheck },
+    { id: 'TRACEABILITY', label: 'Journaux & Traçabilité', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },
+
+    // 4. ARCHITECTURE COMPTABLE ET CONSOLE ADMINISTRATEUR (Surface - Hidden from regular warehouse operators)
+    ...(isAdmin ? [
+      { id: 'SEP_ADMIN', label: 'Console Administration', isSeparator: true },
+      { id: 'FINANCE', label: 'Flux & Valorisation Stock', icon: Landmark, activeColor: 'bg-amber-50 text-amber-600 shadow-sm' },
+      { id: 'VISION_IA', label: 'Vision IA & Diagnostic', icon: Brain, activeColor: 'bg-indigo-950 text-white shadow-xl border border-indigo-700/30 font-black' },
+      { id: 'GESTION_ARTICLES', label: 'Catalogue Maître', icon: Settings2 },
+      { id: 'USER_MGMT', label: 'Utilisateurs & Droits', icon: Users },
+    ] : []),
   ];
 
   return (

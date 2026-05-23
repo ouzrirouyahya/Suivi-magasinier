@@ -1,15 +1,11 @@
-import React, { useEffect, useRef } from 'react';
+import React from 'react';
 import { motion } from 'motion/react';
-import * as THREE from 'three';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { toast } from 'sonner';
-
 import { Background3D } from './Background3D';
 
 const LoginPage: React.FC = () => {
-  const cursorRef = useRef<HTMLDivElement>(null);
-
   const handleLogin = async () => {
     try {
       await signInWithPopup(auth, googleProvider);
@@ -28,31 +24,9 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  useEffect(() => {
-    const onMouseMove = (event: MouseEvent) => {
-      if (cursorRef.current) {
-        cursorRef.current.style.left = event.clientX + 'px';
-        cursorRef.current.style.top = event.clientY + 'px';
-      }
-    };
-
-    window.addEventListener('mousemove', onMouseMove);
-
-    const handleMouseEnter = () => cursorRef.current?.classList.add('scale-[2.5]', 'bg-[#4FC3F7]', 'opacity-40');
-    const handleMouseLeave = () => cursorRef.current?.classList.remove('scale-[2.5]', 'bg-[#4FC3F7]', 'opacity-40');
-
-    document.querySelectorAll('button, a, .site-item, .keyword').forEach(el => {
-      el.addEventListener('mouseenter', handleMouseEnter);
-      el.addEventListener('mouseleave', handleMouseLeave);
-    });
-
-    return () => {
-      window.removeEventListener('mousemove', onMouseMove);
-    };
-  }, []);
-
   return (
-    <div className="fixed inset-0 min-h-screen bg-white overflow-hidden font-sans select-none" style={{ fontSize: '16px' }}>
+    <div className="fixed inset-0 min-h-screen bg-white overflow-hidden font-sans select-none flex items-center justify-center" style={{ fontSize: '16px' }}>
+      
       {/* 3D Background - White with Red/Blue Points */}
       <div className="absolute inset-0 z-[1] opacity-60">
         <Background3D count={1000} opacity={0.6} size={0.05} />
@@ -60,12 +34,6 @@ const LoginPage: React.FC = () => {
 
       {/* Lightweight Grid Overlay */}
       <div className="absolute inset-0 z-[1] opacity-5 bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:40px_40px]" />
-
-      {/* Custom Cursor */}
-      <div 
-        ref={cursorRef}
-        className="fixed w-2 h-2 bg-slate-900 rounded-full pointer-events-none z-[10000] opacity-50 transition-[transform,background,opacity] duration-200 hidden md:block"
-      />
 
       {/* Header Compact */}
       <header className="fixed top-0 left-0 right-0 z-[100] px-[5%] py-6 flex items-center justify-between">
@@ -88,7 +56,7 @@ const LoginPage: React.FC = () => {
       </header>
 
       {/* Main Content */}
-      <main className="relative z-10 flex flex-col lg:flex-row items-center justify-between px-[10%] h-full max-w-[1440px] mx-auto gap-12 lg:gap-0">
+      <main className="relative z-10 flex flex-col lg:flex-row items-center justify-between px-[10%] h-full w-full max-w-[1440px] mx-auto gap-12 lg:gap-0">
         {/* Left Section */}
         <div className="max-w-[500px] mt-24 lg:mt-0 text-center lg:text-left">
           <motion.div 
@@ -122,7 +90,7 @@ const LoginPage: React.FC = () => {
             className="border-t lg:border-t-0 lg:border-l-2 border-[#4FC3F7] pt-8 lg:pt-0 lg:pl-5"
           >
             <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed max-w-[400px] mx-auto lg:mx-0">
-              Système de monitoring énergétique pour sites <span className="text-[#4FC3F7] font-black glow-blue">HYDRO</span><span className="text-[#FF5252] font-black glow-red">MINES</span>.<br />
+              Système de monitoring énergétique pour sites <span className="text-[#4FC3F7] font-black logo-glow-blue">HYDRO</span><span className="text-[#FF5252] font-black logo-glow-red">MINES</span>.<br />
               <span className="text-slate-900 font-black tracking-tight">Traçabilité intégrale et supervision opérationnelle en temps réel.</span>
             </p>
           </motion.div>

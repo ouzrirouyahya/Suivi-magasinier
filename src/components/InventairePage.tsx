@@ -25,9 +25,10 @@ interface InventairePageProps {
   articles: Article[];
   inventaires: Inventaire[];
   onSaveInventaire: (i: Inventaire) => void;
+  isAdmin?: boolean;
 }
 
-export function InventairePage({ currentSite, articles, inventaires, onSaveInventaire }: InventairePageProps) {
+export function InventairePage({ currentSite, articles, inventaires, onSaveInventaire, isAdmin = false }: InventairePageProps) {
   const [activeSession, setActiveSession] = useState<Inventaire | null>(null);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
@@ -168,8 +169,12 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
             </div>
 
             <div className="flex gap-2 shrink-0">
-               <button onClick={handleSaveDraft} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm">Suspendre</button>
-               <button onClick={handleValidate} className="btn btn-primary px-8 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase shadow-xl shadow-sky-500/20">Valider</button>
+               <button onClick={handleSaveDraft} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm" title="Enregistrer le brouillon de comptage">Saisie Comptage (Suspendre)</button>
+               {isAdmin ? (
+                 <button onClick={handleValidate} className="btn btn-primary px-8 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase shadow-xl shadow-sky-500/20">Valider & Ajuster le Stock [Admin]</button>
+               ) : (
+                 <button disabled className="btn bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 px-8 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase" title="La validation finale et l'ajustement de stocks sont réservés aux administrateurs">Validation Réservée Admin</button>
+               )}
             </div>
           </div>
 

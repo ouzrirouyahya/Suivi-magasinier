@@ -59,7 +59,9 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
       const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
       const matchesLocation = !locationFilter || (a.location || '').toLowerCase().includes(locationFilter.toLowerCase());
 
-      return matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation;
+      const matchesActive = a.active !== false;
+
+      return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation;
     });
   }, [articles, site, type, search, showGlobal, categoryFilter, statusFilter, locationFilter]);
 
