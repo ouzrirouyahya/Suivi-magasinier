@@ -78,6 +78,14 @@
       "schema": "UserAccount",
       "description": "Configuration des accès"
     },
+    "/viewer_sessions/{sessionId}": {
+      "schema": "object",
+      "description": "Sessions en temps réel des utilisateurs du Viewer"
+    },
+    "/viewer_activity/{activityId}": {
+      "schema": "object",
+      "description": "Activités et navigation des utilisateurs du Viewer"
+    },
     "/auditLogs/{logId}": {
       "schema": "object",
       "description": "Journaux d'audit système"

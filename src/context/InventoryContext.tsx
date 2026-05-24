@@ -209,6 +209,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [snapshots, setSnapshots] = useState<any[]>([]);
 
   const checkMaintenanceLock = () => {
+    if (currentUser?.email === 'viewer@hydromines.local' || localStorage.getItem('hydromines_viewer_mode') === 'true') {
+      const msg = "Viewer mode is read-only. Critical operations are protected by HydroMines WMS.";
+      toast.error(msg);
+      throw new Error("VIEWER_READ_ONLY");
+    }
     if (maintenanceMode && currentUser?.role !== 'ADMIN') {
       const msg = `PROTECTED_MAINTENANCE_LOCK: Toutes les opérations d'écriture sont temporairement verrouillées pour maintenance de sécurité. Raison: ${maintenanceReason || 'Lock global de sécurité'}`;
       toast.error(msg);
@@ -621,6 +626,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authStateReady) return;
 
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true') {
+      const viewerUser: UserAccount = {
+        id: 'viewer_mode_uid',
+        email: 'viewer@hydromines.local',
+        name: 'Démonstrateur',
+        role: 'ADMIN',
+        active: true,
+        createdAt: new Date().toISOString()
+      };
+      setCurrentUser(viewerUser);
+      setIsLoaded(true);
+      return;
+    }
+
     if (!auth.currentUser) {
       setCurrentUser(null);
       setIsLoaded(true);
@@ -634,8 +653,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         setCurrentUser(userData);
         setIsLoaded(true);
       } else {
-        let role: 'ADMIN' | 'MAGASINIER' = 'MAGASINIER';
-        if (auth.currentUser?.email === 'ouzrirouyahya@gmail.com') role = 'ADMIN';
+        let role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' = 'MAGASINIER';
+        if (auth.currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') role = 'SUPER_ADMIN';
 
         const newUser: UserAccount = {
           id: uid,
@@ -676,6 +695,32 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoaded || !currentUser || !currentUser.active) return;
+
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' && !auth.currentUser) {
+      setRawArticles(INITIAL_ARTICLES);
+      setCatalog(MASTER_CATALOG);
+      setRawMouvements(INITIAL_MOUVEMENTS);
+      setEngins(INITIAL_ENGINS);
+      setPerfos(INITIAL_PERFOS);
+      setAgents(INITIAL_AGENTS);
+      setAccounts([
+        { id: '1', email: 'ouzrirouyahya@gmail.com', name: 'Yahya O.', role: 'SUPER_ADMIN', active: true },
+        { id: '2', email: 'hydro.magasinier@gmail.com', name: 'Magasinier Hydro', role: 'MAGASINIER', active: true },
+        { id: 'viewer_mode_uid', email: 'viewer@hydromines.local', name: 'Démonstrateur', role: 'ADMIN', active: true }
+      ]);
+      setNotifications([
+        {
+          id: 'demo-notif-1',
+          siteId: 'SMI',
+          type: 'INFO',
+          category: 'SYNC',
+          message: 'Mode Démonstration Actif — Données lues localement en tant que Visiteur.',
+          timestamp: new Date().toISOString()
+        }
+      ]);
+      return;
+    }
+
     const unsubs: (() => void)[] = [];
 
     const setupDataListeners = async () => {

@@ -264,5 +264,16 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(id) && isValidForensicLog(incoming());
       allow update, delete: if false;
     }
+
+    // Viewer real-time tracking
+    match /viewer_sessions/{id} {
+      allow read: if isSignedIn();
+      allow write, create, update: if isValidId(id);
+    }
+
+    match /viewer_activity/{id} {
+      allow read: if isSignedIn();
+      allow write, create, update: if isValidId(id);
+    }
   }
 }

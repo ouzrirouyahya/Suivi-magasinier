@@ -104,7 +104,7 @@ export function validateGlobalSnapshotState(
         for (const item of mv.items) {
           if (!articleIdsSet.has(item.articleId)) {
             hasCollectionVersionSkew = true;
-            skewDescription = `Collection skew: movement (${mv.id}) references missing articleId (${item.articleId}). Unsynced cache.`;
+            skewDescription = `Incohérence de stock : le mouvement enregistré (${mv.id || "N/A"}) fait référence à un identifiant d'article introuvable (${item.articleId}).`;
             break;
           }
         }
@@ -126,7 +126,7 @@ export function validateGlobalSnapshotState(
     for (const t of recentTransfers) {
       if (t.status === 'RECU' && !transferRefsInMouvements.has(t.reference)) {
         hasCollectionVersionSkew = true;
-        skewDescription = `Index split-brain: regularized transfer (${t.id}) has no matching movement log mapped.`;
+        skewDescription = `Erreur de liaison mouvement / log : le transfert régularisé (${t.reference || t.id}) ne possède aucun mouvement logistique correspondant en base de données.`;
         break;
       }
     }

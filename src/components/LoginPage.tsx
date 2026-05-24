@@ -8,20 +8,34 @@ import { Background3D } from './Background3D';
 const LoginPage: React.FC = () => {
   const handleLogin = async () => {
     try {
-      await signInWithPopup(auth, googleProvider);
+      console.log("[Google Auth] Initialisation du flux Google Sign-In...");
+      googleProvider.setCustomParameters({ prompt: 'select_account' });
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("[Google Auth] Connexion réussie ! Utilisateur Authentifié :", result.user.email);
+      toast.success(`Bienvenue, ${result.user.displayName || result.user.email || 'Opérateur'}`);
     } catch (error: any) {
-      let message = "La connexion a échoué. Veuillez réessayer.";
+      console.error("[Google Auth] Erreur complète de connexion :", error);
+      let message = `La connexion a échoué (${error.code || error.message || 'Erreur inconnue'}). Veuillez réessayer.`;
       
       if (error.code === 'auth/unauthorized-domain') {
-        message = `Domaine non autorisé : ${window.location.hostname}. \n\nVeuillez l'ajouter dans la console Firebase (Authentification > Paramètres > Domaines autorisés).`;
+        message = `Domaine non autorisé : ${window.location.hostname}.\n\nVeuillez l'ajouter dans la console Firebase (Authentification > Paramètres > Domaines autorisés).`;
       } else if (error.code === 'auth/popup-blocked') {
-        message = "La fenêtre de connexion a été bloquée par votre navigateur.";
+        message = "La fenêtre de connexion (popup) a été bloquée par votre navigateur. Veuillez autoriser les fenêtres pop-up pour cette application.";
       } else if (error.code === 'auth/cancelled-popup-request') {
+        console.warn("[Google Auth] Popup refermé par l'utilisateur.");
         return; // Ignore if user just closed the popup
       }
       
-      toast.error(message);
+      toast.error(message, { duration: 8000 });
     }
+  };
+
+  const handleViewerLogin = () => {
+    localStorage.setItem('hydromines_viewer_mode', 'true');
+    toast.success("Accès Visiteur Démo Activé. Mode Lecture Seule.");
+    setTimeout(() => {
+      window.location.reload();
+    }, 600);
   };
 
   return (
@@ -121,6 +135,17 @@ const LoginPage: React.FC = () => {
                 <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
              </svg>
              Connexion Google
+          </button>
+
+          <button 
+            onClick={handleViewerLogin}
+            className="w-full mt-3 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest transition-all hover:-translate-y-1 active:scale-95 relative overflow-hidden shadow-sm border border-slate-200"
+          >
+             <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+               <circle cx="12" cy="12" r="3" />
+             </svg>
+             ENTER AS VIEWER
           </button>
 
           <div className="mt-8 space-y-4">

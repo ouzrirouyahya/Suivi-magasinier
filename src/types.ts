@@ -26,7 +26,7 @@ export interface UserAccount {
   id: string;
   email: string;
   name: string;
-  role: 'ADMIN' | 'MAGASINIER';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER';
   active: boolean;
   createdAt: FirestoreDate;
 }

@@ -33,6 +33,10 @@ const AuditIntelligenceMagasin = lazy(() => import('./components/AuditIntelligen
 const AutomationOrchestrator = lazy(() => import('./components/AutomationOrchestrator'));
 const FieldOperatorWorkspace = lazy(() => import('./components/FieldOperatorWorkspace'));
 const VisionIA = lazy(() => import('./components/VisionIA').then(m => ({ default: m.VisionIA })));
+const UserAdmin = lazy(() => import('./components/UserAdmin').then(m => ({ default: m.UserAdmin })));
+
+// Tracking
+import { ViewerTracker } from './components/ViewerTracker';
 
 // Shared Components
 import LoginPage from './components/LoginPage';
@@ -65,13 +69,24 @@ export default function App() {
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, accounts, purchaseRequests, notifications, isLoaded,
     addMouvement, addTransfert, completeTransfert, saveInventaire, saveArticle, 
-    deleteArticle, setEngin, setPerfo, setAgent, saveCatalogItem, 
+    deleteArticle, toggleUser, setEngin, setPerfo, setAgent, saveCatalogItem, 
     deleteCatalogItem, addPurchaseRequest, updatePRStatus,
     isSafeMode, rcglResult,
     maintenanceMode, maintenanceReason
   } = useInventory();
 
   useEffect(() => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true') {
+      setUser({
+        uid: 'viewer_mode_uid',
+        email: 'viewer@hydromines.local',
+        displayName: 'Démonstrateur',
+        emailVerified: true
+      } as any);
+      setIsAuthLoading(false);
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsAuthLoading(false);
@@ -80,7 +95,14 @@ export default function App() {
   }, []);
 
   const handleSignOut = () => {
-    signOut(auth);
+    const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true';
+    localStorage.removeItem('hydromines_viewer_mode');
+    setUser(null);
+    if (isViewer) {
+      window.location.reload();
+    } else {
+      signOut(auth);
+    }
   };
 
   if (isAuthLoading) {
@@ -109,7 +131,8 @@ export default function App() {
     );
   }
 
-  const isAdmin = accounts.find(a => a.email === user?.email)?.role === 'ADMIN';
+  const isSuperAdmin = user?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com' || accounts.find(a => a.email?.toLowerCase() === user?.email?.toLowerCase())?.role === 'SUPER_ADMIN';
+  const isAdmin = accounts.find(a => a.email?.toLowerCase() === user?.email?.toLowerCase())?.role === 'ADMIN' || isSuperAdmin;
 
   const navigateToMouvement = (id: string, type: 'IN' | 'OUT') => {
     setSelectedArticleId(id);
@@ -364,6 +387,28 @@ export default function App() {
 
       case 'ALERTES_STOCK':
         return <StockAlertView site={currentSite} articles={articles} onAction={navigateToMouvement} />;
+
+      case 'USER_MGMT':
+        if (!isAdmin) {
+          setShowAdminAlert(true);
+          setCurrentPage('COCKPIT');
+          return null;
+        }
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
+            <UserAdmin 
+              accounts={accounts}
+              onToggleStatus={toggleUser}
+              engins={engins}
+              onSetEngin={setEngin}
+              perfos={perfos}
+              onSetPerfo={setPerfo}
+              agents={agents}
+              onSetAgent={setAgent}
+              isSuperAdmin={isSuperAdmin}
+            />
+          </motion.div>
+        );
         
       default:
         return <Dashboard site={currentSite} articles={articles} mouvements={mouvements} onAction={setCurrentPage} isAdmin={isAdmin} />;
@@ -374,10 +419,12 @@ export default function App() {
     <div className="min-h-screen bg-slate-50 flex relative overflow-hidden">
       {showAdminAlert && <HydrominesSecurityAlert onClose={() => setShowAdminAlert(false)} />}
       
+      <ViewerTracker currentPage={currentPage} />
+      
       <Sidebar 
         currentPage={currentPage} 
         setPage={(page) => {
-          if ((page === 'MAGASINIER_IA' || page === 'AUDIT_INTELLIGENCE' || page === 'IA_CHECKLIST' || page === 'FORENSIC' || page === 'VISION_IA') && !isAdmin) {
+          if ((page === 'MAGASINIER_IA' || page === 'AUDIT_INTELLIGENCE' || page === 'IA_CHECKLIST' || page === 'FORENSIC' || page === 'VISION_IA' || page === 'USER_MGMT') && !isAdmin) {
             setShowAdminAlert(true);
             return;
           }
@@ -457,32 +504,51 @@ export default function App() {
           )}
 
           {isSafeMode && isAdmin ? (
-            <div className="bg-red-500/15 border border-red-500/30 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
-              <div className="p-3 bg-red-500/20 text-red-600 rounded-lg animate-bounce">
+            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
+              <div className="p-3 bg-red-500/15 text-red-600 rounded-lg animate-pulse">
                 <ShieldAlert className="w-6 h-6" />
               </div>
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-600 text-white rounded flex items-center gap-1">
-                    <Lock className="w-3 h-3" /> VERROU DE SÉCURITÉ MAXIMUM (PCV v2.0)
+                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-650 text-white rounded">
+                    SUPERVISION : ALERTE CRITIQUE
                   </span>
                   <span className="text-xs text-red-700 font-extrabold uppercase tracking-wide">
-                    INCOHÉRENCE CRITIQUE DES DONNÉES DÉTECTÉE
+                    MOTEUR DE COHÉRENCE
                   </span>
                 </div>
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">OPÉRATIONS BLOQUÉES — ALIGNEMENT INCORRECT DU STOCK</h3>
-                <p className="text-xs text-slate-600">
-                  Le validateur de cohérence d'état business (BSV) a interrompu préventivement les écritures car l'intégrité ou l'alignement référentiel de votre snapshot local est compromis. Raison : <span className="text-red-800 font-mono font-bold">{rcglResult.skewDescription || "Erreur de synchronisation inter-collections relative aux mouvements."}</span>.
-                </p>
-                <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600 uppercase tracking-widest pt-3">
-                  <div className="flex items-center gap-1.5 text-red-600 font-bold">
-                    <span className="w-2.5 h-2.5 rounded-full bg-red-500 animate-ping" />
-                    Alerte Résolution Active...
-                  </div>
-                  <div className="text-slate-500 font-bold">
-                    Score de Confiance : {(rcglResult.confidenceScore * 100).toFixed(1)}% | Dérive : {Math.round(rcglResult.freshnessGapMs / 1000)}s
+                
+                <div className="space-y-2">
+                  <h3 className="text-sm font-black text-slate-950 uppercase tracking-wide">
+                    📌 DÉSYNCHRONISATION DES DONNÉES DÉTECTÉE
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mt-2 text-slate-700">
+                    <div className="bg-red-500/5 p-3 rounded-lg border border-red-550/10">
+                      <strong className="text-red-900 uppercase text-[10px] block mb-1">📊 IMPACT MÉTIER :</strong>
+                      <p>Risque d'incohérence de stock temporaire sur l'enregistrement des nouveaux mouvements physiques.</p>
+                    </div>
+                    
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                      <strong className="text-slate-800 uppercase text-[10px] block mb-1">🔧 ACTION RECOMMANDÉE :</strong>
+                      <p>Lancer une resynchronisation manuelle des données depuis le cockpit ou vérifier et rapprocher les derniers mouvements.</p>
+                    </div>
                   </div>
                 </div>
+
+                <div className="border-t border-red-500/10 pt-3 flex flex-wrap items-center gap-4 text-[10px] font-mono text-slate-600 uppercase tracking-widest">
+                  <span className="text-red-600 font-bold flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping inline-block" />
+                    Restauration active accessible
+                  </span>
+                  <div className="text-slate-500">
+                    ⚙️ ÉTAT SYSTÈME — STATUT : <span className="font-bold text-red-700">CRITICAL</span> | CONFIANCE : <span className="font-bold text-red-700">{(rcglResult.confidenceScore * 100).toFixed(0)}%</span> | DÉRIVE : <span className="text-red-700 font-bold">{rcglResult.skewDescription || "Incohérence des stocks détectée"}</span>
+                  </div>
+                </div>
+                
+                <p className="text-[10px] text-slate-450 italic">
+                  💡 Note de supervision terrain : Le cockpit d'analyse, la recherche et les fonctionnalités de re-lecture restent entièrement ouverts pour la continuité d'exploitation de la mine.
+                </p>
               </div>
             </div>
           ) : rcglResult.mode !== 'NORMAL' ? (
@@ -490,28 +556,47 @@ export default function App() {
               <div className="p-3 bg-amber-500/15 text-amber-600 rounded-lg">
                 <ShieldAlert className="w-6 h-6 animate-pulse" />
               </div>
-              <div className="flex-1 space-y-1">
+              <div className="flex-1 space-y-3">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-amber-500 text-slate-900 rounded">
-                    DEGRADED DATA MODE
+                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-amber-500 text-slate-950 rounded">
+                    SUPERVISION : MODE DÉGRADÉ
                   </span>
                   <span className="text-xs text-amber-700 font-extrabold uppercase tracking-wide">
-                    CONTINUITÉ OPÉRATIONNELLE ESTIMÉE SÛRE
+                    LATENCE RÉSEAU COMMUNE
                   </span>
                 </div>
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">DÉRIVE RÉSEAU PASSIVE — ÉCRITURES RETENUES PAR LE VALIDATEUR INVARIANT</h3>
-                <p className="text-xs text-slate-600">
-                  La connexion au serveur est ralentie ou instable, mais l'intégrité logique des stocks est préservée. Le mode <span className="font-bold text-amber-700">"Soft Read"</span> est activé : vous pouvez continuer à travailler. Vos modifications seront validées en temps réel par notre moteur de règles invariant (BSV) avant transmission au serveur Firestore.
-                </p>
-                <div className="flex items-center gap-4 text-[10px] font-mono text-slate-600 uppercase tracking-widest pt-3">
-                  <div className="flex items-center gap-1.5 text-amber-600 font-semibold">
-                    <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
-                    Fonctionnement autonome opérationnel sous conditions
-                  </div>
-                  <div className="text-slate-500 font-bold">
-                    Confiance : {(rcglResult.confidenceScore * 100).toFixed(1)}% | Latence : {Math.round(rcglResult.freshnessGapMs / 1000)}s
+
+                <div className="space-y-2">
+                  <h3 className="text-sm font-black text-slate-950 uppercase tracking-wide">
+                    📌 RETARD DE SYNCHRONISATION DU RÉSEAU
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mt-2 text-slate-700">
+                    <div className="bg-amber-500/5 p-3 rounded-lg border border-amber-550/10">
+                      <strong className="text-amber-900 uppercase text-[10px] block mb-1">📊 IMPACT MÉTIER :</strong>
+                      <p>Mise à jour d'inventaire différée sous communication intermittente.</p>
+                    </div>
+                    
+                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
+                      <strong className="text-slate-800 uppercase text-[10px] block mb-1">🔧 ACTION RECOMMANDÉE :</strong>
+                      <p>Continuer la saisie normalement en mode de saisie locale, la réconciliation automatique s'effectuera de manière fluide dès rétablissement de la liaison.</p>
+                    </div>
                   </div>
                 </div>
+
+                <div className="border-t border-amber-500/10 pt-3 flex flex-wrap items-center gap-4 text-[10px] font-mono text-slate-600 uppercase tracking-widest">
+                  <span className="text-amber-600 font-bold flex items-center gap-1">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
+                    Saisie locale résiliente active
+                  </span>
+                  <div className="text-slate-500">
+                    ⚙️ ÉTAT SYSTÈME — STATUT : <span className="font-bold text-amber-700">DEGRADED</span> | CONFIANCE : <span className="font-bold text-amber-700">{(rcglResult.confidenceScore * 100).toFixed(0)}%</span> | LATENCE : <span className="text-amber-700 font-bold">{Math.round(rcglResult.freshnessGapMs / 1000)}s</span>
+                  </div>
+                </div>
+
+                <p className="text-[10px] text-slate-450 italic">
+                  💡 Note de supervision terrain : Vos actions d'inventaire et d'exploitation restent pleinement actives et seront préservées en local en attendant la liaison.
+                </p>
               </div>
             </div>
           ) : null}
