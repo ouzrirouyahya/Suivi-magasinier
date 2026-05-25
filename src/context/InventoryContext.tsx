@@ -165,13 +165,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [authStateReady, setAuthStateReady] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
 
-  const addNotification = async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead'>) => {
+  const addNotification = async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead' | 'severity' | 'status'> & { severity?: any; status?: any }) => {
     const id = generateSecureUUID();
+    const typeVal = notif.type || 'INFO';
+    const severityVal = notif.severity || (typeVal as any);
+    const statusVal = notif.status || 'unread';
+
     const newNotif: AppNotification = {
       ...notif,
       id,
       timestamp: new Date().toISOString(),
-      isRead: false
+      isRead: false,
+      severity: severityVal,
+      status: statusVal
     };
     try {
       await setDoc(doc(db, 'notifications', id), cleanObject(newNotif));
@@ -183,9 +189,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const markNotificationAsRead = async (id: string) => {
     try {
-      await setDoc(doc(db, 'notifications', id), { isRead: true }, { merge: true });
+      await setDoc(doc(db, 'notifications', id), { isRead: true, status: 'read' }, { merge: true });
     } catch (err) {
-      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+      setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true, status: 'read' as any } : n));
     }
   };
 
@@ -193,9 +199,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const unread = notifications.filter(n => n.siteId === siteId && !n.isRead);
     for (const notif of unread) {
       try {
-        await setDoc(doc(db, 'notifications', notif.id), { isRead: true }, { merge: true });
+        await setDoc(doc(db, 'notifications', notif.id), { isRead: true, status: 'read' }, { merge: true });
       } catch (err) {
-        setNotifications(prev => prev.map(n => n.siteId === siteId ? { ...n, isRead: true } : n));
+        setNotifications(prev => prev.map(n => n.siteId === siteId ? { ...n, isRead: true, status: 'read' as any } : n));
       }
     }
   };
@@ -784,7 +790,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'anomalyReports')), setAnomalyReports, 'anomalyReports'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc')), setRawMaintenanceLogs, 'maintenanceLogs'));
-      unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), setNotifications, 'notifications'));
+      unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), (data: any[]) => {
+        const mapped = data.map(item => ({
+          ...item,
+          severity: item.severity || item.type || 'INFO',
+          status: item.status || (item.isRead ? 'read' : 'unread')
+        }));
+        setNotifications(mapped);
+      }, 'notifications'));
 
       if (currentUser.role === 'ADMIN') {
         unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));

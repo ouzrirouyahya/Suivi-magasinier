@@ -240,5 +240,7 @@ export interface AppNotification {
   relatedEntityId?: string;
   actionRoute: string;
   isRead: boolean;
+  severity: 'INFO' | 'WARNING' | 'CRITICAL' | 'SYSTEM';
+  status: 'read' | 'unread';
 }
 

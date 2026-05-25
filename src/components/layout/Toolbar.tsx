@@ -45,9 +45,31 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     return siteNotifications.filter(n => !n.isRead).length;
   }, [siteNotifications]);
 
+  const hasUnreadCritical = React.useMemo(() => {
+    return siteNotifications.some(n => (n.severity === 'CRITICAL' || n.type === 'CRITICAL') && !n.isRead);
+  }, [siteNotifications]);
+
   const filteredNotifications = React.useMemo(() => {
-    if (filterType === 'ALL') return siteNotifications;
-    return siteNotifications.filter(n => n.type === filterType);
+    const list = filterType === 'ALL'
+      ? siteNotifications
+      : siteNotifications.filter(n => n.type === filterType || n.severity === filterType);
+    
+    // Priority valuation helper
+    const getPriorityScore = (n: any) => {
+      const severity = n.severity || n.type || 'INFO';
+      if (severity === 'CRITICAL') return 3;
+      if (severity === 'WARNING') return 2;
+      return 1;
+    };
+
+    return [...list].sort((a, b) => {
+      const pA = getPriorityScore(a);
+      const pB = getPriorityScore(b);
+      if (pA !== pB) {
+        return pB - pA; // CRITICAL first
+      }
+      return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
+    });
   }, [siteNotifications, filterType]);
 
   const siteArticles = articles.filter(a => a.site === currentSite);
@@ -162,12 +184,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           <div className="relative">
             <button
               onClick={() => setNotifOpen(!notifOpen)}
-              className="relative p-2 text-slate-500 hover:text-sky-600 hover:bg-slate-50 rounded-xl transition-all active:scale-95 flex items-center justify-center"
+              className={`relative p-2 rounded-xl transition-all active:scale-95 flex items-center justify-center pointer-events-auto ${
+                hasUnreadCritical 
+                  ? "text-rose-600 bg-rose-50 border border-rose-300 shadow animate-pulse" 
+                  : "text-slate-500 hover:text-sky-600 hover:bg-slate-50"
+              }`}
               id="notification-bell"
             >
-              <Bell className={`w-5 h-5 ${unreadCount > 0 ? "text-sky-600" : ""}`} />
+              <Bell className={`w-5 h-5 ${unreadCount > 0 ? "text-rose-600" : ""} ${hasUnreadCritical ? "animate-bounce" : ""}`} />
               {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 px-1.5 py-0.5 text-[8px] font-black bg-red-500 text-white rounded-full min-w-4 h-4 flex items-center justify-center border-2 border-white shadow-sm">
+                <span className={`absolute -top-1 -right-1 px-1.5 py-0.5 text-[8px] font-black text-white rounded-full min-w-4 h-4 flex items-center justify-center border-2 border-white shadow-sm ${
+                  hasUnreadCritical ? "bg-red-650 animate-ping" : "bg-red-500"
+                }`}>
                   {unreadCount}
                 </span>
               )}
@@ -259,18 +287,22 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                             isUnread ? 'bg-sky-50/40 hover:bg-sky-50/80 font-semibold' : 'hover:bg-slate-50'
                           }`}
                         >
-                          {/* Left severity indicator icon */}
+                           {/* Left severity indicator icon */}
                           <div className="mt-0.5">
-                            {notif.type === 'CRITICAL' ? (
-                              <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg shadow-sm border border-rose-200">
-                                <ShieldAlert className="w-4 h-4" />
+                            {notif.severity === 'CRITICAL' || notif.type === 'CRITICAL' ? (
+                              <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg shadow-sm border border-rose-250 animate-pulse">
+                                <ShieldAlert className="w-4 h-4 animate-bounce" />
                               </div>
-                            ) : notif.type === 'WARNING' ? (
-                              <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg shadow-sm border border-amber-200">
+                            ) : notif.severity === 'WARNING' || notif.type === 'WARNING' ? (
+                              <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg shadow-sm border border-amber-250">
                                 <AlertTriangle className="w-4 h-4" />
                               </div>
+                            ) : notif.severity === 'SYSTEM' ? (
+                              <div className="p-1.5 bg-purple-100 text-purple-600 rounded-lg shadow-sm border border-purple-250">
+                                <ShieldAlert className="w-4 h-4 text-purple-600" />
+                              </div>
                             ) : (
-                              <div className="p-1.5 bg-sky-100 text-sky-600 rounded-lg shadow-sm border border-sky-200">
+                              <div className="p-1.5 bg-sky-100 text-sky-600 rounded-lg shadow-sm border border-sky-250">
                                 <Info className="w-4 h-4" />
                               </div>
                             )}

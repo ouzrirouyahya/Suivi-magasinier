@@ -304,54 +304,116 @@ export function VisionIA({ currentSite }: VisionIAProps) {
     setTimeout(() => {
       const endTs = new Date().toLocaleTimeString('fr-FR');
       
-      // Determine simulated anomaly attributes
-      const isHighRisk = Math.random() > 0.45;
-      const riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' = isHighRisk ? (Math.random() > 0.5 ? 'HIGH' : 'MEDIUM') : 'LOW';
-      const confidence = Math.floor(65 + Math.random() * 32);
-      
-      const anomalies = [
+      // Anomaly Pool represent physical & logical source areas
+      const anomalyPool = [
         {
           title: "Divergence de stock virtuel sur convoyeur principal",
           fix: "Réajuster la pile comptable locale (-15 unités) et réaligner la chronologie FIFO.",
           before: "Quantité convoyée: 125 unités (décalage de cache d'index détecté)",
-          after: "Quantité convoyée: 110 unités (conforme aux balances d'importation)"
+          after: "Quantité convoyée: 110 unités (conforme aux balances d'importation)",
+          source: 'stock'
         },
         {
           title: "Incohérence séquentielle de trace de scellé de sécurité",
           fix: "Forcer la régénération de l'empreinte de sécurité et soumettre au tracker.",
-          before: "Hash de scellé: NULL (interrompu suite à micro-coupure réseau)",
-          after: "Hash de scellé réinitialisé: SHA256[7eb0a1...]"
+          before: "Hash de scellé: NULL (micro-coupure réseau)",
+          after: "Hash de scellé réinitialisé: SHA256[7eb0a1...]",
+          source: 'logs'
         },
         {
           title: "Contre-écriture FIFO split-brain sur excavateur de secours",
           fix: "Réordonner l'historique FIFO et flusher le cache local.",
           before: "Queue FIFO désynchronisée, écart de chronologie repéré",
-          after: "Ligne temporelle redressée, ordre logique validé."
+          after: "Ligne temporelle redressée, ordre logique validé.",
+          source: 'mouvements'
         }
       ];
+
+      // To group anomalies: find 1, 2, or all 3 sources
+      const numAnomaliesFound = Math.floor(Math.random() * 3) + 1; 
+      const selectedAnomalies = anomalyPool.slice(0, numAnomaliesFound);
+      const sourcesSet = new Set(selectedAnomalies.map(a => a.source));
       
-      const chosen = anomalies[Math.floor(Math.random() * anomalies.length)];
+      const hasStock = sourcesSet.has('stock');
+      const hasLogs = sourcesSet.has('logs');
+      const hasMouvements = sourcesSet.has('mouvements');
+      const isMultiSourceConfirmed = hasStock && hasLogs && hasMouvements;
+
+      // Force low confidence sometimes to test true CRITICAL trigger else high
+      const isExtremelyLowConfidence = Math.random() > 0.6;
+      const confidence = isExtremelyLowConfidence ? Math.floor(5 + Math.random() * 15) : Math.floor(25 + Math.random() * 70);
+
+      // Apply the 4 strict SRE evaluation rules:
+      let classification: 'TEMPORAIRE' | 'PARTIELLE' | 'CRITIQUE' = 'TEMPORAIRE';
+      let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+      let severity: 'CRITICAL' | 'DEGRADED' | 'WARNING' | 'INFO' = 'INFO';
+      let status: 'ACTIVE' | 'RESOLVED_AUTO' | 'MONITORING' | 'PENDING_VALIDATION' = 'RESOLVED_AUTO';
+      let decisionReason = "";
+
+      // Rule 4 & 1 Validation checking:
+      if (isMultiSourceConfirmed && confidence <= 20) {
+        classification = 'CRITIQUE';
+        riskLevel = 'HIGH';
+        severity = 'CRITICAL';
+        status = 'PENDING_VALIDATION';
+        decisionReason = "VALIDATION RÉUSSIE-CRITIQUE: Score <= 20% ET cohérence stock+mouvement+log infirmée.";
+      } else if (isMultiSourceConfirmed && confidence > 20) {
+        // Multi Source but Confidence too high -> Rétrograder en WARNING!
+        classification = 'PARTIELLE';
+        riskLevel = 'MEDIUM';
+        severity = 'WARNING';
+        status = 'PENDING_VALIDATION';
+        decisionReason = `PRÉ-VALIDATION CRITIQUE ÉCHOUÉE (RÉTROGRADÉ EN WARNING) : Confiance ${confidence}% > 20% requis.`;
+      } else if (sourcesSet.size >= 2) {
+        classification = 'PARTIELLE';
+        riskLevel = 'MEDIUM';
+        severity = 'WARNING';
+        status = 'PENDING_VALIDATION';
+        decisionReason = `ANOMALIE NON CONFIRMÉE MULTISOURCE : Écart incohérent partiel. Classé PARTIELLE (WARNING).`;
+      } else {
+        // Single source -> NEVER critical. Filtered as temporary or warning.
+        const isTemporary = Math.random() > 0.4;
+        if (isTemporary) {
+          classification = 'TEMPORAIRE';
+          riskLevel = 'LOW';
+          severity = 'INFO';
+          status = 'RESOLVED_AUTO';
+          decisionReason = "FILTRAGE FAUX POSITIF : Source unique altérée. Classé TEMPORAIRE (sync en cours/informatif).";
+        } else {
+          classification = 'PARTIELLE';
+          riskLevel = 'MEDIUM';
+          severity = 'WARNING';
+          status = 'MONITORING';
+          decisionReason = "FILTRAGE FAUX POSITIF : Alerte unilatérale. Classé PARTIELLE (monitoring warning).";
+        }
+      }
+
+      const mainAnomaly = selectedAnomalies[0] || anomalyPool[0];
+      const title = selectedAnomalies.length > 1 
+        ? `Écart de cohérence groupé [${selectedAnomalies.length} sources]`
+        : mainAnomaly.title;
+
+      const groupDescription = selectedAnomalies.map(a => `[Source: ${a.source.toUpperCase()}] ${a.title}`).join(" | ");
       const idStr = `INC-${Math.floor(Math.random() * 900 + 100)}`;
       
-      // Assemble the correction proposal
       const proposal = {
         id: idStr,
         timestamp: endTs,
-        title: chosen.title,
+        title: title,
         site: currentSite,
-        status: (riskLevel === 'LOW' ? 'RESOLVED_AUTO' : 'PENDING_VALIDATION') as any,
-        severity: (riskLevel === 'HIGH' ? 'CRITICAL' : riskLevel === 'MEDIUM' ? 'DEGRADED' : 'WARNING') as any,
-        businessImpact: "Rupture de référentiel d'intégrité suite à désalignement logique.",
-        recommendedAction: chosen.fix,
-        failureReason: "Espace d'écriture instable détecté.",
-        suggested_fix: chosen.fix,
+        status: status as any,
+        severity: (severity === 'CRITICAL' ? 'CRITICAL' : 'WARNING') as any,
+        businessImpact: `Impact d'alignement: ${groupDescription}.`,
+        recommendedAction: mainAnomaly.fix,
+        failureReason: `${decisionReason} Multi-events groupés.`,
+        suggested_fix: mainAnomaly.fix,
         confidence_score: confidence,
         risk_level: riskLevel,
-        before_state: chosen.before,
-        after_state: chosen.after
+        before_state: mainAnomaly.before,
+        after_state: mainAnomaly.after
       };
 
-      if (riskLevel === 'LOW') {
+      if (status === 'RESOLVED_AUTO') {
         // LOW RISK -> Auto-apply immediately!
         setHealedAnomaliesCount(prev => prev + 1);
         
@@ -362,7 +424,7 @@ export function VisionIA({ currentSite }: VisionIAProps) {
             timestamp: endTs,
             type: 'STOCK_ALIGNMENT',
             status: 'SILENT_OK',
-            details: `Auto-correcteur appliqué : ${chosen.title}. Fix: ${chosen.fix}`
+            details: `Auto-correcteur appliqué (TEMPORAIRE) : ${title}. ${decisionReason}`
           },
           ...prev
         ]);
@@ -374,8 +436,8 @@ export function VisionIA({ currentSite }: VisionIAProps) {
             event_id: auditId,
             type: 'fix',
             source: 'auto_recovery',
-            before_state: chosen.before,
-            after_state: chosen.after,
+            before_state: mainAnomaly.before,
+            after_state: mainAnomaly.after,
             timestamp: endTs,
             confidence_score: confidence,
             risk_level: 'LOW'
@@ -389,25 +451,26 @@ export function VisionIA({ currentSite }: VisionIAProps) {
             id: `TL-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
             timestamp: endTs,
             category: 'RECOVERY',
-            message: `Auto-Recovery appliqué [Risque Bas] : ${chosen.title}`
+            message: `Auto-Recovery appliqué [TEMPORAIRE] : ${title}`
           },
           ...prev
         ]);
 
         setActiveConsoleLog(`[${startTs}] 🔍 Scanning active repository...
 [${startTs}] 🛡️ Zone d'évaluation : ${currentSite}
-[${startTs}] 🧬 Anomalie détectée : ${chosen.title}
+[${startTs}] 🧬 Anomalie détectée : ${title}
 [${startTs}] ⚡ Risque : LOW (Seuil auto-applicable respecté)
-[${startTs}] 🧪 Shadow Execution : ${chosen.before} -> ${chosen.after}
-[${endTs}] ✅ [SUCCESS] Correction autonome appliquée avec succès.
+[${startTs}] 📝 Analyse : ${decisionReason}
+[${startTs}] 🧪 Shadow Execution : ${mainAnomaly.before} -> ${mainAnomaly.after}
+[${endTs}] ✅ [SUCCESS] Correction autonome appliquée avec succès (Type TEMPORAIRE).
 [${endTs}] 📜 Log d'audit immuable ${auditId} persisté.`);
 
-        toast.success(`Succès : Correction automatique appliquée pour "${chosen.title}" !`);
+        toast.success(`Succès : Correction automatique appliquée (TEMPORAIRE) pour "${title}" !`);
       } else {
-        // MEDIUM or HIGH RISK -> Escalate to War Room for manual control!
+        // PENDING_VALIDATION -> Escalate to War Room for manual control!
         setAutoRecoveryFailuresCount(prev => prev + 1);
         
-        // Append to warRoomIncidents with PENDING_VALIDATION status
+        // Append to warRoomIncidents with status
         setWarRoomIncidents(prev => [proposal, ...prev]);
         setSelectedIncidentId(idStr);
 
@@ -418,8 +481,8 @@ export function VisionIA({ currentSite }: VisionIAProps) {
             event_id: auditId,
             type: 'detect',
             source: 'system',
-            before_state: chosen.before,
-            after_state: `Escalade War Room requis (Risque: ${riskLevel})`,
+            before_state: mainAnomaly.before,
+            after_state: `Escalade requis (${classification} - Risque: ${riskLevel})`,
             timestamp: endTs,
             confidence_score: confidence,
             risk_level: riskLevel
@@ -433,20 +496,21 @@ export function VisionIA({ currentSite }: VisionIAProps) {
             id: `TL-${Math.random().toString(36).substr(2, 5).toUpperCase()}`,
             timestamp: endTs,
             category: 'ALERT',
-            message: `Escalade War Room [Risque: ${riskLevel}] : ${chosen.title}`
+            message: `Escalade War Room [${classification} - Confiance: ${confidence}%] : ${title}`
           },
           ...prev
         ]);
 
         setActiveConsoleLog(`[${startTs}] 🔍 Scanning active repository...
-[${startTs}] 🚨 Anomalie détectée : ${chosen.title}
-[${startTs}] ⚠️ Risque : ${riskLevel} (Supérieur au seuil de confiance autonome)
+[${startTs}] 🚨 Anomalie détectée : ${title}
+[${startTs}] 🧪 Diagnostic : ${decisionReason}
+[${startTs}] ⚠️ Risque : ${riskLevel} (${classification}) (Confiance: ${confidence}%)
 [${startTs}] 🛑 Blocage d'écriture préventif appliqué.
-[${startTs}] 🧪 Simulation d'impact (Shadow Execution) : ${chosen.before} -> ${chosen.after}
+[${startTs}] 🧪 Simulation d'impact : ${mainAnomaly.before} -> ${mainAnomaly.after}
 [${endTs}] 📢 [MUTATION EN ATTENTE DE VALIDATION] Escaladé vers la War Room.`);
 
         setWarRoomActive(true);
-        toast.warning(`Escalade War Room requis (${riskLevel}) : Validation humaine requise.`);
+        toast.warning(`Escalade War Room requis (${classification}). SRE Validation humaine requise.`);
       }
 
       setAutoRecoveryRunning(false);

@@ -27,10 +27,12 @@ import {
   Volume2, 
   CornerDownRight,
   Filter,
-  Check
+  Check,
+  RefreshCw
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Article, MouvementItem, MouvementType, SiteCode } from '../types';
+import { offlineQueue, QueuedOperation } from '../lib/offlineQueue';
 
 export default function FieldOperatorWorkspace() {
   const {
@@ -84,6 +86,45 @@ export default function FieldOperatorWorkspace() {
 
   // Auto-saved draft
   const [hasDraft, setHasDraft] = useState<boolean>(false);
+
+  // Offline Local Queue State
+  const [offlineQueueItems, setOfflineQueueItems] = useState<QueuedOperation[]>([]);
+
+  useEffect(() => {
+    setOfflineQueueItems(offlineQueue.load());
+  }, []);
+
+  const handleSyncOfflineQueue = async () => {
+    const items = offlineQueue.load();
+    if (items.length === 0) return;
+
+    if (networkQuality === 'OFFLINE' || !window.navigator.onLine) {
+      toast.error("Impossible de synchroniser : vous êtes toujours hors-ligne.");
+      return;
+    }
+
+    toast.loading(`Synchronisation de ${items.length} mouvement(s) en attente...`, { id: 'offline-sync' });
+    let successCount = 0;
+    
+    for (const item of items) {
+      try {
+        await addMouvement(item.payload);
+        offlineQueue.remove(item.id);
+        successCount++;
+      } catch (err: any) {
+        console.error("Failed to sync offline item:", item, err);
+      }
+    }
+
+    setOfflineQueueItems(offlineQueue.load());
+    if (successCount === items.length) {
+      toast.success("Tous les mouvements ont été synchronisés !", { id: 'offline-sync' });
+    } else if (successCount > 0) {
+      toast.warning(`${successCount} mouvement(s) synchronisé(s), certains ont échoué.`, { id: 'offline-sync' });
+    } else {
+      toast.error("Échec de la synchronisation des mouvements.", { id: 'offline-sync' });
+    }
+  };
 
   // References
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -339,6 +380,47 @@ export default function FieldOperatorWorkspace() {
     };
 
     try {
+      const isOffline = networkQuality === 'OFFLINE' || !window.navigator.onLine;
+      if (isOffline) {
+        toast.loading("Enregistrement du mouvement hors-ligne...", { id: 'v10-submit' });
+        offlineQueue.add(payload);
+        
+        // Update local Session movements for responsive review
+        const sessionItem = {
+          id: 'offline_' + Math.random().toString(36).substring(2),
+          designation: selectedArticle.designation,
+          ref: selectedArticle.ref,
+          qty,
+          type: activeMode,
+          timestamp: new Date().toLocaleTimeString() + " [Hors-ligne]",
+          previewStock: previewStockResult
+        };
+        
+        const nextSessionMovs = [sessionItem, ...sessionMovements].slice(0, 15);
+        setSessionMovements(nextSessionMovs);
+        sessionStorage.setItem('hydromines_session_movs_v10', JSON.stringify(nextSessionMovs));
+
+        triggerTactileFeedback('success');
+        toast.success("Mouvement enregistré localement (Hors-ligne) !", { id: 'v10-submit' });
+
+        // Clean up Draft and close Saisie
+        localStorage.removeItem('hydromines_operator_draft_v10');
+        setHasDraft(false);
+        setSelectedArticle(null);
+        setNotesMsg('');
+        setReferenceMsg('');
+        
+        // Refresh focus to search bar
+        setTimeout(() => {
+          if (searchInputRef.current) {
+            searchInputRef.current.focus();
+          }
+        }, 100);
+
+        setOfflineQueueItems(offlineQueue.load());
+        return;
+      }
+
       toast.loading("Enregistrement du mouvement rapide...", { id: 'v10-submit' });
       await addMouvement(payload);
       
@@ -468,6 +550,39 @@ export default function FieldOperatorWorkspace() {
               className="px-4 py-1.5 bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/20 text-[10px] uppercase font-black rounded-lg transition-all flex items-center gap-1"
             >
               Restaurer <ChevronRight className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* OFFLINE QUEUE SYNCHRONIZATION HUD */}
+      {offlineQueueItems.length > 0 && (
+        <div className="bg-indigo-500/10 border border-indigo-500/25 p-4 rounded-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 animate-pulse">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-indigo-500/20 rounded-lg text-indigo-400">
+              <History className="w-5 h-5" />
+            </div>
+            <div>
+              <span className="text-indigo-400 font-bold text-xs block">Synchronisation requise ({offlineQueueItems.length} en attente)</span>
+              <span className="text-[10px] text-slate-300">Des mouvements ont été enregistrés hors-ligne sur cette tablette et attendent d'être poussés sur le Cloud.</span>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 w-full sm:w-auto justify-end animate-none">
+            <button 
+              onClick={() => {
+                offlineQueue.clear();
+                setOfflineQueueItems([]);
+                toast.success("File d'attente hors-ligne vidée.");
+              }}
+              className="px-3 py-1.5 bg-slate-900 border border-slate-800 hover:bg-slate-850 text-slate-400 text-[10px] uppercase font-bold rounded-lg transition-all"
+            >
+              Vider
+            </button>
+            <button 
+              onClick={handleSyncOfflineQueue}
+              className="px-4 py-1.5 bg-indigo-500 hover:bg-indigo-600 text-slate-950 font-black text-[10px] uppercase rounded-lg transition-all flex items-center gap-1.5 shadow-lg shadow-indigo-500/20"
+            >
+              Synchroniser <RefreshCw className="w-3 h-3 text-slate-950" />
             </button>
           </div>
         </div>
@@ -745,7 +860,7 @@ export default function FieldOperatorWorkspace() {
                     <span className="text-xs font-bold text-slate-500 mr-4 uppercase">{selectedArticle.unit}</span>
                   </div>
 
-                  {/* Preset quick-add buttons */}
+                  {/* Preset quick-add buttons - Expanded tactile touch points */}
                   <div className="grid grid-cols-4 gap-2">
                     {['+1', '+5', '+10', '+25', '+50', '-1', '-5', '-10'].map((val) => (
                       <button
@@ -758,10 +873,10 @@ export default function FieldOperatorWorkspace() {
                           const next = Math.max(0, curr + num);
                           setQtyInput(String(next));
                         }}
-                        className={`py-2 text-[11px] font-black rounded-lg border leading-none transition-all ${
+                        className={`py-3.5 text-xs font-black rounded-xl border leading-none transition-all ${
                           val.startsWith('+') 
-                            ? 'bg-slate-950 text-slate-300 hover:bg-slate-900 border-slate-805' 
-                            : 'bg-slate-950 text-slate-500 hover:bg-slate-900 border-slate-805'
+                            ? 'bg-slate-950 text-sky-400 border-sky-500/30 hover:bg-slate-900' 
+                            : 'bg-slate-950 text-slate-350 border-slate-805 hover:bg-slate-900'
                         }`}
                       >
                         {val}
@@ -769,9 +884,9 @@ export default function FieldOperatorWorkspace() {
                     ))}
                   </div>
 
-                  {/* Tactile Virtual Numpad (Avoids slow native keyboard popup) */}
-                  <div className="bg-slate-950 p-2 rounded-xl border border-slate-850 space-y-1.5 shadow-inner">
-                    <div className="grid grid-cols-3 gap-1.5">
+                  {/* Tactile Virtual Numpad - Large targets min 55px (Avoids slow native keyboard popup) */}
+                  <div className="bg-slate-950 p-2.5 rounded-2xl border border-slate-800 space-y-2 shadow-inner">
+                    <div className="grid grid-cols-3 gap-2">
                       {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((num) => (
                         <button
                           key={num}
@@ -781,20 +896,20 @@ export default function FieldOperatorWorkspace() {
                             const current = qtyInput === '0' || qtyInput === '1' ? '' : qtyInput;
                             setQtyInput(current + num);
                           }}
-                          className="py-2.5 bg-slate-900 hover:bg-slate-850 text-slate-10 text-white font-mono text-xs font-black rounded-lg border border-slate-805 active:bg-sky-500/10"
+                          className="py-4 bg-slate-900 hover:bg-slate-800 text-white font-mono text-sm font-black rounded-xl border border-slate-800 active:bg-sky-500/20"
                         >
                           {num}
                         </button>
                       ))}
                       
-                      {/* Zero, Clear, and Backspace */}
+                      {/* Zero, Clear, and Backspace - Tactical color indicators */}
                       <button
                         type="button"
                         onClick={() => {
                           triggerTactileFeedback('light');
                           setQtyInput('0');
                         }}
-                        className="py-2.5 bg-slate-900 hover:bg-slate-850 text-rose-400 text-[10px] font-black rounded-lg border border-slate-805 uppercase"
+                        className="py-4 bg-slate-900 hover:bg-slate-800 text-rose-450 hover:text-rose-400 text-xs font-black rounded-xl border border-slate-800 uppercase"
                       >
                         CLR
                       </button>
@@ -806,7 +921,7 @@ export default function FieldOperatorWorkspace() {
                           const current = qtyInput === '0' ? '' : qtyInput;
                           setQtyInput(current + '0');
                         }}
-                        className="py-2.5 bg-slate-900 hover:bg-slate-10 text-white font-mono text-xs font-black rounded-lg border border-slate-805 hover:bg-slate-850"
+                        className="py-4 bg-slate-900 hover:bg-slate-800 text-white font-mono text-sm font-black rounded-xl border border-slate-800 hover:bg-slate-820"
                       >
                         0
                       </button>
@@ -818,7 +933,7 @@ export default function FieldOperatorWorkspace() {
                           const slice = qtyInput.slice(0, -1);
                           setQtyInput(slice || '0');
                         }}
-                        className="py-2.5 bg-slate-900 hover:bg-slate-850 text-slate-400 text-[10px] font-black rounded-lg border border-slate-805 uppercase"
+                        className="py-4 bg-slate-900 hover:bg-slate-800 text-amber-500 hover:text-amber-400 text-sm font-black rounded-xl border border-slate-800 uppercase"
                       >
                         &larr;
                       </button>
@@ -831,16 +946,16 @@ export default function FieldOperatorWorkspace() {
                 <div className="space-y-4">
                   <span className="text-[10px] font-black text-slate-450 font-mono uppercase block">Attribution & Context :</span>
                   
-                  {/* Engin selector (curtain style) */}
+                  {/* Engin selector (curtain style) - Touch optimized */}
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase font-bold text-slate-500">Engin affecté (Optionnel) :</label>
+                    <label className="text-[9px] uppercase font-black text-slate-400">Engin affecté (Optionnel) :</label>
                     <select
                       value={selectedEnginId}
                       onChange={(e) => {
                         setSelectedEnginId(e.target.value);
                         triggerTactileFeedback('light');
                       }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-505 outline-none font-medium h-[34px]"
+                      className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-505 outline-none font-bold h-[48px]"
                     >
                       <option value="">-- Aucun --</option>
                       {engins.filter(e => e.site === currentSite).map(e => (
@@ -849,16 +964,16 @@ export default function FieldOperatorWorkspace() {
                     </select>
                   </div>
 
-                  {/* Perforateur selector */}
+                  {/* Perforateur selector - Touch optimized */}
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase font-bold text-slate-500">Perforateur (Optionnel) :</label>
+                    <label className="text-[9px] uppercase font-black text-slate-400">Perforateur (Optionnel) :</label>
                     <select
                       value={selectedPerforateurId}
                       onChange={(e) => {
                         setSelectedPerforateurId(e.target.value);
                         triggerTactileFeedback('light');
                       }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-505 outline-none font-medium h-[34px]"
+                      className="w-full bg-slate-955 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-505 outline-none font-bold h-[48px]"
                     >
                       <option value="">-- Aucun --</option>
                       {perfos.filter(p => p.site === currentSite).map(p => (
@@ -867,16 +982,16 @@ export default function FieldOperatorWorkspace() {
                     </select>
                   </div>
 
-                  {/* Agent selector */}
+                  {/* Agent selector - Touch optimized */}
                   <div className="space-y-1">
-                    <label className="text-[9px] uppercase font-bold text-slate-500">Magasiner / Opérateur / Agent de surface :</label>
+                    <label className="text-[9px] uppercase font-black text-slate-400">Magasiner / Opérateur / Agent de surface :</label>
                     <select
                       value={selectedAgentId}
                       onChange={(e) => {
                         setSelectedAgentId(e.target.value);
                         triggerTactileFeedback('light');
                       }}
-                      className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1.5 text-[11px] text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-505 outline-none font-medium h-[34px]"
+                      className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white focus:border-sky-500 focus:ring-1 focus:ring-sky-505 outline-none font-bold h-[48px]"
                     >
                       <option value="">Sélectionner un agent...</option>
                       {agents.map(a => (
@@ -888,23 +1003,23 @@ export default function FieldOperatorWorkspace() {
                   {/* Compact note/message details */}
                   <div className="grid grid-cols-2 gap-2">
                     <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-slate-500">N° Bon / Référence :</label>
+                      <label className="text-[9px] uppercase font-black text-slate-400">N° Bon / Référence :</label>
                       <input 
                         type="text" 
                         value={referenceMsg}
                         onChange={(e) => setReferenceMsg(e.target.value)}
                         placeholder="Réf convoi..." 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-white outline-none focus:border-sky-500"
+                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-sky-500 h-[48px] font-semibold"
                       />
                     </div>
                     <div className="space-y-1">
-                      <label className="text-[9px] uppercase font-bold text-slate-500">Note terrain :</label>
+                      <label className="text-[9px] uppercase font-black text-slate-400">Note terrain :</label>
                       <input 
                         type="text" 
                         value={notesMsg}
                         onChange={(e) => setNotesMsg(e.target.value)}
                         placeholder="Emballage, météo..." 
-                        className="w-full bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 text-[11px] text-white outline-none focus:border-sky-500"
+                        className="w-full bg-slate-950 border border-slate-850 rounded-xl px-3 py-2 text-xs text-white outline-none focus:border-sky-500 h-[48px] font-semibold"
                       />
                     </div>
                   </div>
@@ -944,12 +1059,12 @@ export default function FieldOperatorWorkspace() {
                 )}
               </div>
 
-              {/* ACTION BUTTON CHECKS */}
-              <div className="flex items-center justify-end gap-3 font-semibold text-xs uppercase leading-none pt-3 border-t border-slate-800/60">
+              {/* ACTION BUTTON CHECKS - High contrast, high target 52px */}
+              <div className="flex items-center justify-end gap-3 font-semibold text-xs uppercase leading-none pt-4 border-t border-slate-800/60">
                 <button
                   type="button"
                   onClick={handleClearDraft}
-                  className="px-5 py-3.5 bg-slate-950 border border-slate-800 hover:bg-slate-900 text-slate-400 rounded-xl font-bold uppercase tracking-wider transition-all"
+                  className="px-6 h-[52px] bg-slate-900 border border-slate-700 hover:bg-slate-800 text-slate-200 rounded-xl font-bold uppercase tracking-wider transition-all"
                 >
                   Annuler
                 </button>
@@ -958,21 +1073,21 @@ export default function FieldOperatorWorkspace() {
                   type="button"
                   onClick={handleSubmitOperation}
                   disabled={previewStockResult < 0}
-                  className={`px-7 py-3.5 rounded-xl font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                  className={`px-8 h-[52px] rounded-xl font-black uppercase tracking-widest transition-all flex items-center justify-center gap-2 border ${
                     previewStockResult < 0 
-                      ? 'bg-slate-850 text-slate-500 border border-slate-800 cursor-not-allowed' 
-                      : 'bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-405 border border-emerald-500/25'
+                      ? 'bg-slate-850 text-slate-500 border-slate-800 cursor-not-allowed' 
+                      : 'bg-emerald-500 hover:bg-emerald-650 text-slate-950 border-emerald-400 shadow-lg shadow-emerald-500/20 active:scale-[0.98]'
                   }`}
                 >
-                  <CheckCircle2 className="w-5 h-5 text-emerald-400" /> Valider l'opération
+                  <CheckCircle2 className="w-5 h-5 text-slate-950 stroke-[2.5]" /> Valider l'opération
                 </button>
               </div>
 
             </div>
           ) : (
             <div className="bg-slate-900/15 border-2 border-dashed border-slate-800/55 rounded-2xl p-8 flex flex-col items-center justify-center text-center text-slate-500">
-              <CornerDownRight className="w-8 h-8 text-sky-455 mb-2 opacity-50 animate-bounce" />
-              <span className="text-xs font-black uppercase tracking-widest text-slate-400">Saisie en attente d'un article</span>
+              <CornerDownRight className="w-8 h-8 text-sky-400 mb-2 opacity-75" />
+              <span className="text-xs font-black uppercase tracking-widest text-slate-350">Saisie en attente d'un article</span>
               <p className="text-[10px] text-slate-500 max-w-sm mt-1">
                 Flashez un code ou tapez la référence ci-dessus pour lancer instantanément la console d'écriture tactile v10.0.
               </p>

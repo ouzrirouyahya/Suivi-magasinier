@@ -53,7 +53,7 @@ import { auth } from './lib/firebase';
 import { toast } from 'sonner';
 
 export default function App() {
-  const [currentPage, setCurrentPage] = useState<Page>('COCKPIT');
+  const [currentPageRaw, setCurrentPageRaw] = useState<Page>('COCKPIT');
   const [showAdminAlert, setShowAdminAlert] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [currentSite, setCurrentSite] = useState<SiteCode>('SMI');
@@ -61,6 +61,30 @@ export default function App() {
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [aiTab, setAiTab] = useState<'DASHBOARD' | 'ANOMALIES' | 'PREDICTIONS' | 'FINANCIAL' | 'COMPLIANCE' | 'PROCUREMENT' | 'MECHANIC' | 'VISION' | 'FRAUD' | 'REPORT_CENTER'>('DASHBOARD');
+
+  const currentPage = currentPageRaw;
+  const setCurrentPage = (page: any) => {
+    // SRE CHANGE CONTROL: Redirect ALERTES_STOCK navigation to RESTOCK_MGMT (Action 2)
+    let targetPage = page;
+    if (page === 'ALERTES_STOCK') {
+      targetPage = 'RESTOCK_MGMT';
+    } else if (page && typeof page === 'object' && 'page' in page && page.page === 'ALERTES_STOCK') {
+      targetPage = { ...page, page: 'RESTOCK_MGMT' };
+    }
+
+    if (targetPage && typeof targetPage === 'object') {
+      if ('tab' in targetPage) {
+        setAiTab(targetPage.tab);
+      }
+      if ('page' in targetPage) {
+        setCurrentPageRaw(targetPage.page);
+      } else {
+        setCurrentPageRaw('COCKPIT');
+      }
+    } else {
+      setCurrentPageRaw(targetPage);
+    }
+  };
   
   const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -151,12 +175,14 @@ export default function App() {
               isAdmin={isAdmin}
               onArticleClick={setSelectedArticle}
               onAction={(page) => {
-                if (typeof page === 'object' && page.page === 'AI_ANALYTICS') {
+                if (typeof page === 'object' && page !== null) {
                   if (!isAdmin) {
                     toast.error("Accès réservé aux administrateurs");
                     return;
                   }
-                  setAiTab(page.tab);
+                  if ('tab' in page) {
+                    setAiTab(page.tab);
+                  }
                   setCurrentPage('COCKPIT');
                 } else {
                   setCurrentPage(page);
@@ -502,104 +528,6 @@ export default function App() {
               </div>
             </div>
           )}
-
-          {isSafeMode && isAdmin ? (
-            <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
-              <div className="p-3 bg-red-500/15 text-red-600 rounded-lg animate-pulse">
-                <ShieldAlert className="w-6 h-6" />
-              </div>
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-red-650 text-white rounded">
-                    SUPERVISION : ALERTE CRITIQUE
-                  </span>
-                  <span className="text-xs text-red-700 font-extrabold uppercase tracking-wide">
-                    MOTEUR DE COHÉRENCE
-                  </span>
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="text-sm font-black text-slate-950 uppercase tracking-wide">
-                    📌 DÉSYNCHRONISATION DES DONNÉES DÉTECTÉE
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mt-2 text-slate-700">
-                    <div className="bg-red-500/5 p-3 rounded-lg border border-red-550/10">
-                      <strong className="text-red-900 uppercase text-[10px] block mb-1">📊 IMPACT MÉTIER :</strong>
-                      <p>Risque d'incohérence de stock temporaire sur l'enregistrement des nouveaux mouvements physiques.</p>
-                    </div>
-                    
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                      <strong className="text-slate-800 uppercase text-[10px] block mb-1">🔧 ACTION RECOMMANDÉE :</strong>
-                      <p>Lancer une resynchronisation manuelle des données depuis le cockpit ou vérifier et rapprocher les derniers mouvements.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-red-500/10 pt-3 flex flex-wrap items-center gap-4 text-[10px] font-mono text-slate-600 uppercase tracking-widest">
-                  <span className="text-red-600 font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-ping inline-block" />
-                    Restauration active accessible
-                  </span>
-                  <div className="text-slate-500">
-                    ⚙️ ÉTAT SYSTÈME — STATUT : <span className="font-bold text-red-700">CRITICAL</span> | CONFIANCE : <span className="font-bold text-red-700">{(rcglResult.confidenceScore * 100).toFixed(0)}%</span> | DÉRIVE : <span className="text-red-700 font-bold">{rcglResult.skewDescription || "Incohérence des stocks détectée"}</span>
-                  </div>
-                </div>
-                
-                <p className="text-[10px] text-slate-450 italic">
-                  💡 Note de supervision terrain : Le cockpit d'analyse, la recherche et les fonctionnalités de re-lecture restent entièrement ouverts pour la continuité d'exploitation de la mine.
-                </p>
-              </div>
-            </div>
-          ) : rcglResult.mode !== 'NORMAL' ? (
-            <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">
-              <div className="p-3 bg-amber-500/15 text-amber-600 rounded-lg">
-                <ShieldAlert className="w-6 h-6 animate-pulse" />
-              </div>
-              <div className="flex-1 space-y-3">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-amber-500 text-slate-950 rounded">
-                    SUPERVISION : MODE DÉGRADÉ
-                  </span>
-                  <span className="text-xs text-amber-700 font-extrabold uppercase tracking-wide">
-                    LATENCE RÉSEAU COMMUNE
-                  </span>
-                </div>
-
-                <div className="space-y-2">
-                  <h3 className="text-sm font-black text-slate-950 uppercase tracking-wide">
-                    📌 RETARD DE SYNCHRONISATION DU RÉSEAU
-                  </h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs mt-2 text-slate-700">
-                    <div className="bg-amber-500/5 p-3 rounded-lg border border-amber-550/10">
-                      <strong className="text-amber-900 uppercase text-[10px] block mb-1">📊 IMPACT MÉTIER :</strong>
-                      <p>Mise à jour d'inventaire différée sous communication intermittente.</p>
-                    </div>
-                    
-                    <div className="bg-slate-50 p-3 rounded-lg border border-slate-200">
-                      <strong className="text-slate-800 uppercase text-[10px] block mb-1">🔧 ACTION RECOMMANDÉE :</strong>
-                      <p>Continuer la saisie normalement en mode de saisie locale, la réconciliation automatique s'effectuera de manière fluide dès rétablissement de la liaison.</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-amber-500/10 pt-3 flex flex-wrap items-center gap-4 text-[10px] font-mono text-slate-600 uppercase tracking-widest">
-                  <span className="text-amber-600 font-bold flex items-center gap-1">
-                    <span className="w-2 h-2 rounded-full bg-amber-500 inline-block" />
-                    Saisie locale résiliente active
-                  </span>
-                  <div className="text-slate-500">
-                    ⚙️ ÉTAT SYSTÈME — STATUT : <span className="font-bold text-amber-700">DEGRADED</span> | CONFIANCE : <span className="font-bold text-amber-700">{(rcglResult.confidenceScore * 100).toFixed(0)}%</span> | LATENCE : <span className="text-amber-700 font-bold">{Math.round(rcglResult.freshnessGapMs / 1000)}s</span>
-                  </div>
-                </div>
-
-                <p className="text-[10px] text-slate-450 italic">
-                  💡 Note de supervision terrain : Vos actions d'inventaire et d'exploitation restent pleinement actives et seront préservées en local en attendant la liaison.
-                </p>
-              </div>
-            </div>
-          ) : null}
 
           <div className="max-w-[1600px] mx-auto">
             {renderPage()}

@@ -73,41 +73,84 @@ interface SidebarProps {
   onSignOut: () => void;
 }
 
-export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAdmin, notifications = [], isOpen, onClose, onSignOut }: SidebarProps) {
+export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAdmin, notifications = [], isOpen, onClose, onSignOut }: SidebarProps) {
   const criticalCount = notifications.filter(n => n.type === 'CRITICAL').length;
   const warningCount = notifications.filter(n => n.type === 'WARNING').length;
 
-  const menuItems = [
-    // 1. SERVICES OPÉRATEUR / TERRAIN
-    { id: 'SEP_OP', label: 'Espace Opérateur', isSeparator: true },
-    { id: 'COCKPIT', label: 'Cockpit Intégré', icon: LayoutDashboard, activeColor: 'bg-sky-900 text-white shadow-xl' },
-    { id: 'FIELD_WORKSPACE', label: 'Poste Magasinier', icon: Smartphone, activeColor: 'bg-gradient-to-r from-sky-900 via-sky-850 to-indigo-900 text-white shadow-xl font-black' },
-    { id: 'BON_ENTREE', label: 'Entrées en Stock', icon: ArrowDownLeft, activeColor: 'text-emerald-600 hover:text-emerald-700 bg-emerald-50/20' },
-    { id: 'BON_SORTIE', label: 'Sorties de Stock', icon: ArrowUpRight, activeColor: 'text-rose-700 hover:text-rose-800 bg-rose-50/20' },
+  // Safe access control RBAC function
+  const isAllowed = React.useCallback((routeId: string) => {
+    const adminOnlyRoutes = [
+      'VISION_IA', 
+      'FORENSIC', 
+      'AUDIT_INTELLIGENCE', 
+      'AUTOMATION_WORKFLOWS', 
+      'USER_MGMT', 
+      'FINANCE'
+    ];
+    if (adminOnlyRoutes.includes(routeId)) {
+      return isAdmin;
+    }
+    return true;
+  }, [isAdmin]);
 
-    // 2. DOMAINES PHYSIQUES / ENTREPÔTS
-    { id: 'SEP_PHYS', label: 'Domaines Physiques', isSeparator: true },
-    { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
-    { id: 'STOCK_PERFORATEURS', label: 'Perforateurs', icon: Drill },
-    { id: 'STOCK_CONSOMMABLES', label: 'Consommables', icon: Droplets },
-    { id: 'STOCK_EPI', label: 'Protection (EPI)', icon: Shield },
+  // Memoized menuItems with precise dependencies
+  const menuItems = React.useMemo(() => {
+    const rawItems = [
+      // 🟦 1. OPERATIONAL COCKPIT (REAL-TIME CONTROL)
+      { id: 'SEP_OPERATIONAL', label: '1. Operational Cockpit', isSeparator: true },
+      { id: 'COCKPIT', label: 'Cockpit Intégré', icon: LayoutDashboard, activeColor: 'bg-slate-900 text-white shadow-md' },
+      { id: 'FIELD_WORKSPACE', label: 'Poste Magasinier', icon: Smartphone, activeColor: '' },
 
-    // 3. SECONDAIRE / LOGISTIQUE ET FLUX
-    { id: 'SEP_LOG', label: 'Logistique & Reporting', isSeparator: true },
-    { id: 'TRANSFERS_RETURNS', label: 'Transferts & Retours', icon: RotateCcw, activeColor: 'bg-emerald-50 text-emerald-600' },
-    { id: 'RESTOCK_MGMT', label: 'Ravitaillement & Alertes', icon: ShoppingCart, activeColor: 'bg-amber-50 text-amber-600 ring-amber-100', badge: (criticalCount + warningCount) || 0 },
-    { id: 'INVENTAIRE', label: 'Inventaires Terrain', icon: ClipboardCheck },
-    { id: 'TRACEABILITY', label: 'Journaux & Traçabilité', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },
+      // 🟣 2. INTELLIGENCE CENTER (AI SYSTEMS)
+      { id: 'SEP_INTELLIGENCE', label: '2. Intelligence Center', isSeparator: true },
+      // IA Perception (Analyse du réel)
+      { id: 'SUB_IA_PERCEPTION', label: 'Perception (Analyse du Réel)', isSubHeader: true, dotColor: 'bg-indigo-400' },
+      { id: 'VISION_IA', label: 'Vision IA & Diagnostics', icon: Brain, activeColor: 'bg-indigo-950 text-indigo-100 shadow border border-indigo-700/30 font-semibold' },
+      
+      // IA Intelligence & Risque (SRE + Audit)
+      { id: 'SUB_IA_RISQUE', label: 'Intelligence & Sécurité', isSubHeader: true, dotColor: 'bg-rose-500' },
+      { id: 'FORENSIC', label: 'Forensic & Sûreté', icon: Activity, activeColor: 'bg-rose-955 text-rose-100 shadow border border-rose-700/30' },
+      { id: 'AUDIT_INTELLIGENCE', label: 'Intelligence d\'Audit SRE', icon: ShieldCheck, activeColor: 'bg-sky-955 text-sky-100 shadow border border-sky-700/30' },
+      
+      // IA Orchestration & Action
+      { id: 'SUB_IA_ACTION', label: 'Orchestration & Assistance', isSubHeader: true, dotColor: 'bg-emerald-500' },
+      { id: 'MAGASINIER_IA', label: 'Assistant Magasinier IA', icon: MessageSquare, activeColor: 'bg-indigo-500/10 text-indigo-750 border border-indigo-500/20 font-bold' },
+      { id: 'AUTOMATION_WORKFLOWS', label: 'Workflows Automatisés', icon: RefreshCw, activeColor: 'bg-emerald-955 text-emerald-100 shadow border border-emerald-700/30' },
 
-    // 4. ARCHITECTURE COMPTABLE ET CONSOLE ADMINISTRATEUR (Surface - Hidden from regular warehouse operators)
-    ...(isAdmin ? [
-      { id: 'SEP_ADMIN', label: 'Console Administration', isSeparator: true },
-      { id: 'FINANCE', label: 'Flux & Valorisation Stock', icon: Landmark, activeColor: 'bg-amber-50 text-amber-600 shadow-sm' },
-      { id: 'VISION_IA', label: 'Vision IA & Diagnostic', icon: Brain, activeColor: 'bg-indigo-950 text-white shadow-xl border border-indigo-700/30 font-black' },
+      // 🟨 3. LOGISTICS & FLOW CENTER
+      { id: 'SEP_LOGISTICS', label: '3. Logistics & Flow Center', isSeparator: true },
+      { id: 'BON_ENTREE', label: 'Bons de Réception (Entrée)', icon: ArrowDownLeft, activeColor: 'text-emerald-750 bg-emerald-500/10 border border-emerald-500/20 font-black' },
+      { id: 'BON_SORTIE', label: 'Bons d\'Émission (Sortie)', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black' },
+      { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
+      { id: 'STOCK_PERFORATEURS', label: 'Parforateurs & Fleurets', icon: Drill },
+      { id: 'STOCK_CONSOMMABLES', label: 'Consommables & Fluides', icon: Droplets },
+      { id: 'STOCK_EPI', label: 'Protection (EPI)', icon: Shield },
+      { id: 'TRANSFERS_RETURNS', label: 'Transferts & Retours', icon: RotateCcw, activeColor: 'text-indigo-755 bg-indigo-500/10 border border-indigo-500/20' },
+      { id: 'INVENTAIRE', label: 'Inventaires Terrain', icon: ClipboardCheck },
+      { id: 'RESTOCK_MGMT', label: 'Ravitaillement & Alertes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
+
+      // 🟥 4. GOVERNANCE CENTER
+      { id: 'SEP_GOVERNANCE', label: '4. Governance Center', isSeparator: true },
+      { id: 'REPORTS', label: 'Rapports & Consolidation', icon: FileText, activeColor: 'bg-slate-900 text-white shadow-md' },
+      { id: 'FINANCE', label: 'Flux & Valorisation Stock', icon: Landmark, activeColor: 'bg-amber-500/5 text-amber-700 shadow-sm border border-amber-500/10' },
+      { id: 'TRACEABILITY', label: 'Registres & Traçabilité', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },
       { id: 'GESTION_ARTICLES', label: 'Catalogue Maître', icon: Settings2 },
       { id: 'USER_MGMT', label: 'Utilisateurs & Droits', icon: Users },
-    ] : []),
-  ];
+    ];
+
+    return rawItems.filter(item => {
+      if (item.id === 'SUB_IA_PERCEPTION' || item.id === 'SUB_IA_RISQUE') {
+        return isAdmin;
+      }
+      return isAllowed(item.id);
+    });
+  }, [isAdmin, isAllowed, criticalCount, warningCount]);
+
+  // Memoized navigation handler
+  const handlePageSelect = React.useCallback((pageId: Page) => {
+    setPage(pageId);
+    if (onClose) onClose();
+  }, [setPage, onClose]);
 
   return (
     <>
@@ -126,7 +169,7 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
       )}>
       {/* 3D Visual Effect exclusively for the top of the sidebar */}
       <div className="absolute top-0 left-0 right-0 h-40 z-0 pointer-events-none overflow-hidden border-b border-sky-50 shadow-inner">
-        <Background3D count={150} opacity={0.8} mouseSensitivity={0.5} rotationSpeed={1.5} size={0.03} />
+        <Background3D count={30} opacity={0.4} mouseSensitivity={0.4} rotationSpeed={0.5} size={0.025} />
         <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent" />
       </div>
 
@@ -166,8 +209,34 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
       <nav className="flex-1 px-3 pb-8 flex flex-col gap-0.5 relative z-10">
         {menuItems.map((item) => {
           if (item.isSeparator) {
+            const isOperational = item.id === 'SEP_OPERATIONAL';
+            const isIntelligence = item.id === 'SEP_INTELLIGENCE';
+            const isLogistics = item.id === 'SEP_LOGISTICS';
+            const isGovernance = item.id === 'SEP_GOVERNANCE';
+            
             return (
-              <div key={item.id} className="px-3 pt-6 pb-2 text-sm font-bold text-slate-500 uppercase tracking-[0.05em] flex items-center gap-2">
+              <div 
+                key={item.id} 
+                className={cn(
+                  "px-3 pt-5 pb-1.5 text-[11px] font-extrabold uppercase tracking-[0.07em] flex items-center gap-2 mt-4 first:mt-0 transition-all",
+                  isOperational && "text-sky-600 border-l-2 border-sky-400 pl-2 bg-sky-50/20 py-0.5 rounded-r",
+                  isIntelligence && "text-indigo-650 border-l-2 border-indigo-400 pl-2 bg-indigo-50/30 py-1 rounded-r shadow-sm",
+                  isLogistics && "text-slate-800 border-l-2 border-neutral-400 pl-2 bg-neutral-50 py-0.5 rounded-r",
+                  isGovernance && "text-rose-600 border-l-2 border-rose-450 pl-2 bg-rose-50/10 py-0.5 rounded-r"
+                )}
+              >
+                {item.label}
+              </div>
+            );
+          }
+          
+          if ('isSubHeader' in item && item.isSubHeader) {
+            return (
+              <div 
+                key={item.id} 
+                className="px-3 pt-3.5 pb-1 text-[9px] font-black text-slate-400/90 uppercase tracking-widest flex items-center gap-1.5 mt-2 transition-all"
+              >
+                <span className={cn("w-1.5 h-1.5 rounded-full inline-block", item.dotColor || "bg-indigo-500")} />
                 {item.label}
               </div>
             );
@@ -175,24 +244,30 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
           
           const Icon = item.icon!;
           const isActive = currentPage === item.id;
+          const isFieldWorkspace = item.id === 'FIELD_WORKSPACE';
           
           return (
             <button
                key={item.id}
-               onClick={() => {
-                 setPage(item.id as Page);
-                 if (onClose) onClose();
-               }}
+               onClick={() => handlePageSelect(item.id as Page)}
                className={cn(
-                 "group flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-bold transition-all w-full text-left relative",
-                 isActive 
-                   ? (item.activeColor || "bg-sky-50 text-sky-600 shadow-sm ring-1 ring-sky-100") 
-                   : "text-slate-500 hover:text-sky-500 hover:bg-slate-50/50"
+                 "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-all w-full text-left relative",
+                 isFieldWorkspace
+                   ? (isActive 
+                       ? "bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-500/30 font-black border border-amber-550"
+                       : "text-slate-750 bg-amber-500/5 hover:text-slate-950 hover:bg-amber-500/10 border border-dashed border-amber-400/35"
+                     )
+                   : (isActive 
+                       ? (item.activeColor || "bg-sky-50 text-sky-600 shadow-sm ring-1 ring-sky-100") 
+                       : "text-slate-500 hover:text-sky-500 hover:bg-slate-50/50"
+                     )
                )}
              >
               <Icon className={cn(
                 "w-4 h-4 transition-colors",
-                isActive ? "" : "text-slate-400 group-hover:text-sky-500"
+                isFieldWorkspace
+                  ? (isActive ? "text-slate-950 stroke-[2.5]" : "text-amber-600 animate-pulse")
+                  : (isActive ? "" : "text-slate-400 group-hover:text-sky-500")
                )} />
               <span className="flex-1 truncate uppercase tracking-[0.05em]">{item.label}</span>
               {typeof item.badge === 'number' && item.badge > 0 && (
@@ -243,5 +318,5 @@ export function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAd
     </aside>
     </>
   );
-}
+});
 
