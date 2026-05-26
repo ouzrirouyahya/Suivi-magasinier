@@ -28,12 +28,9 @@ const ReturnsManagement = lazy(() => import('./components/ReturnsManagement').th
 const FinancialDashboard = lazy(() => import('./components/FinancialDashboard').then(m => ({ default: m.FinancialDashboard })));
 const ForensicDashboard = lazy(() => import('./components/ForensicDashboard'));
 const IndustrialIntelligenceDashboard = lazy(() => import('./components/IndustrialIntelligenceDashboard'));
-const MagasinierIAHydro = lazy(() => import('./components/MagasinierIAHydro').then(m => ({ default: m.MagasinierIAHydro })));
-const AuditIntelligenceMagasin = lazy(() => import('./components/AuditIntelligenceMagasin'));
-const AutomationOrchestrator = lazy(() => import('./components/AutomationOrchestrator'));
 const FieldOperatorWorkspace = lazy(() => import('./components/FieldOperatorWorkspace'));
-const VisionIA = lazy(() => import('./components/VisionIA').then(m => ({ default: m.VisionIA })));
 const UserAdmin = lazy(() => import('./components/UserAdmin').then(m => ({ default: m.UserAdmin })));
+const IntelligenceCenter = lazy(() => import('./components/IntelligenceCenter').then(m => ({ default: m.IntelligenceCenter })));
 
 // Tracking
 import { ViewerTracker } from './components/ViewerTracker';
@@ -318,7 +315,7 @@ export default function App() {
           setCurrentPage('COCKPIT');
           return null;
         }
-        return <MagasinierIAHydro />;
+        return <IntelligenceCenter currentSite={currentSite} initialTab="ASSISTANT" />;
 
       case 'AUDIT_INTELLIGENCE':
         if (!isAdmin) {
@@ -326,7 +323,7 @@ export default function App() {
           setCurrentPage('COCKPIT');
           return null;
         }
-        return <AuditIntelligenceMagasin />;
+        return <IntelligenceCenter currentSite={currentSite} initialTab="AUDIT" />;
 
       case 'AUTOMATION_WORKFLOWS':
         if (!isAdmin) {
@@ -334,11 +331,7 @@ export default function App() {
           setCurrentPage('COCKPIT');
           return null;
         }
-        return (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <AutomationOrchestrator />
-          </motion.div>
-        );
+        return <IntelligenceCenter currentSite={currentSite} initialTab="WORKFLOWS" />;
 
       case 'IA_CHECKLIST':
         if (!isAdmin) {
@@ -346,7 +339,7 @@ export default function App() {
           setCurrentPage('COCKPIT');
           return null;
         }
-        return <ProductionChecklist />;
+        return <IntelligenceCenter currentSite={currentSite} initialTab="CHECKLIST" />;
 
       case 'TRANSFERS_RETURNS':
         return (
@@ -393,11 +386,7 @@ export default function App() {
           setCurrentPage('COCKPIT');
           return null;
         }
-        return (
-          <motion.div initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}>
-            <ForensicDashboard />
-          </motion.div>
-        );
+        return <IntelligenceCenter currentSite={currentSite} initialTab="FORENSIC" />;
 
       case 'VISION_IA':
         if (!isAdmin) {
@@ -405,11 +394,7 @@ export default function App() {
           setCurrentPage('COCKPIT');
           return null;
         }
-        return (
-          <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}>
-            <VisionIA currentSite={currentSite} />
-          </motion.div>
-        );
+        return <IntelligenceCenter currentSite={currentSite} initialTab="VISION" />;
 
       case 'ALERTES_STOCK':
         return <StockAlertView site={currentSite} articles={articles} onAction={navigateToMouvement} />;
@@ -442,7 +427,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex relative overflow-hidden">
+    <div className="min-h-screen bg-white flex relative overflow-hidden">
       {showAdminAlert && <HydrominesSecurityAlert onClose={() => setShowAdminAlert(false)} />}
       
       <ViewerTracker currentPage={currentPage} />

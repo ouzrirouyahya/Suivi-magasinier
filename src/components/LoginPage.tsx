@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { toast } from 'sonner';
-import { Background3D } from './Background3D';
+import loginImage from '../assets/images/hydromines_login_banner_clean_1779753268175.png';
 
 const LoginPage: React.FC = () => {
   const handleLogin = async () => {
@@ -39,21 +39,13 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 min-h-screen bg-white overflow-hidden font-sans select-none flex items-center justify-center" style={{ fontSize: '16px' }}>
+    <div className="fixed inset-0 min-h-screen bg-white overflow-hidden font-sans select-none flex flex-col lg:flex-row" style={{ fontSize: '16px' }}>
       
-      {/* 3D Background - White with Red/Blue Points */}
-      <div className="absolute inset-0 z-[1] opacity-60">
-        <Background3D count={1000} opacity={0.6} size={0.05} />
-      </div>
-
-      {/* Lightweight Grid Overlay */}
-      <div className="absolute inset-0 z-[1] opacity-5 bg-[linear-gradient(rgba(0,0,0,0.05)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.05)_1px,transparent_1px)] bg-[size:40px_40px]" />
-
-      {/* Header Compact */}
-      <header className="fixed top-0 left-0 right-0 z-[100] px-[5%] py-6 flex items-center justify-between">
-        <div className="flex items-center gap-4">
+      {/* HEADER COMPACT (Floating over screen) */}
+      <header className="absolute top-0 left-0 right-0 z-[100] px-6 lg:px-12 py-6 flex items-center justify-between pointer-events-none">
+        <div className="flex items-center gap-4 pointer-events-auto">
           <div className="flex flex-col leading-tight">
-            <div className="text-xl font-black tracking-tighter flex items-center">
+            <div className="text-xl lg:text-2xl font-black tracking-tighter flex items-center">
               <span className="text-[#4FC3F7] logo-glow-blue">HYDRO</span>
               <span className="text-[#FF5252] logo-glow-red">MINES</span>
             </div>
@@ -63,135 +55,189 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
         
-        <div className="hidden lg:flex items-center gap-2">
+        <div className="hidden md:flex items-center gap-2 pointer-events-auto">
           <div className="h-[1px] w-12 bg-slate-200" />
-          <span className="font-mono text-[10px] text-slate-400 tracking-widest uppercase">Système de Supervision v2.0</span>
+          <span className="font-mono text-[10px] text-slate-400 tracking-widest uppercase">Espace Magasinière v2.0</span>
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="relative z-10 flex flex-col lg:flex-row items-center justify-between px-[10%] h-full w-full max-w-[1440px] mx-auto gap-12 lg:gap-0">
-        {/* Left Section */}
-        <div className="max-w-[500px] mt-24 lg:mt-0 text-center lg:text-left">
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="font-mono text-[10px] md:text-xs uppercase tracking-[0.4em] text-slate-400 mb-6 font-black"
-          >
-            Suivi gasoil, lubrifiants & environnement
-          </motion.div>
+      {/* LEFT COLUMN: 70% WIDTH CINEMATIC HERO */}
+      <section className="hidden lg:block lg:w-[70%] h-full bg-white relative overflow-hidden">
+        {/* Full-bleed background image */}
+        <motion.div 
+          initial={{ opacity: 0, scale: 1.03 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 1.5, ease: "easeOut" }}
+          className="absolute inset-0 w-full h-full"
+        >
+          <img
+            src={loginImage}
+            alt="Hydromines"
+            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover select-none"
+          />
+        </motion.div>
 
-          <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="flex flex-wrap gap-4 mb-8 justify-center lg:justify-start"
-          >
-            {['CONTRÔLE', 'PRÉCISION', 'TRAÇABILITÉ'].map((word) => (
-              <div 
-                key={word}
-                className="keyword font-mono text-[9px] md:text-[10px] font-black tracking-[0.25em] uppercase text-slate-500 px-3 py-1.5 border border-slate-100 rounded-lg bg-slate-50/50 shadow-sm hover:border-[#4FC3F7] hover:text-[#4FC3F7] hover:bg-[#4FC3F7]/5 transition-all cursor-default backdrop-blur-sm"
-              >
-                {word}
-              </div>
-            ))}
-          </motion.div>
+        {/* Cinematic blend overlays: flawlessly fading the image on all edges into our ultra-clean white layout */}
+        {/* 1. Seamless fade to the right (transitioning into the 30% login panel smoothly with no sharp lines) */}
+        <div className="absolute inset-y-0 right-0 w-[50%] bg-gradient-to-r from-transparent via-white/5 via-white/15 via-white/45 via-white/85 to-white to-[94%] z-10 pointer-events-none" />
+        
+        {/* 1b. Solid white safety strip at the far right of the column to completely kill any sharp border lines */}
+        <div className="absolute top-0 right-0 w-[8%] h-full bg-white z-10 pointer-events-none" />
+        
+        {/* 2. Top-left corner white fade (creating a pristine blend at the top-left section too) */}
+        <div className="absolute top-0 left-0 w-[50%] h-[50%] bg-gradient-to-br from-white via-white/80 via-white/30 to-transparent z-10 pointer-events-none" />
+        
+        {/* 3. Global top-edge fade-to-white to host the header securely */}
+        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white/95 via-white/40 to-transparent z-10 pointer-events-none" />
 
-          <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.2 }}
-            className="border-t lg:border-t-0 lg:border-l-2 border-[#4FC3F7] pt-8 lg:pt-0 lg:pl-5"
+        {/* 4. Global bottom-edge fade-to-white for clean footer context */}
+        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white/80 to-transparent z-10 pointer-events-none" />
+
+        {/* 5. Special Bottom-up Dark Cinematic Vignette overlay strictly acting behind the text to guarantee pristine legibility */}
+        <div className="absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent z-15 pointer-events-none" />
+
+        {/* Cinematic typography: Clean, premium, high-impact poster copy like Google or Tesla */}
+        <div className="absolute inset-0 z-20 flex flex-col justify-end p-20 pb-28 text-left pointer-events-none">
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1.2, delay: 0.3, ease: "easeOut" }}
+            className="max-w-2xl space-y-4"
           >
-            <p className="text-slate-500 text-sm md:text-base font-medium leading-relaxed max-w-[400px] mx-auto lg:mx-0">
-              Système de monitoring énergétique pour sites <span className="text-[#4FC3F7] font-black logo-glow-blue">HYDRO</span><span className="text-[#FF5252] font-black logo-glow-red">MINES</span>.<br />
-              <span className="text-slate-900 font-black tracking-tight">Traçabilité intégrale et supervision opérationnelle en temps réel.</span>
+            <p className="font-mono text-[11px] tracking-[0.52em] text-[#4FC3F7] font-extrabold uppercase drop-shadow-md">
+              HYDROMINES LOGISTICS ENVIRONMENT
+            </p>
+            <h2 className="text-5xl lg:text-6xl xl:text-7xl font-extralight text-white tracking-tighter leading-[0.95] uppercase drop-shadow-lg">
+              L'efficience <br />
+              <span className="font-black text-[#4FC3F7] logo-glow-blue">SANS COMPROMIS.</span>
+            </h2>
+            <p className="text-slate-300 font-sans text-sm max-w-sm leading-relaxed font-semibold mt-3 drop-shadow-md">
+              Supervision intelligente, flux en temps réel et outils prédictifs de pointe.
             </p>
           </motion.div>
         </div>
+      </section>
 
-        {/* Login Card */}
-        <motion.div 
-          initial={{ opacity: 0, y: 40 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-          className="relative bg-white/80 backdrop-blur-[40px] border border-slate-200 rounded-[32px] p-8 md:p-10 w-full max-w-[400px] shadow-[0_20px_50px_rgba(0,0,0,0.1)] text-center overflow-hidden"
-        >
-          <div className="absolute top-0 left-0 right-0 h-[3px] bg-gradient-to-r from-[#4FC3F7] to-[#FF5252] opacity-80" />
+      {/* RIGHT COLUMN: LOGIN SCREEN AND SITES PORTFOLIO */}
+      <section className="w-full lg:w-[30%] h-full bg-white flex flex-col items-center justify-center p-8 relative z-20">
+        
+        <div className="w-full max-w-[420px] flex flex-col items-center gap-8 mt-12">
           
-          <h1 className="text-2xl md:text-3xl font-black text-slate-900 mb-2 tracking-tighter uppercase">Accès Sécurisé</h1>
-          <p className="text-xs md:text-sm text-slate-500 mb-8 leading-relaxed px-4 font-bold">
-            Authentification via compte Google uniquement. <br/>Accès réservé aux opérateurs habilités.
-          </p>
-
-          <button 
-            onClick={handleLogin}
-            className="w-full py-4 bg-white text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest hover:bg-white shadow-[0_10px_20px_rgba(0,0,0,0.2)] transition-all hover:-translate-y-1 active:scale-95 group relative overflow-hidden"
+          {/* Main login block (completely flat with no borders or shadows to "kill the lines") */}
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: 'spring', damping: 22, stiffness: 90, delay: 0.15 }}
+            className="w-full bg-white text-center relative px-2"
           >
-             <svg className="w-5 h-5 transition-transform duration-500 group-hover:rotate-[360deg]" viewBox="0 0 24 24">
-                <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-             </svg>
-             Connexion Google
-          </button>
-
-          <button 
-            onClick={handleViewerLogin}
-            className="w-full mt-3 py-4 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest transition-all hover:-translate-y-1 active:scale-95 relative overflow-hidden shadow-sm border border-slate-200"
-          >
-             <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-               <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
-               <circle cx="12" cy="12" r="3" />
-             </svg>
-             ENTER AS VIEWER
-          </button>
-
-          <div className="mt-8 space-y-4">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-700 rounded-full text-[9px] font-black uppercase tracking-widest">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-              Sécurité Cloud Certifiée
-            </div>
             
-            <div className="space-y-2">
-              <p className="text-[10px] text-slate-500 leading-relaxed font-bold max-w-[280px] mx-auto italic">
-                Vos données sont traitées via <span className="text-[#4FC3F7]">Google OAuth 2.0</span> et l'app n'a aucun accès aux données d'emails.
-              </p>
+            {/* Header of the section */}
+            <h1 className="text-2xl md:text-3xl font-black mb-2 tracking-tighter uppercase font-sans flex items-center justify-center gap-[1px] select-none">
+              {"ESPACE MAGASINIERE".split("").map((char, index) => {
+                if (char === " ") return <span key={index} className="w-2" />;
+                const isEven = index % 2 === 0;
+                return (
+                  <span
+                    key={index}
+                    className={isEven ? "text-[#4FC3F7]" : "text-[#b91c1c]"}
+                  >
+                    {char}
+                  </span>
+                );
+              })}
+            </h1>
+            <p className="text-xs md:text-sm text-slate-500 mb-8 leading-relaxed px-4 font-semibold">
+              Supervision des stocks, audit logistique, et conformité opérationnelle Hydromines.
+            </p>
+
+            {/* Main CTA */}
+            <div className="space-y-3.5">
+              <button 
+                onClick={handleLogin}
+                className="w-full py-4 bg-white hover:bg-slate-50/50 text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-slate-150 transition-all hover:-translate-y-0.5 active:scale-95 group relative overflow-hidden"
+              >
+                 <svg className="w-5 h-5 transition-transform duration-500 group-hover:rotate-[360deg]" viewBox="0 0 24 24">
+                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                 </svg>
+                 Connexion Google Auth
+              </button>
+
+              <button 
+                onClick={handleViewerLogin}
+                className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest transition-all hover:-translate-y-0.5 active:scale-95 shadow-sm border border-slate-200"
+              >
+                 <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                   <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
+                   <circle cx="12" cy="12" r="3" />
+                 </svg>
+                 Accès Visiteur Démo
+              </button>
+            </div>
+
+            {/* Security certification & trust anchors */}
+            <div className="mt-8 space-y-4">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full text-[9px] font-black uppercase tracking-widest">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                Sécurité Cloud Certifiée
+              </div>
               
-              <div className="flex items-center justify-center gap-2">
-                <div className="h-[1px] w-4 bg-slate-100" />
-                <p className="text-[10px] text-slate-400 font-black uppercase tracking-tighter">
-                  Chiffrement bout à bout ( ISO 27001 )
+              <div className="space-y-1.5">
+                <p className="text-[10px] text-slate-500 leading-relaxed font-bold max-w-[280px] mx-auto italic">
+                  Chiffrement de bout en bout opéré via le protocole sécurisé <span className="text-[#4FC3F7] font-extrabold">Google OAuth 2.0</span>.
                 </p>
-                <div className="h-[1px] w-4 bg-slate-100" />
+                <div className="flex items-center justify-center gap-2">
+                  <div className="h-[1px] w-4 bg-slate-100" />
+                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider">
+                    NORME ISO 27001 & SOC 2 COMPLIANT
+                  </p>
+                  <div className="h-[1px] w-4 bg-slate-100" />
+                </div>
               </div>
             </div>
-          </div>
 
-          <div className="mt-8 pt-6 border-t border-slate-100">
-            <div className="flex items-center justify-center gap-6">
-              {['SSL', 'AES-256', 'SOC2'].map(badge => (
-                <span key={badge} className="text-[8px] font-black text-slate-200 uppercase tracking-[0.2em]">{badge}</span>
+            {/* Badges footer inside layout */}
+            <div className="mt-8 pt-4">
+              <div className="flex items-center justify-center gap-6">
+                {['HTTPS', 'AES-256-GCM', 'TLS 1.3'].map(badge => (
+                  <span key={badge} className="text-[8px] font-black text-slate-350 uppercase tracking-[0.2em]">{badge}</span>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* List of active extraction sites */}
+          <div className="w-full flex flex-col gap-3">
+            <div className="text-center">
+              <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-slate-400 font-extrabold">Sites Sous Supervision active</p>
+            </div>
+            <div className="flex flex-wrap justify-center gap-2">
+              {['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'].map((site) => (
+                <div 
+                  key={site} 
+                  className="font-mono text-[9px] font-bold tracking-widest text-slate-500 px-3 py-1.5 bg-slate-50/80 rounded-lg flex items-center gap-2 hover:bg-slate-100/80 transition-colors cursor-default uppercase"
+                >
+                  <span className="w-1 h-1 rounded-full bg-emerald-500" />
+                  {site}
+                </div>
               ))}
             </div>
           </div>
-        </motion.div>
-      </main>
 
-      {/* Bottom Sites */}
-      <div className="fixed bottom-12 left-1/2 -translate-x-1/2 flex gap-8 z-10 bg-white/80 backdrop-blur-xl px-10 py-4 rounded-full border border-slate-100 shadow-xl shadow-slate-200/50">
-        {['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'].map((site) => (
-          <div key={site} className="site-item font-mono text-[9px] font-black tracking-[0.2em] text-slate-400 flex items-center gap-2 hover:text-slate-900 transition-all cursor-default uppercase">
-            <span className="w-1 h-1 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]" />
-            {site}
+        </div>
+
+        {/* Dynamic platform footer */}
+        <footer className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
+          <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-slate-400/80">
+            HYDROMINES © 2026
           </div>
-        ))}
-      </div>
+        </footer>
 
-      <div className="fixed bottom-4 left-1/2 -translate-x-1/2 z-10 font-mono text-[9px] tracking-[0.3em] uppercase text-slate-400 opacity-60">
-        HYDROMINES 2026
-      </div>
+      </section>
+
     </div>
   );
 };

@@ -127,6 +127,24 @@ export function serializeFirestoreData<T>(data: T): any {
     return data;
   }
 
+  // Handle Timestamp or duck-typed Timestamp objects as primitives
+  if (typeof data === "object") {
+    if (typeof (data as any).toDate === "function") {
+      try {
+        return (data as any).toDate().toISOString();
+      } catch (e) {
+        // Fall back to other checks
+      }
+    }
+    if (typeof (data as any).seconds === "number" && typeof (data as any).nanoseconds === "number") {
+      try {
+        return new Date((data as any).seconds * 1000).toISOString();
+      } catch (e) {
+        // Fall back to other checks
+      }
+    }
+  }
+
   if (data instanceof Timestamp) {
     return data.toDate().toISOString();
   }

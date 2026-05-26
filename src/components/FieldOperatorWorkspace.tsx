@@ -479,36 +479,36 @@ export default function FieldOperatorWorkspace() {
     <div className="space-y-6 max-w-7xl mx-auto pb-16">
       
       {/* SECTION BANNER HUD & SYNCHRONISATION */}
-      <div className="bg-slate-900/60 backdrop-blur-md rounded-2xl border border-slate-800/80 p-5 mt-2 shadow-2xl relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-        <div className="absolute right-[-100px] top-[-50px] w-60 h-60 bg-sky-500/10 rounded-full blur-[100px] pointer-events-none" />
+      <div className="bg-slate-50 rounded-2xl border border-slate-200 p-5 mt-2 shadow-sm relative overflow-hidden flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="absolute right-[-100px] top-[-50px] w-60 h-60 bg-sky-500/5 rounded-full blur-[100px] pointer-events-none" />
         
         <div className="space-y-1 relative z-10">
           <div className="flex items-center gap-2">
-            <Smartphone className="w-5 h-5 text-sky-400" />
-            <h2 className="text-lg font-black text-white uppercase tracking-wider">Poste Magasinier Terrain v10.0</h2>
-            <span className="px-2 py-0.5 rounded bg-sky-500/15 border border-sky-400/20 text-sky-400 text-[9px] font-mono tracking-widest uppercase">TABLET OPTIMIZED SPA</span>
+            <Smartphone className="w-5 h-5 text-sky-850" />
+            <h2 className="text-lg font-black text-slate-900 uppercase tracking-wider">Poste Magasinier Terrain v10.0</h2>
+            <span className="px-2 py-0.5 rounded bg-sky-100 border border-sky-200 text-sky-800 text-[9px] font-mono tracking-widest uppercase font-extrabold">TABLET OPTIMIZED SPA</span>
           </div>
-          <p className="text-xs text-slate-400">
+          <p className="text-xs text-slate-600 font-bold">
             Interface de saisie rapide, à haute sensibilité tactile, calibrée pour les conditions de poussière de la mine de surface.
           </p>
         </div>
 
         {/* CONNECTION CARD STATUS */}
-        <div className="flex items-center gap-4 bg-slate-950/70 border border-slate-800/80 p-3 rounded-xl">
+        <div className="flex items-center gap-4 bg-white border border-slate-200 p-3 rounded-xl shadow-xs">
           <div className="space-y-0.5 text-right font-mono">
-            <span className="text-[9px] text-slate-500 uppercase block leading-none">Réseau Local SRE</span>
+            <span className="text-[9px] text-slate-550 uppercase block leading-none font-bold">Réseau Local SRE</span>
             <span className={`text-xs font-black tracking-wide ${
-              networkQuality === 'ONLINE' ? 'text-emerald-400' :
-              networkQuality === 'HIGH_LATENCY' ? 'text-amber-400' :
-              networkQuality === 'INTERMITTENT' ? 'text-yellow-400' :
-              networkQuality === 'RECOVERING' ? 'text-sky-400' :
-              'text-red-400 animate-pulse'
+              networkQuality === 'ONLINE' ? 'text-emerald-700' :
+              networkQuality === 'HIGH_LATENCY' ? 'text-amber-700' :
+              networkQuality === 'INTERMITTENT' ? 'text-yellow-700' :
+              networkQuality === 'RECOVERING' ? 'text-sky-750' :
+              'text-red-750 animate-pulse'
             }`}>
               📡 {networkQuality}
             </span>
           </div>
 
-          <div className="h-8 w-[1px] bg-slate-800" />
+          <div className="h-8 w-[1px] bg-slate-200" />
 
           {/* AUDIO MUTE TOGGLE */}
           <button 
@@ -516,8 +516,8 @@ export default function FieldOperatorWorkspace() {
               setSoundEnabled(p => !p);
               triggerTactileFeedback('light');
             }}
-            className={`p-2 rounded-lg transition-all ${
-              soundEnabled ? 'bg-sky-500/10 text-sky-400 border border-sky-500/20' : 'bg-slate-900 text-slate-500 border border-slate-800'
+            className={`p-2 rounded-lg transition-all border ${
+              soundEnabled ? 'bg-sky-50 text-sky-600 border-sky-200' : 'bg-slate-100 text-slate-500 border-slate-200'
             }`}
             title="Bip d'appui tactile"
           >
@@ -595,9 +595,9 @@ export default function FieldOperatorWorkspace() {
         <div className="lg:col-span-7 space-y-6">
           
           {/* 1. TACTILE SELECTION GRID OF DIRECT MOVEMENT TYPE */}
-          <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/60 p-5 rounded-2xl relative overflow-hidden space-y-3">
-            <span className="text-[11px] font-black uppercase text-slate-300 tracking-wider flex items-center gap-1.5">
-              <Zap className="w-3.5 h-3.5 text-sky-400" /> 
+          <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl relative overflow-hidden space-y-3">
+            <span className="text-[11px] font-black uppercase text-slate-800 tracking-wider flex items-center gap-1.5">
+              <Zap className="w-3.5 h-3.5 text-sky-600" /> 
               1. Sélectionner l'opération de surface :
             </span>
             
@@ -607,15 +607,15 @@ export default function FieldOperatorWorkspace() {
                   setActiveMode('SORTIE');
                   triggerTactileFeedback('light');
                 }}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] cursor-pointer ${
                   activeMode === 'SORTIE' 
-                    ? 'bg-rose-500/15 border-rose-500 text-rose-450 font-black shadow-lg shadow-rose-950/20' 
-                    : 'bg-slate-950/40 border-slate-805 text-slate-400 hover:text-slate-200'
+                    ? 'bg-rose-50 border-rose-500 text-rose-700 font-black shadow-md shadow-rose-500/10' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <ArrowUpRight className="w-5 h-5 mb-1 text-rose-500" />
+                <ArrowUpRight className="w-5 h-5 mb-1 text-rose-600" />
                 <span className="text-[10px] uppercase font-extrabold leading-tight">SORTIE</span>
-                <span className="text-[8px] text-slate-500 font-medium">Bordereau Consom.</span>
+                <span className="text-[8px] text-slate-500 font-bold">Bordereau Consom.</span>
               </button>
 
               <button
@@ -623,15 +623,15 @@ export default function FieldOperatorWorkspace() {
                   setActiveMode('ENTREE');
                   triggerTactileFeedback('light');
                 }}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] cursor-pointer ${
                   activeMode === 'ENTREE' 
-                    ? 'bg-emerald-500/15 border-emerald-500 text-emerald-450 font-black shadow-lg shadow-emerald-950/20' 
-                    : 'bg-slate-950/40 border-slate-805 text-slate-400 hover:text-slate-200'
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-700 font-black shadow-md shadow-emerald-500/10' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <ArrowDownLeft className="w-5 h-5 mb-1 text-emerald-550" />
+                <ArrowDownLeft className="w-5 h-5 mb-1 text-emerald-600" />
                 <span className="text-[10px] uppercase font-extrabold leading-tight">RÉCEPTION</span>
-                <span className="text-[8px] text-slate-500 font-medium">Entrée stock</span>
+                <span className="text-[8px] text-slate-500 font-bold">Entrée stock</span>
               </button>
 
               <button
@@ -639,15 +639,15 @@ export default function FieldOperatorWorkspace() {
                   setActiveMode('RETOUR');
                   triggerTactileFeedback('light');
                 }}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] cursor-pointer ${
                   activeMode === 'RETOUR' 
-                    ? 'bg-sky-500/15 border-sky-500 text-sky-400 font-black shadow-lg shadow-sky-950/20' 
-                    : 'bg-slate-950/40 border-slate-805 text-slate-400 hover:text-slate-200'
+                    ? 'bg-sky-50 border-sky-500 text-sky-700 font-black shadow-md shadow-sky-500/10' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <RotateCcw className="w-5 h-5 mb-1 text-sky-400" />
+                <RotateCcw className="w-5 h-5 mb-1 text-sky-600" />
                 <span className="text-[10px] uppercase font-extrabold leading-tight">RETOUR</span>
-                <span className="text-[8px] text-slate-500 font-medium">Chantier / Fût</span>
+                <span className="text-[8px] text-slate-500 font-bold">Chantier / Fût</span>
               </button>
 
               <button
@@ -655,15 +655,15 @@ export default function FieldOperatorWorkspace() {
                   setActiveMode('AJUSTEMENT');
                   triggerTactileFeedback('light');
                 }}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] cursor-pointer ${
                   activeMode === 'AJUSTEMENT' 
-                    ? 'bg-amber-500/15 border-amber-500 text-amber-400 font-black shadow-lg shadow-amber-950/20' 
-                    : 'bg-slate-950/40 border-slate-805 text-slate-400 hover:text-slate-200'
+                    ? 'bg-amber-50 border-amber-550 text-amber-800 font-black shadow-md shadow-amber-500/10' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <ClipboardCheck className="w-5 h-5 mb-1 text-amber-500" />
+                <ClipboardCheck className="w-5 h-5 mb-1 text-amber-600" />
                 <span className="text-[10px] uppercase font-extrabold leading-tight">AUDIT / AJUST</span>
-                <span className="text-[8px] text-slate-500 font-medium">Écart physique</span>
+                <span className="text-[8px] text-slate-500 font-bold">Écart physique</span>
               </button>
 
               <button
@@ -671,39 +671,39 @@ export default function FieldOperatorWorkspace() {
                   setActiveMode('TRANSFERT_OUT');
                   triggerTactileFeedback('light');
                 }}
-                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] ${
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all h-[80px] min-h-[80px] cursor-pointer ${
                   activeMode === 'TRANSFERT_OUT' 
-                    ? 'bg-indigo-500/15 border-indigo-500 text-indigo-400 font-black shadow-lg shadow-indigo-950/20' 
-                    : 'bg-slate-950/40 border-slate-805 text-slate-400 hover:text-slate-200'
+                    ? 'bg-indigo-555 bg-indigo-50 border-indigo-500 text-indigo-700 font-black shadow-md shadow-indigo-500/10' 
+                    : 'bg-white border-slate-200 text-slate-700 hover:text-slate-900 hover:bg-slate-100'
                 }`}
               >
-                <Truck className="w-5 h-5 mb-1 text-indigo-400" />
+                <Truck className="w-5 h-5 mb-1 text-indigo-600" />
                 <span className="text-[10px] uppercase font-extrabold leading-tight">EXPÉDITION</span>
-                <span className="text-[8px] text-slate-500 font-medium">Vers autre site</span>
+                <span className="text-[8px] text-slate-505 font-bold">Vers autre site</span>
               </button>
             </div>
           </div>
 
           {/* 2. INSTANT SEARCH BAR & AUTOCOMPLETE SUGGESTIONS */}
-          <div className="bg-slate-900/40 backdrop-blur-md border border-slate-800/60 p-5 rounded-2xl space-y-4">
+          <div className="bg-slate-50 border border-slate-200 p-5 rounded-2xl space-y-4">
             
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <span className="text-[11px] font-black uppercase text-slate-350 tracking-wider flex items-center gap-2">
-                <Search className="w-3.5 h-3.5 text-sky-400" />
+              <span className="text-[11px] font-black uppercase text-slate-800 tracking-wider flex items-center gap-2">
+                <Search className="w-3.5 h-3.5 text-sky-600" />
                 2. Chercher ou flasher l'article :
               </span>
               
               {/* COMPACT SPEED SCANNER SIMULATOR FORM */}
-              <form onSubmit={handleBarcodeSubmit} className="flex items-center bg-slate-950 px-2.5 py-1 rounded-lg border border-slate-800 focus-within:border-sky-505 transition-all">
+              <form onSubmit={handleBarcodeSubmit} className="flex items-center bg-white px-2.5 py-1 rounded-lg border border-slate-350 focus-within:border-sky-500 focus-within:ring-1 focus-within:ring-sky-500 transition-all">
                 <Barcode className="w-3.5 h-3.5 text-slate-500 mr-1.5" />
                 <input 
                   type="text"
                   placeholder="Scanner SKU / Réf..."
                   value={barcodeInput}
                   onChange={(e) => setBarcodeInput(e.target.value)}
-                  className="bg-transparent border-0 outline-none text-[10px] font-mono text-white p-0 h-4 w-28 uppercase"
+                  className="bg-transparent border-0 outline-none text-[10px] font-mono text-slate-800 p-0 h-4 w-28 uppercase font-bold"
                 />
-                <button type="submit" className="text-[9px] font-bold bg-sky-500/10 text-sky-400 px-1.5 py-0.5 rounded border border-sky-400/10 ml-1.5">
+                <button type="submit" className="text-[9px] font-black bg-sky-100 text-sky-850 px-1.5 py-0.5 rounded border border-sky-200 ml-1.5">
                   OK
                 </button>
               </form>

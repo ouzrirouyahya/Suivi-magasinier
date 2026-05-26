@@ -138,7 +138,7 @@ export function useStorage() {
         const collectionsToMigrate = ['articles', 'mouvements', 'transferts', 'inventaires', 'engins', 'perfos', 'agents', 'catalog', 'distributions'];
         
         // Only admins can migrate accounts
-        if (currentUser?.role === 'ADMIN') {
+        if (currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') {
           collectionsToMigrate.push('accounts');
         }
 
@@ -243,7 +243,7 @@ export function useStorage() {
       unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
       unsubs.push(safeOnSnapshot(collection(db, 'anomalyReports'), setAnomalyReports, 'anomalyReports'));
 
-      if (currentUser.role === 'ADMIN') {
+      if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
         unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));
       }
     };

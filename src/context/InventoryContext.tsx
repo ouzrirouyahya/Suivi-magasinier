@@ -734,7 +734,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         return onSnapshot(ref, (snapshot: any) => {
           const data = snapshot.docs.map((doc: any) => {
             const raw = { id: doc.id, ...doc.data() };
-            return serializeFirestoreData(raw);
+            const serialized = serializeFirestoreData(raw);
+            if (path === 'notifications') {
+              return {
+                ...serialized,
+                severity: serialized.severity || serialized.type || 'INFO',
+                status: serialized.status || (serialized.isRead ? 'read' : 'unread')
+              };
+            }
+            return serialized;
           });
           
           setter((prev: any[]) => {
@@ -752,7 +760,35 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             // Handle specific sorting if needed:
             if (path === 'mouvements' || path === 'maintenanceLogs' || path === 'auditLogs' || path === 'notifications') {
               const dateField = path === 'auditLogs' || path === 'notifications' ? 'timestamp' : 'date';
-              return merged.sort((a, b) => new Date(b[dateField] || 0).getTime() - new Date(a[dateField] || 0).getTime());
+              const getSafeTime = (val: any): number => {
+                if (!val) return 0;
+                if (typeof val === 'string') {
+                  const parsed = Date.parse(val);
+                  return isNaN(parsed) ? 0 : parsed;
+                }
+                if (val && typeof val === 'object') {
+                  if (typeof val.toDate === 'function') {
+                    try {
+                      return val.toDate().getTime();
+                    } catch (e) {}
+                  }
+                  if (typeof val.seconds === 'number') {
+                    return val.seconds * 1000;
+                  }
+                  if (val.toDateString) {
+                    try {
+                      return new Date(val).getTime();
+                    } catch (e) {}
+                  }
+                }
+                try {
+                  const t = new Date(val).getTime();
+                  return isNaN(t) ? 0 : t;
+                } catch (e) {
+                  return 0;
+                }
+              };
+              return merged.sort((a, b) => getSafeTime(b[dateField]) - getSafeTime(a[dateField]));
             }
             return merged;
           });
@@ -763,7 +799,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         });
       };
 
-      // Seeding logic... (keep as is)
+      // Seeding logic (Articles, Catalog, Engins, etc.)
       const seedIfEmpty = async (col: string, data: any[]) => {
         const snap = await getDocs(query(collection(db, col), limit(1)));
         if (snap.empty) {
@@ -790,16 +826,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'anomalyReports')), setAnomalyReports, 'anomalyReports'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc')), setRawMaintenanceLogs, 'maintenanceLogs'));
-      unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), (data: any[]) => {
-        const mapped = data.map(item => ({
-          ...item,
-          severity: item.severity || item.type || 'INFO',
-          status: item.status || (item.isRead ? 'read' : 'unread')
-        }));
-        setNotifications(mapped);
-      }, 'notifications'));
+      unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), setNotifications, 'notifications'));
 
-      if (currentUser.role === 'ADMIN') {
+      if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
         unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));
       }
 

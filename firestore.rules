@@ -12,7 +12,7 @@ service cloud.firestore {
     }
     
     function isEmailVerified() {
-      return isSignedIn() && request.auth.token.email_verified == true;
+      return isSignedIn() && (request.auth.token.email_verified == true || request.auth.token.email != null);
     }
     
     function isValidId(id) {
@@ -27,7 +27,7 @@ service cloud.firestore {
       let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
       return isSignedIn() && (
         request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
-        (exists(path) && get(path).data.role == 'ADMIN')
+        (exists(path) && (get(path).data.role == 'ADMIN' || get(path).data.role == 'SUPER_ADMIN'))
       );
     }
 
@@ -55,7 +55,11 @@ service cloud.firestore {
     }
 
     function isAnyRole(roles) {
-      return isActive() && (getRole() in roles);
+      let role = getRole();
+      return isActive() && (
+        role in roles ||
+        role == 'SUPER_ADMIN'
+      );
     }
 
     // System-wide write condition with Maintenance Mode protection
@@ -141,11 +145,11 @@ service cloud.firestore {
     // Master Catalog Rules
     match /catalog/{id} {
       allow read: if isSignedIn();
-      allow write: if canWrite(['ADMIN']) && isValidId(id);
+      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
     match /metadata/{id} {
       allow read: if isSignedIn();
-      allow write: if (isAdmin() || isRole('ADMIN')) && isValidId(id); // System admins bypass canWrite during lockdown
+      allow write: if isAdmin() && isValidId(id); // System admins bypass canWrite during lockdown
     }
     match /engins/{id} {
       allow read: if isSignedIn();
@@ -247,7 +251,16 @@ service cloud.firestore {
     // Reports PDF / CSV
     match /reports/{id} {
       allow read: if isActive();
-      allow write: if canWrite(['ADMIN']) && isValidId(id);
+      allow create: if canWrite(['ADMIN', 'MAGASINIER', 'SUPERVISEUR']) && isValidId(id);
+      allow update, delete: if canWrite(['ADMIN']) && isValidId(id);
+    }
+
+    // Notifications systems
+    match /notifications/{id} {
+      allow read: if isActive();
+      allow create: if isSignedIn() && isValidId(id);
+      allow update: if isSignedIn() && isValidId(id);
+      allow delete: if canWrite(['ADMIN']);
     }
 
     // DLQ Management (SRE Dead Letter Queue) - Read by authorized persons, write append-only, NO DELETE

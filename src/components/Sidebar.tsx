@@ -80,6 +80,7 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
   // Safe access control RBAC function
   const isAllowed = React.useCallback((routeId: string) => {
     const adminOnlyRoutes = [
+      'MAGASINIER_IA',
       'VISION_IA', 
       'FORENSIC', 
       'AUDIT_INTELLIGENCE', 
@@ -96,29 +97,8 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
   // Memoized menuItems with precise dependencies
   const menuItems = React.useMemo(() => {
     const rawItems = [
-      // 🟦 1. OPERATIONAL COCKPIT (REAL-TIME CONTROL)
-      { id: 'SEP_OPERATIONAL', label: '1. Operational Cockpit', isSeparator: true },
-      { id: 'COCKPIT', label: 'Cockpit Intégré', icon: LayoutDashboard, activeColor: 'bg-slate-900 text-white shadow-md' },
-      { id: 'FIELD_WORKSPACE', label: 'Poste Magasinier', icon: Smartphone, activeColor: '' },
-
-      // 🟣 2. INTELLIGENCE CENTER (AI SYSTEMS)
-      { id: 'SEP_INTELLIGENCE', label: '2. Intelligence Center', isSeparator: true },
-      // IA Perception (Analyse du réel)
-      { id: 'SUB_IA_PERCEPTION', label: 'Perception (Analyse du Réel)', isSubHeader: true, dotColor: 'bg-indigo-400' },
-      { id: 'VISION_IA', label: 'Vision IA & Diagnostics', icon: Brain, activeColor: 'bg-indigo-950 text-indigo-100 shadow border border-indigo-700/30 font-semibold' },
-      
-      // IA Intelligence & Risque (SRE + Audit)
-      { id: 'SUB_IA_RISQUE', label: 'Intelligence & Sécurité', isSubHeader: true, dotColor: 'bg-rose-500' },
-      { id: 'FORENSIC', label: 'Forensic & Sûreté', icon: Activity, activeColor: 'bg-rose-955 text-rose-100 shadow border border-rose-700/30' },
-      { id: 'AUDIT_INTELLIGENCE', label: 'Intelligence d\'Audit SRE', icon: ShieldCheck, activeColor: 'bg-sky-955 text-sky-100 shadow border border-sky-700/30' },
-      
-      // IA Orchestration & Action
-      { id: 'SUB_IA_ACTION', label: 'Orchestration & Assistance', isSubHeader: true, dotColor: 'bg-emerald-500' },
-      { id: 'MAGASINIER_IA', label: 'Assistant Magasinier IA', icon: MessageSquare, activeColor: 'bg-indigo-500/10 text-indigo-750 border border-indigo-500/20 font-bold' },
-      { id: 'AUTOMATION_WORKFLOWS', label: 'Workflows Automatisés', icon: RefreshCw, activeColor: 'bg-emerald-955 text-emerald-100 shadow border border-emerald-700/30' },
-
-      // 🟨 3. LOGISTICS & FLOW CENTER
-      { id: 'SEP_LOGISTICS', label: '3. Logistics & Flow Center', isSeparator: true },
+      // 🟨 1. LOGISTICS & FLOW CENTER
+      { id: 'SEP_LOGISTICS', label: '1. Logistics & Flow Center', isSeparator: true },
       { id: 'BON_ENTREE', label: 'Bons de Réception (Entrée)', icon: ArrowDownLeft, activeColor: 'text-emerald-750 bg-emerald-500/10 border border-emerald-500/20 font-black' },
       { id: 'BON_SORTIE', label: 'Bons d\'Émission (Sortie)', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black' },
       { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
@@ -129,6 +109,15 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       { id: 'INVENTAIRE', label: 'Inventaires Terrain', icon: ClipboardCheck },
       { id: 'RESTOCK_MGMT', label: 'Ravitaillement & Alertes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
 
+      // 🟦 2. OPERATIONAL COCKPIT (REAL-TIME CONTROL)
+      { id: 'SEP_OPERATIONAL', label: '2. Operational Cockpit', isSeparator: true },
+      { id: 'COCKPIT', label: 'Cockpit Intégré', icon: LayoutDashboard, activeColor: 'bg-slate-900 text-white shadow-md' },
+      { id: 'FIELD_WORKSPACE', label: 'Poste Magasinier', icon: Smartphone, activeColor: '' },
+
+      // 🟣 3. INTELLIGENCE CENTER (AI SYSTEMS)
+      { id: 'SEP_INTELLIGENCE', label: '3. Intelligence Center', isSeparator: true },
+      { id: 'MAGASINIER_IA', label: 'Copilote & Analyses IA', icon: MessageSquare, activeColor: 'bg-indigo-950 text-indigo-100 shadow border border-indigo-700/30 font-semibold' },
+
       // 🟥 4. GOVERNANCE CENTER
       { id: 'SEP_GOVERNANCE', label: '4. Governance Center', isSeparator: true },
       { id: 'REPORTS', label: 'Rapports & Consolidation', icon: FileText, activeColor: 'bg-slate-900 text-white shadow-md' },
@@ -138,12 +127,7 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       { id: 'USER_MGMT', label: 'Utilisateurs & Droits', icon: Users },
     ];
 
-    return rawItems.filter(item => {
-      if (item.id === 'SUB_IA_PERCEPTION' || item.id === 'SUB_IA_RISQUE') {
-        return isAdmin;
-      }
-      return isAllowed(item.id);
-    });
+    return rawItems.filter(item => isAllowed(item.id));
   }, [isAdmin, isAllowed, criticalCount, warningCount]);
 
   // Memoized navigation handler

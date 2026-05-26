@@ -395,24 +395,24 @@ export function MagasinierIAHydro() {
     <div className="space-y-8 animate-in fade-in duration-500 pb-20">
       
       {/* Top Banner & Multi-site Controller */}
-      <div className="bg-slate-900 text-slate-100 rounded-[2rem] p-8 border border-slate-800 shadow-2xl relative overflow-hidden">
+      <div className="bg-white text-slate-900 rounded-[2rem] p-8 border border-slate-200 shadow-xl relative overflow-hidden">
         {/* Subtle background industrial grid pattern */}
-        <div className="absolute inset-0 opacity-[0.03] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#ffffff 2px, transparent 2px)', backgroundSize: '24px 24px' }}></div>
+        <div className="absolute inset-0 opacity-[0.04] pointer-events-none" style={{ backgroundImage: 'radial-gradient(#000000 2px, transparent 2px)', backgroundSize: '24px 24px' }}></div>
         <div className="relative z-10 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6">
           <div className="space-y-2">
-            <div className="flex items-center gap-2 text-slate-400">
-              <Bot className="w-5 h-5 text-slate-500" />
+            <div className="flex items-center gap-2 text-slate-500">
+              <Bot className="w-5 h-5 text-sky-500 animate-pulse" />
               <span className="text-xs font-black uppercase tracking-[0.3em] font-mono">Module de Gestion Magasin</span>
             </div>
-            <h2 className="text-4xl lg:text-5xl font-black text-white tracking-tighter uppercase font-sans">
+            <h2 className="text-4xl lg:text-5xl font-black text-slate-950 tracking-tighter uppercase font-sans">
               Assistant Opérationnel Magasin
             </h2>
-            <p className="text-sm text-slate-400 font-bold uppercase tracking-wider leading-relaxed">
+            <p className="text-sm text-slate-600 font-bold uppercase tracking-wider leading-relaxed">
               Supervision des opérations d'inventaire souterrain, vérification des flux logistiques et détection d'irrégularités.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 bg-slate-950 p-2.5 rounded-2xl border border-slate-800">
+          <div className="flex flex-wrap items-center gap-3 bg-slate-50 p-2.5 rounded-2xl border border-slate-200">
             <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-2">site actif :</span>
             {(['ALL', 'SMI', 'OUMEJRANE', 'BOU-AZZER'] as const).map(sit => (
               <button
@@ -421,8 +421,8 @@ export function MagasinierIAHydro() {
                 className={cn(
                   "px-4 py-1.5 rounded-xl text-xs font-black transition-all uppercase tracking-wider",
                   activeSite === sit 
-                    ? "bg-cyan-500 text-slate-950 shadow-md shadow-cyan-900/40" 
-                    : "text-slate-400 hover:text-slate-100"
+                    ? "bg-sky-500 text-white shadow-md shadow-sky-500/20" 
+                    : "text-slate-500 hover:text-slate-900"
                 )}
               >
                 {sit === 'ALL' ? 'Tous' : sit}
@@ -436,27 +436,27 @@ export function MagasinierIAHydro() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
         
         {/* CONVERSATIONAL PANEL */}
-        <div className="lg:col-span-8 flex flex-col bg-white rounded-3xl border border-slate-100 shadow-xl shadow-slate-200/40 overflow-hidden h-[620px]">
-          <div className="p-6 bg-slate-900 text-white border-b border-slate-800 flex items-center justify-between">
+        <div className="lg:col-span-8 flex flex-col bg-white rounded-3xl border border-slate-200 shadow-xl overflow-hidden h-[620px]">
+          <div className="p-6 bg-slate-50 text-slate-900 border-b border-slate-200 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-cyan-500/20 flex items-center justify-center text-cyan-400 border border-cyan-500/30">
+              <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center text-sky-600 border border-sky-200">
                 <Bot className="w-5 h-5" />
               </div>
               <div>
-                <h3 className="text-base font-black tracking-tight uppercase leading-none">Assistant Opérationnel Magasin</h3>
-                <span className="text-[10px] font-mono text-cyan-400 font-bold tracking-widest mt-1 block">STATUT : DOUBLE CONCORDANCE ACTIVE</span>
+                <h3 className="text-base font-black tracking-tight uppercase leading-none text-slate-950">Assistant Opérationnel Magasin</h3>
+                <span className="text-[10px] font-mono bg-sky-100 text-sky-850 px-2 py-0.5 rounded font-bold tracking-widest mt-1.5 block">STATUT : DOUBLE CONCORDANCE ACTIVE</span>
               </div>
             </div>
-            <div className="hidden sm:flex gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span className="text-[9px] font-mono font-black text-slate-400 uppercase tracking-widest">Contrôle Logistique</span>
+            <div className="hidden sm:flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse"></span>
+              <span className="text-[9px] font-mono font-black text-slate-500 uppercase tracking-widest">Contrôle Logistique</span>
             </div>
           </div>
 
           {/* Chat Messages */}
           <div 
             ref={chatScrollRef}
-            className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-950"
+            className="flex-1 overflow-y-auto p-6 space-y-6 bg-slate-50/50"
           >
             {messages.map((m, idx) => (
               <div 
@@ -469,21 +469,21 @@ export function MagasinierIAHydro() {
                 <div className={cn(
                   "w-9 h-9 rounded-xl flex items-center justify-center shrink-0 border",
                   m.role === 'user' 
-                    ? "bg-slate-800 text-slate-200 border-slate-700" 
-                    : "bg-cyan-950 text-cyan-400 border-cyan-800/40"
+                    ? "bg-slate-200 text-slate-800 border-slate-300" 
+                    : "bg-sky-100 text-sky-800 border-sky-200/60"
                 )}>
                   {m.role === 'user' ? <User className="w-4 h-4" /> : <Bot className="w-4 h-4" />}
                 </div>
                 <div className="space-y-1">
                   <div className={cn(
-                    "rounded-2xl p-4 text-sm font-medium whitespace-pre-wrap leading-relaxed shadow-sm",
+                    "rounded-2xl p-4 text-sm font-semibold whitespace-pre-wrap leading-relaxed shadow-sm",
                     m.role === 'user' 
-                      ? "bg-slate-900 text-slate-200 border border-slate-800" 
-                      : "bg-slate-900/65 text-slate-350 text-slate-300 border border-slate-800"
+                      ? "bg-white text-slate-900 border border-slate-200" 
+                      : "bg-sky-50 text-slate-900 border border-sky-100"
                   )}>
                     {m.content}
                   </div>
-                  <span className="text-[9px] font-bold text-slate-500 tracking-wider block font-mono pl-1">
+                  <span className="text-[9px] font-bold text-slate-400 tracking-wider block font-mono pl-1">
                     {m.time}
                   </span>
                 </div>
@@ -492,10 +492,10 @@ export function MagasinierIAHydro() {
             
             {isAiTyping && (
               <div className="flex gap-4 mr-auto max-w-[50%]">
-                <div className="w-9 h-9 rounded-xl bg-cyan-950 text-cyan-400 border border-cyan-800/40 flex items-center justify-center animate-spin">
+                <div className="w-9 h-9 rounded-xl bg-sky-100 text-sky-800 border border-sky-200 flex items-center justify-center animate-spin">
                   <RefreshCw className="w-4 h-4" />
                 </div>
-                <div className="bg-slate-900/50 text-slate-400 font-bold font-mono text-xs p-3 rounded-2xl border border-slate-800 animate-pulse tracking-widest uppercase">
+                <div className="bg-white text-slate-600 font-bold font-mono text-xs p-3 rounded-2xl border border-slate-200 animate-pulse tracking-widest uppercase shadow-sm">
                   Rapprochement automatique des stocks...
                 </div>
               </div>
@@ -503,7 +503,7 @@ export function MagasinierIAHydro() {
           </div>
 
           {/* Prompt Suggestion Buttons */}
-          <div className="p-3 bg-slate-900 border-t border-slate-800 flex gap-2 overflow-x-auto select-none no-scrollbar">
+          <div className="p-3 bg-slate-50 border-t border-slate-200 flex gap-2 overflow-x-auto select-none no-scrollbar">
             {[
               "Quels articles risquent une rupture ?",
               "Montre les mouvements suspects ou anormaux.",
@@ -514,7 +514,7 @@ export function MagasinierIAHydro() {
                 onClick={() => {
                   setInputVal(p);
                 }}
-                className="px-3.5 py-1 text-xs text-slate-300 bg-slate-800/60 hover:bg-slate-800 rounded-xl font-bold uppercase tracking-wide border border-slate-700/40 hover:border-slate-500 transition-all text-left whitespace-nowrap"
+                className="px-3.5 py-1.5 text-xs text-slate-700 bg-white hover:bg-slate-100 rounded-xl font-bold uppercase tracking-wide border border-slate-250 hover:border-slate-400 transition-all text-left whitespace-nowrap shadow-sm cursor-pointer"
               >
                 {p}
               </button>
@@ -522,18 +522,18 @@ export function MagasinierIAHydro() {
           </div>
 
           {/* Prompt Form */}
-          <form onSubmit={handleChat} className="p-4 bg-slate-950 border-t border-slate-800 flex gap-3 text-white">
+          <form onSubmit={handleChat} className="p-4 bg-white border-t border-slate-200 flex gap-3 text-slate-800">
             <input
               type="text"
               value={inputVal}
               onChange={(e) => setInputVal(e.target.value)}
               placeholder="Question ou ordre (ex: Quels engins ont des consommations suspectes ?)..."
-              className="flex-1 bg-slate-900 text-slate-100 rounded-2xl px-5 text-sm outline-none border border-slate-800 focus:border-cyan-500 transition-colors font-sans"
+              className="flex-1 bg-slate-50 text-slate-900 rounded-2xl px-5 text-sm outline-none border border-slate-200 focus:border-sky-500 transition-colors font-sans font-medium"
             />
             <button
               type="submit"
               disabled={isAiTyping}
-              className="w-12 h-12 bg-cyan-500 hover:bg-cyan-400 rounded-2xl flex items-center justify-center text-slate-950 shadow-lg shadow-cyan-900/20 active:scale-95 transition-all cursor-pointer"
+              className="w-12 h-12 bg-sky-500 hover:bg-sky-450 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-sky-500/10 active:scale-95 transition-all cursor-pointer"
             >
               <Send className="w-5 h-5 pointer-events-none" />
             </button>
@@ -544,45 +544,45 @@ export function MagasinierIAHydro() {
         <div className="lg:col-span-4 space-y-6 flex flex-col justify-between">
           
           {/* Quick Metrics Stack */}
-          <div className="bg-slate-950 rounded-3xl border border-slate-800 p-6 space-y-5 text-white shadow-xl shadow-slate-950/20">
-            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-cyan-400 font-mono flex items-center gap-2">
-              <Boxes className="w-4 h-4" /> Analyses Magasinier En Direct
+          <div className="bg-white rounded-3xl border border-slate-200 p-6 space-y-5 text-slate-800 shadow-xl">
+            <h3 className="text-xs font-black uppercase tracking-[0.2em] text-slate-500 font-mono flex items-center gap-2">
+              <Boxes className="w-4 h-4 text-sky-500" /> Analyses Magasinier En Direct
             </h3>
 
             <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Valeur Stock</span>
-                <span className="text-lg font-black tracking-tighter text-white">
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60">
+                <span className="text-[9px] text-slate-500 font-bold block uppercase tracking-wider">Valeur Stock</span>
+                <span className="text-lg font-black tracking-tighter text-slate-900">
                   {liveStats.totalStockValue.toLocaleString('fr-FR')} €
                 </span>
               </div>
-              <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Activité Journée</span>
-                <span className="text-lg font-black tracking-tighter text-orange-400 flex items-center gap-1">
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60">
+                <span className="text-[9px] text-slate-500 font-bold block uppercase tracking-wider">Activité Journée</span>
+                <span className="text-lg font-black tracking-tighter text-orange-600 flex items-center gap-1">
                   <TrendingUp className="w-4 h-4" /> {liveStats.dailyMovementCount} Mvt
                 </span>
               </div>
-              <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800">
-                <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Corrections</span>
-                <span className="text-lg font-black tracking-tighter text-rose-450 text-rose-400">
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60">
+                <span className="text-[9px] text-slate-500 font-bold block uppercase tracking-wider">Corrections</span>
+                <span className="text-lg font-black tracking-tighter text-rose-600">
                   {liveStats.adjustmentRate}%
                 </span>
               </div>
-              <div className="bg-slate-900/80 p-3 rounded-2xl border border-slate-800 font-mono">
-                <span className="text-[9px] text-slate-400 font-bold block uppercase tracking-wider">Pression Transfert</span>
-                <span className="text-lg font-black tracking-tighter text-amber-400">
+              <div className="bg-slate-50 p-3 rounded-2xl border border-slate-200/60 font-mono">
+                <span className="text-[9px] text-slate-500 font-bold block uppercase tracking-wider">Pression Transfert</span>
+                <span className="text-lg font-black tracking-tighter text-amber-600">
                   {liveStats.activeTransfersCount} Transf
                 </span>
               </div>
             </div>
 
             {/* Site Status alert description */}
-            <div className="bg-slate-900 p-3.5 rounded-2xl border border-slate-800 flex items-start gap-3">
-              <AlertCircle className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
+            <div className="bg-sky-50/50 p-3.5 rounded-2xl border border-sky-100 flex items-start gap-3">
+              <AlertCircle className="w-4 h-4 text-sky-600 mt-0.5 shrink-0" />
               <div>
-                <p className="text-[10px] font-black uppercase text-slate-300 leading-none">Diagnostic Magasinier</p>
-                <p className="text-xs text-slate-400 mt-1 leading-tight font-medium">
-                  État général: <span className="text-cyan-400 font-extrabold">{liveStats.siteActivity}</span>. Intégrité des flux synchronisés surveillée en continu.
+                <p className="text-[10px] font-black uppercase text-sky-900 leading-none">Diagnostic Magasinier</p>
+                <p className="text-xs text-slate-600 mt-1 leading-tight font-medium">
+                  État général: <span className="text-sky-700 font-extrabold">{liveStats.siteActivity}</span>. Intégrité des flux synchronisés surveillée en continu.
                 </p>
               </div>
             </div>
@@ -632,14 +632,14 @@ export function MagasinierIAHydro() {
       </div>
 
       {/* SECTION 3 — OPERATIONAL TIMELINE */}
-      <div className="bg-slate-950 text-white rounded-[2rem] border border-slate-800 p-8 shadow-2xl relative">
+      <div className="bg-white text-slate-900 rounded-[2rem] border border-slate-200 p-8 shadow-xl relative">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-6">
           <div className="space-y-1">
-            <h3 className="text-2xl font-black text-white tracking-tight uppercase">
+            <h3 className="text-2xl font-black text-slate-950 tracking-tight uppercase">
               🕒 Journal Industriel des Stocks
             </h3>
-            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest font-mono">
-              Operational Timeline — Trace en continu des Entrées, Exits, Transferts et Corrections
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-widest font-mono">
+              Operational Timeline — Trace en continu des Entrées, Sorties, Transferts et Corrections
             </p>
           </div>
 
@@ -655,10 +655,10 @@ export function MagasinierIAHydro() {
                 key={f.id}
                 onClick={() => setTimelineFilter(f.id as any)}
                 className={cn(
-                  "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all",
+                  "px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest border transition-all cursor-pointer",
                   timelineFilter === f.id 
-                    ? "bg-slate-100 text-slate-900 border-white" 
-                    : "text-slate-400 border-slate-800 hover:text-slate-200"
+                    ? "bg-slate-900 text-white border-slate-900 shadow-sm" 
+                    : "text-slate-650 bg-slate-50 border-slate-200 hover:text-slate-900 hover:bg-slate-100"
                 )}
               >
                 {f.label}
@@ -670,7 +670,7 @@ export function MagasinierIAHydro() {
         {/* Timeline Flow */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 max-h-[380px] overflow-y-auto pr-2 no-scrollbar">
           {filteredTimeline.length === 0 ? (
-            <div className="col-span-full text-center py-10 border border-dashed border-slate-800 rounded-3xl text-slate-400">
+            <div className="col-span-full text-center py-10 border border-dashed border-slate-200 rounded-3xl text-slate-450">
               <Filter className="w-8 h-8 mx-auto opacity-30 mb-2" />
               <p className="text-xs font-black uppercase tracking-widest">Aucun mouvement ne correspond aux paramètres</p>
             </div>
@@ -686,20 +686,20 @@ export function MagasinierIAHydro() {
                 <div 
                   key={item.id} 
                   className={cn(
-                    "p-4 rounded-2xl bg-slate-900 border transition-all hover:border-slate-700 flex flex-col justify-between space-y-3 relative group",
-                    item.type === 'ENTREE' ? "border-emerald-950" :
-                    item.type === 'SORTIE' ? "border-rose-950" :
-                    item.type === 'AJUSTEMENT' ? "border-cyan-950 animate-pulse" :
-                    "border-slate-800"
+                    "p-4 rounded-2xl bg-slate-50 border transition-all hover:border-slate-400 flex flex-col justify-between space-y-3 relative group",
+                    item.type === 'ENTREE' ? "border-emerald-200 bg-emerald-50/20" :
+                    item.type === 'SORTIE' ? "border-rose-200 bg-rose-50/20" :
+                    item.type === 'AJUSTEMENT' ? "border-cyan-200 bg-cyan-50/20 animate-pulse" :
+                    "border-slate-200"
                   )}
                 >
                   <div className="flex justify-between items-start">
                     <span className={cn(
-                      "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md font-mono",
-                      item.type === 'ENTREE' ? "bg-emerald-900/50 text-emerald-300" :
-                      item.type === 'SORTIE' ? "bg-rose-900/50 text-rose-300" :
-                      item.type === 'AJUSTEMENT' ? "bg-cyan-900/50 text-cyan-300" :
-                      "bg-slate-800 text-slate-300"
+                       "text-[9px] font-black uppercase tracking-widest px-2 py-0.5 rounded-md font-mono",
+                       item.type === 'ENTREE' ? "bg-emerald-100 text-emerald-800" :
+                       item.type === 'SORTIE' ? "bg-rose-100 text-rose-800" :
+                       item.type === 'AJUSTEMENT' ? "bg-cyan-100 text-cyan-800" :
+                       "bg-slate-200 text-slate-800"
                     )}>
                       {item.type}
                     </span>
@@ -709,30 +709,30 @@ export function MagasinierIAHydro() {
                   </div>
 
                   <div className="space-y-1 flex-1">
-                    <div className="text-xs font-black text-slate-300 truncate font-mono uppercase">
+                    <div className="text-xs font-black text-slate-800 truncate font-mono uppercase">
                       ID: {item.id.substring(0, 8)} | {item.site}
                     </div>
-                    <div className="space-y-1 text-slate-350 text-xs">
+                    <div className="space-y-1 text-slate-700 text-xs">
                       {item.items.map((it, itIdx) => {
                         const originalArt = articles.find(a => a.id === it.articleId);
                         return (
-                          <div key={itIdx} className="flex items-center gap-1 font-bold text-slate-400">
-                            <CornerDownRight className="w-3.5 h-3.5 text-cyan-500 shrink-0" />
-                            <span>{originalArt?.designation || 'Article'} (x{it.quantity})</span>
+                          <div key={itIdx} className="flex items-center gap-1 font-bold text-slate-700">
+                            <CornerDownRight className="w-3.5 h-3.5 text-cyan-600 shrink-0" />
+                            <span className="truncate">{originalArt?.designation || 'Article'} (x{it.quantity})</span>
                           </div>
                         );
                       })}
                     </div>
                     {item.engin && (
-                      <p className="text-[10px] text-cyan-400 font-black tracking-wider uppercase font-mono bg-cyan-950/20 px-2 py-0.5 rounded-lg inline-block">
-                        Mach: {item.engin}
+                      <p className="text-[10px] text-cyan-800 font-black tracking-wider uppercase font-mono bg-cyan-100 px-2 py-0.5 rounded-lg inline-block">
+                        Engin: {item.engin}
                       </p>
                     )}
                   </div>
 
-                  <div className="border-t border-slate-800/80 pt-2.5 flex items-center justify-between text-[10px] uppercase font-bold text-slate-400">
+                  <div className="border-t border-slate-200 pt-2.5 flex items-center justify-between text-[10px] uppercase font-bold text-slate-500">
                     <span>Opérateur:</span>
-                    <span className="text-slate-200 max-w-[100px] truncate">{opName}</span>
+                    <span className="text-slate-800 max-w-[100px] truncate">{opName}</span>
                   </div>
                 </div>
               );
