@@ -1,5 +1,5 @@
 import React from 'react';
-import { Search, Menu, Activity, Bell, Check, CheckSquare, AlertTriangle, Info, ShieldAlert, Clock } from 'lucide-react';
+import { Search, Menu, Activity, Bell, Check, CheckSquare, AlertTriangle, Info, ShieldAlert, Clock, SlidersHorizontal } from 'lucide-react';
 import { formatCurrency } from '../../lib/utils';
 import { Article, SiteCode, AppNotification } from '../../types';
 import { useInventory } from '../../context/InventoryContext';
@@ -13,6 +13,8 @@ interface ToolbarProps {
   onOpenMenu?: () => void;
   onNavigateToForensic?: () => void;
   onNavigateTo?: (page: string) => void;
+  density: 'compact' | 'standard' | 'large';
+  onChangeDensity: (d: 'compact' | 'standard' | 'large') => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -23,7 +25,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onSearchFocus,
   onOpenMenu,
   onNavigateToForensic,
-  onNavigateTo
+  onNavigateTo,
+  density,
+  onChangeDensity
 }) => {
   const { 
     collectSystemMetrics, 
@@ -176,6 +180,44 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                 </div>
               </>
             )}
+          </div>
+
+          {/* SEGMENTED LAYOUT DENSITY SWITCHER */}
+          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 font-mono text-[9px] font-black select-none pointer-events-auto shadow-inner gap-0.5" title="Densité d'affichage">
+            <SlidersHorizontal className="w-2.5 h-2.5 text-slate-400 mx-1.5" />
+            <button
+              onClick={() => onChangeDensity('compact')}
+              className={`px-1.5 py-0.5 rounded text-[8px] transition-all duration-150 ${
+                density === 'compact' 
+                  ? 'bg-white text-sky-600 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-slate-200/30 font-black' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+              title="Compact (Option par défaut)"
+            >
+              CPT
+            </button>
+            <button
+              onClick={() => onChangeDensity('standard')}
+              className={`px-1.5 py-0.5 rounded text-[8px] transition-all duration-150 ${
+                density === 'standard' 
+                  ? 'bg-white text-slate-800 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-slate-200/30' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+              title="Standard"
+            >
+              STD
+            </button>
+            <button
+              onClick={() => onChangeDensity('large')}
+              className={`px-1.5 py-0.5 rounded text-[8px] transition-all duration-150 ${
+                density === 'large' 
+                  ? 'bg-white text-slate-800 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-slate-200/30' 
+                  : 'text-slate-400 hover:text-slate-600'
+              }`}
+              title="Large"
+            >
+              LRG
+            </button>
           </div>
 
           <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />

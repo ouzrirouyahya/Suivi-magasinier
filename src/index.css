@@ -244,3 +244,203 @@
 .animate-loading {
   animation: loading-progress 2s infinite ease-in-out;
 }
+
+/* ==========================================================================
+   LAYOUT DENSITY STYLING ENGINE (COMPACT / STANDARD / LARGE)
+   ========================================================================== */
+
+/* 1. Global font size scaling */
+div[data-density="compact"] {
+  font-size: 11px !important;
+}
+
+div[data-density="compact"] .font-sans {
+  font-size: 11px !important;
+}
+
+/* 2. Custom global element overrides based on data-density */
+div[data-density="compact"] .card {
+  padding: 0.85rem 1rem !important; /* Extremely neat and compact whitespace */
+  border-radius: 0.75rem !important;
+}
+
+div[data-density="compact"] .table-container {
+  border-radius: 0.75rem !important;
+}
+
+div[data-density="compact"] .data-table th {
+  padding: 0.35rem 0.6rem !important;
+  font-size: 8.5px !important;
+}
+
+div[data-density="compact"] .data-table td {
+  padding: 0.35rem 0.6rem !important;
+  font-size: 11px !important;
+}
+
+div[data-density="compact"] .btn {
+  padding: 0.25rem 0.6rem !important;
+  font-size: 8.5px !important;
+  border-radius: 0.5rem !important;
+}
+
+div[data-density="compact"] .input-field {
+  padding-top: 0.25rem !important;
+  padding-bottom: 0.25rem !important;
+  border-radius: 0.5rem !important;
+  font-size: 11px !important;
+}
+
+/* Compact utility spacing & padding compressions */
+div[data-density="compact"] .p-8 {
+  padding: 1rem !important;
+}
+
+div[data-density="compact"] .p-6 {
+  padding: 0.85rem !important;
+}
+
+div[data-density="compact"] .p-5 {
+  padding: 0.75rem !important;
+}
+
+div[data-density="compact"] .p-4 {
+  padding: 0.65rem !important;
+}
+
+div[data-density="compact"] .py-4 {
+  padding-top: 0.65rem !important;
+  padding-bottom: 0.65rem !important;
+}
+
+div[data-density="compact"] .pt-12 {
+  padding-top: 1.5rem !important;
+}
+
+div[data-density="compact"] .pb-12 {
+  padding-bottom: 1.5rem !important;
+}
+
+div[data-density="compact"] .pt-6 {
+  padding-top: 0.85rem !important;
+}
+
+div[data-density="compact"] .mb-6 {
+  margin-bottom: 0.75rem !important;
+}
+
+div[data-density="compact"] .mb-4 {
+  margin-bottom: 0.5rem !important;
+}
+
+div[data-density="compact"] .mt-4 {
+  margin-top: 0.5rem !important;
+}
+
+div[data-density="compact"] .mr-8 {
+  margin-right: 0.5rem !important;
+}
+
+div[data-density="compact"] .gap-4 {
+  gap: 0.5rem !important;
+}
+
+div[data-density="compact"] .gap-6 {
+  gap: 0.75rem !important;
+}
+
+div[data-density="compact"] .gap-12 {
+  gap: 1.5rem !important;
+}
+
+/* Compact Spacing Utility Adjustments */
+div[data-density="compact"] .space-y-12 > * + * {
+  margin-top: 1.5rem !important; /* shrink from 3rem */
+}
+
+div[data-density="compact"] .space-y-8 > * + * {
+  margin-top: 1rem !important;
+}
+
+div[data-density="compact"] .space-y-6 > * + * {
+  margin-top: 0.75rem !important;
+}
+
+/* Typography Down-scaling */
+div[data-density="compact"] h2 {
+  font-size: 1.25rem !important;
+  margin-bottom: 0.35rem !important;
+}
+
+div[data-density="compact"] h1 {
+  font-size: 1.4rem !important;
+}
+
+div[data-density="compact"] .text-5xl {
+  font-size: 1.75rem !important;
+}
+
+div[data-density="compact"] .text-4xl {
+  font-size: 1.5rem !important;
+}
+
+div[data-density="compact"] .text-3xl {
+  font-size: 1.35rem !important;
+}
+
+div[data-density="compact"] .text-2xl {
+  font-size: 1.15rem !important;
+}
+
+div[data-density="compact"] .text-xl {
+  font-size: 1rem !important;
+}
+
+div[data-density="compact"] .text-lg {
+  font-size: 0.9rem !important;
+}
+
+div[data-density="compact"] .text-sm {
+  font-size: 0.75rem !important;
+}
+
+div[data-density="compact"] .text-xs {
+  font-size: 0.7rem !important;
+}
+
+/* Rounded corners reduction for high dense alignments */
+div[data-density="compact"] .rounded-3xl {
+  border-radius: 0.75rem !important;
+}
+
+div[data-density="compact"] .rounded-2xl {
+  border-radius: 0.6rem !important;
+}
+
+div[data-density="compact"] .rounded-xl {
+  border-radius: 0.5rem !important;
+}
+
+div[data-density="compact"] .h-[350px] {
+  height: 220px !important;
+  min-height: 220px !important;
+}
+
+div[data-density="compact"] .min-h-[350px] {
+  min-height: 220px !important;
+}
+
+/* 3. Large Density Scale overrides */
+div[data-density="large"] {
+  font-size: 14.5px !important;
+}
+
+div[data-density="large"] .card {
+  padding: 1.5rem 2rem !important;
+}
+
+div[data-density="large"] .data-table th,
+div[data-density="large"] .data-table td {
+  padding: 0.85rem 1rem !important;
+}
+

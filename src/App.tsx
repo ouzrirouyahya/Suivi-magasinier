@@ -51,6 +51,15 @@ import { auth } from './lib/firebase';
 import { toast } from 'sonner';
 
 export default function App() {
+  const [density, setDensity] = useState<'compact' | 'standard' | 'large'>(() => {
+    return (localStorage.getItem('hydromines_layout_density') as 'compact' | 'standard' | 'large') || 'compact';
+  });
+
+  const handleDensityChange = (d: 'compact' | 'standard' | 'large') => {
+    setDensity(d);
+    localStorage.setItem('hydromines_layout_density', d);
+  };
+
   const [currentPageRaw, setCurrentPageRaw] = useState<Page>('COCKPIT');
   const [showAdminAlert, setShowAdminAlert] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -119,6 +128,7 @@ export default function App() {
   const handleSignOut = () => {
     const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true';
     localStorage.removeItem('hydromines_viewer_mode');
+    sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
     setUser(null);
     if (isViewer) {
       window.location.reload();
@@ -428,7 +438,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white flex relative overflow-hidden">
+    <div className="min-h-screen bg-white flex relative overflow-hidden" data-density={density}>
       {showAdminAlert && <HydrominesSecurityAlert onClose={() => setShowAdminAlert(false)} />}
       
       <ViewerTracker currentPage={currentPage} />
@@ -455,7 +465,10 @@ export default function App() {
         onSignOut={handleSignOut}
       />
       
-      <main className="flex-grow p-8 transition-all duration-300 relative min-h-screen">
+      <main className={`flex-grow transition-all duration-300 relative min-h-screen ${
+        density === 'compact' ? 'p-4 md:p-5' : 
+        density === 'large' ? 'p-8 md:p-10' : 'p-6 md:p-8'
+      }`}>
         <Suspense fallback={<PageLoading />}>
           <Toolbar 
             globalSearch={globalSearch}
@@ -481,6 +494,8 @@ export default function App() {
             onNavigateTo={(page) => {
               setCurrentPage(page as any);
             }}
+            density={density}
+            onChangeDensity={handleDensityChange}
           />
 
           {maintenanceMode && (

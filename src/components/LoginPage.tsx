@@ -33,6 +33,7 @@ const LoginPage: React.FC = () => {
 
   const handleViewerLogin = () => {
     localStorage.setItem('hydromines_viewer_mode', 'true');
+    sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
     toast.success("Accès Visiteur Démo Activé. Mode Lecture Seule.");
     setTimeout(() => {
       window.location.reload();

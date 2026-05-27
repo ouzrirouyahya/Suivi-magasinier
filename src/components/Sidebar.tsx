@@ -111,7 +111,7 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
 
       // 🟦 2. OPERATIONAL COCKPIT (REAL-TIME CONTROL)
       { id: 'SEP_OPERATIONAL', label: '2. Operational Cockpit', isSeparator: true },
-      { id: 'COCKPIT', label: 'Cockpit Intégré', icon: LayoutDashboard, activeColor: 'bg-slate-900 text-white shadow-md' },
+      { id: 'COCKPIT', label: 'ESPACE MAGASINIER', icon: LayoutDashboard, activeColor: 'bg-slate-900 text-white shadow-md' },
       { id: 'FIELD_WORKSPACE', label: 'Poste Magasinier', icon: Smartphone, activeColor: '' },
 
       // 🟣 3. INTELLIGENCE CENTER (AI SYSTEMS)
