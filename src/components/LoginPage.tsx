@@ -133,9 +133,34 @@ const LoginPage: React.FC = () => {
           >
             
             {/* Header of the section */}
-            <h1 className="text-2xl md:text-3xl font-black text-slate-950 mb-2 tracking-tighter uppercase font-sans select-none">
-              Espace Magasinière
-            </h1>
+            <div className="relative mb-4 flex items-center justify-center">
+              {/* Crisp white aura backdrop glow for perfect legibility and glow look */}
+              <div className="absolute inset-0 bg-gradient-to-r from-sky-50/20 via-white to-sky-50/20 blur-md rounded-full pointer-events-none" />
+              
+              <motion.h1 
+                animate={{ 
+                  backgroundPosition: ["0% 50%", "200% 50%"],
+                  textShadow: [
+                    "0 0 12px rgba(255, 255, 255, 1), 0 0 2px rgba(255, 255, 255, 0.8)",
+                    "0 0 24px rgba(255, 255, 255, 1), 0 0 6px rgba(255, 255, 255, 0.95)",
+                    "0 0 12px rgba(255, 255, 255, 1), 0 0 2px rgba(255, 255, 255, 0.8)"
+                  ]
+                }}
+                transition={{ 
+                  backgroundPosition: { repeat: Infinity, duration: 4.5, ease: "linear" },
+                  textShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }
+                }}
+                style={{
+                  backgroundImage: "linear-gradient(120deg, #090d16 0%, #1e293b 38%, #ffffff 50%, #1e293b 62%, #090d16 100%)",
+                  backgroundSize: "200% auto",
+                  WebkitBackgroundClip: "text",
+                  WebkitTextFillColor: "transparent"
+                }}
+                className="text-2xl md:text-3xl font-black tracking-widest uppercase font-sans select-none relative z-10 py-1"
+              >
+                Espace Magasinière
+              </motion.h1>
+            </div>
             <p className="text-xs md:text-sm text-slate-500 mb-8 leading-relaxed px-4 font-semibold">
               Supervision des stocks, audit logistique, et conformité opérationnelle Hydromines.
             </p>
@@ -187,19 +212,10 @@ const LoginPage: React.FC = () => {
                 </div>
               </div>
             </div>
-
-            {/* Badges footer inside layout */}
-            <div className="mt-8 pt-4">
-              <div className="flex items-center justify-center gap-6">
-                {['HTTPS', 'AES-256-GCM', 'TLS 1.3'].map(badge => (
-                  <span key={badge} className="text-[8px] font-black text-slate-350 uppercase tracking-[0.2em]">{badge}</span>
-                ))}
-              </div>
-            </div>
           </motion.div>
 
           {/* List of active extraction sites */}
-          <div className="w-full flex flex-col gap-3">
+          <div className="w-full flex flex-col gap-4">
             <div className="text-center">
               <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-slate-400 font-extrabold">Sites Sous Supervision active</p>
             </div>
@@ -213,6 +229,16 @@ const LoginPage: React.FC = () => {
                   {site}
                 </div>
               ))}
+            </div>
+
+            {/* Professional copyright block */}
+            <div className="text-center pt-4 border-t border-slate-100">
+              <p className="text-[10px] text-slate-400 font-medium tracking-wide">
+                © 2026 <span className="font-black text-slate-705">HYDROMINES</span>. Tous droits réservés.
+              </p>
+              <p className="text-[8px] text-slate-350 uppercase tracking-[0.15em] mt-1 font-semibold">
+                Système de Supervision Logistique & Gestion de Sécurité
+              </p>
             </div>
           </div>
 
