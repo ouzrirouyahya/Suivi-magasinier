@@ -4,6 +4,7 @@ import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { toast } from 'sonner';
 import loginImage from '../assets/images/hydromines_login_banner_clean.png';
+import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 const LoginPage: React.FC = () => {
   const handleLogin = async () => {
@@ -55,10 +56,6 @@ const LoginPage: React.FC = () => {
           </div>
         </div>
         
-        <div className="hidden md:flex items-center gap-2 pointer-events-auto">
-          <div className="h-[1px] w-12 bg-slate-200" />
-          <span className="font-mono text-[10px] text-slate-400 tracking-widest uppercase">Espace Magasinière v2.0</span>
-        </div>
       </header>
 
       {/* LEFT COLUMN: 78% WIDTH CINEMATIC HERO */}
@@ -129,9 +126,19 @@ const LoginPage: React.FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ type: 'spring', damping: 22, stiffness: 90, delay: 0.15 }}
-            className="w-full bg-white text-center relative px-2"
+            className="w-full bg-white text-center relative px-2 animate-fade-in"
           >
             
+            {/* Professional HYDROMINES Logo Graphic */}
+            <div className="flex justify-center mb-5">
+              <img 
+                src={hydrominesLogo} 
+                alt="HYDROMINES Logo" 
+                className="w-[125px] h-[125px] object-contain select-none"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
             {/* Header of the section */}
             <div className="relative mb-4 flex items-center justify-center">
               {/* Crisp white aura backdrop glow for perfect legibility and glow look */}

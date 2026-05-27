@@ -34,6 +34,7 @@ const IntelligenceCenter = lazy(() => import('./components/IntelligenceCenter').
 
 // Tracking
 import { ViewerTracker } from './components/ViewerTracker';
+import { ViewerNotificationModal } from './components/common/ViewerNotificationModal';
 
 // Shared Components
 import LoginPage from './components/LoginPage';
@@ -431,6 +432,9 @@ export default function App() {
       {showAdminAlert && <HydrominesSecurityAlert onClose={() => setShowAdminAlert(false)} />}
       
       <ViewerTracker currentPage={currentPage} />
+      
+      {/* Professional HYDROMINES Visitor Notice Modal */}
+      <ViewerNotificationModal />
       
       <Sidebar 
         currentPage={currentPage} 
