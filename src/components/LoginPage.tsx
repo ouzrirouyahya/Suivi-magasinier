@@ -3,7 +3,7 @@ import { motion } from 'motion/react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider } from '../lib/firebase';
 import { toast } from 'sonner';
-import loginImage from '../assets/images/hydromines_login_banner_clean_1779753268175.png';
+import loginImage from '../assets/images/hydromines_login_banner_clean.png';
 
 const LoginPage: React.FC = () => {
   const handleLogin = async () => {
@@ -61,8 +61,8 @@ const LoginPage: React.FC = () => {
         </div>
       </header>
 
-      {/* LEFT COLUMN: 70% WIDTH CINEMATIC HERO */}
-      <section className="hidden lg:block lg:w-[70%] h-full bg-white relative overflow-hidden">
+      {/* LEFT COLUMN: 78% WIDTH CINEMATIC HERO */}
+      <section className="hidden lg:block lg:w-[78%] h-full bg-white relative overflow-hidden">
         {/* Full-bleed background image */}
         <motion.div 
           initial={{ opacity: 0, scale: 1.03 }}
@@ -78,12 +78,9 @@ const LoginPage: React.FC = () => {
           />
         </motion.div>
 
-        {/* Cinematic blend overlays: flawlessly fading the image on all edges into our ultra-clean white layout */}
-        {/* 1. Seamless fade to the right (transitioning into the 30% login panel smoothly with no sharp lines) */}
-        <div className="absolute inset-y-0 right-0 w-[50%] bg-gradient-to-r from-transparent via-white/5 via-white/15 via-white/45 via-white/85 to-white to-[94%] z-10 pointer-events-none" />
-        
-        {/* 1b. Solid white safety strip at the far right of the column to completely kill any sharp border lines */}
-        <div className="absolute top-0 right-0 w-[8%] h-full bg-white z-10 pointer-events-none" />
+        {/* Cinematic blend overlays: flawlessly fading the image on all edges with pristine visibility of our warehouse components */}
+        {/* 1. Seamless smooth fade to the right (smoothly transitioning the photo into the 22% login panel with no sharp lines) */}
+        <div className="absolute inset-y-0 right-0 w-[35%] bg-gradient-to-r from-transparent via-white/10 via-white/50 to-white to-[98%] z-20 pointer-events-none" />
         
         {/* 2. Top-left corner white fade (creating a pristine blend at the top-left section too) */}
         <div className="absolute top-0 left-0 w-[50%] h-[50%] bg-gradient-to-br from-white via-white/80 via-white/30 to-transparent z-10 pointer-events-none" />
@@ -119,8 +116,11 @@ const LoginPage: React.FC = () => {
         </div>
       </section>
 
-      {/* RIGHT COLUMN: LOGIN SCREEN AND SITES PORTFOLIO */}
-      <section className="w-full lg:w-[30%] h-full bg-white flex flex-col items-center justify-center p-8 relative z-20">
+      {/* RIGHT COLUMN: 22% LOGIN PANEL */}
+      <section className="w-full lg:w-[22%] h-full bg-white flex flex-col items-center justify-center p-8 relative z-20">
+        
+        {/* Anti-subpixel-gap pure white safety mask on the left boundary to perfectly bridge the columns */}
+        <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-6 -ml-3 bg-white z-40 pointer-events-none" />
         
         <div className="w-full max-w-[420px] flex flex-col items-center gap-8 mt-12">
           
@@ -133,19 +133,8 @@ const LoginPage: React.FC = () => {
           >
             
             {/* Header of the section */}
-            <h1 className="text-2xl md:text-3xl font-black mb-2 tracking-tighter uppercase font-sans flex items-center justify-center gap-[1px] select-none">
-              {"ESPACE MAGASINIERE".split("").map((char, index) => {
-                if (char === " ") return <span key={index} className="w-2" />;
-                const isEven = index % 2 === 0;
-                return (
-                  <span
-                    key={index}
-                    className={isEven ? "text-[#4FC3F7]" : "text-[#b91c1c]"}
-                  >
-                    {char}
-                  </span>
-                );
-              })}
+            <h1 className="text-2xl md:text-3xl font-black text-slate-950 mb-2 tracking-tighter uppercase font-sans select-none">
+              Espace Magasinière
             </h1>
             <p className="text-xs md:text-sm text-slate-500 mb-8 leading-relaxed px-4 font-semibold">
               Supervision des stocks, audit logistique, et conformité opérationnelle Hydromines.
@@ -173,7 +162,7 @@ const LoginPage: React.FC = () => {
                  <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                    <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
                    <circle cx="12" cy="12" r="3" />
-                 </svg>
+                  </svg>
                  Accès Visiteur Démo
               </button>
             </div>
@@ -229,14 +218,14 @@ const LoginPage: React.FC = () => {
 
         </div>
 
-        {/* Dynamic platform footer */}
-        <footer className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
-          <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-slate-400/80">
-            HYDROMINES © 2026
-          </div>
-        </footer>
-
       </section>
+
+      {/* Dynamic platform footer */}
+      <footer className="absolute bottom-6 left-0 right-0 text-center pointer-events-none">
+        <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-slate-400/80">
+          HYDROMINES © 2026
+        </div>
+      </footer>
 
     </div>
   );
