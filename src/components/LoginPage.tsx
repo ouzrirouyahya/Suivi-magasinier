@@ -134,7 +134,7 @@ const LoginPage: React.FC = () => {
               <img 
                 src={hydrominesLogo} 
                 alt="HYDROMINES Logo" 
-                className="w-[125px] h-[125px] object-contain select-none"
+                className="w-[162px] h-[162px] object-contain select-none"
                 referrerPolicy="no-referrer"
               />
             </div>
