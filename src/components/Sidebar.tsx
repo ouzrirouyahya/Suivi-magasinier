@@ -97,29 +97,28 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
   // Memoized menuItems with precise dependencies
   const menuItems = React.useMemo(() => {
     const rawItems = [
-      // 🟨 1. LOGISTICS & FLOW CENTER
-      { id: 'SEP_LOGISTICS', label: '1. Logistics & Flow Center', isSeparator: true },
-      { id: 'BON_ENTREE', label: 'Bons de Réception (Entrée)', icon: ArrowDownLeft, activeColor: 'text-emerald-750 bg-emerald-500/10 border border-emerald-500/20 font-black' },
-      { id: 'BON_SORTIE', label: 'Bons d\'Émission (Sortie)', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black' },
-      { id: 'STOCK_ENGINS', label: 'Parc Engins', icon: Truck },
-      { id: 'STOCK_PERFORATEURS', label: 'Parforateurs & Fleurets', icon: Drill },
-      { id: 'STOCK_CONSOMMABLES', label: 'Consommables & Fluides', icon: Droplets },
-      { id: 'STOCK_EPI', label: 'Protection (EPI)', icon: Shield },
-      { id: 'TRANSFERS_RETURNS', label: 'Transferts & Retours', icon: RotateCcw, activeColor: 'text-indigo-755 bg-indigo-500/10 border border-indigo-500/20' },
-      { id: 'INVENTAIRE', label: 'Inventaires Terrain', icon: ClipboardCheck },
-      { id: 'RESTOCK_MGMT', label: 'Ravitaillement & Alertes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
-
-      // 🟦 2. OPERATIONAL COCKPIT (REAL-TIME CONTROL)
-      { id: 'SEP_OPERATIONAL', label: '2. Operational Cockpit', isSeparator: true },
+      // 🟦 1. COCKPIT OPERATIONNEL (ESPACE MAGASINIER first)
+      { id: 'SEP_OPERATIONAL', label: '1. Cockpit Opérationnel', isSeparator: true },
       { id: 'COCKPIT', label: 'ESPACE MAGASINIER', icon: LayoutDashboard, activeColor: 'bg-slate-900 text-white shadow-md' },
-      { id: 'FIELD_WORKSPACE', label: 'Poste Magasinier', icon: Smartphone, activeColor: '' },
 
-      // 🟣 3. INTELLIGENCE CENTER (AI SYSTEMS)
-      { id: 'SEP_INTELLIGENCE', label: '3. Intelligence Center', isSeparator: true },
+      // 🟨 2. CENTRE LOGISTIQUE & FLUX
+      { id: 'SEP_LOGISTICS', label: '2. Centre Logistique & Flux', isSeparator: true },
+      { id: 'BON_ENTREE', label: 'Entrées', icon: ArrowDownLeft, activeColor: 'text-emerald-750 bg-emerald-500/10 border border-emerald-500/20 font-black' },
+      { id: 'BON_SORTIE', label: 'Sorties', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black' },
+      { id: 'TRANSFERS_RETURNS', label: 'Transferts & retours', icon: RotateCcw, activeColor: 'text-indigo-755 bg-indigo-500/10 border border-indigo-500/20' },
+      { id: 'STOCK_ENGINS', label: 'Parc engins', icon: Truck },
+      { id: 'STOCK_PERFORATEURS', label: 'Perforateurs', icon: Drill },
+      { id: 'STOCK_CONSOMMABLES', label: 'Consommables & fluides', icon: Droplets },
+      { id: 'STOCK_EPI', label: 'Protections EPI', icon: Shield },
+      { id: 'RESTOCK_MGMT', label: 'RAVITAILLEMENT & alertes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
+
+      // 🟣 3. CENTRE D'INTELLIGENCE IA (AI SYSTEMS)
+      { id: 'SEP_INTELLIGENCE', label: '3. Centre d’Intelligence IA', isSeparator: true },
       { id: 'MAGASINIER_IA', label: 'Copilote & Analyses IA', icon: MessageSquare, activeColor: 'bg-indigo-950 text-indigo-100 shadow border border-indigo-700/30 font-semibold' },
+      { id: 'AUDIT_INTELLIGENCE', label: 'Centre IA Audit', icon: ShieldCheck, activeColor: 'bg-emerald-950 text-emerald-100 shadow border border-emerald-700/30 font-semibold' },
 
-      // 🟥 4. GOVERNANCE CENTER
-      { id: 'SEP_GOVERNANCE', label: '4. Governance Center', isSeparator: true },
+      // 🟥 4. CONTRÔLE & REGISTRES
+      { id: 'SEP_GOVERNANCE', label: '4. Contrôle & Registres', isSeparator: true },
       { id: 'REPORTS', label: 'Rapports & Consolidation', icon: FileText, activeColor: 'bg-slate-900 text-white shadow-md' },
       { id: 'FINANCE', label: 'Flux & Valorisation Stock', icon: Landmark, activeColor: 'bg-amber-500/5 text-amber-700 shadow-sm border border-amber-500/10' },
       { id: 'TRACEABILITY', label: 'Registres & Traçabilité', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },

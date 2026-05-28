@@ -191,6 +191,22 @@ export function useStorage() {
             }
           }
 
+          if (colName === 'articles') {
+            const metaRef = doc(db, 'metadata', 'catalog_version');
+            const metaSnap = await getDoc(metaRef);
+            const currentVer = metaSnap.exists() ? metaSnap.data().version : null;
+            
+            if (currentVer !== CATALOG_VERSION) {
+              const oldSnap = await getDocs(collection(db, 'articles'));
+              const batchDelete = writeBatch(db);
+              oldSnap.docs.forEach(docSnap => {
+                batchDelete.delete(docSnap.ref);
+              });
+              await batchDelete.commit();
+              shouldSeed = true;
+            }
+          }
+
           if (shouldSeed) {
             const batch = writeBatch(db);
             let count = 0;

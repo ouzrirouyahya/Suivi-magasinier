@@ -81,16 +81,31 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     engins, 
     perfos, 
     agents,
-    addMouvement 
+    addMouvement,
+    setEngin,
+    setPerfo
   } = useInventory();
 
   // Mode Selection State
-  const [activePane, setActivePane] = useState<'DASHBOARD' | 'SAISIE'>('DASHBOARD');
+  const [activePane, setActivePane] = useState<'DASHBOARD' | 'SAISIE' | 'PARC'>('DASHBOARD');
+
+  // Live Flux Active Tab Filter
+  const [liveFluxFilter, setLiveFluxFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'TRANSFERT'>('ALL');
+  const [liveFluxSearchText, setLiveFluxSearchText] = useState('');
+  const [selectedFluxMovement, setSelectedFluxMovement] = useState<any | null>(null);
+  const [selectedTopCat, setSelectedTopCat] = useState<'ENGINS' | 'PERFORATEURS' | 'CONSOMMABLES' | 'EPI'>('ENGINS');
 
   // Instant Search Section States
   const [instantSearchQuery, setInstantSearchQuery] = useState('');
   const [searchHighlightIdx, setSearchHighlightIdx] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Parc Management Form States
+  const [parcCategory, setParcCategory] = useState<'ENGIN' | 'PERFO'>('ENGIN');
+  const [parcCode, setParcCode] = useState('');
+  const [parcLabel, setParcLabel] = useState('');
+  const [parcType, setParcType] = useState<'PELLE' | 'DUMPER' | 'VEHICULE' | 'AUTRE'>('PELLE');
+  const [parcFormSuccess, setParcFormSuccess] = useState('');
 
   // Bulk Saisie Excel States
   const [gridType, setGridType] = useState<'ENTREE' | 'SORTIE'>('SORTIE');
@@ -462,7 +477,15 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     machineChartData,
     consumedArticlesData,
     currentMonthStats,
-    compareData
+    compareData,
+    lastSortieText,
+    lastSortieSub,
+    lastEntreeText,
+    lastEntreeSub,
+    topEnginsData,
+    topPerforateursData,
+    topConsommablesData,
+    topEpiData
   } = useMemo(() => {
     const siteArticles = articles.filter(a => a.site === site);
     const siteMouvements = mouvements.filter(m => m.site === site);
@@ -484,6 +507,35 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     const spendToday = siteMouvements
       .filter(m => m.date.startsWith(today) && m.type === 'SORTIE')
       .reduce((acc, m) => acc + m.items.reduce((sum, item) => sum + (item.quantity * item.price), 0), 0);
+
+    // Last movements
+    const lastSortie = [...siteMouvements]
+      .filter(m => m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+    const lastEntree = [...siteMouvements]
+      .filter(m => m.type === 'ENTREE' || m.type === 'TRANSFERT_IN')
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+    const formatLastMouvementText = (m?: any) => {
+      if (!m) return 'Aucun';
+      const d = new Date(m.date);
+      const dateStr = d.toLocaleDateString('fr-MA', { day: '2-digit', month: '2-digit' });
+      const priceSum = m.items.reduce((sum: number, it: any) => sum + (it.quantity * (it.price || 0)), 0);
+      return `${dateStr} (${formatCurrency(priceSum)})`;
+    };
+
+    const formatLastMouvementSub = (m?: any) => {
+      if (!m || m.items.length === 0) return 'Aucun flux enregistré';
+      const count = m.items.length;
+      const originLabel = m.type === 'SORTIE' ? `Dmd: ${m.demandeur || 'Atelier'}` : `Fourn: ${m.vendeur || 'Epiroc'}`;
+      return `${count} réf • ${originLabel}`;
+    };
+
+    const lastSortieText = formatLastMouvementText(lastSortie);
+    const lastSortieSub = formatLastMouvementSub(lastSortie);
+    const lastEntreeText = formatLastMouvementText(lastEntree);
+    const lastEntreeSub = formatLastMouvementSub(lastEntree);
 
     // Chart 1: Spend over time
     const months = ['Jan', 'Fév', 'Mar', 'Avr', 'Mai', 'Juin', 'Juil', 'Aoû', 'Sep', 'Oct', 'Nov', 'Déc'];
@@ -550,6 +602,39 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
       .sort((a, b) => b.value - a.value)
       .slice(0, 5);
 
+    // Multi-category Top-consumed values
+    const getTopConsumedByCategory = (categoryType: string) => {
+      const topConsumed = siteMouvements
+        .filter(m => m.type === 'SORTIE')
+        .reduce((acc, m) => {
+          m.items.forEach(item => {
+            const art = articles.find(a => a.id === item.articleId);
+            if (art) {
+              const matchesType = categoryType === 'EPI' 
+                ? art.type === 'EPI' 
+                : art.type === categoryType;
+                
+              if (matchesType) {
+                const key = art.designation;
+                const spendValue = item.quantity * (item.price || art.price || 0);
+                acc[key] = (acc[key] || 0) + spendValue;
+              }
+            }
+          });
+          return acc;
+        }, {} as Record<string, number>);
+
+      return Object.entries(topConsumed)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value)
+        .slice(0, 5);
+    };
+
+    const topEnginsData = getTopConsumedByCategory('ENGINS');
+    const topPerforateursData = getTopConsumedByCategory('PERFORATEURS');
+    const topConsommablesData = getTopConsumedByCategory('CONSOMMABLES');
+    const topEpiData = getTopConsumedByCategory('EPI');
+
     // Month stats
     const prevMonthIdx = currentMonthIdx === 0 ? 11 : currentMonthIdx - 1;
     const prevMonthYear = currentMonthIdx === 0 ? currentYear - 1 : currentYear;
@@ -592,7 +677,15 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
       machineChartData,
       consumedArticlesData,
       currentMonthStats,
-      compareData
+      compareData,
+      lastSortieText,
+      lastSortieSub,
+      lastEntreeText,
+      lastEntreeSub,
+      topEnginsData,
+      topPerforateursData,
+      topConsommablesData,
+      topEpiData
     };
   }, [articles, mouvements, site]);
 
@@ -655,18 +748,76 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     articles.filter(a => a.site === site && a.quantity <= a.minStock).slice(0, 5),
   [articles, site]);
 
-  const recentMovements = React.useMemo(() => 
-    mouvements.filter(m => m.site === site).slice(0, 8),
-  [mouvements, site]);
+  const recentMovements = React.useMemo(() => {
+    let list = mouvements.filter(m => m.site === site);
+    
+    // 1. Live tab filter
+    if (liveFluxFilter !== 'ALL') {
+      list = list.filter(m => {
+        if (liveFluxFilter === 'ENTREE') return m.type === 'ENTREE' || m.type === 'TRANSFERT_IN';
+        if (liveFluxFilter === 'SORTIE') return m.type === 'SORTIE';
+        if (liveFluxFilter === 'TRANSFERT') return m.type === 'TRANSFERT_OUT' || m.type === 'TRANSFERT_IN';
+        return true;
+      });
+    }
+
+    // 2. Live text filter
+    if (liveFluxSearchText.trim() !== '') {
+      const q = liveFluxSearchText.toLowerCase();
+      list = list.filter(m => {
+        const machineMatch = (m.engin || '').toLowerCase().includes(q) || (m.perforateur || '').toLowerCase().includes(q);
+        const reasonMatch = (m.motif || '').toLowerCase().includes(q);
+        const sourceMatch = (m.vendeur || m.demandeur || '').toLowerCase().includes(q);
+        const refMatch = m.items.some(it => {
+          const art = articles.find(a => a.id === it.articleId);
+          if (!art) return false;
+          return art.ref.toLowerCase().includes(q) || art.designation.toLowerCase().includes(q);
+        });
+        return machineMatch || reasonMatch || sourceMatch || refMatch;
+      });
+    }
+
+    return list.slice(0, 15);
+  }, [mouvements, site, liveFluxFilter, liveFluxSearchText]);
 
   const stats = [
-    { label: 'Valeur Immobilisée', value: formatCurrency(stockValue), icon: DollarSign, color: 'text-sky-600', bg: 'bg-sky-50', alert: false },
-    { label: 'Indice de Santé', value: '88/100', icon: ShieldIcon, color: 'text-emerald-600', bg: 'bg-emerald-50', alert: false },
-    ...(isAdmin ? [
-      { label: 'Audit FBI', value: 'Lancer', icon: Fingerprint, color: 'text-rose-600', bg: 'bg-rose-50', action: 'AI_FRAUD', alert: false },
-      { label: 'Rapport Hebdo', value: 'Prêt', icon: Calendar, color: 'text-sky-600', bg: 'bg-sky-50', action: 'AI_REPORTS', alert: false },
-      { label: 'IA Achats', value: 'Optimiser', icon: Zap, color: 'text-indigo-600', bg: 'bg-indigo-50', action: 'AI_PROCUREMENT', alert: false },
-    ] : [])
+    { 
+      label: 'Valeur Immobilisée', 
+      value: formatCurrency(stockValue), 
+      sub: `${totalArticles} références actives`, 
+      icon: DollarSign, 
+      color: 'text-sky-600', 
+      bg: 'bg-sky-50',
+      alert: false 
+    },
+    { 
+      label: 'Dernière Entrée', 
+      value: lastEntreeText, 
+      sub: lastEntreeSub, 
+      icon: ArrowDownLeft, 
+      color: 'text-emerald-600', 
+      bg: 'bg-emerald-50',
+      alert: false 
+    },
+    { 
+      label: 'Dernière Sortie', 
+      value: lastSortieText, 
+      sub: lastSortieSub, 
+      icon: ArrowUpRight, 
+      color: 'text-rose-600', 
+      bg: 'bg-rose-50',
+      alert: false 
+    },
+    { 
+      label: 'Ruptures Stock Critique', 
+      value: `${lowStockCount} Réf`, 
+      sub: `En alerte approvisionnement`, 
+      icon: AlertCircle, 
+      color: lowStockCount > 0 ? 'text-amber-600' : 'text-slate-500', 
+      bg: lowStockCount > 0 ? 'bg-amber-50' : 'bg-slate-50', 
+      action: 'ALERTES_STOCK', 
+      alert: lowStockCount > 0 
+    }
   ];
 
   return (
@@ -674,7 +825,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-2 py-1 bg-sky-100 text-sky-700 text-xs font-black uppercase tracking-widest rounded-md border border-sky-200">v2.0 Sync</span>
+            <span className="px-2 py-1 bg-sky-100 text-sky-700 text-xs font-black uppercase tracking-widest rounded-md border border-sky-200">v3.1 Industrial</span>
             <span className="text-slate-300">|</span>
             <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">{new Date().toLocaleDateString('fr-MA', { day: 'numeric', month: 'long' })}</span>
           </div>
@@ -734,6 +885,17 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
           )}
         >
           ⌨️ Saisie Massive Excel Grid
+        </button>
+        <button
+          onClick={() => setActivePane('PARC')}
+          className={cn(
+            "px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5",
+            activePane === 'PARC'
+              ? "bg-amber-600 text-white shadow-lg shadow-amber-500/20"
+              : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
+          )}
+        >
+          🚚 Parc Perfo & Engins
         </button>
       </div>
 
@@ -1142,15 +1304,244 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
         </div>
       )}
 
+      {/* 2.5 PARC ENGINS & PERFORATEURS PANEL */}
+      {activePane === 'PARC' && !instantSearchQuery && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-slate-100 p-5 rounded-xl border border-slate-200 gap-3">
+            <div>
+              <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
+                <Truck className="w-5 h-5 text-amber-500" /> GESTION OPÉRATIONNELLE DU PARC ÉQUIPEMENTS LOURDS
+              </h3>
+              <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">État physique et d'imputation du site {site} (-350m, agressif silices)</p>
+            </div>
+            <button
+              onClick={() => setActivePane('DASHBOARD')}
+              className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white text-xs font-black uppercase tracking-wider rounded-lg transition-colors shadow-md"
+            >
+              Retour Tableau de Bord
+            </button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Column: List of existing equipment */}
+            <div className="lg:col-span-8 space-y-6">
+              
+              {/* Scooptrams / Engins section */}
+              <div className="card glass p-6 shadow-sm border border-slate-200/60">
+                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-1.5">
+                    <Truck className="w-4 h-4 text-amber-500" /> Flotte d'Engins Actifs (Scooptrams / Dumpers)
+                  </h4>
+                  <span className="px-2 py-0.5 bg-amber-50 text-amber-900 text-[9px] font-mono border border-amber-100 rounded">
+                    {engins.filter(e => e.site === site).length} actifs
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {engins.filter(e => e.site === site).map(eng => (
+                    <div key={eng.id} className="p-4 bg-white border border-slate-150 rounded-xl hover:shadow-md transition-all flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start">
+                          <span className="px-1.5 py-0.5 bg-amber-100 text-amber-800 text-[8px] font-black uppercase tracking-wider rounded border border-amber-200">
+                            {eng.type}
+                          </span>
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[8px] font-black rounded uppercase">
+                            Opérationnel
+                          </span>
+                        </div>
+                        <h5 className="text-sm font-black text-slate-900 mt-2 uppercase">{eng.code}</h5>
+                        <p className="text-xs text-slate-500 font-bold uppercase mt-0.5 leading-snug">{eng.label}</p>
+                      </div>
+                      
+                      <div className="mt-4 pt-2 border-t border-slate-100 flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase">
+                        <span>Mine Souterraine</span>
+                        <span className="text-amber-600 font-black">Epiroc Tracked</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {engins.filter(e => e.site === site).length === 0 && (
+                    <div className="col-span-2 text-center py-10 text-slate-400 font-bold text-xs uppercase opacity-70">
+                      Aucun Scooptram ou véhicule lourd déclaré pour le point d'imputation {site}.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Perforateurs section */}
+              <div className="card glass p-6 shadow-sm border border-slate-200/60">
+                <div className="flex justify-between items-center mb-4 border-b border-slate-100 pb-2">
+                  <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest flex items-center gap-1.5">
+                    <Activity className="w-4 h-4 text-rose-500" /> Marteaux de Perforation COP Systems
+                  </h4>
+                  <span className="px-2 py-0.5 bg-rose-50 text-rose-900 text-[9px] font-mono border border-rose-100 rounded">
+                    {perfos.filter(p => p.site === site).length} marteaux
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  {perfos.filter(p => p.site === site).map(perf => (
+                    <div key={perf.id} className="p-4 bg-white border border-slate-150 rounded-xl hover:shadow-md transition-all flex flex-col justify-between">
+                      <div>
+                        <div className="flex justify-between items-start">
+                          <span className="px-1.5 py-0.5 bg-rose-100 text-rose-800 text-[8px] font-black uppercase tracking-wider rounded border border-rose-200">
+                            MARTEAU DRIL
+                          </span>
+                          <span className="px-1.5 py-0.5 bg-emerald-100 text-emerald-800 text-[8px] font-black rounded uppercase">
+                            Actif Terrain
+                          </span>
+                        </div>
+                        <h5 className="text-sm font-black text-slate-900 mt-2 uppercase">{perf.code}</h5>
+                        <p className="text-xs text-slate-500 font-bold uppercase mt-0.5">COP Forage Technique Silices</p>
+                      </div>
+
+                      <div className="mt-4 pt-2 border-t border-slate-100 flex justify-between items-center text-[9px] text-slate-400 font-bold uppercase">
+                        <span>Attribution Front</span>
+                        <span className="text-rose-600 font-black">Montabert Compatible</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {perfos.filter(p => p.site === site).length === 0 && (
+                    <div className="col-span-2 text-center py-10 text-slate-400 font-bold text-xs uppercase opacity-70">
+                      Aucun marteau de perforation déclaré sur le site {site}.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+
+            {/* Right Column: Add equipment form */}
+            <div className="lg:col-span-4 bg-white p-5 rounded-2xl border border-slate-200/70 shadow-xl space-y-4">
+              <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest border-b border-slate-100 pb-2">
+                📝 Enregistrer un Matériel au Parc
+              </h4>
+
+              {parcFormSuccess && (
+                <div className="p-3 bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold rounded-xl animate-bounce">
+                  {parcFormSuccess}
+                </div>
+              )}
+
+              <form onSubmit={async (e) => {
+                e.preventDefault();
+                if (!parcCode.trim()) return;
+                const newId = generateId();
+                if (parcCategory === 'ENGIN') {
+                  await setEngin(newId, {
+                    id: newId,
+                    code: parcCode.toUpperCase().trim(),
+                    label: parcLabel.toUpperCase().trim() || 'EQUIPEMENT ENGIN',
+                    site,
+                    type: parcType
+                  });
+                  setParcFormSuccess(`L'engin "${parcCode.toUpperCase()}" a été enregistré.`);
+                } else {
+                  await setPerfo(newId, {
+                    id: newId,
+                    code: parcCode.toUpperCase().trim(),
+                    site
+                  });
+                  setParcFormSuccess(`Le perforateur "${parcCode.toUpperCase()}" a été enregistré.`);
+                }
+                setParcCode('');
+                setParcLabel('');
+                setTimeout(() => setParcFormSuccess(''), 4000);
+              }} className="space-y-4">
+                
+                {/* CATEGORY SELECTOR */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Catégorie D'Équipement</label>
+                  <div className="flex bg-slate-105 p-0.5 rounded-lg border border-slate-200 gap-0.5">
+                    <button
+                      type="button"
+                      onClick={() => setParcCategory('ENGIN')}
+                      className={cn(
+                        "flex-1 py-1.5 text-xs font-black uppercase rounded-md transition-all text-center",
+                        parcCategory === 'ENGIN' ? "bg-slate-950 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
+                      )}
+                    >
+                      Scooptram
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setParcCategory('PERFO')}
+                      className={cn(
+                        "flex-1 py-1.5 text-xs font-black uppercase rounded-md transition-all text-center",
+                        parcCategory === 'PERFO' ? "bg-slate-950 text-white shadow-sm" : "text-slate-500 hover:text-slate-900"
+                      )}
+                    >
+                      Perforateur
+                    </button>
+                  </div>
+                </div>
+
+                {/* ID/CODE */}
+                <div>
+                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Code / Châssis (Immatriculation) *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="Ex: EX-ST2G-03, COP1838HD..."
+                    value={parcCode}
+                    onChange={(e) => setParcCode(e.target.value)}
+                    className="w-full h-10 px-3 text-xs font-black text-slate-800 placeholder-slate-400 bg-slate-5e border border-slate-200 rounded-lg outline-none focus:border-amber-500 uppercase"
+                  />
+                </div>
+
+                {/* Specific features for Scooptrams */}
+                {parcCategory === 'ENGIN' && (
+                  <>
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Marque / Modèle descriptif</label>
+                      <input
+                        type="text"
+                        placeholder="Ex: Epiroc Scooptram ST2G, ST2D..."
+                        value={parcLabel}
+                        onChange={(e) => setParcLabel(e.target.value)}
+                        className="w-full h-10 px-3 text-xs font-black text-slate-800 placeholder-slate-400 bg-slate-5e border border-slate-200 rounded-lg outline-none focus:border-amber-500 uppercase"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1">Type d'imputation ERP</label>
+                      <select
+                        value={parcType}
+                        onChange={(e: any) => setParcType(e.target.value)}
+                        className="w-full h-10 px-3 text-xs font-black text-slate-800 bg-white border border-slate-200 rounded-lg outline-none focus:border-amber-500 uppercase"
+                      >
+                        <option value="PELLE">PELLE (SCOOPTRAM LOADER)</option>
+                        <option value="DUMPER">DUMPER (MINING TRUCK)</option>
+                        <option value="VEHICULE">VEHICULE UTILITAIRE</option>
+                        <option value="AUTRE">AUTRE CHARGEUR</option>
+                      </select>
+                    </div>
+                  </>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={!parcCode.trim()}
+                  className="w-full py-3 mt-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 text-white rounded-xl font-black uppercase text-xs tracking-widest transition-colors shadow-lg shadow-amber-500/10 active:scale-95"
+                >
+                  🚀 Valider l'enregistrement
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* 3. NORMAL VISUAL COCKPIT/DASHBOARD */}
       {activePane === 'DASHBOARD' && !instantSearchQuery && (
         <>
           {/* Quick Action Hub */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 no-print row-dense">
             {[
-              { icon: ArrowDownLeft, label: 'Réception', color: 'emerald', page: 'BON_ENTREE' },
-              { icon: ArrowUpRight, label: 'Sortie', color: 'rose', page: 'BON_SORTIE' },
-              { icon: Truck, label: 'Transfert', color: 'sky', page: 'TRANSFERT' },
+              { icon: ArrowDownLeft, label: 'Réception (Entrées)', color: 'emerald', page: 'BON_ENTREE' },
+              { icon: ArrowUpRight, label: 'Sortie Pièces', color: 'rose', page: 'BON_SORTIE' },
+              { icon: Truck, label: 'Transferts & Retours', color: 'sky', page: 'TRANSFERS_RETURNS' },
             ].map(action => (
               <button 
                 key={action.page}
@@ -1178,32 +1569,70 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
             ))}
           </div>
 
+          {/* CATALOG NAVIGATION SHORTCUTS */}
+          <div className="card glass p-6 shadow-sm border border-slate-100 no-print">
+            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Accès Rapide aux Catalogues & Flotte</h4>
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {[
+                { label: 'Catalogues Maîtres', desc: 'Gestion Réf/BOM', icon: Package, page: 'GESTION_ARTICLES', color: 'text-sky-600', bg: 'bg-sky-50 border-sky-100' },
+                { label: 'Parc Engins', desc: 'Registre Scooptrams', icon: Truck, page: 'PARC', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
+                { label: 'Perforateurs', desc: 'Marteaux COP/MB', icon: Activity, page: 'STOCK_PERFORATEURS', color: 'text-rose-600', bg: 'bg-rose-50 border-rose-100' },
+                { label: 'Consommables', desc: 'Fluides & Silice', icon: Flame, page: 'STOCK_CONSOMMABLES', color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100' },
+                { label: 'Equipements EPI', desc: 'Sûreté -350m', icon: ShieldIcon, page: 'STOCK_EPI', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
+                { label: 'Ravitaillement', desc: 'Stock & Plannings', icon: AlertCircle, page: 'RESTOCK_MGMT', color: 'text-violet-600', bg: 'bg-violet-50 border-violet-100' },
+              ].map(sec => (
+                <button
+                  key={sec.label}
+                  onClick={() => {
+                    if (sec.page === 'PARC') {
+                      setActivePane('PARC');
+                    } else {
+                      onAction(sec.page);
+                    }
+                  }}
+                  className={cn(
+                    "flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 transition-all text-center group hover:-translate-y-1 shadow-none hover:shadow-lg bg-white/50"
+                  )}
+                >
+                  <div className={cn("p-2 rounded-lg mb-2 shadow-inner group-hover:scale-110 transition-transform", sec.bg, sec.color)}>
+                    <sec.icon className="w-5 h-5" />
+                  </div>
+                  <span className="text-xs font-black text-slate-800 uppercase tracking-tight group-hover:text-amber-600">{sec.label}</span>
+                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-wider">{sec.desc}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (
               <div 
                 key={stat.label} 
                 onClick={() => {
-                  if (stat.label === 'Ruptures Stock') onAction('RESTOCK_MGMT');
-                  if (stat.action === 'AI_COMPLIANCE') onAction({ page: 'COCKPIT', tab: 'COMPLIANCE' });
-                  if (stat.action === 'AI_FRAUD') onAction({ page: 'COCKPIT', tab: 'FRAUD' });
-                  if (stat.action === 'AI_REPORTS') onAction({ page: 'COCKPIT', tab: 'REPORT_CENTER' });
-                  if (stat.action === 'AI_PROCUREMENT') onAction({ page: 'COCKPIT', tab: 'PROCUREMENT' });
-                  if (stat.action === 'AI_VISION') onAction({ page: 'COCKPIT', tab: 'VISION' });
+                  if (stat.action === 'ALERTES_STOCK') onAction('RESTOCK_MGMT');
                 }}
                 className={cn(
-                  "card glass p-8 rounded-3xl border-l-[6px] border-slate-100 transition-all duration-300 hover:translate-y-[-4px] h-full",
-                  stat.alert ? "border-rose-500 bg-rose-50/20 cursor-pointer shadow-md shadow-rose-100/50" : 
-                  stat.action ? "border-indigo-500 bg-indigo-50/20 cursor-pointer hover:shadow-indigo-100/50" : "shadow-sm"
+                  "card glass p-5 rounded-2xl border-l-[6px] border-slate-200 transition-all duration-300 hover:translate-y-[-2px] h-full flex flex-col justify-between select-none",
+                  stat.alert ? "border-rose-500 bg-rose-50/10 cursor-pointer shadow-sm" : 
+                  stat.action ? "border-indigo-500 bg-indigo-50/10 cursor-pointer" : "shadow-sm border-slate-300 bg-white"
                 )}
               >
-                <div className="flex items-center justify-between mb-4 font-black">
-                  <div className={cn("p-2 rounded-xl", stat.bg, stat.color)}>
-                    <stat.icon className="w-6 h-6" />
+                <div>
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-xs font-black text-slate-400 uppercase tracking-wider leading-none">{stat.label}</p>
+                    <div className={cn("p-1.5 rounded-lg", stat.bg, stat.color)}>
+                      <stat.icon className="w-4 h-4" />
+                    </div>
                   </div>
+                  <p className={cn(
+                    "font-black tracking-tight leading-none mb-1 text-slate-950 truncate",
+                    stat.value.length > 20 ? "text-[11px] sm:text-xs md:text-sm font-mono text-slate-500" : "text-2xl sm:text-3xl"
+                  )}>
+                    {stat.value}
+                  </p>
                 </div>
-                <p className="text-lg font-black text-slate-400 uppercase tracking-tighter leading-none opacity-70 mb-2">{stat.label}</p>
-                <p className={cn("text-5xl font-black tracking-tighter leading-none", stat.alert ? "text-rose-600" : "text-slate-900")}>
-                  {stat.value}
+                <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 leading-normal border-t border-slate-100/50 pt-1">
+                  {stat.sub}
                 </p>
               </div>
             ))}
@@ -1212,64 +1641,130 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
             <div className="lg:col-span-8 space-y-4">
               <div className="card glass p-6 shadow-xl">
-                <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter mb-4 flex items-center gap-2">
-                  <TrendingUp className="w-5 h-5 text-sky-600" /> Flux de Consommation
-                </h3>
-                <div className="h-[350px] min-h-[350px]">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={350} minWidth={0} debounce={50}>
-                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 60, bottom: 0 }}>
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
+                  <div>
+                    <h3 className="text-lg font-black text-slate-100 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 inline-block uppercase tracking-tighter mb-1.5 flex items-center gap-2">
+                      <TrendingUp className="w-4 h-4 text-sky-400" /> FLUX DE CONSOMMATION DU MAGASIN (MAD)
+                    </h3>
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+                      Courbe de valorisation globale des sorties magasin en Dirhams (MAD) cumulées par mois sur l'année en cours.
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-md uppercase tracking-widest border border-sky-100">Devise: MAD</span>
+                </div>
+                <div className="h-[300px] min-h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0} debounce={50}>
+                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
                       <defs>
                         <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.1}/>
+                          <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.15}/>
                           <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
                         </linearGradient>
                       </defs>
                       <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" fontSize={12} fontWeight="900" axisLine={false} tickLine={false} />
-                      <YAxis fontSize={12} fontWeight="900" axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
+                      <XAxis dataKey="name" fontSize={11} fontWeight="900" axisLine={false} tickLine={false} stroke="#64748b" />
+                      <YAxis fontSize={11} fontWeight="900" axisLine={false} tickLine={false} stroke="#64748b" tickFormatter={(value) => `${formatCurrency(value)}`} />
                       <Tooltip 
-                        contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', padding: '12px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' }}
-                        itemStyle={{ fontWeight: '900', fontSize: '12px' }}
-                        labelStyle={{ fontWeight: '900', fontSize: '13px', marginBottom: '4px' }}
+                        contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', padding: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}
+                        itemStyle={{ fontWeight: '900', fontSize: '11px', color: '#0f172a' }}
+                        labelStyle={{ fontWeight: '900', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}
+                        formatter={(value: any) => [`${formatCurrency(value)}`, 'Total Consommé']}
                       />
-                      <Area type="monotone" dataKey="value" stroke="#0ea5e9" strokeWidth={4} fillOpacity={1} fill="url(#colorValue)" />
+                      <Area type="monotone" dataKey="value" stroke="#0ea5e9" strokeWidth={3.5} fillOpacity={1} fill="url(#colorValue)" />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="card glass p-8 shadow-xl">
-                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-6 flex items-center gap-2">
-                    <Truck className="w-6 h-6 text-amber-600" /> Coût par Engin
-                  </h3>
-                  <div className="h-[200px] min-h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
-                      <BarChart data={machineChartData} layout="vertical" margin={{ left: 40 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                        <XAxis type="number" hide />
-                        <YAxis dataKey="name" type="category" width={80} fontSize={10} fontWeight="900" />
-                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', padding: '8px', fontWeight: '900' }} />
-                        <Bar dataKey="value" fill="#f59e0b" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                {/* COÛT PAR ENGIN */}
+                <div className="card glass p-6 shadow-xl border border-slate-100">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      <Truck className="w-5 h-5 text-amber-600 font-black" /> COÛT DE MAINTENANCE PAR ENGIN (MAD)
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-4">Dépenses de sorties pièces imputées par machine lourd</p>
+                  </div>
+                  <div className="h-[250px] min-h-[250px]">
+                    {machineChartData.length > 0 ? (
+                      <ResponsiveContainer width="100%" height="100%" minHeight={250} minWidth={0} debounce={50}>
+                        <BarChart data={machineChartData} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                          <XAxis type="number" hide />
+                          <YAxis dataKey="name" type="category" width={80} fontSize={10} fontWeight="900" axisLine={false} tickLine={false} stroke="#475569" />
+                          <Tooltip 
+                            cursor={{ fill: 'rgba(245, 158, 11, 0.04)' }} 
+                            contentStyle={{ borderRadius: '8px', border: 'none', padding: '8px', fontWeight: '900', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }} 
+                            formatter={(value: any) => [`${formatCurrency(value)}`, 'Coûts de sorties']}
+                          />
+                          <Bar dataKey="value" fill="#f59e0b" radius={[0, 6, 6, 0]} maxBarSize={20} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    ) : (
+                      <div className="h-full flex items-center justify-center text-center text-xs font-black text-slate-400 uppercase">Aucune imputation de coût machine</div>
+                    )}
                   </div>
                 </div>
 
-                <div className="card glass p-8 shadow-xl">
-                  <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter mb-6 flex items-center gap-2">
-                    <Package className="w-6 h-6 text-indigo-600" /> Top Consommation
-                  </h3>
-                  <div className="h-[200px] min-h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
-                      <BarChart data={consumedArticlesData} layout="vertical" margin={{ left: 40 }}>
-                        <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                        <XAxis type="number" hide />
-                        <YAxis dataKey="name" type="category" width={80} fontSize={10} fontWeight="900" />
-                        <Tooltip cursor={{ fill: 'transparent' }} contentStyle={{ borderRadius: '8px', border: 'none', padding: '8px', fontWeight: '900' }} />
-                        <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} />
-                      </BarChart>
-                    </ResponsiveContainer>
+                {/* TOP CONSOMMATION CATEGORIES TABBED */}
+                <div className="card glass p-6 shadow-xl border border-slate-100 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                      <Package className="w-5 h-5 text-indigo-600" /> CLASSEMENT DES CONSOMMATIONS PAR CATÉGORIE
+                    </h3>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-3">Valorisation absolue (MAD) des pièces détachées sorties</p>
+                    
+                    {/* Category Switcher Tabs */}
+                    <div className="flex bg-slate-100 p-0.5 rounded-lg gap-0.5 mb-4 no-print flex-wrap">
+                      {[
+                        { id: 'ENGINS', label: '🚚 Engins' },
+                        { id: 'PERFORATEURS', label: '🔨 Perfo' },
+                        { id: 'CONSOMMABLES', label: '🧪 Fluides' },
+                        { id: 'EPI', label: '🦺 EPI' }
+                      ].map(tab => (
+                        <button
+                          key={tab.id}
+                          onClick={() => setSelectedTopCat(tab.id as any)}
+                          className={cn(
+                            "flex-1 text-[9px] font-black uppercase tracking-tight py-1.5 px-1 rounded-md transition-all",
+                            selectedTopCat === tab.id 
+                              ? "bg-slate-950 text-white shadow-sm" 
+                              : "text-slate-500 hover:text-slate-900"
+                          )}
+                        >
+                          {tab.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="h-[200px] min-h-[200px] flex-1">
+                    {(() => {
+                      const data = selectedTopCat === 'ENGINS' ? topEnginsData :
+                                   selectedTopCat === 'PERFORATEURS' ? topPerforateursData :
+                                   selectedTopCat === 'CONSOMMABLES' ? topConsommablesData : topEpiData;
+                      const activeColor = selectedTopCat === 'ENGINS' ? '#f59e0b' :
+                                          selectedTopCat === 'PERFORATEURS' ? '#10b981' :
+                                          selectedTopCat === 'CONSOMMABLES' ? '#f43f5e' : '#6366f1';
+
+                      return data.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
+                          <BarChart data={data} layout="vertical" margin={{ left: 10, right: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" width={90} fontSize={9} fontWeight="900" axisLine={false} tickLine={false} stroke="#475569" />
+                            <Tooltip 
+                              cursor={{ fill: 'transparent' }} 
+                              contentStyle={{ borderRadius: '8px', border: 'none', padding: '8px', fontWeight: '900', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }} 
+                              formatter={(value: any) => [`${formatCurrency(value)}`, 'Valorisation']}
+                            />
+                            <Bar dataKey="value" fill={activeColor} radius={[0, 6, 6, 0]} maxBarSize={16} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-center text-xs font-black text-slate-400 uppercase">Aucune consommation enregistrée dans cette catégorie</div>
+                      );
+                    })()}
                   </div>
                 </div>
               </div>
@@ -1342,56 +1837,270 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               </div>
             </div>
 
-            <div className="lg:col-span-4 card glass p-6 flex flex-col h-full bg-slate-900/5 backdrop-blur-3xl border-slate-200/50 shadow-xl overflow-hidden self-stretch">
-              <h3 className="text-lg font-black text-slate-900 uppercase tracking-tighter mb-4 flex items-center gap-2">
-                <Activity className="w-5 h-5 text-sky-600" /> Flux Live
-              </h3>
-              <div className="space-y-3 flex-1 overflow-y-auto custom-scrollbar pr-1">
+            <div className="lg:col-span-4 card glass p-5 flex flex-col h-full bg-slate-50 border-slate-200/60 shadow-xl overflow-hidden self-stretch no-print">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tighter flex items-center gap-1.5">
+                  <Activity className="w-4 h-4 text-sky-600" /> Flux Live Flux
+                </h3>
+                <span className="flex h-2 w-2 relative">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+              </div>
+
+              {/* LIVE TABS FILTER */}
+              <div className="flex bg-slate-200/50 p-0.5 rounded-lg gap-0.5 mb-2 flex-wrap">
+                {[
+                  { id: 'ALL', label: 'Tous' },
+                  { id: 'ENTREE', label: 'Entrées' },
+                  { id: 'SORTIE', label: 'Sorties' },
+                  { id: 'TRANSFERT', label: 'Transf.' }
+                ].map(lt => (
+                  <button
+                    key={lt.id}
+                    onClick={() => setLiveFluxFilter(lt.id as any)}
+                    className={cn(
+                      "flex-1 text-[9px] font-black uppercase py-1.5 rounded-md transition-all text-center",
+                      liveFluxFilter === lt.id 
+                        ? "bg-white text-slate-900 shadow-sm font-bold" 
+                        : "text-slate-500 hover:text-slate-900"
+                    )}
+                  >
+                    {lt.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* SEARCH INPUT FILTER */}
+              <div className="relative mb-3">
+                <input
+                  type="text"
+                  placeholder="Filtrer par machine, motif ou réf..."
+                  value={liveFluxSearchText}
+                  onChange={(e) => setLiveFluxSearchText(e.target.value)}
+                  className="w-full h-8 pl-8 pr-3 text-xs font-bold text-slate-800 placeholder-slate-400 bg-white border border-slate-200 rounded-lg outline-none focus:border-amber-500 transition-colors"
+                />
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                {liveFluxSearchText && (
+                  <button 
+                    onClick={() => setLiveFluxSearchText('')} 
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 text-xs font-bold"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[450px]">
                 {recentMovements.length > 0 ? recentMovements.map((mov) => {
                   const total = mov.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+                  const isIncoming = mov.type === 'ENTREE' || mov.type === 'TRANSFERT_IN';
                   return (
                     <div 
                       key={mov.id} 
-                      onClick={() => {
-                        const firstItem = mov.items[0];
-                        if (firstItem) {
-                          const article = articles.find(a => a.id === firstItem.articleId);
-                          if (article) onArticleClick?.(article);
-                        }
-                      }}
-                      className="flex items-start gap-3 p-3 rounded-xl hover:bg-white transition-all border border-transparent hover:border-slate-100 group shadow-none hover:shadow-lg cursor-pointer"
+                      onClick={() => setSelectedFluxMovement(mov)}
+                      className="group border border-slate-100 hover:border-slate-300 p-2.5 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col gap-1 text-left"
                     >
-                      <div className={cn(
-                        "p-2.5 rounded-lg flex-shrink-0 transition-transform group-hover:scale-110 shadow-md",
-                        mov.type === 'ENTREE' ? "bg-emerald-500 text-white" : "bg-rose-800 text-white"
-                      )}>
-                        {mov.type === 'ENTREE' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+                      <div className="flex items-center justify-between gap-1.5">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className={cn(
+                            "px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider",
+                            isIncoming ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
+                          )}>
+                            {mov.type}
+                          </span>
+                          <span className="text-xs font-black text-slate-900 truncate uppercase">
+                            {isIncoming ? mov.vendeur : mov.demandeur}
+                          </span>
+                        </div>
+                        <span className="text-[9px] font-mono font-bold text-slate-500 flex-shrink-0">
+                          {formatCurrency(total)}
+                        </span>
                       </div>
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm font-black text-slate-900 uppercase truncate leading-tight">
-                          {mov.type === 'ENTREE' ? mov.vendeur : mov.demandeur}
+
+                      {/* Display targeted machine if imputed */}
+                      {(mov.engin || mov.perforateur) && (
+                        <div className="flex items-center gap-1 text-[10px] text-amber-600 font-bold uppercase tracking-tight mt-0.5">
+                          <Truck className="w-3 h-3 flex-shrink-0" />
+                          <span className="truncate">CIBLE: {mov.engin || mov.perforateur}</span>
+                        </div>
+                      )}
+
+                      {/* Display intervention motif */}
+                      {mov.motif && (
+                        <p className="text-[9px] font-semibold text-slate-400 uppercase italic line-clamp-1 border-t border-slate-50 pt-0.5">
+                          Motif: {mov.motif}
                         </p>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 tracking-widest leading-none opacity-70">
-                          {mov.items.length} Réf • {formatCurrency(total)}
-                        </p>
+                      )}
+
+                      <div className="flex justify-between items-center text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-1 border-t border-slate-50 pt-1">
+                        <span>{mov.items.length} références</span>
+                        <span>{new Date(mov.date).toLocaleDateString('fr-MA', { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
                     </div>
                   );
                 }) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center opacity-30 py-6">
-                    <p className="text-[10px] font-black uppercase tracking-widest">Aucun flux récent</p>
+                  <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
+                    <p className="text-[10px] font-black uppercase tracking-widest">Aucun flux ne correspond</p>
                   </div>
                 )}
               </div>
-              <button 
-                 onClick={() => onAction('AUDIT_LOG')}
-                 className="mt-4 w-full py-3 bg-slate-950 text-white rounded-xl font-black uppercase text-xs tracking-widest hover:bg-slate-800 transition-all shadow-xl active:scale-95"
-              >
-                Inspecteur Auditeur
-              </button>
             </div>
           </div>
         </>
+      )}
+
+      {/* 4. COMPREHENSIVE MOVEMENT TRACEABILITY MODAL POP-UP */}
+      {selectedFluxMovement && (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <header className="bg-slate-950 p-5 text-white flex justify-between items-center">
+              <div>
+                <span className="text-[9px] font-black uppercase tracking-widest text-[#f59e0b] bg-[#f59e0b]/10 px-2 py-0.5 rounded border border-[#f59e0b]/20">Traceability Log</span>
+                <h3 className="text-lg font-black uppercase tracking-tight mt-1 flex items-center gap-2">
+                  <Activity className="w-5 h-5 text-[#f59e0b]" /> COMPTE RENDU DE FLUX #{selectedFluxMovement.id.slice(0, 8)}
+                </h3>
+              </div>
+              <button 
+                onClick={() => setSelectedFluxMovement(null)}
+                className="text-slate-400 hover:text-white text-lg font-black transition-colors"
+                title="Fermer"
+              >
+                ✕
+              </button>
+            </header>
+
+            <div className="p-6 space-y-4 overflow-y-auto flex-1">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest break-words block">Type de mouvement</span>
+                  <span className={cn(
+                    "text-[10px] font-black uppercase tracking-tighter inline-block px-2.5 py-0.5 mt-1 rounded-md",
+                    selectedFluxMovement.type === 'ENTREE' || selectedFluxMovement.type === 'TRANSFERT_IN' 
+                      ? "bg-emerald-100 text-emerald-800" 
+                      : "bg-rose-100 text-rose-800"
+                  )}>
+                    {selectedFluxMovement.type}
+                  </span>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest break-words block">Date / Heure</span>
+                  <span className="text-xs font-mono font-bold text-slate-700 mt-1 block">
+                    {new Date(selectedFluxMovement.date).toLocaleString('fr-MA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Saisie par (Opérateur)</span>
+                  <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                    {selectedFluxMovement.operateur || 'Magasinier SMI'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Acteur terrain (Mécanicien)</span>
+                  <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                    {selectedFluxMovement.mecanicien || 'Aucun affecté'}
+                  </p>
+                </div>
+              </div>
+
+              {selectedFluxMovement.type === 'SORTIE' ? (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Demandeur (Service)</span>
+                    <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                      {selectedFluxMovement.demandeur || 'Atelier de maintenance'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-bold text-rose-600">Bénéficiaire final</span>
+                    <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                      {selectedFluxMovement.beneficiaire || 'Atelier fond'}
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Vendeur / Fournisseur</span>
+                    <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                      {selectedFluxMovement.vendeur || 'Epiroc France / OEM'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-bold text-emerald-600">BL Code / Manifest</span>
+                    <p className="text-xs font-mono font-bold text-slate-800 uppercase mt-1">
+                      {selectedFluxMovement.blCode || 'SANS BL'}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Machine cible affectée</span>
+                  <p className="text-xs font-black text-amber-600 uppercase mt-1 flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5" />
+                    {selectedFluxMovement.engin || selectedFluxMovement.perforateur || 'Parc global (Sans imputation)'}
+                  </p>
+                </div>
+                <div>
+                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Motif d'intervention</span>
+                  <p className="text-xs font-bold text-slate-700 uppercase mt-1">
+                    {selectedFluxMovement.motif || 'Aucune observation saisie'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Items Table */}
+              <div className="border border-slate-100 rounded-xl overflow-hidden mt-2">
+                <div className="bg-slate-50 px-3 py-2 border-b border-secondary text-[9px] font-black text-slate-400 uppercase tracking-wider grid grid-cols-12 gap-1.5">
+                  <span className="col-span-3">Référence</span>
+                  <span className="col-span-5">Désignation complète</span>
+                  <span className="col-span-2 text-right">Qté</span>
+                  <span className="col-span-2 text-right">Prix Unitaire</span>
+                </div>
+                <div className="divide-y divide-slate-100">
+                  {selectedFluxMovement.items.map((it: any) => (
+                    <div 
+                      key={it.articleId || it.ref} 
+                      onClick={() => {
+                        const art = articles.find(a => a.id === it.articleId || a.ref === it.ref);
+                        if (art) {
+                          onArticleClick?.(art);
+                          setSelectedFluxMovement(null);
+                        }
+                      }}
+                      className="px-3 py-2 text-xs grid grid-cols-12 gap-1.5 items-center hover:bg-slate-50 cursor-pointer transition-colors"
+                    >
+                      <span className="col-span-3 font-mono font-bold text-slate-900 group-hover:text-amber-600">{it.ref}</span>
+                      <span className="col-span-5 text-slate-600 font-semibold truncate uppercase">{it.designation || 'Pièce inconnue'}</span>
+                      <span className="col-span-2 text-right font-mono font-black text-slate-600">{it.quantity}</span>
+                      <span className="col-span-2 text-right font-mono font-bold text-slate-500">{formatCurrency(it.price || 0)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="bg-amber-50 px-4 py-2 text-xs font-black text-amber-950 flex justify-between items-center tracking-tighter">
+                  <span>VALORISATION TOTALE DU BON DE MOUVEMENT</span>
+                  <span className="text-xs font-mono text-amber-600">
+                    {formatCurrency(selectedFluxMovement.items.reduce((sum: number, it: any) => sum + (it.quantity * (it.price || 0)), 0))}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <footer className="bg-slate-50 p-4 border-t border-slate-100 flex justify-end">
+              <button 
+                onClick={() => setSelectedFluxMovement(null)}
+                className="px-6 py-2 bg-slate-950 text-white rounded-lg font-black uppercase text-xs tracking-wider hover:bg-slate-800 transition-colors"
+              >
+                Fermer la vue
+              </button>
+            </footer>
+          </div>
+        </div>
       )}
     </div>
   );

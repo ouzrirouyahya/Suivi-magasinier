@@ -52,20 +52,66 @@ export interface Article {
   active: boolean;
   lastInventoryDate?: string;
   notes?: string;
+  compatibility?: string;
+  criticality?: 'CRITIQUE' | 'HAUTE' | 'MOYENNE' | 'BASSE';
 }
 
 export interface CatalogItem {
   id: string;
   reference: string;
   designation: string;
-  functionalCategory: string;
-  subCategory: string;
-  component: string;
-  subComponent: string;
+  functionalCategory: string; // Map to Level 1 Subsystem in BOM System
+  subCategory: string;        // Map to Level 2 Assembly in BOM System
+  component: string;          // Map to Level 3 Component in BOM System
+  subComponent: string;       // Map to specification / subComponent
   notes?: string;
   price?: number;
+  proposedPrice?: number;
   suggestedType: StockType;
   source?: 'MASTER' | 'UPLOAD';
+  compatibility?: string;     // Map to Level 0 Machine in BOM System (e.g., ST2G, ST2D, MONTABERT)
+  criticality?: 'CRITIQUE' | 'HAUTE' | 'MOYENNE' | 'BASSE';
+  
+  // Advanced Level 3 Intelligent BOM Parameters
+  bomLevel?: 0 | 1 | 2 | 3;
+  unit?: 'PIECE' | 'KIT' | 'ASSEMBLY' | 'SET';
+  criticalityScore?: number;        // Score from 1 to 100
+  mtbfHours?: number;               // Mean Time Between Failures in operational hours
+  overhaulIntervalHours?: number;   // Recommended interval before rebuild
+  failureModes?: string[];          // List of common failure modes
+  relatedItems?: string[];          // IDs or references of dependent components/kits
+
+  // ERP V3.1 Extensions for Real Underground Mining Conditions (-350m)
+  // --- MODULE STOCK MAGASIN ---
+  stockQty?: number;
+  minStock?: number;
+  criticalStock?: number;
+  leadTimeDays?: number;
+  supplierReal?: string;
+  replacementRisk?: 'LOW' | 'MEDIUM' | 'HIGH';
+
+  // --- MODULE MAGASINIER TERRAIN ---
+  commonName?: string;              // Simplified field name used by operators
+  searchTags?: string[];            // Emergency keywords
+  urgentUse?: boolean;              // Highlight critical status for shift handover
+
+  // --- MODULE COMPATIBILITÉ ---
+  compatibleMachines?: string[];    // Direct machine models (e.g. ['ST2G', 'ST2D'])
+  interchangeableWith?: string[];   // List of alternative interchangeable part numbers/IDs
+
+  // --- MODULE FIABILITÉ ---
+  mtbfStatus?: 'ESTIMATED' | 'FIELD_PROVEN';
+
+  // --- MODULE MAINTENANCE OPÉRATIONNELLE ---
+  operationalPriority?: 1 | 2 | 3 | 4 | 5; // 1 = lowest, 5 = highest emergency
+  downtimeImpact?: 'LOW' | 'MEDIUM' | 'CRITICAL';
+
+  // --- MODULE HISTORIQUE PANNES ---
+  realFailureReports?: {
+    date: string;
+    symptom: string;
+    causeFound: string;
+  }[];
 }
 
 export type MouvementType = 'ENTREE' | 'SORTIE' | 'TRANSFERT_OUT' | 'TRANSFERT_IN' | 'AJUSTEMENT' | 'RETOUR';

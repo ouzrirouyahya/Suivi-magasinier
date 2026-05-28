@@ -48,10 +48,10 @@ export function IntelligenceCenter({ currentSite, initialTab = 'ASSISTANT' }: In
     },
     {
       id: 'AUDIT' as TabId,
-      label: 'Audit SRE & Concordance',
-      desc: 'Double-vérification des écarts physiques',
+      label: 'Disponibilité Stratégique',
+      desc: 'Pilotage SRE flotte, prévision fatigue, budget & TCO',
       icon: ShieldCheck,
-      color: 'text-emerald-750 bg-emerald-50 border-emerald-200'
+      color: 'text-emerald-700 bg-emerald-50 border-emerald-200'
     },
     {
       id: 'WORKFLOWS' as TabId,

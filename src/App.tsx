@@ -197,22 +197,8 @@ export default function App() {
                 }
               }} 
             />
-            {isAdmin && (
-              <div className="border-t border-slate-100 pt-12">
-                 <AIAnalytics 
-                   site={currentSite} 
-                   articles={articles} 
-                   mouvements={mouvements} 
-                   agents={agents} 
-                   initialTab={aiTab} 
-                 />
-              </div>
-            )}
           </div>
         );
-      
-      case 'FIELD_WORKSPACE':
-        return <FieldOperatorWorkspace />;
       
       case 'STOCK_ENGINS':
       case 'STOCK_PERFORATEURS':
