@@ -58,6 +58,8 @@ export default function ForensicDashboard() {
     networkQuality
   } = useInventory();
 
+  const isAdminUser = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+
   const [logs, setLogs] = useState<any[]>([]);
   const [metrics, setMetrics] = useState<any>(null);
   const [storage, setStorage] = useState<any>(null);
@@ -314,7 +316,7 @@ export default function ForensicDashboard() {
         </div>
 
         {/* ADMIN TRIGGER RIG */}
-        {currentUser?.role === 'ADMIN' ? (
+        {isAdminUser ? (
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
             {!maintenanceMode && (
               <input
@@ -697,7 +699,7 @@ export default function ForensicDashboard() {
                               <span className="text-[9px] text-slate-500 italic">ID: {s.id.slice(0, 8)}... | {dateStr} | {s.articleCount} Articles</span>
                             </div>
 
-                            {currentUser?.role === 'ADMIN' && (
+                            {isAdminUser && (
                               <button
                                 onClick={() => {
                                   if (window.confirm(`Voulez-vous vraiment restaurer TOUT l'inventaire au point: "${s.label}"?`)) {
@@ -726,7 +728,7 @@ export default function ForensicDashboard() {
 
                 <div className="space-y-4">
                   {/* PANIC REPLAY TRIGGER */}
-                  {currentUser?.role === 'ADMIN' && (
+                  {isAdminUser && (
                     <button
                       onClick={async () => {
                         if (window.confirm("CRITICAL PANIC OVERWRITE : Vous allez écraser l'état actuel de la base d'articles pour recalculer l'intégralité des stocks en rejouant chronologiquement la Blockchain de Ledger. Continuer ?")) {
@@ -880,7 +882,7 @@ export default function ForensicDashboard() {
                   <span className="text-slate-300 font-bold block">File d'attente FSM Multi-Sites ({retryQueue.length} En attente)</span>
                   <span className="text-[10px] text-slate-500">Isolation cryptographique par SiteID empêchant les rejeux croisés</span>
                 </div>
-                {retryQueue.length > 0 && currentUser?.role === 'ADMIN' && (
+                {retryQueue.length > 0 && isAdminUser && (
                   <button 
                     onClick={handleForceExecute}
                     className="px-2.5 py-1 bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/20 rounded font-black font-mono text-[9px] uppercase tracking-wider"
@@ -1038,7 +1040,7 @@ export default function ForensicDashboard() {
                             </button>
                           )}
 
-                          {t.status === 'PENDING_APPROVAL' && currentUser?.role === 'ADMIN' && (
+                          {t.status === 'PENDING_APPROVAL' && isAdminUser && (
                             <button
                               onClick={async () => {
                                 const reason = window.prompt("Entrez le motif du rejet / annulation du transfert draft :");
@@ -1143,7 +1145,7 @@ export default function ForensicDashboard() {
                             </div>
                           )}
 
-                          {t.status === 'DISPUTED' && currentUser?.role === 'ADMIN' && (
+                          {t.status === 'DISPUTED' && isAdminUser && (
                             <div className="w-full pt-3 border-t border-slate-900 flex flex-col md:flex-row md:items-end gap-3 justify-between">
                               <div className="flex-1 space-y-1">
                                 <label className="text-[9px] uppercase font-bold text-red-400 font-mono">Arbitrage d'autorité SRE / Motif de clôture forcée :</label>

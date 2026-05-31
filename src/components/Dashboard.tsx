@@ -88,6 +88,19 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
   // Mode Selection State
   const [activePane, setActivePane] = useState<'DASHBOARD' | 'SAISIE' | 'PARC'>('DASHBOARD');
+  const [dashboardViewMode, setDashboardViewMode] = useState<'OPERATIONAL' | 'ANALYTICAL'>('OPERATIONAL');
+
+  // Single Item Saisie Express states
+  const [singleType, setSingleType] = useState<'ENTREE' | 'SORTIE'>('SORTIE');
+  const [singleArticleId, setSingleArticleId] = useState('');
+  const [singleQty, setSingleQty] = useState<number>(1);
+  const [singleBeneficiaire, setSingleBeneficiaire] = useState('');
+  const [singleFournisseur, setSingleFournisseur] = useState('');
+  const [singleBL, setSingleBL] = useState('');
+  const [singleMecanicien, setSingleMecanicien] = useState('');
+  const [singleMachine, setSingleMachine] = useState('');
+  const [singleMotif, setSingleMotif] = useState('');
+  const [isSubmittingSingle, setIsSubmittingSingle] = useState(false);
 
   // Live Flux Active Tab Filter
   const [liveFluxFilter, setLiveFluxFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'TRANSFERT'>('ALL');
@@ -466,6 +479,95 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     }
   };
 
+  const handleSingleMovementSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!singleArticleId) {
+      toast.error("Veuillez sélectionner un article.");
+      return;
+    }
+    const matchedArt = articles.filter(a => a.site === site).find(a => a.id === singleArticleId);
+    if (!matchedArt) {
+      toast.error("Article introuvable.");
+      return;
+    }
+    const qNum = Number(singleQty);
+    if (isNaN(qNum) || qNum <= 0) {
+      toast.error("Quantité invalide.");
+      return;
+    }
+    if (singleType === 'SORTIE') {
+      if (qNum > matchedArt.quantity) {
+        toast.error(`Stock insuffisant. Quantité maximale disponible : ${matchedArt.quantity}`);
+        return;
+      }
+      if (!singleBeneficiaire.trim()) {
+        toast.error("Veuillez indiquer le demandeur/bénéficiaire.");
+        return;
+      }
+    } else {
+      if (!singleFournisseur.trim()) {
+        toast.error("Veuillez indiquer le fournisseur.");
+        return;
+      }
+      if (!singleBL.trim()) {
+        toast.error("Veuillez indiquer le code document (BL/Manifest).");
+        return;
+      }
+    }
+
+    setIsSubmittingSingle(true);
+    try {
+      const itemsList: MouvementItem[] = [{
+        articleId: matchedArt.id,
+        quantity: qNum,
+        price: matchedArt.price || 0
+      }];
+
+      const prefix = singleType === 'ENTREE' ? 'BE' : 'BS';
+      const autoDocId = `${prefix}/${site}/${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+
+      const resolvedMachine = [...engins, ...perfos].find(m => m.id === singleMachine);
+
+      const newMouvement: Mouvement = {
+        id: generateId(),
+        site,
+        date: new Date().toISOString(),
+        type: singleType,
+        reference: singleType === 'ENTREE' ? singleBL : autoDocId,
+        vendeur: singleType === 'ENTREE' ? singleFournisseur : undefined,
+        demandeur: singleType === 'SORTIE' ? singleBeneficiaire : undefined,
+        beneficiaire: singleType === 'SORTIE' ? singleBeneficiaire : undefined,
+        mecanicien: singleMecanicien || 'OPÉRATEUR RECON',
+        engin: resolvedMachine?.code || '',
+        perforateur: '',
+        category: 'FAST_GRID',
+        service: 'TERRAIN_MAGASIN',
+        motif: singleMotif || 'SAISIE COCKPIT RAPIDE',
+        notes: `Opération express - Article : ${matchedArt.designation}`,
+        status: 'VALIDE',
+        items: itemsList
+      };
+
+      await addMouvement(newMouvement);
+      toast.success("Mouvement rapide enregistré avec succès !");
+      
+      // Reset form fields
+      setSingleArticleId('');
+      setSingleQty(1);
+      setSingleBeneficiaire('');
+      setSingleFournisseur('');
+      setSingleBL('');
+      setSingleMecanicien('');
+      setSingleMachine('');
+      setSingleMotif('');
+    } catch (err) {
+      console.error(err);
+      toast.error("Erreur durant l'enregistrement.");
+    } finally {
+      setIsSubmittingSingle(false);
+    }
+  };
+
   const { 
     totalArticles, 
     stockValue, 
@@ -825,102 +927,53 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
       <header className="flex flex-col md:flex-row md:items-end justify-between gap-4">
         <div>
           <div className="flex items-center gap-2 mb-1.5">
-            <span className="px-2 py-1 bg-sky-100 text-sky-700 text-xs font-black uppercase tracking-widest rounded-md border border-sky-200">v3.1 Industrial</span>
-            <span className="text-slate-300">|</span>
-            <span className="text-xs text-slate-400 font-bold uppercase tracking-widest">{new Date().toLocaleDateString('fr-MA', { day: 'numeric', month: 'long' })}</span>
+            <span className="px-2.5 py-0.5 bg-slate-50 text-slate-600 text-[10px] font-semibold uppercase tracking-wider rounded-full border border-slate-200/50 shadow-[0_1px_2px_rgba(0,0,0,0.02)]">Espace Opérationnel</span>
+            <span className="text-slate-200">•</span>
+            <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider font-mono">{new Date().toLocaleDateString('fr-MA', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
           </div>
-          <h2 className="text-3xl md:text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">ESPACE MAGASINIER</h2>
-          <p className="text-sm md:text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">Tableau de commande & Surveillance active - Site {site}</p>
+          <h2 className="text-2xl md:text-3xl font-semibold text-slate-900 tracking-tight leading-none">ESPACE MAGASINIER</h2>
+          <p className="text-xs md:text-sm text-slate-500 font-medium tracking-tight mt-1.5 opacity-80">Tableau de commande & surveillance active en temps réel — Site {site}</p>
         </div>
         
         <div className="flex items-center gap-4 hidden md:flex">
-          <div className="p-2 bg-white/80 backdrop-blur-md rounded-xl border border-slate-100 shadow-md flex items-center gap-3 ring-1 ring-slate-900/5">
-            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
-              <ShieldIcon className="w-4 h-4" />
-            </div>
-            <div>
-              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none">Réseau</p>
-              <p className="text-sm font-black text-emerald-600 uppercase mt-0.5 flex items-center gap-1.5 font-mono">
-                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                Live
-              </p>
-            </div>
+          <div className="px-3 py-1.5 bg-white rounded-full border border-slate-100 shadow-[0_1px_3px_rgba(0,0,0,0.02)] flex items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
+            <span className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider font-mono">Connexion Live</span>
           </div>
         </div>
       </header>
 
-      {/* COCKPIT COMPACT PANEL SWITCHER */}
-      <div className="flex border-b border-slate-200 gap-1.5 pb-2 no-print">
-        <button
-          onClick={() => setActivePane('DASHBOARD')}
-          className={cn(
-            "px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all",
-            activePane === 'DASHBOARD'
-              ? "bg-slate-950 text-white shadow"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-          )}
-        >
-          📊 Supervision Active
-        </button>
-        <button
-          onClick={() => {
-            setActivePane('SAISIE');
-            // Re-populate with blank rows if empty
-            if (gridRows.length === 0 || (gridRows.length === 5 && gridRows.every(r => r.reference === ''))) {
-              setGridRows(Array.from({ length: 5 }, () => ({
-                id: generateId(),
-                reference: '',
-                designation: '',
-                quantity: '',
-                destination: '',
-                observation: '',
-              })));
-            }
-          }}
-          className={cn(
-            "px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-2",
-            activePane === 'SAISIE'
-              ? "bg-sky-600 text-white shadow-lg shadow-sky-500/20"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-          )}
-        >
-          ⌨️ Saisie Massive Excel Grid
-        </button>
-        <button
-          onClick={() => setActivePane('PARC')}
-          className={cn(
-            "px-4 py-2 text-xs font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1.5",
-            activePane === 'PARC'
-              ? "bg-amber-600 text-white shadow-lg shadow-amber-500/20"
-              : "text-slate-500 hover:bg-slate-50 hover:text-slate-800"
-          )}
-        >
-          🚚 Parc Perfo & Engins
-        </button>
-      </div>
-
       {/* RECHERCHE ULTRA RAPIDE BAR */}
       <div className="relative group no-print">
-        <div className="absolute inset-0 bg-sky-500/5 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
+        <div className="absolute inset-0 bg-slate-400/5 rounded-2xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 relative z-10" />
         <input 
           id="espace-magasinier-instant-search"
           ref={searchInputRef}
           type="text" 
-          placeholder="RECHERCHE INSTANTANÉE (RÉFÉRENCE, ARTICLE, MACHINE, FOURNISSEUR, LOGS...) — PRESSER [/] OU [CTRL+K] POUR FILTRER..." 
-          className="input-field h-12 pl-12 text-sm font-black tracking-tight bg-white border border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/5 rounded-xl relative z-10 transition-all uppercase placeholder:text-slate-400"
+          placeholder="RECHERCHE RAPIDE (RÉFÉRENCE, NOM PIÈCE, MACHINE, FOURNISSEUR, LOGS...) — Saisir [/] pour filtrer" 
+          className="w-full h-11 pl-11 pr-20 text-xs font-medium bg-white border border-slate-200 rounded-xl relative z-10 transition-all outline-none placeholder:text-slate-400 focus:border-slate-350 focus:ring-4 focus:ring-slate-50"
           value={instantSearchQuery}
           onChange={(e) => { setInstantSearchQuery(e.target.value); setSearchHighlightIdx(0); }}
           onKeyDown={handleSearchKeyDown}
         />
-        {instantSearchQuery && (
+        {instantSearchQuery ? (
           <button 
             type="button"
             onClick={() => setInstantSearchQuery('')}
-            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 text-[10px] bg-slate-150 hover:bg-slate-200 border border-slate-250 px-2 py-1 rounded font-black text-slate-500 uppercase tracking-widest"
+            className="absolute right-4 top-1/2 -translate-y-1/2 z-20 text-[10px] bg-slate-100 hover:bg-slate-200 border border-slate-200 px-2 py-1 rounded-md font-semibold text-slate-600 uppercase tracking-wider"
           >
             Vider
           </button>
+        ) : (
+          <div className="absolute right-4 top-1/2 -translate-y-1/2 z-20 flex items-center gap-1 pointer-events-none">
+            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[9px] font-bold text-slate-400">
+              <span>Ctrl</span>K
+            </kbd>
+            <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-0.5 rounded border border-slate-200 bg-slate-50 px-1.5 font-mono text-[9px] font-bold text-slate-400">
+              <span>/</span>
+            </kbd>
+          </div>
         )}
       </div>
 
@@ -1536,50 +1589,131 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
       {/* 3. NORMAL VISUAL COCKPIT/DASHBOARD */}
       {activePane === 'DASHBOARD' && !instantSearchQuery && (
         <>
-          {/* Quick Action Hub */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 no-print row-dense">
-            {[
-              { icon: ArrowDownLeft, label: 'Réception (Entrées)', color: 'emerald', page: 'BON_ENTREE' },
-              { icon: ArrowUpRight, label: 'Sortie Pièces', color: 'rose', page: 'BON_SORTIE' },
-              { icon: Truck, label: 'Transferts & Retours', color: 'sky', page: 'TRANSFERS_RETURNS' },
-            ].map(action => (
-              <button 
-                key={action.page}
-                onClick={() => onAction(action.page)}
-                className={cn(
-                  "group relative overflow-hidden card glass p-4 flex flex-col items-start gap-2 transition-all duration-500",
-                  action.color === 'emerald' ? "hover:border-emerald-200" : action.color === 'rose' ? "hover:border-rose-200" : "hover:border-sky-200"
-                )}
-              >
-                <div className={cn(
-                  "absolute top-0 right-0 w-16 h-16 rounded-full -mr-8 -mt-8 group-hover:scale-150 transition-transform duration-700 opacity-5",
-                   action.color === 'emerald' ? "bg-emerald-500" : action.color === 'rose' ? "bg-rose-500" : "bg-sky-500"
-                )} />
-                <div className={cn(
-                  "w-10 h-10 rounded-xl flex items-center justify-center shadow-inner group-hover:scale-110 transition-transform",
-                   action.color === 'emerald' ? "bg-emerald-100 text-emerald-600" : action.color === 'rose' ? "bg-rose-100 text-rose-600" : "bg-sky-100 text-sky-600"
-                )}>
-                   <action.icon className="w-5 h-5" />
+          {/* Quick Action Hub with Hydromines Signature Dual-Vline Design and Advanced Operational HUD */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 no-print row-dense">
+            {/* 1. RÉCEPTION (ENTRÉES) */}
+            <button 
+              onClick={() => onAction('BON_ENTREE')}
+              className="group relative text-left bg-white border border-slate-200/70 p-6 pl-10 rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.015)] transition-all duration-300 hover:border-slate-400 hover:shadow-[0_6px_20px_rgba(0,0,0,0.04)] focus:outline-none overflow-hidden"
+            >
+              {/* Double Ligne Verticale Hydromines: BLEU CIEL (première) & ROUGE FONCÉ (deuxième) */}
+              <div className="absolute left-0 top-0 bottom-0 flex w-3">
+                <div className="w-1.5 h-full bg-sky-400" />
+                <div className="w-1.5 h-full bg-[#991b1b]" />
+              </div>
+
+              <div className="flex items-start justify-between">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-sky-50 text-sky-600 transition-transform group-hover:scale-105">
+                  <ArrowDownLeft className="w-5.5 h-5.5" />
                 </div>
-                <div>
-                  <h4 className="text-sm font-black text-slate-900 uppercase tracking-tighter leading-none">{action.label}</h4>
-                  <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5 opacity-60">Action Rapide</p>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">ENREGISTREMENT ENTRÉE</span>
+              </div>
+              <div className="mt-5">
+                <h4 className="text-base font-black text-slate-950 uppercase tracking-tight group-hover:text-sky-950 transition-colors">Réception (Entrées)</h4>
+                <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100">Enregistrer une nouvelle livraison de pièces ou d'équipements de forage.</p>
+                
+                {/* Embedded Live HUD */}
+                <div className="mt-3 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400 font-bold uppercase font-sans">Mouvements ce jour</span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 font-black font-mono">
+                    {(() => {
+                      const mvs = mouvements.filter(m => m.site === site && (m.type === 'ENTREE'));
+                      const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                      return `${count} ENTRÉE${count > 1 ? 'S' : ''}`;
+                    })()}
+                  </span>
                 </div>
-              </button>
-            ))}
+              </div>
+            </button>
+
+            {/* 2. SORTIE DE PIÈCES */}
+            <button 
+              onClick={() => onAction('BON_SORTIE')}
+              className="group relative text-left bg-white border border-slate-200/70 p-6 pl-10 rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.015)] transition-all duration-300 hover:border-slate-400 hover:shadow-[0_6px_20px_rgba(0,0,0,0.04)] focus:outline-none overflow-hidden"
+            >
+              {/* Double Ligne Verticale Hydromines: ROUGE FONCÉ (première) & BLEU CIEL (deuxième) */}
+              <div className="absolute left-0 top-0 bottom-0 flex w-3">
+                <div className="w-1.5 h-full bg-[#991b1b]" />
+                <div className="w-1.5 h-full bg-sky-400" />
+              </div>
+
+              <div className="flex items-start justify-between">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-rose-50 text-rose-600 transition-transform group-hover:scale-105">
+                  <ArrowUpRight className="w-5.5 h-5.5" />
+                </div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">ENREGISTREMENT SORTIE</span>
+              </div>
+              <div className="mt-5">
+                <h4 className="text-base font-black text-slate-950 uppercase tracking-tight group-hover:text-rose-950 transition-colors">Sortie de Pièces</h4>
+                <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100">Déstocker pour un engin minier, perforateur Montabert ou atelier local.</p>
+                
+                {/* Embedded Live HUD */}
+                <div className="mt-3 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400 font-bold uppercase font-sans">Mouvements ce jour</span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 font-black font-mono">
+                    {(() => {
+                      const mvs = mouvements.filter(m => m.site === site && m.type === 'SORTIE');
+                      const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                      return `${count} SORTIE${count > 1 ? 'S' : ''}`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+            </button>
+
+            {/* 3. TRANSFERTS & RETOURS */}
+            <button 
+              onClick={() => onAction('TRANSFERS_RETURNS')}
+              className="group relative text-left bg-white border border-slate-200/70 p-6 pl-10 rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.015)] transition-all duration-300 hover:border-slate-400 hover:shadow-[0_6px_20px_rgba(0,0,0,0.04)] focus:outline-none overflow-hidden"
+            >
+              {/* Double Ligne Verticale Hydromines: BLEU CIEL (première) & ROUGE FONCÉ (deuxième) */}
+              <div className="absolute left-0 top-0 bottom-0 flex w-3">
+                <div className="w-1.5 h-full bg-sky-400" />
+                <div className="w-1.5 h-full bg-[#991b1b]" />
+              </div>
+
+              <div className="flex items-start justify-between">
+                <div className="w-11 h-11 rounded-xl flex items-center justify-center bg-indigo-50 text-indigo-600 transition-transform group-hover:scale-105">
+                  <Truck className="w-5.5 h-5.5" />
+                </div>
+                <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider font-mono">TRANSFERT INTER-SITES</span>
+              </div>
+              <div className="mt-5">
+                <h4 className="text-base font-black text-slate-950 uppercase tracking-tight group-hover:text-indigo-950 transition-colors">Transferts & Retours</h4>
+                <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100">Transférer entre magasins de surface et fonds (-350m) et retours usine.</p>
+                
+                {/* Embedded Live HUD */}
+                <div className="mt-3 flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400 font-bold uppercase font-sans">Mouvements ce jour</span>
+                  <span className="px-2 py-0.5 rounded-full bg-slate-50 border border-slate-200 text-slate-700 font-black font-mono">
+                    {(() => {
+                      const mvs = mouvements.filter(m => m.site === site && (m.type === 'TRANSFERT_OUT' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR'));
+                      const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                      return `${count} TRANSFERT${count > 1 ? 'S' : ''}`;
+                    })()}
+                  </span>
+                </div>
+              </div>
+            </button>
           </div>
 
           {/* CATALOG NAVIGATION SHORTCUTS */}
-          <div className="card glass p-6 shadow-sm border border-slate-100 no-print">
+          <div className="relative bg-white border border-slate-200/60 p-6 pl-10 rounded-2xl shadow-[0_1px_4px_rgba(0,0,0,0.015)] hover:border-slate-350 transition-all duration-300 no-print overflow-hidden">
+            {/* Double Ligne Verticale Hydromines: BLEU CIEL & ROUGE FONCÉ */}
+            <div className="absolute left-0 top-0 bottom-0 flex w-3">
+              <div className="w-1.5 h-full bg-[#38bdf8]" />
+              <div className="w-1.5 h-full bg-[#991b1b]" />
+            </div>
+
             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Accès Rapide aux Catalogues & Flotte</h4>
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
               {[
-                { label: 'Catalogues Maîtres', desc: 'Gestion Réf/BOM', icon: Package, page: 'GESTION_ARTICLES', color: 'text-sky-600', bg: 'bg-sky-50 border-sky-100' },
-                { label: 'Parc Engins', desc: 'Registre Scooptrams', icon: Truck, page: 'PARC', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
-                { label: 'Perforateurs', desc: 'Marteaux COP/MB', icon: Activity, page: 'STOCK_PERFORATEURS', color: 'text-rose-600', bg: 'bg-rose-50 border-rose-100' },
-                { label: 'Consommables', desc: 'Fluides & Silice', icon: Flame, page: 'STOCK_CONSOMMABLES', color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100' },
-                { label: 'Equipements EPI', desc: 'Sûreté -350m', icon: ShieldIcon, page: 'STOCK_EPI', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100' },
-                { label: 'Ravitaillement', desc: 'Stock & Plannings', icon: AlertCircle, page: 'RESTOCK_MGMT', color: 'text-violet-600', bg: 'bg-violet-50 border-violet-100' },
+                { label: 'Catalogues Maîtres', desc: 'Gestion Réf/BOM', icon: Package, page: 'GESTION_ARTICLES', color: 'text-sky-600', bg: 'bg-sky-50 border-sky-100', hoverBorder: 'hover:border-sky-300' },
+                { label: 'Parc Engins', desc: 'Registre Scooptrams', icon: Truck, page: 'PARC', color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100', hoverBorder: 'hover:border-amber-300' },
+                { label: 'Perforateurs', desc: 'Marteaux COP/MB', icon: Activity, page: 'STOCK_PERFORATEURS', color: 'text-rose-600', bg: 'bg-rose-50 border-rose-100', hoverBorder: 'hover:border-rose-300' },
+                { label: 'Consommables', desc: 'Fluides & Silice', icon: Flame, page: 'STOCK_CONSOMMABLES', color: 'text-orange-600', bg: 'bg-orange-50 border-orange-100', hoverBorder: 'hover:border-orange-300' },
+                { label: 'Equipements EPI', desc: 'Sûreté -350m', icon: ShieldIcon, page: 'STOCK_EPI', color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-100', hoverBorder: 'hover:border-emerald-300' },
+                { label: 'Ravitaillement', desc: 'Stock & Plannings', icon: AlertCircle, page: 'RESTOCK_MGMT', color: 'text-indigo-600', bg: 'bg-indigo-50 border-indigo-100', hoverBorder: 'hover:border-indigo-300' },
               ].map(sec => (
                 <button
                   key={sec.label}
@@ -1591,17 +1725,44 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                     }
                   }}
                   className={cn(
-                    "flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 transition-all text-center group hover:-translate-y-1 shadow-none hover:shadow-lg bg-white/50"
+                    "flex flex-col items-center justify-center p-4 rounded-xl border border-slate-200/50 transition-all text-center group bg-white shadow-[0_1px_2px_rgba(0,0,0,0.01)] hover:shadow-md cursor-pointer",
+                    sec.hoverBorder
                   )}
                 >
-                  <div className={cn("p-2 rounded-lg mb-2 shadow-inner group-hover:scale-110 transition-transform", sec.bg, sec.color)}>
-                    <sec.icon className="w-5 h-5" />
+                  <div className={cn("p-2.5 rounded-xl mb-2.5 transition-transform group-hover:scale-110", sec.bg, sec.color)}>
+                    <sec.icon className="w-5.5 h-5.5 stroke-[2]" />
                   </div>
-                  <span className="text-xs font-black text-slate-800 uppercase tracking-tight group-hover:text-amber-600">{sec.label}</span>
-                  <span className="text-[9px] text-slate-400 font-bold uppercase mt-0.5 tracking-wider">{sec.desc}</span>
+                  <span className="text-xs font-bold text-slate-800 tracking-tight group-hover:text-slate-950">{sec.label}</span>
+                  <span className="text-[10px] text-slate-400 mt-1 font-bold uppercase tracking-wider leading-none">{sec.desc}</span>
                 </button>
               ))}
             </div>
+          </div>
+
+          {/* VIEW SWITCHER CONTROL */}
+          <div className="flex bg-slate-100 p-1 rounded-xl w-fit gap-1 no-print">
+            <button
+              onClick={() => setDashboardViewMode('OPERATIONAL')}
+              className={cn(
+                "px-4 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all",
+                dashboardViewMode === 'OPERATIONAL'
+                  ? "bg-white text-slate-900 shadow-sm border border-slate-200/40 font-semibold"
+                  : "text-slate-500 hover:text-slate-800"
+              )}
+            >
+              📋 Mode Opérationnel
+            </button>
+            <button
+              onClick={() => setDashboardViewMode('ANALYTICAL')}
+              className={cn(
+                "px-4 py-1.5 text-xs font-semibold uppercase tracking-wider rounded-lg transition-all",
+                dashboardViewMode === 'ANALYTICAL'
+                  ? "bg-white text-slate-900 shadow-sm border border-slate-200/40 font-semibold"
+                  : "text-slate-500 hover:text-slate-800"
+              )}
+            >
+              📊 Mode Statistique
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -1612,358 +1773,692 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                   if (stat.action === 'ALERTES_STOCK') onAction('RESTOCK_MGMT');
                 }}
                 className={cn(
-                  "card glass p-5 rounded-2xl border-l-[6px] border-slate-200 transition-all duration-300 hover:translate-y-[-2px] h-full flex flex-col justify-between select-none",
-                  stat.alert ? "border-rose-500 bg-rose-50/10 cursor-pointer shadow-sm" : 
-                  stat.action ? "border-indigo-500 bg-indigo-50/10 cursor-pointer" : "shadow-sm border-slate-300 bg-white"
+                  "bg-white border border-slate-200/60 p-5 rounded-2xl transition-all duration-300 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] h-full flex flex-col justify-between select-none relative overflow-hidden",
+                  stat.action || stat.alert ? "cursor-pointer hover:border-slate-350" : ""
                 )}
               >
+                {stat.alert && (
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-red-500" />
+                )}
                 <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <p className="text-xs font-black text-slate-400 uppercase tracking-wider leading-none">{stat.label}</p>
-                    <div className={cn("p-1.5 rounded-lg", stat.bg, stat.color)}>
-                      <stat.icon className="w-4 h-4" />
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider leading-none">{stat.label}</p>
+                    <div className={cn("p-1.5 rounded-xl border border-slate-100", stat.bg, stat.color)}>
+                      <stat.icon className="w-4 h-4 stroke-[1.5]" />
                     </div>
                   </div>
                   <p className={cn(
-                    "font-black tracking-tight leading-none mb-1 text-slate-950 truncate",
-                    stat.value.length > 20 ? "text-[11px] sm:text-xs md:text-sm font-mono text-slate-500" : "text-2xl sm:text-3xl"
+                    "font-semibold tracking-tight leading-none mb-1 text-slate-900 truncate",
+                    stat.value.length > 20 ? "text-xs font-mono text-slate-500" : "text-2xl"
                   )}>
                     {stat.value}
                   </p>
                 </div>
-                <p className="text-[10px] text-slate-500 font-bold uppercase mt-1 leading-normal border-t border-slate-100/50 pt-1">
+                <p className="text-[10px] text-slate-400 font-medium mt-2 leading-normal border-t border-slate-100/60 pt-2 font-mono">
                   {stat.sub}
                 </p>
               </div>
             ))}
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
-            <div className="lg:col-span-8 space-y-4">
-              <div className="card glass p-6 shadow-xl">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-4">
-                  <div>
-                    <h3 className="text-lg font-black text-slate-100 bg-slate-900 border border-slate-800 rounded px-2.5 py-1 inline-block uppercase tracking-tighter mb-1.5 flex items-center gap-2">
-                      <TrendingUp className="w-4 h-4 text-sky-400" /> FLUX DE CONSOMMATION DU MAGASIN (MAD)
-                    </h3>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
-                      Courbe de valorisation globale des sorties magasin en Dirhams (MAD) cumulées par mois sur l'année en cours.
-                    </p>
+          {dashboardViewMode === 'OPERATIONAL' ? (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* LEFT COLUMN: SAISIE UNITAIRE EXPRESS */}
+              <div className="lg:col-span-5 bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                <div className="flex items-center gap-3 pb-3 border-b border-slate-100 mb-5">
+                  <div className="p-2 bg-slate-50 text-slate-700 rounded-lg flex items-center justify-center border border-slate-200/60">
+                    <Zap className="w-4 h-4 text-slate-800" />
                   </div>
-                  <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-md uppercase tracking-widest border border-sky-100">Devise: MAD</span>
+                  <div>
+                    <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none font-sans">Saisie Unitaire Express</h3>
+                    <p className="text-[10px] text-slate-400 mt-1 leading-none font-sans">Enregistrement rapide d'un article</p>
+                  </div>
                 </div>
-                <div className="h-[300px] min-h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0} debounce={50}>
-                    <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 20, bottom: 0 }}>
-                      <defs>
-                        <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.15}/>
-                          <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
-                        </linearGradient>
-                      </defs>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" fontSize={11} fontWeight="900" axisLine={false} tickLine={false} stroke="#64748b" />
-                      <YAxis fontSize={11} fontWeight="900" axisLine={false} tickLine={false} stroke="#64748b" tickFormatter={(value) => `${formatCurrency(value)}`} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', padding: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}
-                        itemStyle={{ fontWeight: '900', fontSize: '11px', color: '#0f172a' }}
-                        labelStyle={{ fontWeight: '900', fontSize: '12px', color: '#64748b', marginBottom: '4px' }}
-                        formatter={(value: any) => [`${formatCurrency(value)}`, 'Total Consommé']}
+
+                <form onSubmit={handleSingleMovementSubmit} className="space-y-4">
+                  {/* TYPE DE MOUVEMENT BUTTONS */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1.5 font-sans">Action Magasinier</label>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        type="button"
+                        onClick={() => { setSingleType('SORTIE'); setSingleArticleId(''); }}
+                        className={cn(
+                          "py-2.5 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-2",
+                          singleType === 'SORTIE'
+                            ? "bg-slate-950 text-white border-transparent shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
+                        )}
+                      >
+                        <ArrowUpRight className="w-3.5 h-3.5" /> Imputation / Sortie
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setSingleType('ENTREE'); setSingleArticleId(''); }}
+                        className={cn(
+                          "py-2.5 rounded-xl border text-xs font-medium transition-all flex items-center justify-center gap-2",
+                          singleType === 'ENTREE'
+                            ? "bg-slate-950 text-white border-transparent shadow-[0_2px_4px_rgba(0,0,0,0.06)]"
+                            : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:text-slate-800"
+                        )}
+                      >
+                        <ArrowDownLeft className="w-3.5 h-3.5" /> Réception Check
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* SÉLECTION ARTICLE */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Article en stock *</label>
+                    <select
+                      value={singleArticleId}
+                      onChange={(e) => setSingleArticleId(e.target.value)}
+                      required
+                      className="w-full h-10 px-3 text-xs font-medium text-slate-800 bg-white border border-slate-200 rounded-lg outline-none focus:border-slate-400 transition-all uppercase tracking-tight"
+                    >
+                      <option value="">-- CHOISIR ARTICLE --</option>
+                      {articles
+                        .filter(a => a.site === site)
+                        .map(a => (
+                          <option key={a.id} value={a.id}>
+                            {a.ref} - {a.designation.toUpperCase()} ({a.quantity} {a.unit || 'uds'} dispo)
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  {/* SÉLECTION QUANTITÉ WITH MINUS/PLUS CONTROLS */}
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Quantité *</label>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setSingleQty(prev => Math.max(1, prev - 1))}
+                        className="w-9 h-9 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 font-medium rounded-lg flex items-center justify-center text-sm transition-all active:scale-95"
+                      >
+                        -
+                      </button>
+                      <input
+                        type="number"
+                        min="1"
+                        required
+                        value={singleQty}
+                        onChange={(e) => setSingleQty(Math.max(1, Number(e.target.value)))}
+                        className="flex-1 h-9 text-center font-medium text-xs bg-white border border-slate-200 rounded-lg focus:border-slate-400 focus:ring-4 focus:ring-slate-50 outline-none text-slate-900 transition-all"
                       />
-                      <Area type="monotone" dataKey="value" stroke="#0ea5e9" strokeWidth={3.5} fillOpacity={1} fill="url(#colorValue)" />
-                    </AreaChart>
-                  </ResponsiveContainer>
-                </div>
+                      <button
+                        type="button"
+                        onClick={() => setSingleQty(prev => prev + 1)}
+                        className="w-9 h-9 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-600 font-medium rounded-lg flex items-center justify-center text-sm transition-all active:scale-95"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* CONDITIONAL SUPPLY METADATA (SUPPLIER VS BENEFICIARY) */}
+                  {singleType === 'SORTIE' ? (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Bénéficiaire *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Atelier, Personnel..."
+                            value={singleBeneficiaire}
+                            onChange={(e) => setSingleBeneficiaire(e.target.value)}
+                            className="w-full h-9 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 bg-white border border-slate-200 rounded-lg outline-none focus:border-slate-400 transition-all uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Mécanicien</label>
+                          <select
+                            value={singleMecanicien}
+                            onChange={(e) => setSingleMecanicien(e.target.value)}
+                            className="w-full h-9 px-3 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg outline-none focus:border-slate-400 transition-all uppercase"
+                          >
+                            <option value="">Sélectionner...</option>
+                            {agents.filter(a => a.site === site).map(a => (
+                              <option key={a.id} value={`${a.lastname} ${a.firstname}`}>{a.lastname} {a.firstname}</option>
+                            ))}
+                          </select>
+                        </div>
+                      </div>
+
+                      <div>
+                        <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Engin Imputé</label>
+                        <select
+                          value={singleMachine}
+                          onChange={(e) => setSingleMachine(e.target.value)}
+                          className="w-full h-9 px-3 text-xs font-semibold text-slate-800 bg-white border border-slate-200 rounded-lg outline-none focus:border-slate-400 transition-all uppercase"
+                        >
+                          <option value="">Aucune imputation...</option>
+                          {[...engins.filter(e => e.site === site), ...perfos.filter(p => p.site === site)].map(item => (
+                            <option key={item.id} value={item.id}>{item.code}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Fournisseur *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: Epiroc, Sandvik..."
+                            value={singleFournisseur}
+                            onChange={(e) => setSingleFournisseur(e.target.value)}
+                            className="w-full h-9 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 bg-white border border-slate-200 rounded-lg outline-none focus:border-slate-400 transition-all uppercase"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">N° BL / Manifest *</label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="Ex: BL-837424"
+                            value={singleBL}
+                            onChange={(e) => setSingleBL(e.target.value)}
+                            className="w-full h-9 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 bg-white border border-slate-200 rounded-lg outline-none focus:border-slate-400 transition-all uppercase"
+                          />
+                        </div>
+                      </div>
+                    </>
+                  )}
+
+                  <div>
+                    <label className="text-[10px] font-semibold text-slate-400 uppercase tracking-wider block mb-1">Motif / Notes</label>
+                    <input
+                      type="text"
+                      placeholder="Maintenance, rechange d'usage..."
+                      value={singleMotif}
+                      onChange={(e) => setSingleMotif(e.target.value)}
+                      className="w-full h-9 px-3 text-xs font-semibold text-slate-800 placeholder-slate-400 bg-white border border-slate-200 rounded-lg outline-none focus:border-slate-400 transition-all uppercase"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isSubmittingSingle}
+                    className="w-full py-2.5 rounded-xl font-medium text-xs tracking-wider transition-all shadow-[0_2px_4px_rgba(0,0,0,0.04)] active:scale-95 text-white bg-slate-900 hover:bg-slate-800 flex items-center justify-center gap-2 focus:outline-none"
+                  >
+                    {isSubmittingSingle ? (
+                      <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                    ) : (
+                      <>⚡ Soumettre le mouvement</>
+                    )}
+                  </button>
+                </form>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* COÛT PAR ENGIN */}
-                <div className="card glass p-6 shadow-xl border border-slate-100">
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                      <Truck className="w-5 h-5 text-amber-600 font-black" /> COÛT DE MAINTENANCE PAR ENGIN (MAD)
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-4">Dépenses de sorties pièces imputées par machine lourd</p>
+              {/* RIGHT COLUMN: STOCK ALERTS & TRACKING FLUX */}
+              <div className="lg:col-span-7 space-y-6">
+                {/* 1. SEUILS DE RUPTURE CRITIQUES SECTION */}
+                <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-50 text-slate-700 rounded-lg flex items-center justify-center border border-slate-200/60">
+                        <AlertCircle className="w-4 h-4 text-slate-800 anim-pulse" />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none font-sans">Ruptures & Seuils d'Alerte Actifs</h3>
+                        <p className="text-[10px] text-slate-400 mt-1 leading-none font-sans">Besoin de ravitaillement à {site}</p>
+                      </div>
+                    </div>
+                    <span className="bg-red-50 text-red-600 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-red-100/80">
+                      {lowStockCount} Articles critiques
+                    </span>
                   </div>
-                  <div className="h-[250px] min-h-[250px]">
-                    {machineChartData.length > 0 ? (
-                      <ResponsiveContainer width="100%" height="100%" minHeight={250} minWidth={0} debounce={50}>
-                        <BarChart data={machineChartData} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
-                          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                          <XAxis type="number" hide />
-                          <YAxis dataKey="name" type="category" width={80} fontSize={10} fontWeight="900" axisLine={false} tickLine={false} stroke="#475569" />
-                          <Tooltip 
-                            cursor={{ fill: 'rgba(245, 158, 11, 0.04)' }} 
-                            contentStyle={{ borderRadius: '8px', border: 'none', padding: '8px', fontWeight: '900', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }} 
-                            formatter={(value: any) => [`${formatCurrency(value)}`, 'Coûts de sorties']}
-                          />
-                          <Bar dataKey="value" fill="#f59e0b" radius={[0, 6, 6, 0]} maxBarSize={20} />
-                        </BarChart>
-                      </ResponsiveContainer>
+
+                  <div className="space-y-3">
+                    {lowStockItems.length > 0 ? (
+                      lowStockItems.map((item) => {
+                        const safetyPct = item.quantity > 0 ? Math.round((item.quantity / (item.minStock || 1)) * 100) : 0;
+                        return (
+                          <div key={item.id} className="p-3.5 bg-slate-50/50 rounded-xl border border-slate-150 flex flex-col md:flex-row md:items-center justify-between gap-3 hover:bg-slate-50 transition-colors">
+                            <div className="flex-1 min-w-0">
+                              <span className="text-[10px] font-mono font-medium text-slate-500 bg-white px-2 py-0.5 rounded border border-slate-200">
+                                {item.ref}
+                              </span>
+                              <h4 className="text-xs font-semibold text-slate-800 mt-2 tracking-tight truncate uppercase">
+                                {item.designation}
+                              </h4>
+                              {/* Stock metric / Progress bar */}
+                              <div className="mt-2.5 flex items-center gap-3">
+                                <div className="flex-1 bg-slate-200/80 h-1 rounded-full overflow-hidden">
+                                  <div 
+                                    className={cn(
+                                      "h-full rounded-full transition-all", 
+                                      item.quantity === 0 ? "w-0 bg-red-505" : safetyPct <= 45 ? "bg-red-400" : "bg-amber-400"
+                                    )}
+                                    style={{ width: `${Math.min(100, safetyPct)}%` }}
+                                  />
+                                </div>
+                                <span className="text-[10px] font-medium font-mono text-slate-500 shrink-0">
+                                  {item.quantity} / {item.minStock} {item.unit || 'unit'}
+                                </span>
+                              </div>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => toast.success(`Bon de ravitaillement drafté pour ${item.ref}. Soumis à l'approvisionneur.`)}
+                              className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white font-medium text-[10px] tracking-wider rounded-lg transition-all shrink-0 md:self-end flex items-center gap-1 focus:outline-none"
+                            >
+                              <ArrowRight className="w-3" /> Rapprovisionner
+                            </button>
+                          </div>
+                        );
+                      })
                     ) : (
-                      <div className="h-full flex items-center justify-center text-center text-xs font-black text-slate-400 uppercase">Aucune imputation de coût machine</div>
+                      <div className="py-8 text-center text-slate-400 font-medium text-xs tracking-tight flex flex-col items-center gap-2">
+                        <CheckCircle2 className="w-8 h-8 text-emerald-500" />
+                        <span>Tout est en ordre — aucun article en alerte de stock.</span>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* TOP CONSOMMATION CATEGORIES TABBED */}
-                <div className="card glass p-6 shadow-xl border border-slate-100 flex flex-col justify-between">
-                  <div>
-                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider mb-1 flex items-center gap-1.5">
-                      <Package className="w-5 h-5 text-indigo-600" /> CLASSEMENT DES CONSOMMATIONS PAR CATÉGORIE
-                    </h3>
-                    <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest leading-none mb-3">Valorisation absolue (MAD) des pièces détachées sorties</p>
-                    
-                    {/* Category Switcher Tabs */}
-                    <div className="flex bg-slate-100 p-0.5 rounded-lg gap-0.5 mb-4 no-print flex-wrap">
-                      {[
-                        { id: 'ENGINS', label: '🚚 Engins' },
-                        { id: 'PERFORATEURS', label: '🔨 Perfo' },
-                        { id: 'CONSOMMABLES', label: '🧪 Fluides' },
-                        { id: 'EPI', label: '🦺 EPI' }
-                      ].map(tab => (
-                        <button
-                          key={tab.id}
-                          onClick={() => setSelectedTopCat(tab.id as any)}
-                          className={cn(
-                            "flex-1 text-[9px] font-black uppercase tracking-tight py-1.5 px-1 rounded-md transition-all",
-                            selectedTopCat === tab.id 
-                              ? "bg-slate-950 text-white shadow-sm" 
-                              : "text-slate-500 hover:text-slate-900"
-                          )}
-                        >
-                          {tab.label}
-                        </button>
-                      ))}
+                {/* 2. SUIVI TERRAIN ET DERNIERS MOUVEMENTS (Timeline style) */}
+                <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 bg-slate-50 text-slate-700 rounded-lg flex items-center justify-center border border-slate-200/60">
+                        <Activity className="w-4 h-4 text-slate-800" strokeWidth={1.5} />
+                      </div>
+                      <div>
+                        <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none font-sans">Journal d'Imputations Récentes</h3>
+                        <p className="text-[10px] text-slate-400 mt-1 leading-none font-sans">Derniers déstockages observés sur site</p>
+                      </div>
                     </div>
                   </div>
 
-                  <div className="h-[200px] min-h-[200px] flex-1">
-                    {(() => {
-                      const data = selectedTopCat === 'ENGINS' ? topEnginsData :
-                                   selectedTopCat === 'PERFORATEURS' ? topPerforateursData :
-                                   selectedTopCat === 'CONSOMMABLES' ? topConsommablesData : topEpiData;
-                      const activeColor = selectedTopCat === 'ENGINS' ? '#f59e0b' :
-                                          selectedTopCat === 'PERFORATEURS' ? '#10b981' :
-                                          selectedTopCat === 'CONSOMMABLES' ? '#f43f5e' : '#6366f1';
-
-                      return data.length > 0 ? (
-                        <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
-                          <BarChart data={data} layout="vertical" margin={{ left: 10, right: 10 }}>
-                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                            <XAxis type="number" hide />
-                            <YAxis dataKey="name" type="category" width={90} fontSize={9} fontWeight="900" axisLine={false} tickLine={false} stroke="#475569" />
-                            <Tooltip 
-                              cursor={{ fill: 'transparent' }} 
-                              contentStyle={{ borderRadius: '8px', border: 'none', padding: '8px', fontWeight: '900', boxShadow: '0 5px 15px rgba(0,0,0,0.05)' }} 
-                              formatter={(value: any) => [`${formatCurrency(value)}`, 'Valorisation']}
-                            />
-                            <Bar dataKey="value" fill={activeColor} radius={[0, 6, 6, 0]} maxBarSize={16} />
-                          </BarChart>
-                        </ResponsiveContainer>
-                      ) : (
-                        <div className="h-full flex items-center justify-center text-center text-xs font-black text-slate-400 uppercase">Aucune consommation enregistrée dans cette catégorie</div>
-                      );
-                    })()}
+                  <div className="space-y-2.5 max-h-[350px] overflow-y-auto pr-1">
+                    {recentMovements.length > 0 ? (
+                      recentMovements.slice(0, 8).map((mov) => {
+                        const total = mov.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+                        const isIncoming = mov.type === 'ENTREE' || mov.type === 'TRANSFERT_IN';
+                        return (
+                          <div 
+                            key={mov.id}
+                            onClick={() => setSelectedFluxMovement(mov)}
+                            className="p-3 border border-slate-100 bg-white hover:border-slate-300 rounded-xl hover:shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-all duration-200 cursor-pointer flex items-center justify-between gap-4 text-left"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className={cn(
+                                "w-8 h-8 rounded-lg flex items-center justify-center shrink-0 border-slate-100",
+                                isIncoming ? "bg-emerald-50/50 text-emerald-600 border" : "bg-rose-50/50 text-rose-600 border"
+                              )}>
+                                {isIncoming ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="text-xs font-semibold text-slate-800 uppercase tracking-tight leading-none">
+                                    {isIncoming ? (mov.vendeur || 'Fournisseur') : (mov.demandeur || 'Atelier')}
+                                  </span>
+                                  <span className={cn(
+                                    "px-1.5 py-0.2 text-[8px] font-semibold rounded-full uppercase tracking-wider",
+                                    isIncoming ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
+                                  )}>
+                                    {mov.type}
+                                  </span>
+                                </div>
+                                <p className="text-[10px] text-slate-400 font-medium mt-1 uppercase max-w-sm truncate whitespace-nowrap">
+                                  {mov.motif || 'Aucune note'} • {mov.items.length} Réf PIÈCES
+                                </p>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <p className="text-xs font-semibold text-slate-900 leading-none">{formatCurrency(total)}</p>
+                              <p className="text-[9px] text-slate-400 font-medium mt-1">
+                                {new Date(mov.date).toLocaleDateString('fr-MA', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="py-8 text-center text-slate-400 font-medium text-xs">
+                        Aucun flux de mouvement enregistré aujourd'hui.
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="card glass p-8 shadow-xl">
-                  <div className="flex items-center justify-between mb-6 border-b border-transparent">
-                    <h3 className="text-xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-2">
-                      <ArrowRightLeft className="w-6 h-6 text-sky-600" /> Performance
-                    </h3>
-                  </div>
-                  
-                  <div className="flex gap-4 mb-6">
-                    <div className="flex-1 bg-emerald-50 p-4 rounded-2xl border border-emerald-100 shadow-inner">
-                      <p className="text-xs font-black text-emerald-600 uppercase tracking-widest leading-none">Entrées</p>
-                      <p className="text-lg font-black text-slate-900 mt-2">{formatCurrency(currentMonthStats.entrees)}</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-8 space-y-6">
+                <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-2">
+                        <TrendingUp className="w-4 h-4 text-slate-800 font-semibold" /> Flux de Consommation Magasin (MAD)
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-sans leading-none">
+                        Courbe de valorisation globale des sorties magasin en Dirhams (MAD) cumulées par mois sur l'année en cours.
+                      </p>
                     </div>
-                    <div className="flex-1 bg-rose-50 p-4 rounded-2xl border border-rose-100 shadow-inner">
-                      <p className="text-xs font-black text-rose-600 uppercase tracking-widest leading-none">Sorties</p>
-                      <p className="text-lg font-black text-slate-900 mt-2">{formatCurrency(currentMonthStats.sorties)}</p>
-                    </div>
+                    <span className="text-[10px] font-medium text-slate-600 bg-slate-50 px-2.5 py-1 rounded-full uppercase tracking-tight border border-slate-200/60 font-mono">Devise: MAD</span>
                   </div>
-
-                  <div className="h-[200px] min-h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
-                      <BarChart data={compareData} margin={{ left: 20 }}>
+                  <div className="h-[300px] min-h-[300px]">
+                    <ResponsiveContainer width="100%" height="100%" minHeight={300} minWidth={0} debounce={50}>
+                      <AreaChart data={chartData} margin={{ top: 10, right: 10, left: 10, bottom: 0 }}>
+                        <defs>
+                          <linearGradient id="colorValue" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="5%" stopColor="#0f172a" stopOpacity={0.06}/>
+                            <stop offset="95%" stopColor="#0f172a" stopOpacity={0}/>
+                          </linearGradient>
+                        </defs>
                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                        <XAxis dataKey="name" fontSize={10} fontWeight="900" axisLine={false} tickLine={false} />
-                        <YAxis fontSize={10} fontWeight="900" axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} />
-                        <Tooltip contentStyle={{ borderRadius: '12px', padding: '8px', fontWeight: '900', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }} />
-                        <Legend iconSize={8} wrapperStyle={{ fontSize: '10px', fontWeight: '900', textTransform: 'uppercase', paddingTop: '10px' }} />
-                        <Bar dataKey="Entrées" fill="#10b981" radius={[4, 4, 0, 0]} />
-                        <Bar dataKey="Sorties" fill="#b91c1c" radius={[4, 4, 0, 0]} />
-                      </BarChart>
+                        <XAxis dataKey="name" fontSize={10} fontWeight="500" axisLine={false} tickLine={false} stroke="#64748b" />
+                        <YAxis fontSize={10} fontWeight="500" axisLine={false} tickLine={false} stroke="#64748b" tickFormatter={(value) => `${formatCurrency(value)}`} />
+                        <Tooltip 
+                          contentStyle={{ backgroundColor: '#fff', borderRadius: '12px', padding: '12px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05)' }}
+                          itemStyle={{ fontWeight: '500', fontSize: '11px', color: '#0f172a' }}
+                          labelStyle={{ fontWeight: '600', fontSize: '11px', color: '#64748b', marginBottom: '4px' }}
+                          formatter={(value: any) => [`${formatCurrency(value)}`, 'Total Consommé']}
+                        />
+                        <Area type="monotone" dataKey="value" stroke="#0f172a" strokeWidth={2.5} fillOpacity={1} fill="url(#colorValue)" />
+                      </AreaChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
 
-                <div className="card glass p-8 shadow-xl">
-                  <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-6 flex items-center gap-2">
-                    <PieIcon className="w-6 h-6 text-emerald-600" /> Répartition ABC
-                  </h3>
-                  <div className="h-[180px] min-h-[180px]">
-                     <ResponsiveContainer width="100%" height="100%" minHeight={180} minWidth={0} debounce={50}>
-                       <PieChart>
-                         <Pie
-                           data={abcChartData}
-                           innerRadius={50}
-                           outerRadius={70}
-                           paddingAngle={6}
-                           dataKey="value"
-                         >
-                           {abcChartData.map((entry, index) => (
-                             <Cell key={`cell-${index}`} fill={entry.color} />
-                           ))}
-                         </Pie>
-                         <Tooltip />
-                       </PieChart>
-                     </ResponsiveContainer>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* COÛT PAR ENGIN */}
+                  <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-1.5">
+                        <Truck className="w-4 h-4 text-slate-800" /> Dépenses de Maintenance par Machine
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-sans leading-none mb-5">Valorisation globale des sorties imputées par engin lourd</p>
+                    </div>
+                    <div className="h-[250px] min-h-[250px]">
+                      {machineChartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%" minHeight={250} minWidth={0} debounce={50}>
+                          <BarChart data={machineChartData} layout="vertical" margin={{ left: 10, right: 10, top: 10, bottom: 10 }}>
+                            <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                            <XAxis type="number" hide />
+                            <YAxis dataKey="name" type="category" width={80} fontSize={9} fontWeight="500" axisLine={false} tickLine={false} stroke="#475569" />
+                            <Tooltip 
+                              cursor={{ fill: 'rgba(15, 23, 42, 0.02)' }} 
+                              contentStyle={{ borderRadius: '8px', border: '1px solid #f1f5f9', padding: '8px', fontWeight: '500', boxShadow: '0 5px 15px rgba(0,0,0,0.03)' }} 
+                              formatter={(value: any) => [`${formatCurrency(value)}`, 'Coûts de sorties']}
+                            />
+                            <Bar dataKey="value" fill="#334155" radius={[0, 4, 4, 0]} maxBarSize={16} />
+                          </BarChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <div className="h-full flex items-center justify-center text-center text-xs font-semibold text-slate-400 uppercase">Aucune imputation de coût machine</div>
+                      )}
+                    </div>
                   </div>
-                  <div className="mt-1.5 space-y-0.5">
-                    {abcChartData.map(item => (
-                      <div key={item.name} className="flex items-center justify-between">
-                        <span className="text-sm font-black text-slate-400 uppercase">{item.name}</span>
-                        <span className="text-lg font-black text-slate-900">{item.value} Réf</span>
+
+                  {/* TOP CONSOMMATION CATEGORIES TABBED */}
+                  <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)] flex flex-col justify-between">
+                    <div>
+                      <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-1.5">
+                        <Package className="w-4 h-4 text-slate-800" /> Dépenses par Catégorie de Pièce
+                      </h3>
+                      <p className="text-[10px] text-slate-400 font-sans leading-none mb-4">Valorisation absolue (MAD) des pièces détachées sorties</p>
+                      
+                      {/* Category Switcher Tabs */}
+                      <div className="flex bg-slate-50 border border-slate-200/60 p-0.5 rounded-xl gap-0.5 mb-4 no-print flex-wrap">
+                        {[
+                          { id: 'ENGINS', label: '🚚 Engins' },
+                          { id: 'PERFORATEURS', label: '🔨 Perfo' },
+                          { id: 'CONSOMMABLES', label: '🧪 Fluides' },
+                          { id: 'EPI', label: '🦺 EPI' }
+                        ].map(tab => (
+                          <button
+                            type="button"
+                            key={tab.id}
+                            onClick={() => setSelectedTopCat(tab.id as any)}
+                            className={cn(
+                              "flex-1 text-[9px] font-semibold uppercase py-1.5 px-1 rounded-lg transition-all",
+                              selectedTopCat === tab.id 
+                                ? "bg-slate-900 text-white shadow-sm" 
+                                : "text-slate-500 hover:text-slate-900"
+                            )}
+                          >
+                            {tab.label}
+                          </button>
+                        ))}
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="h-[200px] min-h-[200px] flex-1">
+                      {(() => {
+                        const data = selectedTopCat === 'ENGINS' ? topEnginsData :
+                                     selectedTopCat === 'PERFORATEURS' ? topPerforateursData :
+                                     selectedTopCat === 'CONSOMMABLES' ? topConsommablesData : topEpiData;
+                        const activeColor = selectedTopCat === 'ENGINS' ? '#475569' :
+                                            selectedTopCat === 'PERFORATEURS' ? '#475569' :
+                                            selectedTopCat === 'CONSOMMABLES' ? '#475569' : '#475569';
+
+                        return data.length > 0 ? (
+                          <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
+                            <BarChart data={data} layout="vertical" margin={{ left: 10, right: 10 }}>
+                              <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                              <XAxis type="number" hide />
+                              <YAxis dataKey="name" type="category" width={90} fontSize={9} fontWeight="500" axisLine={false} tickLine={false} stroke="#475569" />
+                              <Tooltip 
+                                cursor={{ fill: 'transparent' }} 
+                                contentStyle={{ borderRadius: '8px', border: '1px solid #f1f5f9', padding: '8px', fontWeight: '500', boxShadow: '0 5px 15px rgba(0,0,0,0.03)' }} 
+                                formatter={(value: any) => [`${formatCurrency(value)}`, 'Valorisation']}
+                              />
+                              <Bar dataKey="value" fill={activeColor} radius={[0, 4, 4, 0]} maxBarSize={14} />
+                            </BarChart>
+                          </ResponsiveContainer>
+                        ) : (
+                          <div className="h-full flex items-center justify-center text-center text-xs font-semibold text-slate-400 uppercase">Aucune consommation enregistrée dans cette catégorie</div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                    <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
+                      <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none flex items-center gap-2">
+                        <ArrowRightLeft className="w-4 h-4 text-slate-800" /> Flux d'Entrées vs Sorties
+                      </h3>
+                    </div>
+                    
+                    <div className="flex gap-4 mb-5">
+                      <div className="flex-1 bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-sm">
+                        <p className="text-[10px] font-semibold text-slate-450 uppercase tracking-widest leading-none">Entrées</p>
+                        <p className="text-sm font-bold text-slate-900 mt-2">{formatCurrency(currentMonthStats.entrees)}</p>
+                      </div>
+                      <div className="flex-1 bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-sm">
+                        <p className="text-[10px] font-semibold text-slate-450 uppercase tracking-widest leading-none">Sorties</p>
+                        <p className="text-sm font-bold text-slate-900 mt-2">{formatCurrency(currentMonthStats.sorties)}</p>
+                      </div>
+                    </div>
+
+                    <div className="h-[200px] min-h-[200px]">
+                      <ResponsiveContainer width="100%" height="100%" minHeight={200} minWidth={0} debounce={50}>
+                        <BarChart data={compareData} margin={{ left: 10 }}>
+                          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                          <XAxis dataKey="name" fontSize={9} fontWeight="500" axisLine={false} tickLine={false} />
+                          <YAxis fontSize={9} fontWeight="500" axisLine={false} tickLine={false} tickFormatter={(value) => `${value/1000}k`} stroke="#94a3b8" />
+                          <Tooltip contentStyle={{ borderRadius: '12px', padding: '8px', fontWeight: '500', border: '1px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.03)' }} />
+                          <Legend iconSize={6} wrapperStyle={{ fontSize: '9px', fontWeight: '500', textTransform: 'uppercase', paddingTop: '10px' }} />
+                          <Bar dataKey="Entrées" fill="#334155" radius={[3, 3, 0, 0]} />
+                          <Bar dataKey="Sorties" fill="#64748b" radius={[3, 3, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </div>
+
+                  <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                    <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-6 flex items-center gap-2">
+                      <PieIcon className="w-4 h-4 text-slate-800" /> Analyse & Dispersion ABC
+                    </h3>
+                    <div className="h-[180px] min-h-[180px] flex items-center justify-center">
+                       <ResponsiveContainer width="100%" height="100%" minHeight={180} minWidth={0} debounce={50}>
+                         <PieChart>
+                           <Pie
+                             data={abcChartData}
+                             innerRadius={50}
+                             outerRadius={70}
+                             paddingAngle={6}
+                             dataKey="value"
+                           >
+                             {abcChartData.map((entry, index) => (
+                               <Cell key={`cell-${index}`} fill={entry.color} />
+                             ))}
+                           </Pie>
+                           <Tooltip />
+                         </PieChart>
+                       </ResponsiveContainer>
+                    </div>
+                    <div className="mt-4 space-y-1">
+                      {abcChartData.map(item => (
+                        <div key={item.name} className="flex items-center justify-between text-xs font-sans">
+                          <span className="font-semibold text-slate-400 uppercase">{item.name}</span>
+                          <span className="font-semibold text-slate-900">{item.value} Réf</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="lg:col-span-4 card glass p-5 flex flex-col h-full bg-slate-50 border-slate-200/60 shadow-xl overflow-hidden self-stretch no-print">
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-tighter flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-sky-600" /> Flux Live Flux
-                </h3>
-                <span className="flex h-2 w-2 relative">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-              </div>
+              <div className="lg:col-span-4 bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)] flex flex-col h-full overflow-hidden self-stretch no-print">
+                <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
+                  <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none flex items-center gap-1.5 font-sans">
+                    <Activity className="w-4 h-4 text-slate-850" /> Flux Live Interactif
+                  </h3>
+                  <span className="flex h-2 w-2 relative">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                </div>
 
-              {/* LIVE TABS FILTER */}
-              <div className="flex bg-slate-200/50 p-0.5 rounded-lg gap-0.5 mb-2 flex-wrap">
-                {[
-                  { id: 'ALL', label: 'Tous' },
-                  { id: 'ENTREE', label: 'Entrées' },
-                  { id: 'SORTIE', label: 'Sorties' },
-                  { id: 'TRANSFERT', label: 'Transf.' }
-                ].map(lt => (
-                  <button
-                    key={lt.id}
-                    onClick={() => setLiveFluxFilter(lt.id as any)}
-                    className={cn(
-                      "flex-1 text-[9px] font-black uppercase py-1.5 rounded-md transition-all text-center",
-                      liveFluxFilter === lt.id 
-                        ? "bg-white text-slate-900 shadow-sm font-bold" 
-                        : "text-slate-500 hover:text-slate-900"
-                    )}
-                  >
-                    {lt.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* SEARCH INPUT FILTER */}
-              <div className="relative mb-3">
-                <input
-                  type="text"
-                  placeholder="Filtrer par machine, motif ou réf..."
-                  value={liveFluxSearchText}
-                  onChange={(e) => setLiveFluxSearchText(e.target.value)}
-                  className="w-full h-8 pl-8 pr-3 text-xs font-bold text-slate-800 placeholder-slate-400 bg-white border border-slate-200 rounded-lg outline-none focus:border-amber-500 transition-colors"
-                />
-                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
-                {liveFluxSearchText && (
-                  <button 
-                    onClick={() => setLiveFluxSearchText('')} 
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-900 text-xs font-bold"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-
-              <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[450px]">
-                {recentMovements.length > 0 ? recentMovements.map((mov) => {
-                  const total = mov.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
-                  const isIncoming = mov.type === 'ENTREE' || mov.type === 'TRANSFERT_IN';
-                  return (
-                    <div 
-                      key={mov.id} 
-                      onClick={() => setSelectedFluxMovement(mov)}
-                      className="group border border-slate-100 hover:border-slate-300 p-2.5 bg-white rounded-xl shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer flex flex-col gap-1 text-left"
+                {/* LIVE TABS FILTER */}
+                <div className="flex bg-slate-5 border border-slate-200/60 p-0.5 rounded-xl gap-0.5 mb-3 flex-wrap">
+                  {[
+                    { id: 'ALL', label: 'Tous' },
+                    { id: 'ENTREE', label: 'Entrées' },
+                    { id: 'SORTIE', label: 'Sorties' },
+                    { id: 'TRANSFERT', label: 'Transf.' }
+                  ].map(lt => (
+                    <button
+                      type="button"
+                      key={lt.id}
+                      onClick={() => setLiveFluxFilter(lt.id as any)}
+                      className={cn(
+                        "flex-1 text-[9px] font-semibold uppercase py-1.5 rounded-lg transition-all text-center",
+                        liveFluxFilter === lt.id 
+                          ? "bg-slate-900 text-white shadow-sm" 
+                          : "text-slate-500 hover:text-slate-900"
+                      )}
                     >
-                      <div className="flex items-center justify-between gap-1.5">
-                        <div className="flex items-center gap-1.5 min-w-0">
-                          <span className={cn(
-                            "px-1.5 py-0.5 text-[8px] font-black rounded uppercase tracking-wider",
-                            isIncoming ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
-                          )}>
-                            {mov.type}
-                          </span>
-                          <span className="text-xs font-black text-slate-900 truncate uppercase">
-                            {isIncoming ? mov.vendeur : mov.demandeur}
+                      {lt.label}
+                    </button>
+                  ))}
+                </div>
+
+                {/* SEARCH INPUT FILTER */}
+                <div className="relative mb-4">
+                  <input
+                    type="text"
+                    placeholder="Filtrer par machine, motif..."
+                    value={liveFluxSearchText}
+                    onChange={(e) => setLiveFluxSearchText(e.target.value)}
+                    className="w-full h-9 pl-9 pr-3 text-xs font-medium text-slate-800 placeholder-slate-400 bg-white border border-slate-200 rounded-lg outline-none focus:border-slate-400 transition-all font-sans"
+                  />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+                  {liveFluxSearchText && (
+                    <button 
+                      onClick={() => setLiveFluxSearchText('')} 
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 text-xs font-medium"
+                    >
+                      ✕
+                    </button>
+                  )}
+                </div>
+
+                <div className="space-y-2 flex-1 overflow-y-auto custom-scrollbar pr-1 max-h-[450px]">
+                  {recentMovements.length > 0 ? recentMovements.map((mov) => {
+                    const total = mov.items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
+                    const isIncoming = mov.type === 'ENTREE' || mov.type === 'TRANSFERT_IN';
+                    return (
+                      <div 
+                        key={mov.id} 
+                        onClick={() => setSelectedFluxMovement(mov)}
+                        className="group border border-slate-100 hover:border-slate-300 p-3 bg-white rounded-xl shadow-sm hover:shadow-[0_2px_8px_rgba(0,0,0,0.01)] transition-all duration-200 cursor-pointer flex flex-col gap-1 text-left"
+                      >
+                        <div className="flex items-center justify-between gap-1.5">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            <span className={cn(
+                              "px-1.5 py-0.2 text-[8px] font-semibold rounded-full uppercase tracking-wider",
+                              isIncoming ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-rose-50 text-rose-700 border border-rose-100"
+                            )}>
+                              {mov.type}
+                            </span>
+                            <span className="text-xs font-semibold text-slate-900 truncate uppercase mt-0.5">
+                              {isIncoming ? mov.vendeur : mov.demandeur}
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-mono font-semibold text-slate-500 flex-shrink-0">
+                            {formatCurrency(total)}
                           </span>
                         </div>
-                        <span className="text-[9px] font-mono font-bold text-slate-500 flex-shrink-0">
-                          {formatCurrency(total)}
-                        </span>
-                      </div>
 
-                      {/* Display targeted machine if imputed */}
-                      {(mov.engin || mov.perforateur) && (
-                        <div className="flex items-center gap-1 text-[10px] text-amber-600 font-bold uppercase tracking-tight mt-0.5">
-                          <Truck className="w-3 h-3 flex-shrink-0" />
-                          <span className="truncate">CIBLE: {mov.engin || mov.perforateur}</span>
+                        {/* Display targeted machine if imputed */}
+                        {(mov.engin || mov.perforateur) && (
+                          <div className="flex items-center gap-1 text-[9px] text-slate-505 font-medium uppercase tracking-tight mt-1 bg-slate-50 border border-slate-100 rounded px-1.5 py-0.5 inline-block self-start">
+                            <Truck className="w-3 h-3 flex-shrink-0" />
+                            <span className="truncate">ENGIN: {mov.engin || mov.perforateur}</span>
+                          </div>
+                        )}
+
+                        {/* Display intervention motif */}
+                        {mov.motif && (
+                          <p className="text-[9px] font-medium text-slate-400 uppercase italic line-clamp-1 border-t border-slate-50 pt-1 mt-1">
+                            Motif: {mov.motif}
+                          </p>
+                        )}
+
+                        <div className="flex justify-between items-center text-[8px] text-slate-400 font-medium uppercase tracking-wider mt-1.5 border-t border-slate-50 pt-1">
+                          <span>{mov.items.length} références</span>
+                          <span>{new Date(mov.date).toLocaleDateString('fr-MA', { hour: '2-digit', minute: '2-digit' })}</span>
                         </div>
-                      )}
-
-                      {/* Display intervention motif */}
-                      {mov.motif && (
-                        <p className="text-[9px] font-semibold text-slate-400 uppercase italic line-clamp-1 border-t border-slate-50 pt-0.5">
-                          Motif: {mov.motif}
-                        </p>
-                      )}
-
-                      <div className="flex justify-between items-center text-[8px] text-slate-400 font-bold uppercase tracking-wider mt-1 border-t border-slate-50 pt-1">
-                        <span>{mov.items.length} références</span>
-                        <span>{new Date(mov.date).toLocaleDateString('fr-MA', { hour: '2-digit', minute: '2-digit' })}</span>
                       </div>
+                    );
+                  }) : (
+                    <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
+                      <p className="text-[10px] font-semibold uppercase tracking-widest">Aucun flux ne correspond</p>
                     </div>
-                  );
-                }) : (
-                  <div className="h-full flex flex-col items-center justify-center text-center opacity-40 py-12">
-                    <p className="text-[10px] font-black uppercase tracking-widest">Aucun flux ne correspond</p>
-                  </div>
-                )}
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
         </>
       )}
 
       {/* 4. COMPREHENSIVE MOVEMENT TRACEABILITY MODAL POP-UP */}
       {selectedFluxMovement && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-100 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
-            <header className="bg-slate-950 p-5 text-white flex justify-between items-center">
+        <div className="fixed inset-0 bg-slate-900/20 backdrop-blur-[2px] flex items-center justify-center p-4 z-50 animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full border border-slate-200/60 overflow-hidden animate-in zoom-in-95 duration-200 flex flex-col max-h-[90vh]">
+            <header className="p-5 border-b border-slate-100 flex justify-between items-center bg-white">
               <div>
-                <span className="text-[9px] font-black uppercase tracking-widest text-[#f59e0b] bg-[#f59e0b]/10 px-2 py-0.5 rounded border border-[#f59e0b]/20">Traceability Log</span>
-                <h3 className="text-lg font-black uppercase tracking-tight mt-1 flex items-center gap-2">
-                  <Activity className="w-5 h-5 text-[#f59e0b]" /> COMPTE RENDU DE FLUX #{selectedFluxMovement.id.slice(0, 8)}
+                <span className="text-[9px] font-semibold uppercase tracking-wider text-slate-500 bg-slate-50 px-2.5 py-1 rounded-full border border-slate-200/60 font-mono">Traceability Log</span>
+                <h3 className="text-sm font-semibold text-slate-900 tracking-tight mt-2 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-slate-950" /> Compte rendu de flux #{selectedFluxMovement.id.slice(0, 8)}
                 </h3>
               </div>
               <button 
                 onClick={() => setSelectedFluxMovement(null)}
-                className="text-slate-400 hover:text-white text-lg font-black transition-colors"
+                className="w-8 h-8 rounded-full border border-slate-200 hover:bg-slate-50 flex items-center justify-center text-slate-500 hover:text-slate-850 text-sm font-medium transition-all"
                 title="Fermer"
               >
                 ✕
@@ -1972,20 +2467,20 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
             <div className="p-6 space-y-4 overflow-y-auto flex-1">
               <div className="grid grid-cols-2 gap-4">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest break-words block">Type de mouvement</span>
+                <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
+                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block font-sans">Type de mouvement</span>
                   <span className={cn(
-                    "text-[10px] font-black uppercase tracking-tighter inline-block px-2.5 py-0.5 mt-1 rounded-md",
+                    "text-[10px] font-semibold uppercase tracking-tight inline-block px-2.5 py-0.5 mt-1 rounded-md",
                     selectedFluxMovement.type === 'ENTREE' || selectedFluxMovement.type === 'TRANSFERT_IN' 
-                      ? "bg-emerald-100 text-emerald-800" 
-                      : "bg-rose-100 text-rose-800"
+                      ? "bg-emerald-50 text-emerald-800 border border-emerald-100" 
+                      : "bg-rose-50 text-rose-800 border border-rose-100"
                   )}>
                     {selectedFluxMovement.type}
                   </span>
                 </div>
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest break-words block">Date / Heure</span>
-                  <span className="text-xs font-mono font-bold text-slate-700 mt-1 block">
+                <div className="bg-slate-50/50 p-3.5 rounded-xl border border-slate-100">
+                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block font-sans">Date / Heure</span>
+                  <span className="text-xs font-mono font-semibold text-slate-700 mt-1.5 block">
                     {new Date(selectedFluxMovement.date).toLocaleString('fr-MA', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
@@ -1993,14 +2488,14 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Saisie par (Opérateur)</span>
-                  <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Saisie par (Opérateur)</span>
+                  <p className="text-xs font-semibold text-slate-800 uppercase mt-1">
                     {selectedFluxMovement.operateur || 'Magasinier SMI'}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Acteur terrain (Mécanicien)</span>
-                  <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Acteur terrain (Mécanicien)</span>
+                  <p className="text-xs font-semibold text-slate-800 uppercase mt-1">
                     {selectedFluxMovement.mecanicien || 'Aucun affecté'}
                   </p>
                 </div>
@@ -2009,14 +2504,14 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               {selectedFluxMovement.type === 'SORTIE' ? (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Demandeur (Service)</span>
-                    <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Demandeur (Service)</span>
+                    <p className="text-xs font-semibold text-slate-800 uppercase mt-1">
                       {selectedFluxMovement.demandeur || 'Atelier de maintenance'}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-bold text-rose-600">Bénéficiaire final</span>
-                    <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Bénéficiaire final</span>
+                    <p className="text-xs font-semibold text-slate-800 uppercase mt-1">
                       {selectedFluxMovement.beneficiaire || 'Atelier fond'}
                     </p>
                   </div>
@@ -2024,14 +2519,14 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               ) : (
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Vendeur / Fournisseur</span>
-                    <p className="text-xs font-black text-slate-800 uppercase mt-1">
+                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Vendeur / Fournisseur</span>
+                    <p className="text-xs font-semibold text-slate-800 uppercase mt-1">
                       {selectedFluxMovement.vendeur || 'Epiroc France / OEM'}
                     </p>
                   </div>
                   <div>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block font-bold text-emerald-600">BL Code / Manifest</span>
-                    <p className="text-xs font-mono font-bold text-slate-800 uppercase mt-1">
+                    <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">BL Code / Manifest</span>
+                    <p className="text-xs font-mono font-semibold text-slate-800 uppercase mt-1">
                       {selectedFluxMovement.blCode || 'SANS BL'}
                     </p>
                   </div>
@@ -2040,29 +2535,29 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
               <div className="grid grid-cols-2 gap-4 border-t border-slate-100 pt-3">
                 <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Machine cible affectée</span>
-                  <p className="text-xs font-black text-amber-600 uppercase mt-1 flex items-center gap-1.5">
-                    <Truck className="w-3.5 h-3.5" />
+                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Machine cible affectée</span>
+                  <p className="text-xs font-semibold text-slate-800 uppercase mt-1 flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-slate-405" />
                     {selectedFluxMovement.engin || selectedFluxMovement.perforateur || 'Parc global (Sans imputation)'}
                   </p>
                 </div>
                 <div>
-                  <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Motif d'intervention</span>
-                  <p className="text-xs font-bold text-slate-700 uppercase mt-1">
+                  <span className="text-[9px] font-semibold text-slate-400 uppercase tracking-wider block">Motif d'intervention</span>
+                  <p className="text-xs font-medium text-slate-700 uppercase mt-1">
                     {selectedFluxMovement.motif || 'Aucune observation saisie'}
                   </p>
                 </div>
               </div>
 
               {/* Items Table */}
-              <div className="border border-slate-100 rounded-xl overflow-hidden mt-2">
-                <div className="bg-slate-50 px-3 py-2 border-b border-secondary text-[9px] font-black text-slate-400 uppercase tracking-wider grid grid-cols-12 gap-1.5">
+              <div className="border border-slate-105 rounded-xl overflow-hidden mt-4">
+                <div className="bg-slate-50 px-3 py-2 border-b border-slate-100 text-[9px] font-semibold text-slate-500 uppercase tracking-wider grid grid-cols-12 gap-1.5 font-mono">
                   <span className="col-span-3">Référence</span>
                   <span className="col-span-5">Désignation complète</span>
                   <span className="col-span-2 text-right">Qté</span>
                   <span className="col-span-2 text-right">Prix Unitaire</span>
                 </div>
-                <div className="divide-y divide-slate-100">
+                <div className="divide-y divide-slate-100 bg-white">
                   {selectedFluxMovement.items.map((it: any) => (
                     <div 
                       key={it.articleId || it.ref} 
@@ -2073,28 +2568,28 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                           setSelectedFluxMovement(null);
                         }
                       }}
-                      className="px-3 py-2 text-xs grid grid-cols-12 gap-1.5 items-center hover:bg-slate-50 cursor-pointer transition-colors"
+                      className="px-3 py-2 text-xs grid grid-cols-12 gap-1.5 items-center hover:bg-slate-50 cursor-pointer transition-all"
                     >
-                      <span className="col-span-3 font-mono font-bold text-slate-900 group-hover:text-amber-600">{it.ref}</span>
-                      <span className="col-span-5 text-slate-600 font-semibold truncate uppercase">{it.designation || 'Pièce inconnue'}</span>
-                      <span className="col-span-2 text-right font-mono font-black text-slate-600">{it.quantity}</span>
-                      <span className="col-span-2 text-right font-mono font-bold text-slate-500">{formatCurrency(it.price || 0)}</span>
+                      <span className="col-span-3 font-mono font-semibold text-slate-900 group-hover:text-slate-950">{it.ref}</span>
+                      <span className="col-span-5 text-slate-600 font-medium truncate uppercase">{it.designation || 'Pièce inconnue'}</span>
+                      <span className="col-span-2 text-right font-mono font-semibold text-slate-600">{it.quantity}</span>
+                      <span className="col-span-2 text-right font-mono font-medium text-slate-550">{formatCurrency(it.price || 0)}</span>
                     </div>
                   ))}
                 </div>
-                <div className="bg-amber-50 px-4 py-2 text-xs font-black text-amber-950 flex justify-between items-center tracking-tighter">
-                  <span>VALORISATION TOTALE DU BON DE MOUVEMENT</span>
-                  <span className="text-xs font-mono text-amber-600">
+                <div className="bg-slate-50/40 px-4 py-3 text-xs font-semibold text-slate-900 flex justify-between items-center tracking-tight border-t border-slate-100">
+                  <span className="text-[11px] text-slate-450 uppercase tracking-wider">VALORISATION TOTALE DU BON DE MOUVEMENT</span>
+                  <span className="text-xs font-mono font-semibold text-slate-950">
                     {formatCurrency(selectedFluxMovement.items.reduce((sum: number, it: any) => sum + (it.quantity * (it.price || 0)), 0))}
                   </span>
                 </div>
               </div>
             </div>
 
-            <footer className="bg-slate-50 p-4 border-t border-slate-100 flex justify-end">
+            <footer className="bg-slate-50/50 p-4 border-t border-slate-100 flex justify-end">
               <button 
                 onClick={() => setSelectedFluxMovement(null)}
-                className="px-6 py-2 bg-slate-950 text-white rounded-lg font-black uppercase text-xs tracking-wider hover:bg-slate-800 transition-colors"
+                className="px-5 py-2 bg-slate-900 hover:bg-slate-800 text-white rounded-lg font-semibold text-xs transition-all"
               >
                 Fermer la vue
               </button>

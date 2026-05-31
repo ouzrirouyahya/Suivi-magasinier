@@ -247,7 +247,8 @@ export function ReportPage() {
     document.body.removeChild(link);
   };
 
-  if (currentUser?.role !== 'ADMIN') {
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  if (!isAdmin) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white rounded-3xl border border-slate-100 italic">
         <ShieldCheck className="w-16 h-16 text-rose-500 mb-6 opacity-20" />

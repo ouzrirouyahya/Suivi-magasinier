@@ -59,9 +59,29 @@
         "stats": { "type": "object" }
       },
       "required": ["id", "site", "type", "generatedAt", "data"]
+    },
+    "DeletionRequest": {
+      "title": "DeletionRequest",
+      "description": "Demande de suppression d'articles soumise par un magasinier pour validation admin",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "articleIds": { "type": "array" },
+        "articleRefs": { "type": "array" },
+        "articleDesignations": { "type": "array" },
+        "site": { "type": "string" },
+        "requestedBy": { "type": "string" },
+        "requestedAt": { "type": "string" },
+        "status": { "type": "string" }
+      },
+      "required": ["id", "articleIds", "site", "requestedBy", "requestedAt", "status"]
     }
   },
   "firestore": {
+    "/deletionRequests/{id}": {
+      "schema": "DeletionRequest",
+      "description": "Demandes de suppression d'articles soumises à la validation administrative"
+    },
     "/reports/{reportId}": {
       "schema": "AIReport",
       "description": "Stockage des analyses IA générées automatiquement"

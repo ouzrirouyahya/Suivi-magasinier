@@ -1,6 +1,6 @@
 import React from 'react';
-import { Search, Menu, Activity, Bell, Check, CheckSquare, AlertTriangle, Info, ShieldAlert, Clock, SlidersHorizontal } from 'lucide-react';
-import { formatCurrency } from '../../lib/utils';
+import { Search, Menu, Activity, Bell, Check, CheckSquare, AlertTriangle, Info, ShieldAlert, Clock, SlidersHorizontal, Sun, Moon, Monitor, Smartphone } from 'lucide-react';
+import { formatCurrency, cn } from '../../lib/utils';
 import { Article, SiteCode, AppNotification } from '../../types';
 import { useInventory } from '../../context/InventoryContext';
 
@@ -15,6 +15,10 @@ interface ToolbarProps {
   onNavigateTo?: (page: string) => void;
   density: 'compact' | 'standard' | 'large';
   onChangeDensity: (d: 'compact' | 'standard' | 'large') => void;
+  isDarkMode?: boolean;
+  onToggleDarkMode?: () => void;
+  isDesktopViewport?: boolean;
+  onToggleViewportMode?: () => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({ 
@@ -27,7 +31,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onNavigateToForensic,
   onNavigateTo,
   density,
-  onChangeDensity
+  onChangeDensity,
+  isDarkMode = false,
+  onToggleDarkMode,
+  isDesktopViewport = true,
+  onToggleViewportMode
 }) => {
   const { 
     collectSystemMetrics, 
@@ -183,7 +191,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </div>
 
           {/* SEGMENTED LAYOUT DENSITY SWITCHER */}
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 font-mono text-[9px] font-black select-none pointer-events-auto shadow-inner gap-0.5" title="Densité d'affichage">
+          <div className="hidden sm:flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 font-mono text-[9px] font-black select-none pointer-events-auto shadow-inner gap-0.5" title="Densité d'affichage">
             <SlidersHorizontal className="w-2.5 h-2.5 text-slate-400 mx-1.5" />
             <button
               onClick={() => onChangeDensity('compact')}
@@ -219,6 +227,48 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               LRG
             </button>
           </div>
+
+          <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
+
+          {/* VIEWPORT SCALING MODE TOGGLE */}
+          {onToggleViewportMode && (
+            <button
+              onClick={onToggleViewportMode}
+              className={cn(
+                "px-2.5 py-1.5 rounded-xl border transition-all active:scale-95 flex items-center gap-1.5 pointer-events-auto text-[9px] font-black uppercase tracking-wider shadow-sm bg-white cursor-pointer hover:border-slate-350",
+                isDesktopViewport 
+                  ? "bg-sky-50/70 text-sky-700 border-sky-200/80 hover:bg-sky-100/50" 
+                  : "bg-slate-50/50 text-slate-500 border-slate-200 hover:bg-slate-100/50"
+              )}
+              title={isDesktopViewport ? "Passer à la version mobile standard" : "Forcer la version ordinateur (Recommandé)"}
+            >
+              <span className="relative flex h-1.5 w-1.5">
+                {isDesktopViewport ? (
+                  <>
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-sky-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-sky-500"></span>
+                  </>
+                ) : (
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-slate-400"></span>
+                )}
+              </span>
+              {isDesktopViewport ? <Monitor className="w-3.5 h-3.5 text-sky-600 hidden sm:block" /> : <Smartphone className="w-3.5 h-3.5 text-slate-400 hidden sm:block" />}
+              <span>{isDesktopViewport ? 'Mode Bureau' : 'Mode Mobile'}</span>
+            </button>
+          )}
+
+          <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
+
+          {/* NIGHT MODE TOGGLE */}
+          {onToggleDarkMode && (
+            <button
+              onClick={onToggleDarkMode}
+              className="p-1.5 md:p-2 rounded-xl text-slate-500 hover:text-sky-600 hover:bg-slate-50 transition-all active:scale-95 flex items-center justify-center pointer-events-auto border border-slate-100/70 hover:border-slate-200 bg-white shadow-sm"
+              title={isDarkMode ? "Activer le mode jour" : "Activer le mode nuit"}
+            >
+              {isDarkMode ? <Sun className="w-4.5 h-4.5 text-amber-500" /> : <Moon className="w-4.5 h-4.5" />}
+            </button>
+          )}
 
           <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
 

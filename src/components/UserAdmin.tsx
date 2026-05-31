@@ -462,47 +462,64 @@ export function UserAdmin({
         {activeTab === 'VIEWER_AUDIT' && isSuperAdmin && (() => {
           const evaluateSuspicion = (sess: any, sessActs: any[]) => {
             const reasons: string[] = [];
-            if (!sessActs || sessActs.length === 0) return { suspicious: false, reasons };
-
-            // 1. Navigation trop rapide: >= 3 pages visitées avec moyenne < 5s
-            const totalDuration = sessActs.reduce((acc: number, a: any) => acc + (a.duration_seconds || 0), 0);
-            const totalPages = sessActs.length;
-            const avgSec = totalDuration / totalPages;
-            if (totalPages >= 3 && avgSec > 0 && avgSec < 5) {
-              reasons.push(`Navigation ultra-rapide (${avgSec.toFixed(1)}s/page en moyenne sur ${totalPages} pages)`);
-            }
-
-            // 2. Refresh excessif ou clics hors normes: > 15 clics sur une seule page
-            const hasExcessiveC = sessActs.some((a: any) => (a.click_count || 0) > 15);
-            if (hasExcessiveC) {
-              const culprit = sessActs.find((a: any) => (a.click_count || 0) > 15);
-              reasons.push(`Clics excessifs (${culprit?.click_count} clics détectés sur ${culprit?.page_name || 'Cockpit'})`);
-            }
-
-            // 3. Comportement répétitif anormal (boucle): même page visitée consécutivement >= 3 fois
-            let currentConsecutive = 1;
-            let maxConsecutive = 1;
-            let lastPageName = '';
-            for (let i = 0; i < sessActs.length; i++) {
-              const pName = sessActs[i].page_name || '';
-              if (i > 0 && pName === lastPageName) {
-                currentConsecutive++;
-                if (currentConsecutive > maxConsecutive) {
-                  maxConsecutive = currentConsecutive;
-                }
-              } else {
-                currentConsecutive = 1;
+            
+            // 0. Watchdog security inspection markers (evaluated first even if they have no actions yet!)
+            if (sess) {
+              if (sess.is_inspecting) {
+                reasons.push(`Inspecteur / Console Dev détecté : ${sess.inspect_attempts_reason || "Tentative d'inspection"}`);
               }
-              lastPageName = pName;
-            }
-            if (maxConsecutive >= 3) {
-              reasons.push(`Boucle répétitive (${maxConsecutive}x consultations consécutives de la même page)`);
+              if (sess.key_combos_count > 0) {
+                reasons.push(`Raccourcis clavier inspecteur saisis : ${sess.key_combos_count} combinaisons F12/Ctrl+Shift`);
+              }
+              if (sess.right_click_count > 0) {
+                reasons.push(`Déclenchements clics-droits suspectés : ${sess.right_click_count} occurrences`);
+              }
+              if (sess.user_role === 'GUEST_ANONYMOUS' && sess.key_combos_count > 0) {
+                reasons.push(`ALERTE TENTATIVE INTRUSION : Visiteur anonyme tentant d'inspecter ou de profiler le formulaire de connexion`);
+              }
             }
 
-            // 4. Fréquence de clic suspecte (> 1.2 clics par seconde)
-            const totalC = sessActs.reduce((acc: number, a: any) => acc + (a.click_count || 0), 0);
-            if (totalDuration > 5 && (totalC / totalDuration) > 1.2) {
-              reasons.push(`Fréquence de clics anormale (${(totalC / totalDuration).toFixed(2)} clics/sec)`);
+            if (sessActs && sessActs.length > 0) {
+              // 1. Navigation trop rapide: >= 3 pages visitées avec moyenne < 5s
+              const totalDuration = sessActs.reduce((acc: number, a: any) => acc + (a.duration_seconds || 0), 0);
+              const totalPages = sessActs.length;
+              const avgSec = totalDuration / totalPages;
+              if (totalPages >= 3 && avgSec > 0 && avgSec < 5) {
+                reasons.push(`Navigation ultra-rapide (${avgSec.toFixed(1)}s/page en moyenne sur ${totalPages} pages)`);
+              }
+
+              // 2. Refresh excessif ou clics hors normes: > 15 clics sur une seule page
+              const hasExcessiveC = sessActs.some((a: any) => (a.click_count || 0) > 15);
+              if (hasExcessiveC) {
+                const culprit = sessActs.find((a: any) => (a.click_count || 0) > 15);
+                reasons.push(`Clics excessifs (${culprit?.click_count} clics détectés sur ${culprit?.page_name || 'Cockpit'})`);
+              }
+
+              // 3. Comportement répétitif anormal (boucle): même page visitée consécutivement >= 3 fois
+              let currentConsecutive = 1;
+              let maxConsecutive = 1;
+              let lastPageName = '';
+              for (let i = 0; i < sessActs.length; i++) {
+                const pName = sessActs[i].page_name || '';
+                if (i > 0 && pName === lastPageName) {
+                  currentConsecutive++;
+                  if (currentConsecutive > maxConsecutive) {
+                    maxConsecutive = currentConsecutive;
+                  }
+                } else {
+                  currentConsecutive = 1;
+                }
+                lastPageName = pName;
+              }
+              if (maxConsecutive >= 3) {
+                reasons.push(`Boucle répétitive (${maxConsecutive}x consultations consécutives de la même page)`);
+              }
+
+              // 4. Fréquence de clic suspecte (> 1.2 clics par seconde)
+              const totalC = sessActs.reduce((acc: number, a: any) => acc + (a.click_count || 0), 0);
+              if (totalDuration > 5 && (totalC / totalDuration) > 1.2) {
+                reasons.push(`Fréquence de clics anormale (${(totalC / totalDuration).toFixed(2)} clics/sec)`);
+              }
             }
 
             return {
@@ -667,7 +684,69 @@ export function UserAdmin({
                     </div>
                   </div>
                 </div>
+
+                {/* Raccourcis temporels de filtrage par date */}
+                <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-slate-100 mt-2.5">
+                  <span className="text-[8px] font-black uppercase tracking-widest text-slate-455">⚡ Filtrage rapide :</span>
+                  <button
+                    onClick={() => {
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      setFilterDateMin(todayStr);
+                      setFilterDateMax(todayStr);
+                    }}
+                    className={cn(
+                      "px-2 px-2.5 py-1 rounded text-[8.5px] font-black uppercase tracking-wider transition-all",
+                      (filterDateMin === new Date().toISOString().split('T')[0] && filterDateMax === new Date().toISOString().split('T')[0])
+                        ? "bg-rose-600 text-white shadow-xs font-black"
+                        : "bg-white hover:bg-slate-200 text-slate-700 border border-slate-200"
+                    )}
+                  >
+                    📅 Aujourd'hui
+                  </button>
+                  <button
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - 7);
+                      const sevenDaysAgoStr = d.toISOString().split('T')[0];
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      setFilterDateMin(sevenDaysAgoStr);
+                      setFilterDateMax(todayStr);
+                    }}
+                    className={cn(
+                      "px-2 px-2.5 py-1 rounded text-[8.5px] font-black uppercase tracking-wider transition-all",
+                      (filterDateMin && !filterDateMax) // or a simplified class toggle
+                        ? "bg-slate-200 text-slate-700"
+                        : "bg-white hover:bg-slate-200 text-slate-700 border border-slate-200"
+                    )}
+                  >
+                    📅 7 Derniers Jours
+                  </button>
+                  <button
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() - 30);
+                      const thirtyDaysAgoStr = d.toISOString().split('T')[0];
+                      const todayStr = new Date().toISOString().split('T')[0];
+                      setFilterDateMin(thirtyDaysAgoStr);
+                      setFilterDateMax(todayStr);
+                    }}
+                    className="px-2 px-2.5 py-1 rounded text-[8.5px] font-black uppercase tracking-wider bg-white hover:bg-slate-200 text-slate-700 border border-slate-200 transition-all font-bold"
+                  >
+                    📅 30 Derniers Jours
+                  </button>
+                  <button
+                    onClick={() => {
+                      setFilterDateMin('');
+                      setFilterDateMax('');
+                    }}
+                    className="px-2.5 py-1 rounded text-[8.5px] font-black uppercase tracking-wider bg-slate-100 hover:bg-slate-200 text-slate-500 border border-slate-200/60 transition-all"
+                  >
+                    🔄 Tout voir (Réinitialiser)
+                  </button>
+                </div>
+
               </div>
+
 
               {/* Live Metrics KPIs */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -938,45 +1017,160 @@ export function UserAdmin({
                         );
                       })()}
 
+                      {/* IDENTITY DETAILS CARD */}
+                      <div className="p-3.5 bg-slate-900 text-white rounded-xl space-y-2 border border-slate-950 font-sans shadow-md">
+                        <div className="flex justify-between items-center">
+                          <p className="text-[8.5px] uppercase tracking-widest text-slate-400 font-black">Profil d'Utilisateur</p>
+                          <span className={cn(
+                            "px-2 py-0.5 rounded text-[7px] font-black uppercase tracking-wider",
+                            selectedSession.user_role === 'ADMIN' ? "bg-red-500 text-white" :
+                            selectedSession.user_role === 'OPERATOR' ? "bg-amber-500 text-slate-950" :
+                            selectedSession.user_role === 'VIEWER' ? "bg-cyan-400 text-slate-950" :
+                            "bg-slate-700 text-slate-300"
+                          )}>
+                            {selectedSession.user_role || 'INCONNU'}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-full bg-slate-800 flex items-center justify-center font-black text-xs text-[#4FC3F7] border border-slate-700 select-none uppercase">
+                            {selectedSession.user_name ? selectedSession.user_name.substring(0, 2) : 'AN'}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <h4 className="text-xs font-black truncate text-white">{selectedSession.user_name || 'Utilisateur Anonyme'}</h4>
+                            <p className="text-[9px] font-mono text-slate-400 truncate">{selectedSession.user_email || 'anonymous_visitor@hydromines.local'}</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* SECURITY WATCHDOG STATUS PANEL */}
+                      <div className={cn(
+                        "p-3.5 rounded-xl border font-sans space-y-2 transition-colors",
+                        selectedSession.is_inspecting || (selectedSession.key_combos_count > 0) || (selectedSession.right_click_count > 0)
+                          ? "bg-rose-50/90 border-rose-200 text-rose-950 shadow-inner"
+                          : "bg-emerald-50/50 border-emerald-100 text-emerald-950"
+                      )}>
+                        <h5 className="text-[9px] font-black uppercase tracking-widest flex items-center gap-2">
+                          <span className={cn(
+                            "w-2.5 h-2.5 rounded-full",
+                            selectedSession.is_inspecting || (selectedSession.key_combos_count > 0) || (selectedSession.right_click_count > 0)
+                              ? "bg-rose-600 animate-ping"
+                              : "bg-emerald-500 animate-pulse"
+                          )} />
+                          🛡️ SECURITE DETECTEUR D'INSPECTEUR
+                        </h5>
+                        <div className="grid grid-cols-2 gap-2 text-[9px] font-mono font-bold">
+                          <div className="p-2 bg-white/60 rounded border border-slate-200/55">
+                            <span className="text-[7.5px] text-slate-500 uppercase block">Raccourcis Saisis</span>
+                            <span className="text-[11px] font-black text-[#FF5252] mt-0.5 block">{selectedSession.key_combos_count || 0} fois</span>
+                          </div>
+                          <div className="p-2 bg-white/60 rounded border border-slate-200/55">
+                            <span className="text-[7.5px] text-slate-500 uppercase block">Clics Droits</span>
+                            <span className="text-[11px] font-black text-[#FF5252] mt-0.5 block">{selectedSession.right_click_count || 0} fois</span>
+                          </div>
+                        </div>
+                        {selectedSession.inspect_attempts_reason && (
+                          <div className="p-2.5 bg-rose-100/70 rounded-lg border border-rose-200/80 mt-1">
+                            <p className="text-[8.5px] uppercase text-rose-800 font-extrabold font-mono tracking-widest">Symptômes d'Inspection</p>
+                            <p className="text-[9px] font-bold text-rose-900 mt-1 leading-relaxed font-sans">{selectedSession.inspect_attempts_reason}</p>
+                          </div>
+                        )}
+                      </div>
+
                       {/* BLOCK D. TECH DEVICE INTELLIGENCE */}
                       <div className="space-y-2.5">
                         <h5 className="text-[9px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
                           <Cpu className="w-3.5 h-3.5 text-[#FF5252]" />
-                          🌍 D. TECH DEVICE INTELLIGENCE
+                          🌍 D. INTELLIGENCE APPAREIL & LOCALISATION DÉTAILLÉE
                         </h5>
                         
                         <div className="grid grid-cols-2 gap-2 text-[10px] bg-slate-50 border border-slate-100/60 p-3 rounded-xl font-bold">
                           <div className="space-y-0.5">
-                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold mt-0.5">Système d'exploitation</p>
-                            <p className="text-slate-800 uppercase font-mono">{selectedSession.OS || 'Inconnu'}</p>
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold mt-0.5">Appareil / Modèle</p>
+                            <p className="text-[#FF5252] uppercase font-mono truncate" title={selectedSession.device_model}>{selectedSession.device_model || 'Modèle Inconnu'}</p>
                           </div>
                           <div className="space-y-0.5">
-                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold mt-0.5">Navigateur</p>
-                            <p className="text-slate-800 font-mono">{selectedSession.browser || 'Inconnu'}</p>
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold mt-0.5">Type & Support Tactile</p>
+                            <p className="text-slate-800 font-sans">{selectedSession.device_type === 'mobile' ? '📱 Téléphone' : selectedSession.device_type === 'tablet' ? '📟 Tablette' : '💻 Ordinateur'} • {selectedSession.max_touch_points > 0 ? 'Tactile' : 'Souris'}</p>
                           </div>
+                          
+                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5">
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Système & OS</p>
+                            <p className="text-slate-800 uppercase font-mono">{selectedSession.OS || 'Inconnu'}</p>
+                          </div>
+                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5">
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Navigateur</p>
+                            <p className="text-slate-700 font-mono truncate">{selectedSession.browser || 'Inconnu'}</p>
+                          </div>
+
+                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5">
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Charge & Niveau Batterie</p>
+                            <span className={cn(
+                              "text-[9px] px-1.5 py-0.5 rounded font-mono font-bold uppercase",
+                              selectedSession.battery_charging === 'En charge' ? 'bg-emerald-50 text-emerald-700 border border-emerald-100' : 'bg-slate-100 text-slate-700'
+                            )}>
+                              🔋 {selectedSession.battery_level || '100%'} ({selectedSession.battery_charging === 'En charge' ? 'Secteur' : 'Batterie'})
+                            </span>
+                          </div>
+                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5">
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Processeur & Mémoire</p>
+                            <p className="text-slate-800 font-mono">{selectedSession.hardware_cores || 2} Coeurs / {selectedSession.hardware_memory || 'Normal'}</p>
+                          </div>
+
                           <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5">
                             <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Résolution d'écran</p>
-                            <p className="text-slate-800 font-mono">{selectedSession.screen_resolution || 'Inconnu'}</p>
+                            <p className="text-slate-800 font-mono">{selectedSession.screen_resolution || 'Inconnu'} ({selectedSession.device_pixel_ratio || 1}x)</p>
                           </div>
                           <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5">
-                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Type de Machine</p>
-                            <p className="text-slate-800 uppercase">{selectedSession.device_type || 'Desktop'}</p>
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Taille Viewport active</p>
+                            <p className="text-rose-600 font-mono">{selectedSession.viewport_resolution || 'Inconnu'}</p>
                           </div>
+
                           <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5 col-span-2">
-                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Région & Localisation</p>
-                            <p className="text-slate-800 uppercase font-sans flex items-center gap-1.5 mt-0.5">
-                              <MapPin className="w-3 h-3 text-[#FF5252]" /> {selectedSession.city || 'Inconnu'}, {selectedSession.country || 'Inconnu'}
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">GPU (Moteur de rendu 3D)</p>
+                            <p className="text-slate-800 text-[8px] uppercase font-mono truncate" title={selectedSession.gpu_renderer}>{selectedSession.gpu_renderer || 'Inconnue'}</p>
+                          </div>
+
+                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5 col-span-2">
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Réseau & Performance de connexion</p>
+                            <p className="text-slate-700 text-[8.5px] font-sans">
+                              Type : {selectedSession.network_type || 'Wi-Fi/Ethernet'} • Débit : {selectedSession.network_downlink || 'Très rapide'} • Latence : {selectedSession.connection_rtt || 'Non-mesurable'}
                             </p>
                           </div>
+
                           <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5 col-span-2">
-                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Adresse IP Publique</p>
-                            <p className="text-[#FF5252] font-mono text-[9px]">{selectedSession.ip_public || '127.0.0.1'}</p>
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">🌍 FAI & Réseau Internet (Fournisseur d'accès)</p>
+                            <p className="text-slate-800 text-[9px] font-mono truncate">{selectedSession.ip_isp || 'Opérateur National Direct'} ({selectedSession.ip_asn || 'Standard'})</p>
                           </div>
+
+                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5 col-span-2">
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">📍 Recherche approfondie de la localisation</p>
+                            <div className="flex justify-between items-center text-slate-800 text-[9px] mt-0.5">
+                              <span>
+                                Ville : <strong className="text-[#FF5252]">{selectedSession.city || 'Inconnue'}</strong> • Pays : <strong className="text-[#FF5252]">{selectedSession.country || 'Inconnu'}</strong> • CP : {selectedSession.postal_code || '1000'}
+                              </span>
+                            </div>
+                            {selectedSession.gps_coordinates && selectedSession.gps_coordinates !== 'Inconnu' && (
+                              <a
+                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedSession.gps_coordinates)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="inline-flex items-center gap-1 mt-1 text-[8.5px] font-black text-blue-600 hover:text-blue-800 hover:underline uppercase tracking-wider font-mono bg-blue-50/50 px-2 py-0.5 rounded border border-blue-105"
+                              >
+                                🗺️ VOIR LA POSITION EXACTE SUR GOOGLE MAPS ({selectedSession.gps_coordinates})
+                              </a>
+                            )}
+                          </div>
+
+                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5 col-span-2">
+                            <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Adresse IP Publique stable</p>
+                            <p className="text-[#FF5252] font-mono text-[9px] select-all">{selectedSession.ip_public || '127.0.0.1'}</p>
+                          </div>
+                          
                           <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5">
                             <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Langue</p>
                             <p className="text-slate-700 uppercase font-mono">{selectedSession.language || 'FR-FR'}</p>
                           </div>
-                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5">
+                          <div className="space-y-0.5 border-t border-slate-100/60 pt-1.5 font-mono">
                             <p className="text-[8px] uppercase tracking-widest text-slate-400 font-extrabold">Fuseau Horaire</p>
                             <p className="text-slate-700 uppercase font-mono">{selectedSession.timezone || 'UTC'}</p>
                           </div>
@@ -1117,32 +1311,56 @@ export function UserAdmin({
                           <div className="space-y-3">
                             <h4 className="text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                               <Cpu className="w-4 h-4 text-rose-500" />
-                              Fiche technique d'environnement
+                              Fiche d'environnement & localisation
                             </h4>
                             <div className="bg-slate-950 text-[10px] rounded-xl border border-slate-805 p-4 space-y-3 font-semibold text-slate-300 font-sans">
-                              <div className="flex justify-between border-b border-slate-950 pb-1.5">
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
                                 <span className="text-slate-500 uppercase text-[8px]">Adresse IP Publique</span>
                                 <span className="text-rose-400 font-mono font-extrabold">{modalSess.ip_public || '127.0.0.1'}</span>
                               </div>
-                              <div className="flex justify-between border-b border-slate-950 pb-1.5">
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                                <span className="text-slate-500 uppercase text-[8px]">Modèle de Téléphone</span>
+                                <span className="text-white font-mono text-[9px] select-all truncate">{modalSess.device_model || 'Ordinateur Bureau'}</span>
+                              </div>
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                                <span className="text-slate-500 uppercase text-[8px]">Région / Code Postal</span>
+                                <span className="text-slate-300">{modalSess.region_name || 'Inconnu'} • {modalSess.postal_code || 'Inconnu'}</span>
+                              </div>
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5 font-mono">
+                                <span className="text-slate-500 uppercase text-[8px]">Coordonnées GPS</span>
+                                <span className="text-cyan-400">{modalSess.gps_coordinates || 'Inconnu'}</span>
+                              </div>
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                                <span className="text-slate-500 uppercase text-[8px]">fournisseur d'accès FAI</span>
+                                <span className="text-slate-300 font-mono text-[9px] truncate max-w-[180px] text-right" title={modalSess.ip_isp}>{modalSess.ip_isp || 'Inconnu'}</span>
+                              </div>
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                                <span className="text-slate-500 uppercase text-[8px]">État de la Batterie</span>
+                                <span className="text-emerald-400 font-mono">🔋 {modalSess.battery_level || '100%'} ({modalSess.battery_charging || 'Inconnu'})</span>
+                              </div>
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
                                 <span className="text-slate-500 uppercase text-[8px]">Navigateur détecté</span>
                                 <span className="text-slate-300 font-mono text-[9px] truncate max-w-[200px] text-right">{modalSess.browser || 'Inconnu'}</span>
                               </div>
-                              <div className="flex justify-between border-b border-slate-950 pb-1.5">
-                                <span className="text-slate-500 uppercase text-[8px]">Résolution d'écran</span>
-                                <span className="text-slate-300 font-mono">{modalSess.screen_resolution || 'Inconnu'}</span>
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                                <span className="text-slate-500 uppercase text-[8px]">Résolution / DPR</span>
+                                <span className="text-slate-300 font-mono">{modalSess.screen_resolution || 'Inconnu'} ({modalSess.device_pixel_ratio || 1}x)</span>
                               </div>
-                              <div className="flex justify-between border-b border-slate-955 pb-1.5">
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
                                 <span className="text-slate-500 uppercase text-[8px]">Langue navigateur</span>
                                 <span className="text-slate-300 uppercase font-mono">{modalSess.language || 'FR'}</span>
                               </div>
-                              <div className="flex justify-between border-b border-slate-955 pb-1.5">
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
                                 <span className="text-slate-500 uppercase text-[8px]">Fuseau Horaire</span>
                                 <span className="text-slate-300 uppercase font-mono">{modalSess.timezone || 'UTC'}</span>
                               </div>
-                              <div className="flex justify-between">
-                                <span className="text-slate-500 uppercase text-[8px]">Date & Heure Début</span>
-                                <span className="text-slate-400 font-mono">{modalSess.created_at ? new Date(modalSess.created_at).toLocaleString('fr-FR') : 'Inconnu'}</span>
+                              <div className="flex justify-between border-b border-slate-900 pb-1.5">
+                                <span className="text-slate-500 uppercase text-[8px]">Performance Connexion</span>
+                                <span className="text-slate-400 font-sans text-[8.5px]">Latence : <strong className="text-emerald-400">{modalSess.connection_rtt || 'Non stable'}</strong> • Débit : {modalSess.network_downlink || 'Inconnu'}</span>
+                              </div>
+                              <div className="flex justify-between gap-2">
+                                <span className="text-slate-500 uppercase text-[8px] flex-shrink-0">Date de départ</span>
+                                <span className="text-slate-400 font-mono text-right">{modalSess.login_timestamp ? new Date(modalSess.login_timestamp).toLocaleString('fr-FR') : 'Inconnue'}</span>
                               </div>
                             </div>
                           </div>
@@ -1188,6 +1406,63 @@ export function UserAdmin({
                             </div>
                           </div>
                         </div>
+
+                        {/* Interactive Click & Actions Feed */}
+                        <div className="space-y-4 pt-2">
+                          <h4 className="text-[9px] font-black text-rose-450 uppercase tracking-widest flex items-center gap-2">
+                            <Activity className="w-4 h-4 text-rose-500 animate-pulse" />
+                            🐾 JOURNAL DES CLICS & ACTIONS UTILISATEUR EN DIRECT
+                          </h4>
+                          {!modalSess.actions_log || modalSess.actions_log.length === 0 ? (
+                            <div className="p-6 text-center bg-slate-950 border border-slate-805 rounded-xl text-[9px] text-slate-500 font-bold uppercase">
+                              Aucune interaction spécifique n'a encore été interceptée (Clics, saisies, etc.)
+                            </div>
+                          ) : (
+                            <div className="bg-slate-950 rounded-xl border border-slate-805 max-h-[220px] overflow-y-auto divide-y divide-slate-900">
+                              {modalSess.actions_log.map((act: any, idx: number) => (
+                                <div key={idx} className="p-2.5 flex items-start justify-between gap-3 text-[9px] hover:bg-slate-900/40 transition-all font-mono">
+                                  <div className="space-y-0.5">
+                                    <p className="text-slate-200 font-bold leading-relaxed">{act.action}</p>
+                                    <div className="flex gap-2 text-slate-550 text-[8.5px]">
+                                      <span>Page : <strong className="text-rose-400 font-semibold">{act.page}</strong></span>
+                                      <span>•</span>
+                                      <span>Heure : {act.timestamp ? new Date(act.timestamp).toLocaleTimeString('fr-FR') : 'Inconnue'}</span>
+                                    </div>
+                                  </div>
+                                  <span className="text-[7.5px] font-black uppercase text-slate-500 bg-slate-900 px-1.5 py-0.5 rounded border border-slate-800 flex-shrink-0">
+                                    LOG INVARIANT
+                                  </span>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Force GPS details rendering for visual maps mapping */}
+                        {modalSess.gps_coordinates && modalSess.gps_coordinates !== 'Inconnu' && (
+                          <div className="p-4 bg-slate-950 border border-slate-805 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                            <div>
+                              <p className="text-[8px] uppercase tracking-widest text-slate-500 font-extrabold">LOCALISATION CARTOGRAPHIQUE</p>
+                              <p className="text-slate-300 text-xs mt-1 font-black uppercase">RECHERCHE APPROFONDIE ACTIVE</p>
+                            </div>
+                            <a
+                              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(modalSess.gps_coordinates)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg font-black uppercase tracking-wider text-[9px] transition-all shadow-md flex items-center gap-2"
+                            >
+                              🗺️ TRACER LA LOCALISATION SUR GOOGLE MAPS
+                            </a>
+                          </div>
+                        )}
+
+                        {/* Raw User Agent Forensic string */}
+                        {modalSess.raw_user_agent && (
+                          <div className="p-3 bg-slate-950 border border-slate-805 rounded-xl font-mono text-[8.5px] text-slate-400 space-y-1">
+                            <span className="text-[7px] uppercase tracking-widest font-black text-rose-500">RAW FORENSIC USER AGENT</span>
+                            <p className="break-all text-slate-300 select-all leading-normal">{modalSess.raw_user_agent}</p>
+                          </div>
+                        )}
 
                         {/* Full chronologique tracking timeline */}
                         <div className="space-y-4 pt-2">

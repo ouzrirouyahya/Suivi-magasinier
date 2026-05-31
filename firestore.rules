@@ -172,6 +172,12 @@ service cloud.firestore {
       allow delete: if canWrite(['ADMIN']) && isValidId(articleId);
     }
 
+    match /deletionRequests/{id} {
+      allow read: if isActive();
+      allow create: if isActive() && isValidId(id);
+      allow update, delete: if canWrite(['ADMIN']) && isValidId(id);
+    }
+
     // Transactional Movements: Append-only, never modifiable except by ADMIN, never deletable
     match /mouvements/{id} {
       allow read: if isActive();

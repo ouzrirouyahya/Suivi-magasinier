@@ -25,11 +25,29 @@ type TabId = 'ASSISTANT' | 'VISION' | 'AUDIT' | 'WORKFLOWS' | 'FORENSIC' | 'CHEC
 
 interface IntelligenceCenterProps {
   currentSite: any;
+  activeTab?: TabId;
+  onTabChange?: (tab: TabId) => void;
   initialTab?: TabId;
 }
 
-export function IntelligenceCenter({ currentSite, initialTab = 'ASSISTANT' }: IntelligenceCenterProps) {
-  const [activeTab, setActiveTab] = useState<TabId>(initialTab);
+export function IntelligenceCenter({ 
+  currentSite, 
+  activeTab: controlledActiveTab, 
+  onTabChange, 
+  initialTab = 'ASSISTANT' 
+}: IntelligenceCenterProps) {
+  const [localActiveTab, setLocalActiveTab] = useState<TabId>(initialTab);
+
+  // Sync state if controlled
+  const activeTab = controlledActiveTab !== undefined ? controlledActiveTab : localActiveTab;
+  const setActiveTab = (tab: TabId) => {
+    if (controlledActiveTab === undefined) {
+      setLocalActiveTab(tab);
+    }
+    if (onTabChange) {
+      onTabChange(tab);
+    }
+  };
 
   const tabs = [
     {
@@ -108,15 +126,16 @@ export function IntelligenceCenter({ currentSite, initialTab = 'ASSISTANT' }: In
               <Sparkles className="w-4 h-4" />
             </div>
             <span className="text-xs font-black uppercase text-sky-850 px-2.5 py-0.5 bg-sky-100 rounded-full tracking-wider font-mono">
-              Hub d'Appui Centralisé
+              Radar Cognitif & Audit
             </span>
           </div>
-          <h2 className="text-3xl font-black text-slate-950 tracking-tight uppercase">
-            Copilote & Analyses IA Opérationnelles
+          <h2 className="text-3xl font-black tracking-tight uppercase flex items-center gap-1.5 leading-none">
+            <span className="text-sky-500 font-extrabold">HYDRO</span>
+            <span className="text-rose-800 font-black">MINES</span>
+            <span className="text-slate-950 font-black">RADAR</span>
           </h2>
           <p className="text-sm text-slate-600 font-medium max-w-4xl">
-            Regroupement centralisé des systèmes d'intelligence industrielle : requêtes conversationnelles, 
-            reco visuelle des articles, double-concordance de sécurité SRE, télémétrie réseau de surface et automatisation.
+            Regroupement intégral et surveillance temps-réel de nos modules d'intelligence industrielle : copilote conversationnel, reconnaissance de pièces SRE, double-concordance de sécurité, orchestrateur de flux et diagnostics forensic.
           </p>
         </div>
 

@@ -250,9 +250,12 @@ export const ViewerNotificationModal: React.FC<ViewerNotificationModalProps> = (
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.9 }}
-                className="text-center font-mono space-y-1 select-none"
+                className="text-center space-y-2 select-none"
               >
-                <div className="text-xs font-semibold text-slate-600">
+                <p className="text-xs md:text-sm text-slate-650 font-semibold max-w-xl mx-auto leading-relaxed">
+                  La plateforme est actuellement déployée à <span className="text-sky-600 font-extrabold">50% de ses capacités</span> pour cette phase pilote. Notre équipe prépare activement la version à <span className="text-emerald-600 font-extrabold">100% opérationnelle</span> qui sera disponible très bientôt !
+                </p>
+                <div className="text-xs font-semibold text-slate-500 font-mono pt-1">
                   HYDROMINES 2026 - Suivi magasinier V 1
                 </div>
               </motion.div>

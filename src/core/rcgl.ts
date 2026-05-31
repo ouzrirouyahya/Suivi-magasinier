@@ -103,9 +103,15 @@ export function validateGlobalSnapshotState(
       if (mv.items) {
         for (const item of mv.items) {
           if (!articleIdsSet.has(item.articleId)) {
-            hasCollectionVersionSkew = true;
-            skewDescription = `Incohérence de stock : le mouvement enregistré (${mv.id || "N/A"}) fait référence à un identifiant d'article introuvable (${item.articleId}).`;
-            break;
+            const mvTime = mv.date ? new Date(mv.date).getTime() : 0;
+            const ageMs = now - mvTime;
+            // Only trigger a consistency violation if the movement was made within the last 45 seconds (transient sync drift).
+            // If the movement is older, the referenced article was likely deleted, which is a normal state.
+            if (mvTime > 0 && ageMs < 45000) {
+              hasCollectionVersionSkew = true;
+              skewDescription = `Incohérence de stock : le mouvement récent (${mv.id || "N/A"}) fait référence à un identifiant d'article introuvable (${item.articleId}). SRE attend la synchronisation.`;
+              break;
+            }
           }
         }
       }

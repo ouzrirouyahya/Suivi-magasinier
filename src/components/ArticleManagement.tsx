@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw } from 'lucide-react';
 import { Article, StockType, SiteCode, CatalogItem } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { MASTER_CATALOG } from '../catalogData';
 import Papa from 'papaparse';
 import { toast } from 'sonner';
 import { matchArticleSearch } from '../lib/searchUtils';
+import { useInventory } from '../context/InventoryContext';
 
 interface ArticleManagementProps {
   site: SiteCode;
@@ -60,12 +61,51 @@ function NotificationCenter({ notifications }: { notifications: { id: string, me
 }
 
 export function ArticleManagement({ site, articles, catalog, saveCatalogItem, deleteCatalogItem, onSave, onDelete }: ArticleManagementProps) {
+  const { 
+    currentUser, 
+    deletionRequests = [], 
+    approveDeletionRequest, 
+    rejectDeletionRequest,
+    deleteArticles,
+    importAllCatalogToArticles
+  } = useInventory();
+
+  const [isBulkImporting, setIsBulkImporting] = useState(false);
+
+  const handleImportAllCatalog = async () => {
+    const excludeCostly = window.confirm(
+      "CONSEIL DE GESTION DES STOCKS (SMI 400 000 DH max) :\n\nSouhaitez-vous EXCLURE les pièces d'investissement extrêmement coûteuses (≥ 40 000 DH / 50 000 DH) lors de cette importation collective ?\n\n- Cliquez sur [OK] pour importer uniquement les consommables et pièces < 40 000 DH (recommandé pour préserver le budget magasin).\n- Cliquez sur [Annuler] pour importer toutes les pièces sans distinction de coût."
+    );
+
+    const confirmed = window.confirm(
+      `Confirmez-vous le lancement de l'importation collective des références du catalogue pour le site ${site} ?`
+    );
+    if (!confirmed) return;
+
+    setIsBulkImporting(true);
+    try {
+      const res = await importAllCatalogToArticles(site, excludeCostly);
+      if (res.imported > 0) {
+        toast.success(`Importation collective réussie ! ${res.imported} nouvelles pièces configurées pour le site ${site}. (Option d'exclusion des pièces coûteuses : ${excludeCostly ? 'Active ✅' : 'Désactivée ❌'})`);
+      } else {
+        toast.info("Toutes les pièces de ce catalogue sont déjà présentes.");
+      }
+    } catch (err: any) {
+      toast.error(`Erreur d'importation : ${err.message || err}`);
+    } finally {
+      setIsBulkImporting(false);
+    }
+  };
+
   const [searchTerm, setSearchTerm] = useState('');
   const [editingArticle, setEditingArticle] = useState<Partial<Article> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  
+  const [selectedArticleIds, setSelectedArticleIds] = useState<string[]>([]);
+
   const [activeCatalogType, setActiveCatalogType] = useState<StockType>('ENGINS');
-  const [activeCatalogFilter, setActiveCatalogFilter] = useState<'ST2G' | 'ST2D' | 'MONTALBERT'>('ST2G');
+  const [activeCatalogFilter, setActiveCatalogFilter] = useState<'ALL' | 'ST2G' | 'ST2D' | 'MONTALBERT'>('ALL');
   const [catalogSearch, setCatalogSearch] = useState('');
   
   // Dynamic Catalog State
@@ -77,11 +117,38 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   const [selectedMachine, setSelectedMachine] = useState<string>('ALL');
   const [selectedCategory, setSelectedCategory] = useState<string>('ALL');
   const [selectedCriticality, setSelectedCriticality] = useState<string>('ALL');
+  const [catalogPriceFilter, setCatalogPriceFilter] = useState<'ALL' | 'BELOW_40K' | 'BELOW_50K' | 'EXPENSIVE_ONLY'>('BELOW_40K');
   const [selectedSort, setSelectedSort] = useState<string>('DEFAULT');
+
+  const toggleSelectArticle = (id: string) => {
+    setSelectedArticleIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
 
   const filteredArticles = articles.filter(a => 
     a.site === site && matchArticleSearch(a, searchTerm)
   );
+
+  const isAllSelected = filteredArticles.length > 0 && filteredArticles.every(a => selectedArticleIds.includes(a.id));
+
+  const toggleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedArticleIds(prev => prev.filter(id => !filteredArticles.some(a => a.id === id)));
+    } else {
+      const newIds = filteredArticles.map(a => a.id);
+      setSelectedArticleIds(prev => {
+        const set = new Set([...prev, ...newIds]);
+        return Array.from(set);
+      });
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedArticleIds.length === 0) return;
+    await deleteArticles(selectedArticleIds);
+    setSelectedArticleIds([]);
+  };
 
   const currentCatalog = React.useMemo(() => {
     return catalog.filter(item => {
@@ -91,8 +158,9 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       
       const isST2G = comp.includes('st2g') || machs.some(m => m.includes('st2g')) || id.startsWith('st2g_');
       const isST2D = comp.includes('st2d') || machs.some(m => m.includes('st2d')) || id.startsWith('st2d_');
-      const isMontabert = comp.includes('montabert') || comp.includes('t23') || machs.some(m => m.includes('montabert') || m.includes('t23')) || id.startsWith('perf_');
+      const isMontabert = comp.includes('montabert') || comp.includes('t23') || machs.some(m => m.includes('montabert') || m.includes('t23')) || id.startsWith('perf_') || id.startsWith('cop_');
       
+      if (activeCatalogFilter === 'ALL') return true;
       if (activeCatalogFilter === 'ST2G') return isST2G;
       if (activeCatalogFilter === 'ST2D') return isST2D;
       if (activeCatalogFilter === 'MONTALBERT') return isMontabert;
@@ -101,9 +169,13 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     });
   }, [catalog, activeCatalogFilter, activeCatalogType]);
 
-  const changeCatalogFilter = (filter: 'ST2G' | 'ST2D' | 'MONTALBERT') => {
+  const changeCatalogFilter = (filter: 'ALL' | 'ST2G' | 'ST2D' | 'MONTALBERT') => {
     setActiveCatalogFilter(filter);
-    setActiveCatalogType(filter === 'MONTALBERT' ? 'PERFORATEURS' : 'ENGINS');
+    if (filter === 'ALL') {
+      setActiveCatalogType('ENGINS');
+    } else {
+      setActiveCatalogType(filter === 'MONTALBERT' ? 'PERFORATEURS' : 'ENGINS');
+    }
     setNavPath([]);
     setCatalogSearch('');
   };
@@ -112,7 +184,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   const [navPath, setNavPath] = useState<{level: string, value: string}[]>([]);
   const [currentLevel, setCurrentLevel] = useState<'CATEGORY' | 'SUBCATEGORY' | 'COMPONENT' | 'SUBCOMPONENT' | 'RESULTS'>('CATEGORY');
 
-  const isFilterActive = selectedMachine !== 'ALL' || selectedCategory !== 'ALL' || selectedCriticality !== 'ALL';
+  const isFilterActive = selectedMachine !== 'ALL' || selectedCategory !== 'ALL' || selectedCriticality !== 'ALL' || catalogPriceFilter !== 'BELOW_40K';
 
   useEffect(() => {
     if (catalogSearch.length > 0 || isFilterActive) {
@@ -211,6 +283,15 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       items = items.filter(item => item.criticality === selectedCriticality);
     }
 
+    // 4.5 Price filter (Budget limits for warehouse storage)
+    if (catalogPriceFilter === 'BELOW_40K') {
+      items = items.filter(item => (item.price || 0) < 40000);
+    } else if (catalogPriceFilter === 'BELOW_50K') {
+      items = items.filter(item => (item.price || 0) < 50000);
+    } else if (catalogPriceFilter === 'EXPENSIVE_ONLY') {
+      items = items.filter(item => (item.price || 0) >= 40000);
+    }
+
     // 5. Sorting
     if (selectedSort === 'PRICE_ASC') {
       items = [...items].sort((a, b) => (a.price || 0) - (b.price || 0));
@@ -229,7 +310,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     }
 
     return items;
-  }, [currentCatalog, catalogSearch, navPath, selectedMachine, selectedCategory, selectedCriticality, selectedSort, articles, site, isFilterActive]);
+  }, [currentCatalog, catalogSearch, navPath, selectedMachine, selectedCategory, selectedCriticality, selectedSort, articles, site, isFilterActive, catalogPriceFilter]);
 
   const [notifications, setNotifications] = useState<{id: string, message: string, type: 'success' | 'error' | 'info'}[]>([]);
 
@@ -561,6 +642,18 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
         <div className="flex gap-2 flex-wrap justify-end">
           <button 
             onClick={() => {
+              changeCatalogFilter('ALL');
+              setIsCatalogOpen(true);
+            }} 
+            className="btn bg-slate-900 border border-slate-800 text-white hover:bg-indigo-650 shadow-md h-9 px-3.5 rounded-lg transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-1.5 relative overflow-hidden"
+          >
+            <div className="absolute inset-0 bg-indigo-500/10 opacity-0 group-hover:opacity-100 transition-opacity" />
+            <BookOpen className="w-3.5 h-3.5 text-indigo-400 group-hover:scale-110 transition-transform relative z-10" /> 
+            <span className="relative z-10">Catalogue Master (Tous)</span>
+          </button>
+
+          <button 
+            onClick={() => {
               changeCatalogFilter('ST2G');
               setIsCatalogOpen(true);
             }} 
@@ -568,7 +661,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           >
             <div className="absolute inset-0 bg-emerald-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             <Database className="w-3.5 h-3.5 text-emerald-500 group-hover:scale-110 transition-transform relative z-10" /> 
-            <span className="relative z-10">Catalogue ST2G</span>
+            <span className="relative z-10">Cat. ST2G</span>
           </button>
 
           <button 
@@ -580,7 +673,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           >
             <div className="absolute inset-0 bg-sky-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             <Database className="w-3.5 h-3.5 text-sky-500 group-hover:scale-110 transition-transform relative z-10" /> 
-            <span className="relative z-10">Catalogue ST2D</span>
+            <span className="relative z-10">Cat. ST2D</span>
           </button>
           
           <button 
@@ -592,8 +685,24 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           >
             <div className="absolute inset-0 bg-rose-400/5 opacity-0 group-hover:opacity-100 transition-opacity" />
             <Layers className="w-3.5 h-3.5 text-rose-500 group-hover:scale-110 transition-transform relative z-10" /> 
-            <span className="relative z-10">Catalogue Montabert T23</span>
+            <span className="relative z-10">Cat. T23 (Montabert)</span>
           </button>
+          
+          {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
+            <button 
+              onClick={handleImportAllCatalog}
+              disabled={isBulkImporting}
+              className="btn bg-sky-50 text-sky-700 border border-sky-100 hover:border-sky-500 hover:bg-sky-100/55 shadow-sm h-9 px-3 rounded-lg transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-1.5 disabled:opacity-50 select-none cursor-pointer"
+              title="Importer toutes les pièces de référence du catalogue technique pour ce site d'un coup"
+            >
+              {isBulkImporting ? (
+                <RefreshCcw className="w-3.5 h-3.5 animate-spin text-sky-600" />
+              ) : (
+                <Upload className="w-3.5 h-3.5 text-sky-500 group-hover:scale-110 transition-transform" />
+              )}
+              <span>Tout Importer</span>
+            </button>
+          )}
           
           <span className="w-1 px-1" />
 
@@ -602,6 +711,84 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           </button>
         </div>
       </header>
+
+      {/* Demande de suppression administratives en attente */}
+      {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && deletionRequests.filter(r => r.status === 'PENDING_APPROVAL').length > 0 && (
+        <div className="bg-amber-50/50 border border-amber-200/60 rounded-[2rem] p-6 mb-6 shadow-xl relative overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
+              <AlertCircle className="w-5 h-5 animate-pulse" />
+            </div>
+            <div>
+              <h3 className="font-black text-slate-950 uppercase text-xs tracking-widest">Demandes de suppression en attente</h3>
+              <p className="text-[11px] text-slate-500 uppercase tracking-wider mt-0.5">Validation administrative requise d'urgence</p>
+            </div>
+          </div>
+          
+          <div className="divide-y divide-amber-100/50">
+            {deletionRequests.filter(r => r.status === 'PENDING_APPROVAL').map(req => (
+              <div key={req.id} className="py-4 first:pt-0 last:pb-0 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-[9px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md uppercase tracking-wider">
+                      Site: {req.site}
+                    </span>
+                    <span className="text-[9px] font-black text-slate-400 uppercase">
+                      Demandé par {req.requestedBy} le {new Date(req.requestedAt).toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+                    </span>
+                  </div>
+                  <p className="text-slate-800 text-sm font-semibold">
+                    Articles : <span className="font-semibold text-slate-900">{req.articleDesignations.map((d, idx) => `${d} (${req.articleRefs[idx]})`).join(', ')}</span>
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => approveDeletionRequest(req.id)}
+                    className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all shadow-sm shadow-emerald-600/10 cursor-pointer"
+                  >
+                    Valider la suppression
+                  </button>
+                  <button
+                    onClick={() => rejectDeletionRequest(req.id)}
+                    className="bg-rose-50 hover:bg-rose-100 text-rose-700 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest active:scale-95 transition-all outline outline-1 outline-rose-200/50 cursor-pointer"
+                  >
+                    Refuser
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Barre d'action de suppression groupée */}
+      {selectedArticleIds.length > 0 && (
+        <div className="bg-slate-900 text-white px-6 py-4 rounded-[2rem] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400 font-extrabold text-xs">
+              {selectedArticleIds.length}
+            </div>
+            <p className="text-xs font-black uppercase tracking-wider text-slate-300">
+              {selectedArticleIds.length === 1 ? "Article sélectionné" : "Articles sélectionnés"}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleBulkDelete}
+              className="bg-rose-600/[0.93] hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-lg shadow-rose-600/20"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> 
+              {currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' ? "Supprimer définitivement" : "Demander la suppression"}
+            </button>
+            <button 
+              onClick={() => setSelectedArticleIds([])}
+              className="bg-slate-800 text-slate-300 hover:text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-slate-700 transition-colors cursor-pointer"
+            >
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="card glass p-4 shadow-xl ring-1 ring-slate-900/5">
         <div className="relative">
@@ -620,6 +807,14 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
         <table className="w-full text-left">
           <thead>
             <tr>
+              <th className="px-4 py-4 w-12 text-center text-xs font-black text-slate-400">
+                <input 
+                  type="checkbox" 
+                  onChange={toggleSelectAll} 
+                  checked={isAllSelected} 
+                  className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4" 
+                />
+              </th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Référence & Désignation</th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Classification</th>
               <th className="px-6 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Prix Unit.</th>
@@ -632,6 +827,14 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           <tbody className="divide-y divide-slate-100/50">
             {filteredArticles.map(article => (
               <tr key={article.id} className="group hover:bg-white/60 transition-all duration-300">
+                <td className="px-4 py-4 text-center w-12">
+                  <input 
+                    type="checkbox" 
+                    checked={selectedArticleIds.includes(article.id)} 
+                    onChange={() => toggleSelectArticle(article.id)} 
+                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4" 
+                  />
+                </td>
                 <td className="px-6 py-4">
                   <p className="font-mono text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">#{article.ref}</p>
                   <p className="font-black text-slate-900 text-sm leading-tight">{article.designation}</p>
@@ -670,11 +873,11 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                   </span>
                 </td>
                 <td className="px-6 py-4">
-                  <div className="flex justify-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(article)} className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors">
+                  <div className="flex justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => handleEdit(article)} className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer" title="Modifier">
                       <Pencil className="w-4 h-4" />
                     </button>
-                    <button onClick={() => onDelete(article.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                    <button onClick={() => onDelete(article.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Supprimer">
                       <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
@@ -694,9 +897,10 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                   "p-3 rounded-2xl shadow-md transition-all duration-500 hover:scale-110",
                   activeCatalogFilter === 'ST2G' ? "bg-emerald-50 text-emerald-600 shadow-emerald-100" :
                   activeCatalogFilter === 'ST2D' ? "bg-sky-50 text-sky-600 shadow-sky-100" :
-                  "bg-rose-50 text-rose-600 shadow-rose-100"
+                  activeCatalogFilter === 'MONTALBERT' ? "bg-rose-50 text-rose-600 shadow-rose-100" :
+                  "bg-indigo-50 text-indigo-600 shadow-indigo-100"
                 )}>
-                  {activeCatalogFilter === 'MONTALBERT' ? <Layers className="w-6 h-6" /> : <Database className="w-6 h-6" />}
+                  {activeCatalogFilter === 'MONTALBERT' ? <Layers className="w-6 h-6" /> : <BookOpen className="w-6 h-6" />}
                 </div>
                 <div>
                   <div className="flex items-center gap-3 mb-1">
@@ -710,6 +914,15 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                     
                     {/* Catalog Toggles inside modal */}
                     <div className="flex items-center bg-slate-100/80 p-1.5 rounded-xl gap-1">
+                      <button 
+                        onClick={() => changeCatalogFilter('ALL')}
+                        className={cn(
+                          "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all",
+                          activeCatalogFilter === 'ALL' ? "bg-indigo-600 text-white shadow" : "text-slate-500 hover:text-slate-800"
+                        )}
+                      >
+                        TOUT LE CATALOGUE
+                      </button>
                       <button 
                         onClick={() => changeCatalogFilter('ST2G')}
                         className={cn(
@@ -735,7 +948,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                           activeCatalogFilter === 'MONTALBERT' ? "bg-rose-600 text-white shadow" : "text-slate-500 hover:text-slate-800"
                         )}
                       >
-                        MONTALBERT T23
+                        T23 / Montabert
                       </button>
                     </div>
                   </div>
@@ -936,6 +1149,20 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                      </select>
                   </div>
 
+                  <div className="flex flex-col gap-1.5 min-w-[200px]">
+                     <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md w-fit uppercase tracking-widest">Seuil de Stock (SMI)</span>
+                     <select
+                        value={catalogPriceFilter}
+                        onChange={(e: any) => setCatalogPriceFilter(e.target.value)}
+                        className="bg-white border border-emerald-200 rounded-xl px-3 py-2 text-xs font-black uppercase text-emerald-800 focus:outline-none focus:ring-2 focus:ring-emerald-550/20 cursor-pointer"
+                     >
+                        <option value="ALL">Tout afficher (Sans limites)</option>
+                        <option value="BELOW_40K">Stockable Magasin (Sous 40k DH)</option>
+                        <option value="BELOW_50K">Stockable Magasin (Sous 50k DH)</option>
+                        <option value="EXPENSIVE_ONLY">Investissements seuls (≥ 40k DH)</option>
+                     </select>
+                  </div>
+
                   {isFilterActive && (
                      <button
                         onClick={() => {
@@ -943,6 +1170,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                            setSelectedCategory('ALL');
                            setSelectedCriticality('ALL');
                            setSelectedSort('DEFAULT');
+                           setCatalogPriceFilter('BELOW_40K');
                            setCatalogSearch('');
                         }}
                         className="self-end mb-1 px-4 py-2 text-xs font-black text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 tracking-[0.1em] uppercase rounded-xl transition-all"
@@ -950,7 +1178,8 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                         Effacer les filtres ({[
                            selectedMachine !== 'ALL' && 'Machine',
                            selectedCategory !== 'ALL' && 'Catégorie',
-                           selectedCriticality !== 'ALL' && 'Criticité'
+                           selectedCriticality !== 'ALL' && 'Criticité',
+                           catalogPriceFilter !== 'BELOW_40K' && 'Seuil Budget'
                         ].filter(Boolean).length})
                      </button>
                   )}
@@ -958,6 +1187,56 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
             </div>
 
             <div className="flex-1 overflow-y-auto p-6 bg-slate-50/20 relative">
+               {/* Quick-Jump Systems Bar inside drilldown views */}
+               {navPath.length > 0 && categories.length > 0 && !isImporting && (
+                  <div className="mb-6 bg-white p-4 rounded-3xl border border-slate-100/80 shadow-sm flex flex-col md:flex-row md:items-center gap-3 select-none flex-wrap animate-in slide-in-from-top-3 duration-300">
+                     <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">Changement de Système :</span>
+                     <div className="flex flex-wrap items-center gap-2">
+                        {categories.map(catItem => {
+                          const isSelected = navPath[0]?.value === catItem;
+                          const count = catalog.filter(i => {
+                            const comp = (i.compatibility || '').toLowerCase();
+                            const machs = (i.compatibleMachines || []).map(m => m.toLowerCase());
+                            const id = (i.id || '').toLowerCase();
+                            
+                            const isST2G = comp.includes('st2g') || machs.some(m => m.includes('st2g')) || id.startsWith('st2g_');
+                            const isST2D = comp.includes('st2d') || machs.some(m => m.includes('st2d')) || id.startsWith('st2d_');
+                            const isMontabert = comp.includes('montabert') || comp.includes('t23') || machs.some(m => m.includes('montabert') || m.includes('t23')) || id.startsWith('perf_') || id.startsWith('cop_');
+                            
+                            if (activeCatalogFilter === 'ST2G') if (!isST2G) return false;
+                            if (activeCatalogFilter === 'ST2D') if (!isST2D) return false;
+                            if (activeCatalogFilter === 'MONTALBERT') if (!isMontabert) return false;
+                            
+                            return i.functionalCategory === catItem;
+                          }).length;
+
+                          if (count === 0) return null;
+
+                          return (
+                            <button
+                              key={catItem}
+                              onClick={() => {
+                                setNavPath([{ level: 'CATEGORY', value: catItem }]);
+                              }}
+                              className={cn(
+                                "px-3 py-1 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all flex items-center gap-1.5",
+                                isSelected 
+                                  ? "bg-indigo-600 text-white shadow-sm shadow-indigo-500/20"
+                                  : "bg-slate-50 text-slate-500 hover:text-slate-800 border border-slate-100 hover:bg-slate-100"
+                              )}
+                            >
+                              <span>{catItem}</span>
+                              <span className={cn(
+                                "text-[9px] font-black px-1.5 py-0.5 rounded",
+                                isSelected ? "bg-white/20 text-white" : "bg-slate-200/80 text-slate-500"
+                              )}>{count}</span>
+                            </button>
+                          );
+                        })}
+                     </div>
+                  </div>
+               )}
+
                {isImporting && (
                  <div className="absolute inset-0 z-[100] bg-white/98 backdrop-blur-2xl flex flex-col items-center justify-center animate-in fade-in duration-700">
                     <div className="w-40 h-40 relative mb-12">
@@ -1266,7 +1545,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                                  )}
                                </div>
                                
-                               <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between relative z-10 w-full">
+                               <div className="mt-auto pt-6 border-t border-slate-100 flex items-center justify-between relative z-10 w-full gap-4">
                                  <div className="flex items-center gap-3">
                                    {isLocal ? (
                                      <>
@@ -1275,20 +1554,28 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                                          <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-emerald-500"></span>
                                        </span>
                                        <div className="flex flex-col">
-                                         <p className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.1em]">En stock local : {localQuantity} unités</p>
-                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Empl.: {localPlacement}</p>
+                                         <p className="text-[11px] font-black text-emerald-600 uppercase tracking-[0.1em]">Actif en stock : {localQuantity} {item.unit || 'U'}</p>
+                                         <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Emplacement: {localPlacement}</p>
                                        </div>
                                      </>
                                    ) : (
                                      <>
-                                       <div className="w-3 h-3 bg-slate-200 rounded-full shadow-inner" />
-                                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em]">Réf. catalogue (Non en stock)</p>
+                                       <div className="w-1.5 h-1.5 bg-slate-300 rounded-full" />
+                                       <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.1em] shrink-0">Non présent sur site ({site})</p>
                                      </>
                                    )}
                                  </div>
                                  {!isManagingCatalog && (
-                                   <div className="flex items-center gap-2 text-sky-600 text-[11px] font-black uppercase tracking-[0.2em] hover:translate-x-2 transition-transform">
-                                     {isLocal ? 'Ajuster Fiche' : 'Importer'} <ChevronDown className="w-4 h-4 -rotate-90" />
+                                   <div className="flex items-center gap-2 shrink-0">
+                                     {isLocal ? (
+                                       <div className="flex items-center gap-2 text-sky-600 text-[11px] font-black uppercase tracking-[0.2em] hover:translate-x-1.5 transition-transform bg-sky-50 border border-sky-100 px-3 py-1.5 rounded-xl">
+                                         Ajuster <ChevronDown className="w-4 h-4 -rotate-90 text-sky-500" />
+                                       </div>
+                                     ) : (
+                                       <div className="flex items-center gap-1 text-indigo-600 text-[11px] font-black uppercase tracking-[0.1em] hover:scale-103 transition-transform bg-indigo-50 border border-indigo-100 px-3.5 py-1.5 rounded-xl hover:bg-slate-900 hover:text-white">
+                                         <Plus className="w-3.5 h-3.5" /> Créer Fiche
+                                       </div>
+                                     )}
                                    </div>
                                  )}
                                </div>
@@ -1545,6 +1832,17 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                     onChange={(e) => setEditingArticle({...editingArticle, price: e.target.value === '' ? 0 : Number(e.target.value)})}
                     required
                   />
+                  {editingArticle.price >= 40000 && (
+                    <div className="bg-rose-50 text-rose-800 p-4 rounded-2xl border border-rose-100 flex items-start gap-3 mt-2 animate-in fade-in duration-300">
+                      <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-wider">Alerte Pièce d'investissement Coûteuse</p>
+                        <p className="text-xs leading-normal">
+                          Les pièces coûteuses de ≥ 40 000 DH ne sont pas recommandées en stock physique magasin (SMI). Privilégiez l'achat direct sur commande pour préserver le plafond global SMI de 400 000 DH.
+                        </p>
+                      </div>
+                    </div>
+                  )}
                 </div>
                 <div className="space-y-3">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Emplacement Magasin</label>

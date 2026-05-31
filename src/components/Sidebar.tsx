@@ -24,7 +24,9 @@ import {
   RotateCcw,
   Landmark,
   FileText,
-  Smartphone
+  Smartphone,
+  Sun,
+  Moon
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SITES } from '../demoData';
@@ -58,7 +60,8 @@ export type Page =
   | 'SEARCH_RESULTS'
   | 'TRACEABILITY'
   | 'TRANSFERS_RETURNS'
-  | 'VISION_IA';
+  | 'VISION_IA'
+  | 'HYDROMINES_RADAR';
 
 interface SidebarProps {
   currentPage: Page;
@@ -71,9 +74,11 @@ interface SidebarProps {
   isOpen?: boolean;
   onClose?: () => void;
   onSignOut: () => void;
+  isDarkMode?: boolean;
+  onToggleDarkMode?: () => void;
 }
 
-export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAdmin, notifications = [], isOpen, onClose, onSignOut }: SidebarProps) {
+export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAdmin, notifications = [], isOpen, onClose, onSignOut, isDarkMode = false, onToggleDarkMode }: SidebarProps) {
   const criticalCount = notifications.filter(n => n.type === 'CRITICAL').length;
   const warningCount = notifications.filter(n => n.type === 'WARNING').length;
 
@@ -86,7 +91,8 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       'AUDIT_INTELLIGENCE', 
       'AUTOMATION_WORKFLOWS', 
       'USER_MGMT', 
-      'FINANCE'
+      'FINANCE',
+      'HYDROMINES_RADAR'
     ];
     if (adminOnlyRoutes.includes(routeId)) {
       return isAdmin;
@@ -112,10 +118,9 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       { id: 'STOCK_EPI', label: 'Protections EPI', icon: Shield },
       { id: 'RESTOCK_MGMT', label: 'RAVITAILLEMENT & alertes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
 
-      // 🟣 3. CENTRE D'INTELLIGENCE IA (AI SYSTEMS)
-      { id: 'SEP_INTELLIGENCE', label: '3. Centre d’Intelligence IA', isSeparator: true },
-      { id: 'MAGASINIER_IA', label: 'Copilote & Analyses IA', icon: MessageSquare, activeColor: 'bg-indigo-950 text-indigo-100 shadow border border-indigo-700/30 font-semibold' },
-      { id: 'AUDIT_INTELLIGENCE', label: 'Centre IA Audit', icon: ShieldCheck, activeColor: 'bg-emerald-950 text-emerald-100 shadow border border-emerald-700/30 font-semibold' },
+      // 🟣 3. CENTRE D'INTELLIGENCE (AI SYSTEMS)
+      { id: 'SEP_INTELLIGENCE', label: '3. Centre d’Intelligence', isSeparator: true },
+      { id: 'HYDROMINES_RADAR', label: 'Hydromines Radar', icon: Brain, activeColor: 'bg-indigo-950 text-indigo-100 shadow border border-indigo-700/30 font-semibold' },
 
       // 🟥 4. CONTRÔLE & REGISTRES
       { id: 'SEP_GOVERNANCE', label: '4. Contrôle & Registres', isSeparator: true },
@@ -252,7 +257,14 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
                   ? (isActive ? "text-slate-950 stroke-[2.5]" : "text-amber-600 animate-pulse")
                   : (isActive ? "" : "text-slate-400 group-hover:text-sky-500")
                )} />
-              <span className="flex-1 truncate uppercase tracking-[0.05em]">{item.label}</span>
+              {item.id === 'HYDROMINES_RADAR' ? (
+                <span className="flex-1 truncate uppercase tracking-[0.05em] font-black text-xs">
+                  <span className="text-sky-500 font-extrabold mr-1">HYDRO</span>
+                  <span className="text-rose-800 font-black">MINES</span> <span className="text-slate-800 font-black opacity-80 select-none">RADAR</span>
+                </span>
+              ) : (
+                <span className="flex-1 truncate uppercase tracking-[0.05em]">{item.label}</span>
+              )}
               {typeof item.badge === 'number' && item.badge > 0 && (
                 <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-lg shadow-rose-200">
                   {item.badge}
@@ -272,7 +284,18 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Connecté au Cloud</span>
           </div>
-          <RefreshCw className="w-3 h-3 text-slate-300" />
+          <div className="flex items-center gap-2">
+            {onToggleDarkMode && (
+              <button
+                onClick={onToggleDarkMode}
+                className="text-slate-400 hover:text-sky-500 dark:text-slate-450 dark:hover:text-amber-500 transition-colors p-1 rounded-md"
+                title={isDarkMode ? "Activer le mode jour" : "Activer le mode nuit"}
+              >
+                {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5" />}
+              </button>
+            )}
+            <RefreshCw className="w-3 h-3 text-slate-300" />
+          </div>
         </div>
 
         <div className="card-mini bg-slate-50/80 rounded-xl p-2.5 flex items-center gap-3 border border-slate-100/50">
@@ -287,7 +310,9 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
             <p className="text-sm font-black text-slate-800 truncate uppercase tracking-tighter leading-tight">
               {user?.displayName || (user?.email?.split('@')[0]) || 'User'}
             </p>
-            <p className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-widest mt-0.5">Opérateur</p>
+            <p className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-widest mt-0.5">
+              {isAdmin ? 'ADMIN' : 'OPÉRATEUR'}
+            </p>
           </div>
           <button 
             onClick={onSignOut}

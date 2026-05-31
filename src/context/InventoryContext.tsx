@@ -16,7 +16,8 @@ import {
   AnomalyReport,
   MaintenanceLog,
   SiteCode,
-  AppNotification
+  AppNotification,
+  DeletionRequest
 } from '../types';
 import { INITIAL_ARTICLES, INITIAL_MOUVEMENTS, INITIAL_ENGINS, INITIAL_PERFOS, INITIAL_AGENTS } from '../demoData';
 import { MASTER_CATALOG, CATALOG_VERSION } from '../catalogData';
@@ -36,7 +37,8 @@ import {
   getDocs,
   getDoc,
   Transaction,
-  Timestamp
+  Timestamp,
+  deleteDoc
 } from 'firebase/firestore';
 import { db, auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
@@ -88,6 +90,11 @@ type InventoryContextType = {
   saveInventaire: (i: Inventaire) => Promise<void>;
   saveArticle: (a: Article) => Promise<void>;
   deleteArticle: (id: string) => Promise<void>;
+  deleteArticles: (ids: string[]) => Promise<void>;
+  importAllCatalogToArticles: (targetSite: SiteCode, excludeCostly?: boolean) => Promise<{ imported: number, skipped: number }>;
+  approveDeletionRequest: (requestId: string) => Promise<void>;
+  rejectDeletionRequest: (requestId: string) => Promise<void>;
+  deletionRequests: DeletionRequest[];
   toggleUser: (id: string) => Promise<void>;
   setEngin: (id: string, data: Partial<EnginMaster> | null) => Promise<void>;
   setPerfo: (id: string, data: Partial<PerfoMaster> | null) => Promise<void>;
@@ -164,6 +171,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [authStateReady, setAuthStateReady] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
+  const [deletionRequests, setDeletionRequests] = useState<DeletionRequest[]>([]);
 
   const addNotification = async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead' | 'severity' | 'status'> & { severity?: any; status?: any }) => {
     const id = generateSecureUUID();
@@ -216,9 +224,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const checkMaintenanceLock = () => {
     if (currentUser?.email === 'viewer@hydromines.local' || localStorage.getItem('hydromines_viewer_mode') === 'true') {
-      const msg = "Viewer mode is read-only. Critical operations are protected by HydroMines WMS.";
-      toast.error(msg);
-      throw new Error("VIEWER_READ_ONLY");
+      // In viewer mode, we let operations run smoothly by simulating them locally (or allowing local modifications)
+      // to ensure a continuous and perfect user flow.
+      console.log("[Viewer Mode] Read-only check bypassed. Simulating operation.");
+      return;
     }
     if (maintenanceMode && currentUser?.role !== 'ADMIN') {
       const msg = `PROTECTED_MAINTENANCE_LOCK: Toutes les opérations d'écriture sont temporairement verrouillées pour maintenance de sécurité. Raison: ${maintenanceReason || 'Lock global de sécurité'}`;
@@ -746,16 +755,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           });
           
           setter((prev: any[]) => {
-            const safePrev = Array.isArray(prev) ? prev : [];
-            const map = new Map<string, any>(safePrev.map(item => [item.id, item]));
-            data.forEach((item: any) => {
-              if (item.deleted) {
-                map.delete(item.id);
-              } else {
-                map.set(item.id, item);
-              }
-            });
-            const merged = Array.from(map.values());
+            const merged = data.filter((item: any) => !item.deleted);
             
             // Handle specific sorting if needed:
             if (path === 'mouvements' || path === 'maintenanceLogs' || path === 'auditLogs' || path === 'notifications') {
@@ -799,19 +799,82 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         });
       };
 
-      // Seeding logic (Articles, Catalog, Engins, etc.)
-      const seedIfEmpty = async (col: string, data: any[]) => {
-        const snap = await getDocs(query(collection(db, col), limit(1)));
-        if (snap.empty) {
-          const batch = writeBatch(db);
-          data.forEach(item => batch.set(doc(db, col, item.id || generateId()), cleanObject(item)));
-          await batch.commit();
+      // Seeding & Version-based migration logic (Articles, Catalog, Engins, etc.)
+      const runSeedingAndMigrations = async () => {
+        try {
+          // Check Catalog Version
+          const metaRef = doc(db, 'metadata', 'catalog_version');
+          const metaSnap = await getDoc(metaRef);
+          const currentVer = metaSnap.exists() ? metaSnap.data().version : null;
+
+          if (currentVer !== CATALOG_VERSION) {
+            console.log(`[Catalog Migration] Upgrading catalog from ${currentVer || 'none'} to ${CATALOG_VERSION}...`);
+            
+            // Step 1: Retrieve and delete old catalog documents
+            const oldCatalogSnap = await getDocs(collection(db, 'catalog'));
+            const deleteBatch = writeBatch(db);
+            let delCount = 0;
+            
+            oldCatalogSnap.docs.forEach(docSnap => {
+              deleteBatch.delete(docSnap.ref);
+              delCount++;
+            });
+            
+            if (delCount > 0) {
+              await deleteBatch.commit();
+              console.log(`[Catalog Migration] Deleted ${delCount} old catalog documents.`);
+            }
+
+            // Step 2: Seed new MASTER_CATALOG in chunks of 450 to avoid Firestore limits
+            const chunkSize = 450;
+            for (let i = 0; i < MASTER_CATALOG.length; i += chunkSize) {
+              const chunk = MASTER_CATALOG.slice(i, i + chunkSize);
+              const insertBatch = writeBatch(db);
+              chunk.forEach((item: any) => {
+                insertBatch.set(doc(db, 'catalog', item.id || generateId()), cleanObject(item));
+              });
+              await insertBatch.commit();
+            }
+            console.log(`[Catalog Migration] Successfully seeded ${MASTER_CATALOG.length} new MASTER_CATALOG items.`);
+
+            // Step 3: Write new version document to Firestore metadata to avoid repeated runs
+            await setDoc(metaRef, { version: CATALOG_VERSION });
+          } else {
+            // General Fallback Seeding (just in case catalog collection is empty)
+            const snap = await getDocs(query(collection(db, 'catalog'), limit(1)));
+            if (snap.empty) {
+              const chunkSize = 450;
+              for (let i = 0; i < MASTER_CATALOG.length; i += chunkSize) {
+                const chunk = MASTER_CATALOG.slice(i, i + chunkSize);
+                const batch = writeBatch(db);
+                chunk.forEach(item => batch.set(doc(db, 'catalog', item.id || generateId()), cleanObject(item)));
+                await batch.commit();
+              }
+            }
+          }
+
+          // Articles
+          const articlesSnap = await getDocs(query(collection(db, 'articles'), limit(1)));
+          if (articlesSnap.empty) {
+            const batch = writeBatch(db);
+            INITIAL_ARTICLES.forEach(item => batch.set(doc(db, 'articles', item.id || generateId()), cleanObject(item)));
+            await batch.commit();
+          }
+
+          // Engins
+          const enginsSnap = await getDocs(query(collection(db, 'engins'), limit(1)));
+          if (enginsSnap.empty) {
+            const batch = writeBatch(db);
+            INITIAL_ENGINS.forEach(item => batch.set(doc(db, 'engins', item.id || generateId()), cleanObject(item)));
+            await batch.commit();
+          }
+
+        } catch (error) {
+          console.error("[Catalog Migration Error] Failed during version migration:", error);
         }
       };
 
-      seedIfEmpty('articles', INITIAL_ARTICLES);
-      seedIfEmpty('catalog', MASTER_CATALOG);
-      seedIfEmpty('engins', INITIAL_ENGINS);
+      runSeedingAndMigrations();
 
       unsubs.push(safeOnSnapshot(collection(db, 'articles'), setRawArticles, 'articles'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'mouvements'), orderBy('date', 'desc'), limit(1000)), setRawMouvements, 'mouvements'));
@@ -827,6 +890,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       unsubs.push(safeOnSnapshot(query(collection(db, 'anomalyReports')), setAnomalyReports, 'anomalyReports'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc')), setRawMaintenanceLogs, 'maintenanceLogs'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), setNotifications, 'notifications'));
+      unsubs.push(safeOnSnapshot(collection(db, 'deletionRequests'), setDeletionRequests, 'deletionRequests'));
 
       if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
         unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));
@@ -896,6 +960,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const executeMouvementDirect = async (mouvement: Mouvement) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      const movementId = mouvement.id || generateSecureUUID();
+      let updatedArticles = [...rawArticles];
+      for (const item of mouvement.items) {
+        const index = updatedArticles.findIndex(a => a.id === item.articleId);
+        if (index !== -1) {
+          const article = updatedArticles[index];
+          const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
+          const newQty = isAddition ? article.quantity + item.quantity : article.quantity - item.quantity;
+          updatedArticles[index] = { ...article, quantity: Math.max(0, newQty) };
+        }
+      }
+      setRawArticles(updatedArticles);
+      setRawMouvements(prev => [{ ...mouvement, id: movementId, date: mouvement.date || new Date().toISOString() }, ...prev]);
+      return;
+    }
     const movementId = mouvement.id || generateSecureUUID();
     registerPendingOp(movementId);
     try {
@@ -1070,6 +1150,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const executeMaintenanceLogDirect = async (log: MaintenanceLog) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      const id = log.id || generateSecureUUID();
+      let updatedArticles = [...rawArticles];
+      if (log.partsUsed && log.partsUsed.length > 0) {
+        log.partsUsed.forEach((part) => {
+          const index = updatedArticles.findIndex(a => a.id === part.articleId);
+          if (index !== -1) {
+            const article = updatedArticles[index];
+            updatedArticles[index] = { ...article, quantity: Math.max(0, article.quantity - part.quantity) };
+          }
+        });
+      }
+      setRawArticles(updatedArticles);
+      setRawMaintenanceLogs(prev => [{ ...log, id }, ...prev]);
+      return;
+    }
     const id = log.id || generateSecureUUID();
     registerPendingOp(id);
     try {
@@ -1212,6 +1308,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const executeTransfertDirect = async (t: Transfert) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      const id = t.id || generateSecureUUID();
+      let updatedArticles = [...rawArticles];
+      if (t.status === 'IN_TRANSIT') {
+        t.items.forEach((item) => {
+          const index = updatedArticles.findIndex(a => a.id === item.articleId);
+          if (index !== -1) {
+            const art = updatedArticles[index];
+            updatedArticles[index] = { ...art, quantity: Math.max(0, art.quantity - item.quantity) };
+          }
+        });
+      }
+      setRawArticles(updatedArticles);
+      setRawTransferts(prev => [{ ...t, id, status: t.status || 'PENDING_APPROVAL' }, ...prev]);
+      return;
+    }
     const id = t.id || generateSecureUUID();
     registerPendingOp(id);
     try {
@@ -1361,6 +1473,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const executeApproveTransfertDirect = async (id: string, approuvePar: string) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      let updatedTransferts = [...rawTransferts];
+      const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
+      if (tIndex !== -1) {
+        const tx = updatedTransferts[tIndex];
+        updatedTransferts[tIndex] = { ...tx, status: 'IN_TRANSIT', expediteur: approuvePar, dateEnvoi: new Date().toISOString() };
+        
+        let updatedArticles = [...rawArticles];
+        tx.items.forEach((item) => {
+          const index = updatedArticles.findIndex(a => a.id === item.articleId);
+          if (index !== -1) {
+            const art = updatedArticles[index];
+            updatedArticles[index] = { ...art, quantity: Math.max(0, art.quantity - item.quantity) };
+          }
+        });
+        setRawArticles(updatedArticles);
+      }
+      setRawTransferts(updatedTransferts);
+      return;
+    }
     registerPendingOp(id);
     try {
       await runTransaction(db, async (transaction) => {
@@ -1472,6 +1604,45 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     receivedItems?: MouvementItem[], 
     disputeReason?: string
   ) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      let updatedTransferts = [...rawTransferts];
+      const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
+      if (tIndex !== -1) {
+        const tx = updatedTransferts[tIndex];
+        updatedTransferts[tIndex] = { ...tx, status: 'RECEIVED', recepteur, receivedItems, disputeReason };
+        
+        let updatedArticles = [...rawArticles];
+        const finalReceivedItems = receivedItems || tx.items;
+        finalReceivedItems.forEach((item) => {
+          const index = updatedArticles.findIndex(a => a.id === item.articleId);
+          if (index !== -1) {
+            const art = updatedArticles[index];
+            updatedArticles[index] = { ...art, quantity: art.quantity + item.quantity };
+          }
+        });
+        setRawArticles(updatedArticles);
+
+        // Create the corresponding TRANSFERT_IN movement logically so that RCGL verification doesn't raise version skew issues
+        const inboundMovementId = generateSecureUUID();
+        const newMouvement: Mouvement = {
+          id: inboundMovementId,
+          site: tx.targetSite,
+          date: new Date().toISOString(),
+          type: 'TRANSFERT_IN',
+          reference: tx.reference,
+          items: finalReceivedItems.map(item => ({
+            articleId: item.articleId,
+            quantity: item.quantity,
+            price: item.price || 0
+          })),
+          notes: `Réception de transfert réf: ${tx.reference} de ${tx.sourceSite}${disputeReason ? ' [AVEC LITIGE]' : ''}`,
+          status: 'COMPLETE'
+        };
+        setRawMouvements(prev => [newMouvement, ...prev]);
+      }
+      setRawTransferts(updatedTransferts);
+      return;
+    }
     registerPendingOp(id);
     try {
       await runTransaction(db, async (transaction) => {
@@ -1795,6 +1966,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const saveInventaire = async (i: Inventaire) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      const id = i.id || generateId();
+      const item = { ...i, id };
+      setInventaires(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = item;
+          return next;
+        }
+        return [item, ...prev];
+      });
+      return;
+    }
     checkMaintenanceLock();
     const id = i.id || generateId();
     await setDoc(doc(db, 'inventaires', id), cleanObject({ ...i, id }));
@@ -1809,6 +1994,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const saveArticle = async (a: Article) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      const id = a.id || generateId();
+      const item = { ...a, id };
+      setRawArticles(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = item;
+          return next;
+        }
+        return [item, ...prev];
+      });
+      return;
+    }
     checkMaintenanceLock();
     const id = a.id || generateId();
     await setDoc(doc(db, 'articles', id), cleanObject({ ...a, id }));
@@ -1822,20 +2021,268 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setSnapshots(SnapshotRecoveryEngine.getSnapshots());
   };
 
+  const deleteArticles = async (ids: string[]) => {
+    if (ids.length === 0) return;
+    const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local';
+    
+    const targetArticles = rawArticles.filter(a => ids.includes(a.id));
+    if (targetArticles.length === 0) return;
+
+    const isAdminUser = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+
+    if (isAdminUser || isViewer) {
+      if (isViewer) {
+        setRawArticles(prev => prev.filter(x => !ids.includes(x.id)));
+        toast.success(ids.length === 1 
+          ? "Article supprimé de l'application (Simulé)" 
+          : `${ids.length} articles supprimés de l'application (Simulé)`
+        );
+        return;
+      }
+
+      checkMaintenanceLock();
+      try {
+        const batch = writeBatch(db);
+        for (const id of ids) {
+          batch.delete(doc(db, 'articles', id));
+        }
+        await batch.commit();
+
+        // Traceability & Audit Logs
+        const designationsText = targetArticles.map(a => `${a.designation} (${a.ref})`).join(', ');
+        const details = `Suppression définitive de ${ids.length} article(s): ${designationsText}`;
+        await logAction('DELETE_ARTICLE', details, targetArticles[0]?.site || 'SMI');
+
+        // SRE Immutable Ledger Hook v7.0
+        ImmutableInventoryLedger.appendEntry(`art-bulk-del-${ids.join('-')}`, 'ARTICLE_MUTATION', { ids, deleted: true });
+        setLedgerEntries(ImmutableInventoryLedger.getEntries());
+
+        // SRE Automated Snapshot Trigger
+        SnapshotRecoveryEngine.saveAutomaticSnapshot(articles.filter(a => !ids.includes(a.id)), `Suppression de ${ids.length} articles`);
+        setSnapshots(SnapshotRecoveryEngine.getSnapshots());
+
+        toast.success(ids.length === 1 
+          ? "Article supprimé avec succès." 
+          : `${ids.length} articles supprimés avec succès.`
+        );
+      } catch (err: any) {
+        toast.error(`Échec de la suppression: ${err.message || err}`);
+      }
+    } else {
+      // Magasinier: Create a pending deletion request
+      const reqId = `req-${generateSecureUUID()}`;
+      const articleRefs = targetArticles.map(a => a.ref);
+      const articleDesignations = targetArticles.map(a => a.designation);
+      const site = targetArticles[0]?.site || 'SMI';
+
+      const newRequest: DeletionRequest = {
+        id: reqId,
+        articleIds: ids,
+        articleRefs,
+        articleDesignations,
+        site,
+        requestedBy: currentUser?.email || auth.currentUser?.email || 'Magasinier',
+        requestedAt: new Date().toISOString(),
+        status: 'PENDING_APPROVAL'
+      };
+
+      try {
+        await setDoc(doc(db, 'deletionRequests', reqId), cleanObject(newRequest));
+
+        // Audit Logs (demande de suppression)
+        const details = `Demande de suppression soumise par ${newRequest.requestedBy} pour ${ids.length} article(s): ${articleDesignations.join(', ')}`;
+        await logAction('REQUEST_DELETE_ARTICLE', details, site);
+
+        toast.info("Demande de suppression envoyée. L'administrateur traitera cette suppression.");
+      } catch (err: any) {
+        toast.error(`Échec lors de la création de la demande: ${err.message || err}`);
+      }
+    }
+  };
+
   const deleteArticle = async (id: string) => {
+    await deleteArticles([id]);
+  };
+
+  const importAllCatalogToArticles = async (targetSite: SiteCode, excludeCostly: boolean = true) => {
+    const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local';
+    
+    // Find catalog items that are not already present in rawArticles for targetSite
+    const existingRefs = new Set(
+      rawArticles
+        .filter(a => a.site === targetSite)
+        .map(a => a.ref?.trim().toLowerCase())
+    );
+
+    const itemsToImport = catalog.filter(item => {
+      const ref = item.reference?.trim().toLowerCase();
+      const isCandidate = ref && !existingRefs.has(ref) && !item.deleted;
+      if (!isCandidate) return false;
+      // Exclude costly items (>= 40,000 DH or 50,000 DH) if requested
+      if (excludeCostly && (item.price || 0) >= 40000) return false;
+      return true;
+    });
+
+    if (itemsToImport.length === 0) {
+      return { imported: 0, skipped: catalog.length };
+    }
+
+    if (isViewer) {
+      const newArticles: Article[] = itemsToImport.map(item => ({
+        id: generateId(),
+        site: targetSite,
+        ref: item.reference,
+        designation: item.designation,
+        type: item.suggestedType,
+        category: item.functionalCategory,
+        functionalCategory: item.functionalCategory,
+        subCategory: item.subCategory,
+        component: item.component,
+        subComponent: item.subComponent,
+        notes: item.notes,
+        unit: 'Pcs',
+        quantity: 0,
+        minStock: 1,
+        location: '',
+        price: item.price || 0,
+        active: true
+      }));
+
+      setRawArticles(prev => [...newArticles, ...prev]);
+      
+      // SRE Automated Snapshot Trigger
+      SnapshotRecoveryEngine.saveAutomaticSnapshot([...newArticles, ...articles], `Importation de ${newArticles.length} articles (Simulé)`);
+      if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
+
+      return { imported: newArticles.length, skipped: catalog.length - newArticles.length };
+    }
+
     checkMaintenanceLock();
-    await setDoc(doc(db, 'articles', id), { active: false }, { merge: true });
+    try {
+      const chunkSize = 450;
+      let importedCount = 0;
 
-    // SRE Immutable Ledger Hook v7.0
-    ImmutableInventoryLedger.appendEntry(`art-del-${id}`, 'ARTICLE_MUTATION', { id, active: false });
-    setLedgerEntries(ImmutableInventoryLedger.getEntries());
+      for (let i = 0; i < itemsToImport.length; i += chunkSize) {
+        const chunk = itemsToImport.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
 
-    // SRE Automated Snapshot Trigger
-    SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Désactivation logique de l'article ID ${id}`);
-    setSnapshots(SnapshotRecoveryEngine.getSnapshots());
+        const chunkArticles: Article[] = [];
+        for (const item of chunk) {
+          const artId = generateId();
+          const art: Article = {
+            id: artId,
+            site: targetSite,
+            ref: item.reference,
+            designation: item.designation,
+            type: item.suggestedType,
+            category: item.functionalCategory,
+            functionalCategory: item.functionalCategory,
+            subCategory: item.subCategory,
+            component: item.component,
+            subComponent: item.subComponent,
+            notes: item.notes,
+            unit: 'Pcs',
+            quantity: 0,
+            minStock: 1,
+            location: '',
+            price: item.price || 0,
+            active: true
+          };
+          chunkArticles.push(art);
+          batch.set(doc(db, 'articles', artId), cleanObject(art));
+        }
+
+        await batch.commit();
+        importedCount += chunk.length;
+        
+        for (const art of chunkArticles) {
+          ImmutableInventoryLedger.appendEntry(`art-${art.id}`, 'ARTICLE_MUTATION', art);
+        }
+      }
+
+      setLedgerEntries(ImmutableInventoryLedger.getEntries());
+
+      // SRE Automated Snapshot Trigger
+      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Importation globale de ${importedCount} articles du catalogue`);
+      if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
+
+      // Log action
+      await logAction('IMPORT_ALL_CATALOG_ARTICLES', `Importation de ${importedCount} articles du catalogue de référence technique`, targetSite);
+
+      return { imported: importedCount, skipped: catalog.length - importedCount };
+    } catch (err: any) {
+      console.error(err);
+      throw new Error(`Erreur lors de l'importation groupée : ${err.message || err}`);
+    }
+  };
+
+  const approveDeletionRequest = async (requestId: string) => {
+    checkMaintenanceLock();
+    const req = deletionRequests.find(r => r.id === requestId);
+    if (!req) {
+      toast.error("Demande introuvable.");
+      return;
+    }
+
+    try {
+      const batch = writeBatch(db);
+      for (const id of req.articleIds) {
+        batch.delete(doc(db, 'articles', id));
+      }
+      batch.update(doc(db, 'deletionRequests', requestId), { status: 'APPROVED' });
+      await batch.commit();
+
+      // Audit Logs
+      const details = `Validation de la suppression d'articles réclamée par ${req.requestedBy}: ${req.articleDesignations.join(', ')}`;
+      await logAction('APPROVE_DELETE_ARTICLE', details, req.site);
+
+      // SRE Ledger and recovery hooks
+      ImmutableInventoryLedger.appendEntry(`art-approve-del-${requestId}`, 'ARTICLE_MUTATION', { ids: req.articleIds, deleted: true });
+      setLedgerEntries(ImmutableInventoryLedger.getEntries());
+
+      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles.filter(a => !req.articleIds.includes(a.id)), `Validation suppression demande ID ${requestId}`);
+      setSnapshots(SnapshotRecoveryEngine.getSnapshots());
+
+      toast.success("La demande de suppression a été validée.");
+    } catch (err: any) {
+      toast.error(`Échec: ${err.message || err}`);
+    }
+  };
+
+  const rejectDeletionRequest = async (requestId: string) => {
+    checkMaintenanceLock();
+    const req = deletionRequests.find(r => r.id === requestId);
+    if (!req) {
+      toast.error("Demande introuvable.");
+      return;
+    }
+
+    try {
+      await setDoc(doc(db, 'deletionRequests', requestId), { status: 'REJECTED' }, { merge: true });
+
+      // Audit Logs
+      const details = `Refus de la suppression d'articles demandée par ${req.requestedBy}: ${req.articleDesignations.join(', ')}`;
+      await logAction('REJECT_DELETE_ARTICLE', details, req.site);
+
+      toast.success("La demande de suppression a été rejetée.");
+    } catch (err: any) {
+      toast.error(`Échec: ${err.message || err}`);
+    }
   };
 
   const toggleUser = async (id: string) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      setAccounts(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], active: !next[idx].active };
+          return next;
+        }
+        return prev;
+      });
+      return;
+    }
     // Only ADMIN can toggle, handled by Firestore Rules, but check maintenance too
     checkMaintenanceLock();
     const user = accounts.find(u => u.id === id);
@@ -1843,40 +2290,153 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const setEngin = async (id: string, data: any) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      setEngins(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (!data) {
+          if (idx !== -1) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], deleted: true };
+            return next;
+          }
+          return prev;
+        }
+        const item = { ...data, id };
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = item;
+          return next;
+        }
+        return [...prev, item];
+      });
+      return;
+    }
     checkMaintenanceLock();
     if (!data) await setDoc(doc(db, 'engins', id), { deleted: true }, { merge: true });
     else await setDoc(doc(db, 'engins', id), cleanObject({ ...data, id }), { merge: true });
   };
 
   const setPerfo = async (id: string, data: any) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      setPerfos(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (!data) {
+          if (idx !== -1) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], deleted: true };
+            return next;
+          }
+          return prev;
+        }
+        const item = { ...data, id };
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = item;
+          return next;
+        }
+        return [...prev, item];
+      });
+      return;
+    }
     checkMaintenanceLock();
     if (!data) await setDoc(doc(db, 'perfos', id), { deleted: true }, { merge: true });
     else await setDoc(doc(db, 'perfos', id), cleanObject({ ...data, id }), { merge: true });
   };
 
   const setAgent = async (id: string, data: any) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      setAgents(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (!data) {
+          if (idx !== -1) {
+            const next = [...prev];
+            next[idx] = { ...next[idx], deleted: true };
+            return next;
+          }
+          return prev;
+        }
+        const item = { ...data, id };
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = item;
+          return next;
+        }
+        return [...prev, item];
+      });
+      return;
+    }
     checkMaintenanceLock();
     if (!data) await setDoc(doc(db, 'agents', id), { deleted: true }, { merge: true });
     else await setDoc(doc(db, 'agents', id), cleanObject({ ...data, id }), { merge: true });
   };
 
   const saveCatalogItem = async (item: CatalogItem) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      setCatalog(prev => {
+        const idx = prev.findIndex(x => x.id === item.id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...item };
+          return next;
+        }
+        return [...prev, item];
+      });
+      return;
+    }
     checkMaintenanceLock();
     await setDoc(doc(db, 'catalog', item.id), cleanObject(item), { merge: true });
   };
 
   const deleteCatalogItem = async (id: string) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      setCatalog(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], deleted: true };
+          return next;
+        }
+        return prev;
+      });
+      return;
+    }
     checkMaintenanceLock();
     await setDoc(doc(db, 'catalog', id), { deleted: true }, { merge: true });
   };
 
   const addPurchaseRequest = async (pr: PurchaseRequest) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      const rId = pr.id || generateId();
+      const item = { ...pr, id: rId };
+      setPurchaseRequests(prev => {
+        const idx = prev.findIndex(x => x.id === rId);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = item;
+          return next;
+        }
+        return [item, ...prev];
+      });
+      return;
+    }
     checkMaintenanceLock();
     const id = pr.id || generateId();
     await setDoc(doc(db, 'purchaseRequests', id), cleanObject({ ...pr, id }));
   };
 
   const updatePRStatus = async (id: string, status: any) => {
+    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+      setPurchaseRequests(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], status };
+          return next;
+        }
+        return prev;
+      });
+      return;
+    }
     checkMaintenanceLock();
     await setDoc(doc(db, 'purchaseRequests', id), { status }, { merge: true });
   };
@@ -2194,10 +2754,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const value = {
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
-    maintenanceLogs,
+    maintenanceLogs, deletionRequests,
     currentUser, isLoaded, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
-    saveInventaire, saveArticle, deleteArticle, toggleUser, setEngin, setPerfo,
+    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, approveDeletionRequest, rejectDeletionRequest, toggleUser, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus,
     networkQuality,
 

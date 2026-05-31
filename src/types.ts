@@ -290,3 +290,15 @@ export interface AppNotification {
   status: 'read' | 'unread';
 }
 
+export interface DeletionRequest {
+  id: string;
+  articleIds: string[];
+  articleRefs: string[];
+  articleDesignations: string[];
+  site: SiteCode;
+  requestedBy: string;
+  requestedAt: string;
+  status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+}
+
+
