@@ -142,18 +142,17 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
 
   return (
     <>
-      {/* Mobile Overlay */}
+      {/* Dynamic Overlay */}
       {isOpen && (
         <div 
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[45] lg:hidden animate-in fade-in duration-300"
+          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[45] animate-in fade-in duration-300"
           onClick={onClose}
         />
       )}
       
       <aside className={cn(
-        "w-[260px] flex-shrink-0 bg-white border-r border-slate-100 h-screen sticky top-0 overflow-y-auto flex flex-col no-print shadow-xl shadow-slate-200/50 transition-all duration-500 ease-in-out z-50",
-        "fixed lg:sticky lg:translate-x-0",
-        isOpen ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+        "w-[260px] bg-white border-r border-slate-100 h-screen fixed inset-y-0 left-0 overflow-y-auto flex flex-col no-print shadow-2xl shadow-slate-350/50 transition-all duration-300 ease-in-out z-50",
+        isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
       {/* 3D Visual Effect exclusively for the top of the sidebar */}
       <div className="absolute top-0 left-0 right-0 h-40 z-0 pointer-events-none overflow-hidden border-b border-sky-50 shadow-inner">

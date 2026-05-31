@@ -96,7 +96,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         <div className="flex items-center gap-2 flex-1">
           <button 
             onClick={onOpenMenu}
-            className="lg:hidden w-10 h-10 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-500 hover:text-sky-600 transition-colors shadow-sm"
+            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-500 hover:text-sky-600 transition-colors shadow-sm cursor-pointer"
           >
             <Menu className="w-5 h-5" />
           </button>
