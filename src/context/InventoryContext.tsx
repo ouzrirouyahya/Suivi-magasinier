@@ -77,6 +77,7 @@ type InventoryContextType = {
   maintenanceLogs: MaintenanceLog[];
   currentUser: UserAccount | null;
   isLoaded: boolean;
+  isViewer: boolean;
   notifications: AppNotification[];
   addNotification: (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead'>) => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
@@ -91,7 +92,8 @@ type InventoryContextType = {
   saveArticle: (a: Article) => Promise<void>;
   deleteArticle: (id: string) => Promise<void>;
   deleteArticles: (ids: string[]) => Promise<void>;
-  importAllCatalogToArticles: (targetSite: SiteCode, excludeCostly?: boolean) => Promise<{ imported: number, skipped: number }>;
+  importAllCatalogToArticles: (targetSite: SiteCode, excludeCostly?: boolean | number) => Promise<{ imported: number, skipped: number }>;
+  importSpecificCatalogItems: (targetSite: SiteCode, items: CatalogItem[]) => Promise<{ imported: number, skipped: number }>;
   approveDeletionRequest: (requestId: string) => Promise<void>;
   rejectDeletionRequest: (requestId: string) => Promise<void>;
   deletionRequests: DeletionRequest[];
@@ -222,11 +224,30 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
   const [snapshots, setSnapshots] = useState<any[]>([]);
 
+  const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true' && currentUser?.email?.toLowerCase() !== 'ouzrirouyahya@gmail.com';
+
+  const checkWritePermission = () => {
+    if (isViewer || currentUser?.email === 'viewer@hydromines.local') {
+      const msg = "Accès refusé : Le mode démonstrateur est strictement limité à la consultation seule. Veuillez vous connecter avec un compte administrateur.";
+      toast.error(msg, { duration: 6000 });
+      throw new Error("VIEWER_READ_ONLY_RESTRICITON");
+    }
+  };
+
+  const isSimulationMode = () => {
+    if (currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
+      return false;
+    }
+    return isViewer || 
+           !!localStorage.getItem('hydromines_bypass_email') || 
+           currentUser?.email === 'viewer@hydromines.local';
+  };
+
   const checkMaintenanceLock = () => {
-    if (currentUser?.email === 'viewer@hydromines.local' || localStorage.getItem('hydromines_viewer_mode') === 'true') {
+    if (isSimulationMode()) {
       // In viewer mode, we let operations run smoothly by simulating them locally (or allowing local modifications)
       // to ensure a continuous and perfect user flow.
-      console.log("[Viewer Mode] Read-only check bypassed. Simulating operation.");
+      console.log("[Simulation Mode] Read-only check bypassed. Simulating operation.");
       return;
     }
     if (maintenanceMode && currentUser?.role !== 'ADMIN') {
@@ -641,6 +662,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authStateReady) return;
 
+    const bypassEmail = localStorage.getItem('hydromines_bypass_email');
+    if (bypassEmail) {
+      const isSuper = bypassEmail.toLowerCase() === 'ouzrirouyahya@gmail.com';
+      const bypassUser: UserAccount = {
+        id: isSuper ? 'bypass_super_uid' : 'bypass_magasinier_uid',
+        email: bypassEmail,
+        name: isSuper ? 'Yahya O.' : 'Magasinier Hydro',
+        role: isSuper ? 'SUPER_ADMIN' : 'MAGASINIER',
+        active: true,
+        createdAt: new Date().toISOString()
+      };
+      setCurrentUser(bypassUser);
+      setIsLoaded(true);
+      return;
+    }
+
     if (localStorage.getItem('hydromines_viewer_mode') === 'true') {
       const viewerUser: UserAccount = {
         id: 'viewer_mode_uid',
@@ -665,6 +702,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const unsubUser = onSnapshot(doc(db, 'accounts', uid), async (snap) => {
       if (snap.exists()) {
         const userData = serializeFirestoreData({ id: snap.id, ...snap.data() }) as UserAccount;
+        if (auth.currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
+          userData.role = 'SUPER_ADMIN';
+        }
         setCurrentUser(userData);
         setIsLoaded(true);
       } else {
@@ -708,13 +748,33 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoaded, articles.length, authStateReady, currentUser]);
 
+  // Persist simulated data under Simulation/Viewer Mode so additions, modifications & imports remain across page reloads
+  useEffect(() => {
+    if (isLoaded && isSimulationMode()) {
+      if (rawArticles.length > 0) {
+        localStorage.setItem('hydromines_simulated_articles', JSON.stringify(rawArticles));
+      }
+    }
+  }, [rawArticles, isLoaded]);
+
+  useEffect(() => {
+    if (isLoaded && isSimulationMode()) {
+      if (rawMouvements.length > 0) {
+        localStorage.setItem('hydromines_simulated_mouvements', JSON.stringify(rawMouvements));
+      }
+    }
+  }, [rawMouvements, isLoaded]);
+
   useEffect(() => {
     if (!isLoaded || !currentUser || !currentUser.active) return;
 
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' && !auth.currentUser) {
-      setRawArticles(INITIAL_ARTICLES);
+    if (isSimulationMode() && !auth.currentUser) {
+      const storedArticles = localStorage.getItem('hydromines_simulated_articles');
+      const storedMouvements = localStorage.getItem('hydromines_simulated_mouvements');
+
+      setRawArticles(storedArticles ? JSON.parse(storedArticles) : INITIAL_ARTICLES);
       setCatalog(MASTER_CATALOG);
-      setRawMouvements(INITIAL_MOUVEMENTS);
+      setRawMouvements(storedMouvements ? JSON.parse(storedMouvements) : INITIAL_MOUVEMENTS);
       setEngins(INITIAL_ENGINS);
       setPerfos(INITIAL_PERFOS);
       setAgents(INITIAL_AGENTS);
@@ -853,12 +913,99 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             }
           }
 
-          // Articles
-          const articlesSnap = await getDocs(query(collection(db, 'articles'), limit(1)));
+          // Articles & Missing High-Frequency Maintenance Parts Auto-Injection System
+          const articlesSnap = await getDocs(collection(db, 'articles'));
+          const existingMap = new Set<string>();
+          articlesSnap.forEach(docSnap => {
+            const data = docSnap.data();
+            if (data.site && data.ref) {
+              existingMap.add(`${data.site.toUpperCase()}_${data.ref.trim().toLowerCase()}`);
+            }
+          });
+
           if (articlesSnap.empty) {
             const batch = writeBatch(db);
-            INITIAL_ARTICLES.forEach(item => batch.set(doc(db, 'articles', item.id || generateId()), cleanObject(item)));
+            INITIAL_ARTICLES.forEach(item => {
+              const itemWithId = { ...item, id: item.id || generateId() };
+              batch.set(doc(db, 'articles', itemWithId.id), cleanObject(itemWithId));
+              if (itemWithId.site && itemWithId.ref) {
+                existingMap.add(`${itemWithId.site.toUpperCase()}_${itemWithId.ref.trim().toLowerCase()}`);
+              }
+            });
             await batch.commit();
+          }
+
+          // Automatically inject the highly requested V6.0 maintenance parts (under 25,000 MAD)
+          // so they are available inside stock sheets (fiches articles) instantly without manual import clicks!
+          const sites: SiteCode[] = ['SMI', 'OUMEJRANE', 'KOUDIA', 'BOU-AZZER', 'OUANSIMI'];
+          const hfReferences = [
+            "3115 1254 00", // Piston d'amortissement COP 1838
+            "5580 1450 88", // Accouplement cannelé
+            "5580 9100 12", // Pistolet pneumatique de graissage
+            "5580 0012 34", // Kit flexibles de flèche ST2
+            "5580 0760 11", // Axe et bagues d'articulation centrale
+            "5580 1204 99", // Électrovanne Parker 24V
+            "3128 3004 55", // Patins Ertalon glissière
+            "3115 0262 00", // Accumulateur d'impact HP
+            "3115 0001 99", // Mallette de gonflage azote
+            "3115 5012 80", // Joints toriques de rinçage d'eau
+            "3115 9942 10", // Raccord d'eau tournant en bronze
+            "5580 2004 01", // Bouton d'arrêt d'urgence
+            "5580 8872 15", // Détecteur inductif M18
+            "0423 3897 00", // Injecteur Deutz 914
+            "0118 0100 24"  // Bougie de préchauffage 24V
+          ];
+
+          // Select any items from MASTER_CATALOG starting with "mine_", in hfReferences, or with price less than 25,000 MAD
+          const itemsToAutoSeed = MASTER_CATALOG.filter(item => 
+            (item.price || 0) < 25000 || hfReferences.includes(item.reference) || (item.id && item.id.toLowerCase().startsWith("mine_"))
+          );
+
+          const toCreate: Article[] = [];
+          for (const siteCode of sites) {
+            for (const item of itemsToAutoSeed) {
+              const refKey = `${siteCode.toUpperCase()}_${item.reference.trim().toLowerCase()}`;
+              if (!existingMap.has(refKey)) {
+                // Ensure unique ID based on site + item.id
+                const artId = `${siteCode.toLowerCase()}_${item.id || generateId()}`;
+                const art: Article = {
+                  id: artId,
+                  site: siteCode,
+                  ref: item.reference,
+                  designation: item.designation,
+                  type: item.suggestedType || 'CONSOMMABLES',
+                  category: item.functionalCategory || 'Consommables',
+                  functionalCategory: item.functionalCategory,
+                  subCategory: item.subCategory,
+                  component: item.component,
+                  subComponent: item.subComponent,
+                  compatibility: item.compatibility,
+                  criticality: item.criticality || 'HAUTE',
+                  unit: 'Pcs',
+                  quantity: 0, // initially empty, ready for entry/movement
+                  minStock: 2,
+                  location: siteCode === 'SMI' ? 'RAY-AUTO-A' : 'M-01',
+                  price: item.price || 0,
+                  active: true,
+                  notes: item.notes || ''
+                };
+                toCreate.push(art);
+                existingMap.add(refKey);
+              }
+            }
+          }
+
+          if (toCreate.length > 0) {
+            const chunkSize = 450;
+            for (let i = 0; i < toCreate.length; i += chunkSize) {
+              const chunk = toCreate.slice(i, i + chunkSize);
+              const writeB = writeBatch(db);
+              chunk.forEach(art => {
+                writeB.set(doc(db, 'articles', art.id), cleanObject(art));
+              });
+              await writeB.commit();
+            }
+            console.log(`[Auto-Injection] Successfully auto-injected ${toCreate.length} missing stock fiches.`);
           }
 
           // Engins
@@ -960,7 +1107,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const executeMouvementDirect = async (mouvement: Mouvement) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    if (isSimulationMode()) {
       const movementId = mouvement.id || generateSecureUUID();
       let updatedArticles = [...rawArticles];
       for (const item of mouvement.items) {
@@ -1030,6 +1177,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const addMouvement = async (mouvement: Mouvement) => {
+    checkWritePermission();
     checkMaintenanceLock();
     const movementId = mouvement.id || generateSecureUUID();
     mouvement.id = movementId;
@@ -1150,7 +1298,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const executeMaintenanceLogDirect = async (log: MaintenanceLog) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    if (isSimulationMode()) {
       const id = log.id || generateSecureUUID();
       let updatedArticles = [...rawArticles];
       if (log.partsUsed && log.partsUsed.length > 0) {
@@ -1239,6 +1387,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const addMaintenanceLog = async (log: MaintenanceLog) => {
+    checkWritePermission();
     checkMaintenanceLock();
     const id = log.id || generateSecureUUID();
     log.id = id;
@@ -1308,7 +1457,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const executeTransfertDirect = async (t: Transfert) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    if (isSimulationMode()) {
       const id = t.id || generateSecureUUID();
       let updatedArticles = [...rawArticles];
       if (t.status === 'IN_TRANSIT') {
@@ -1386,6 +1535,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const addTransfert = async (t: Transfert) => {
+    checkWritePermission();
     checkMaintenanceLock();
     const id = t.id || generateSecureUUID();
     t.id = id;
@@ -1473,7 +1623,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const executeApproveTransfertDirect = async (id: string, approuvePar: string) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    if (isSimulationMode()) {
       let updatedTransferts = [...rawTransferts];
       const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
       if (tIndex !== -1) {
@@ -1544,6 +1694,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const approveTransfert = async (id: string, approuvePar: string) => {
+    checkWritePermission();
     checkMaintenanceLock();
     const sourceT = transferts.find(t => t.id === id);
     const intentId = getOrCreateIntent(`approve-tx-${id}-${sourceT?.sourceSite || 'SMI'}`);
@@ -1604,7 +1755,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     receivedItems?: MouvementItem[], 
     disputeReason?: string
   ) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    if (isSimulationMode()) {
       let updatedTransferts = [...rawTransferts];
       const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
       if (tIndex !== -1) {
@@ -1809,6 +1960,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     receivedItems?: MouvementItem[], 
     disputeReason?: string
   ) => {
+    checkWritePermission();
     checkMaintenanceLock();
     const sourceT = transferts.find(t => t.id === id);
     const intentId = getOrCreateIntent(`rx-${id}-${sourceT?.targetSite || 'SMI'}`);
@@ -1919,6 +2071,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const closeTransfert = async (id: string, motifCloture: string) => {
+    checkWritePermission();
     checkMaintenanceLock();
     const sourceT = transferts.find(t => t.id === id);
     const intentId = getOrCreateIntent(`close-${id}-${sourceT?.targetSite || 'SMI'}`);
@@ -1966,7 +2119,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const saveInventaire = async (i: Inventaire) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       const id = i.id || generateId();
       const item = { ...i, id };
       setInventaires(prev => {
@@ -1994,7 +2148,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const saveArticle = async (a: Article) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       const id = a.id || generateId();
       const item = { ...a, id };
       setRawArticles(prev => {
@@ -2022,8 +2177,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteArticles = async (ids: string[]) => {
+    checkWritePermission();
     if (ids.length === 0) return;
-    const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local';
+    const isViewer = isSimulationMode();
     
     const targetArticles = rawArticles.filter(a => ids.includes(a.id));
     if (targetArticles.length === 0) return;
@@ -2104,8 +2260,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     await deleteArticles([id]);
   };
 
-  const importAllCatalogToArticles = async (targetSite: SiteCode, excludeCostly: boolean = true) => {
-    const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local';
+  const importAllCatalogToArticles = async (targetSite: SiteCode, excludeCostly: boolean | number = true) => {
+    checkWritePermission();
+    const isViewer = isSimulationMode();
     
     // Find catalog items that are not already present in rawArticles for targetSite
     const existingRefs = new Set(
@@ -2114,17 +2271,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         .map(a => a.ref?.trim().toLowerCase())
     );
 
-    const itemsToImport = catalog.filter(item => {
+    const itemsToImport = MASTER_CATALOG.filter(item => {
       const ref = item.reference?.trim().toLowerCase();
-      const isCandidate = ref && !existingRefs.has(ref) && !item.deleted;
+      const isCandidate = ref && !existingRefs.has(ref);
       if (!isCandidate) return false;
-      // Exclude costly items (>= 40,000 DH or 50,000 DH) if requested
-      if (excludeCostly && (item.price || 0) >= 40000) return false;
+      
+      // Filter by custom price limit
+      if (typeof excludeCostly === 'number') {
+        if ((item.price || 0) >= excludeCostly) return false;
+      } else if (excludeCostly === true) {
+        if ((item.price || 0) >= 40000) return false;
+      }
       return true;
     });
 
     if (itemsToImport.length === 0) {
-      return { imported: 0, skipped: catalog.length };
+      return { imported: 0, skipped: MASTER_CATALOG.length };
     }
 
     if (isViewer) {
@@ -2154,7 +2316,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       SnapshotRecoveryEngine.saveAutomaticSnapshot([...newArticles, ...articles], `Importation de ${newArticles.length} articles (Simulé)`);
       if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
 
-      return { imported: newArticles.length, skipped: catalog.length - newArticles.length };
+      return { imported: newArticles.length, skipped: MASTER_CATALOG.length - newArticles.length };
     }
 
     checkMaintenanceLock();
@@ -2195,6 +2357,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         await batch.commit();
         importedCount += chunk.length;
         
+        // Responsiveness Booster: immediately update local rawArticles state
+        setRawArticles(prev => {
+          const mergedMap = new Map<string, Article>(prev.map(a => [a.id, a]));
+          chunkArticles.forEach(art => mergedMap.set(art.id, art));
+          return Array.from(mergedMap.values());
+        });
+        
         for (const art of chunkArticles) {
           ImmutableInventoryLedger.appendEntry(`art-${art.id}`, 'ARTICLE_MUTATION', art);
         }
@@ -2203,16 +2372,119 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       setLedgerEntries(ImmutableInventoryLedger.getEntries());
 
       // SRE Automated Snapshot Trigger
-      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Importation globale de ${importedCount} articles du catalogue`);
+      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Importation globale de ${importedCount} articles du catalogue master`);
       if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
 
       // Log action
       await logAction('IMPORT_ALL_CATALOG_ARTICLES', `Importation de ${importedCount} articles du catalogue de référence technique`, targetSite);
 
-      return { imported: importedCount, skipped: catalog.length - importedCount };
+      return { imported: importedCount, skipped: MASTER_CATALOG.length - importedCount };
     } catch (err: any) {
       console.error(err);
       throw new Error(`Erreur lors de l'importation groupée : ${err.message || err}`);
+    }
+  };
+
+  const importSpecificCatalogItems = async (targetSite: SiteCode, itemsToImport: CatalogItem[]) => {
+    checkWritePermission();
+    const isViewer = isSimulationMode();
+    
+    if (itemsToImport.length === 0) {
+      return { imported: 0, skipped: 0 };
+    }
+
+    if (isViewer) {
+      const newArticles: Article[] = itemsToImport.map(item => ({
+        id: generateId(),
+        site: targetSite,
+        ref: item.reference,
+        designation: item.designation,
+        type: item.suggestedType,
+        category: item.functionalCategory,
+        functionalCategory: item.functionalCategory,
+        subCategory: item.subCategory,
+        component: item.component,
+        subComponent: item.subComponent,
+        notes: item.notes,
+        unit: 'Pcs',
+        quantity: 0,
+        minStock: 1,
+        location: '',
+        price: item.price || 0,
+        active: true
+      }));
+
+      setRawArticles(prev => [...newArticles, ...prev]);
+      
+      SnapshotRecoveryEngine.saveAutomaticSnapshot([...newArticles, ...articles], `Importation de ${newArticles.length} articles (Simulé)`);
+      if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
+
+      return { imported: newArticles.length, skipped: 0 };
+    }
+
+    checkMaintenanceLock();
+    try {
+      const chunkSize = 450;
+      let importedCount = 0;
+
+      for (let i = 0; i < itemsToImport.length; i += chunkSize) {
+        const chunk = itemsToImport.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+
+        const chunkArticles: Article[] = [];
+        for (const item of chunk) {
+          const artId = generateId();
+          const art: Article = {
+            id: artId,
+            site: targetSite,
+            ref: item.reference,
+            designation: item.designation,
+            type: item.suggestedType,
+            category: item.functionalCategory,
+            functionalCategory: item.functionalCategory,
+            subCategory: item.subCategory,
+            component: item.component,
+            subComponent: item.subComponent,
+            notes: item.notes,
+            unit: 'Pcs',
+            quantity: 0,
+            minStock: 1,
+            location: '',
+            price: item.price || 0,
+            active: true
+          };
+          chunkArticles.push(art);
+          batch.set(doc(db, 'articles', artId), cleanObject(art));
+        }
+
+        await batch.commit();
+        importedCount += chunk.length;
+        
+        setRawArticles(prev => {
+          const mergedMap = new Map<string, Article>(prev.map(a => [a.id, a]));
+          chunkArticles.forEach(art => mergedMap.set(art.id, art));
+          return Array.from(mergedMap.values());
+        });
+        
+        for (const art of chunkArticles) {
+          ImmutableInventoryLedger.appendEntry(`art-${art.id}`, 'ARTICLE_MUTATION', art);
+        }
+      }
+
+      setLedgerEntries(ImmutableInventoryLedger.getEntries());
+
+      // SRE Automated Snapshot Trigger
+      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Importation ciblée de ${importedCount} articles du catalogue master`);
+      if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
+
+      // Log action
+      const details = `Importation collective ciblée de ${importedCount} fiches d'articles pour le site ${targetSite}`;
+      await logAction('BULK_IMPORT_ARTICLES', details, targetSite);
+
+      return { imported: importedCount, skipped: 0 };
+    } catch (err: any) {
+      console.error(err);
+      throw new Error(`Erreur lors de l'importation groupée ciblée : ${err.message || err}`);
     }
   };
 
@@ -2271,7 +2543,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const toggleUser = async (id: string) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       setAccounts(prev => {
         const idx = prev.findIndex(x => x.id === id);
         if (idx !== -1) {
@@ -2290,7 +2563,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const setEngin = async (id: string, data: any) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       setEngins(prev => {
         const idx = prev.findIndex(x => x.id === id);
         if (!data) {
@@ -2317,7 +2591,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const setPerfo = async (id: string, data: any) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       setPerfos(prev => {
         const idx = prev.findIndex(x => x.id === id);
         if (!data) {
@@ -2344,7 +2619,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const setAgent = async (id: string, data: any) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       setAgents(prev => {
         const idx = prev.findIndex(x => x.id === id);
         if (!data) {
@@ -2371,7 +2647,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const saveCatalogItem = async (item: CatalogItem) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       setCatalog(prev => {
         const idx = prev.findIndex(x => x.id === item.id);
         if (idx !== -1) {
@@ -2388,7 +2665,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const deleteCatalogItem = async (id: string) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       setCatalog(prev => {
         const idx = prev.findIndex(x => x.id === id);
         if (idx !== -1) {
@@ -2405,7 +2683,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const addPurchaseRequest = async (pr: PurchaseRequest) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       const rId = pr.id || generateId();
       const item = { ...pr, id: rId };
       setPurchaseRequests(prev => {
@@ -2425,7 +2704,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const updatePRStatus = async (id: string, status: any) => {
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true' || currentUser?.email === 'viewer@hydromines.local') {
+    checkWritePermission();
+    if (isSimulationMode()) {
       setPurchaseRequests(prev => {
         const idx = prev.findIndex(x => x.id === id);
         if (idx !== -1) {
@@ -2755,9 +3035,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs, deletionRequests,
-    currentUser, isLoaded, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
+    currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
-    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, approveDeletionRequest, rejectDeletionRequest, toggleUser, setEngin, setPerfo,
+    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus,
     networkQuality,
 

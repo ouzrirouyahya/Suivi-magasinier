@@ -224,7 +224,7 @@ async function startServer() {
 
       const { messages, context } = req.body;
       
-      const systemInstruction = `Tu es l'Expert Gemini d'Hydromines, spécialisé dans la maintenance des équipements miniers souterrains et la gestion de magasin.
+      const systemInstruction = `Tu es l'Expert Gemini d'Hydromines, spécialisé dans la maintenance des équipements miniers au jour et la gestion de magasin au jour.
       Ton expertise inclut :
       - Les engins de forage (Jumbos, Simbas).
       - Les perforateurs Montabert (modèles T23 et T28).

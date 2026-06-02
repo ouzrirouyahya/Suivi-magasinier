@@ -299,6 +299,14 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
                       </span>
                     </div>
 
+                    {(article.price || 0) < 25000 && (
+                      <div className="mb-2 w-fit">
+                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 text-[9px] font-black uppercase rounded border border-emerald-500/15" title="Importée comme fiche définitive durable < 25K MAD">
+                          Fiche Définitive &lt; 25K MAD
+                        </span>
+                      </div>
+                    )}
+
                     <h3 className="text-xl font-black text-slate-900 leading-snug mb-2 min-h-[3.5rem] line-clamp-2">
                       {article.designation}
                     </h3>
@@ -385,6 +393,11 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
                     <div className="flex items-center gap-4 mt-3 flex-wrap">
                       <code className="text-lg font-black bg-slate-100 px-3 py-1 rounded-xl text-slate-500 uppercase tracking-widest border border-slate-200/50">#{article.ref}</code>
                       <span className="text-lg font-black text-slate-400 tracking-tighter uppercase">• {article.location}</span>
+                      {(article.price || 0) < 25000 && (
+                        <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-700 text-[10px] font-black uppercase rounded-lg border border-emerald-500/15" title="Importée comme fiche définitive durable < 25K MAD">
+                          Fiche Définitive &lt; 25K MAD
+                        </span>
+                      )}
                     </div>
                   </div>
                 </td>

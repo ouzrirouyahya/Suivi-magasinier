@@ -7,9 +7,15 @@ import loginImage from '../assets/images/hydromines_login_banner_clean.png';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 const LoginPage: React.FC = () => {
+  const [authError, setAuthError] = React.useState<string | null>(null);
+
   const handleLogin = async () => {
     try {
+      setAuthError(null);
       console.log("[Google Auth] Initialisation du flux Google Sign-In...");
+      localStorage.removeItem('hydromines_viewer_mode');
+      localStorage.removeItem('hydromines_bypass_email');
+      sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
       googleProvider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, googleProvider);
       console.log("[Google Auth] Connexion réussie ! Utilisateur Authentifié :", result.user.email);
@@ -25,14 +31,18 @@ const LoginPage: React.FC = () => {
       } else if (error.code === 'auth/cancelled-popup-request') {
         console.warn("[Google Auth] Popup refermé par l'utilisateur.");
         return; // Ignore if user just closed the popup
+      } else if (error.code === 'auth/popup-closed-by-user') {
+        message = "La fenêtre de connexion Google a été fermée ou bloquée par l'environnement d'iframe. Ouvrez l'application dans un nouvel onglet.";
       }
       
+      setAuthError(error.code || 'unknown');
       toast.error(message, { duration: 8000 });
     }
   };
 
   const handleViewerLogin = () => {
     localStorage.setItem('hydromines_viewer_mode', 'true');
+    localStorage.removeItem('hydromines_bypass_email');
     sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
     toast.success("Accès Visiteur Démo Activé. Mode Lecture Seule.");
     setTimeout(() => {
@@ -199,6 +209,22 @@ const LoginPage: React.FC = () => {
                  Accès Visiteur Démo
               </button>
             </div>
+
+            {authError && (
+              <div className="mt-4 bg-rose-50/90 border border-rose-200 p-4 rounded-2xl text-left space-y-2 text-xs leading-normal">
+                <div className="flex items-center gap-2 text-rose-700 font-extrabold uppercase tracking-wider text-[10px]">
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                  Guide de Résolution de Connexion
+                </div>
+                <p className="text-slate-600 font-bold text-[9px] tracking-wide uppercase">
+                  L'environnement de prévisualisation (iframe) AI Studio bloque les pop-ups Google de manière restrictive.
+                </p>
+                <div className="space-y-1.5 bg-white/80 p-2.5 rounded-xl border border-slate-100 font-medium text-[10px] text-slate-500 uppercase tracking-tight">
+                  <p>1. <strong className="text-sky-600">Recommandé</strong> : Ouvrez l'application dans un nouvel onglet en cliquant sur l'icône de flèche externe tout en haut à droite pour autoriser le dialogue Google de façon sécurisée.</p>
+                  <p>2. <strong className="text-slate-600">Alternative</strong> : Enregistrez le domaine ou autorisez les cookies tiers du service.</p>
+                </div>
+              </div>
+            )}
 
             {/* Security certification & trust anchors */}
             <div className="mt-8 space-y-4">

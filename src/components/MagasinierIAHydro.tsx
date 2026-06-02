@@ -349,9 +349,9 @@ export function MagasinierIAHydro() {
         } else if (query.includes("dorment") || query.includes("dormant") || query.includes("lent") || query.includes("rotation")) {
           reply = `**RECONSTITUTION DU CAPITAL DORMANT (Surplus physique) :**\n\nNous recensons **${liveStats.dormantCount} articles** stockés n'ayant subi aucun flux sur les 60 derniers jours sur ${activeSite === 'ALL' ? 'l\'ensemble des bases' : `la base de ${activeSite}`}.\n\nExemples d'immobilisation de trésorerie :\n${liveStats.dormantSample.map(d => `- **${d.ref}** : ${d.designation} (Valeur unitaire : ${d.price || 45} EUR, Qté active : ${d.quantity})`).join('\n')}\n\n*Note logistique :* Les pièces devraient être envoyées en priorité vers les sites ayant un "Transfert Imbalance" prononcé.`;
         } else if (query.includes("mouvement") || query.includes("timeline") || query.includes("sorties") || query.includes("entrées")) {
-          reply = `**RESTITUTION DE L'ACTIVITÉ OPÉRATIONNELLE :**\n\nSur les dernières 24 heures, nous comptabilisons **${liveStats.dailyMovementCount} mouvements** réels en base.\nLe flux dominant actuel est constitué de **Sorties de piécages (filtres/flexibles)** pour les engins de fond.\n\nVous trouverez le détail chronologique filtré dans le panneau inférieur **Journal Industriel en Direct(Operational Timeline)**.`;
+          reply = `**RESTITUTION DE L'ACTIVITÉ OPÉRATIONNELLE :**\n\nSur les dernières 24 heures, nous comptabilisons **${liveStats.dailyMovementCount} mouvements** réels en base.\nLe flux dominant actuel est constitué de **Sorties de piécages (filtres/flexibles)** pour les engins au jour.\n\nVous trouverez le détail chronologique filtré dans le panneau inférieur **Journal Industriel en Direct(Operational Timeline)**.`;
         } else if (query.includes("synchronisation") || query.includes("sync") || query.includes("dlq") || query.includes("panne")) {
-          reply = `**MÉTÉO DES SERVEURS DE DÉPÔT ET DE LA CONCORDANCE CLOUD :**\n\n- **Retry Queue actis :** Aucun en attente d'envoi.\n- **Dead Letter Queue (DLQ) :** ${dlq.length} blocages résiduels identifiés.\nLe site **BOU-AZZER** présente une latence de synchronisation s'élevant à 1200ms dû aux conditions souterraines, mais l'intégrité transactionnelle (RCGL) demeure blindée à 100%.`;
+          reply = `**MÉTÉO DES SERVEURS DE DÉPÔT ET DE LA CONCORDANCE CLOUD :**\n\n- **Retry Queue actis :** Aucun en attente d'envoi.\n- **Dead Letter Queue (DLQ) :** ${dlq.length} blocages résiduels identifiés.\nLe site **BOU-AZZER** présente une latence de synchronisation transitoire de 1200ms, mais l'intégrité transactionnelle (RCGL) demeure blindée à 100%.`;
         } else {
           reply = `Bonjour, en tant que Storekeeper en chef supervisant l'IA, j'analyse votre message : "${userText}".\n\nVoici le point stratégique d'inventaire opérationnel :\n- Valeur totale valorisée du site actif : **${liveStats.totalStockValue.toLocaleString('fr-FR')} EUR**.\n- Nombre de SKUs suivis sur ce périmètre : **${liveStats.totalArticles}**.\n- Taux moyen de corrections d'inventaires : **${liveStats.adjustmentRate}%**.\n\nN'hésitez pas à spécifier votre demande en demandant par exemple : "Quels articles dorment depuis longtemps ?" ou "Montre les anomalies suspectes".`;
         }
@@ -408,7 +408,7 @@ export function MagasinierIAHydro() {
               Assistant Opérationnel Magasin
             </h2>
             <p className="text-sm text-slate-600 font-bold uppercase tracking-wider leading-relaxed">
-              Supervision des opérations d'inventaire souterrain, vérification des flux logistiques et détection d'irrégularités.
+              Supervision des opérations d'inventaire, vérification des flux logistiques et détection d'irrégularités.
             </p>
           </div>
 

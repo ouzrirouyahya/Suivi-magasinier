@@ -17,7 +17,7 @@ export function AIChatExpert({ site, articles }: AIChatExpertProps) {
   const [messages, setMessages] = React.useState<Message[]>([
     { 
       role: 'assistant', 
-      content: "Bonjour ! Je suis l'expert IA dédié à l'univers Hydromines. Spécialiste des opérations minières souterraines et des équipements Montabert, je vous accompagne dans la gestion de stock et la maintenance technique de votre parc engins. Posez-moi vos questions !" 
+      content: "Bonjour ! Je suis l'expert IA dédié à l'univers Hydromines. Spécialiste des opérations minières et des équipements Montabert, je vous accompagne dans la gestion de stock et la maintenance technique de votre parc d'engins et perforateurs au jour. Posez-moi vos questions !" 
     }
   ]);
   const [input, setInput] = React.useState('');

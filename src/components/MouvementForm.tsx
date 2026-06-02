@@ -83,11 +83,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [notes, setNotes] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>(type === 'SORTIE' ? '' : 'ALL');
   const [status, setStatus] = useState<'BROUILLON' | 'VALIDE'>('VALIDE');
-  const [items, setItems] = useState<MouvementItem[]>(() => {
+  const [items, setItems] = useState<(MouvementItem & { lineId: string })[]>(() => {
     if (initialArticleId) {
       const art = articles.find(a => a.id === initialArticleId);
       if (art) {
-        return [{ articleId: art.id, quantity: 1, price: art.price ?? 0 }];
+        return [{ lineId: generateId(), articleId: art.id, quantity: 1, price: art.price ?? 0 }];
       }
     }
     return [];
@@ -152,7 +152,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       try {
         await onArticleCreate(newArticle);
         setLocalCreatedArticles(prev => [...prev, newArticle]);
-        setItems([...items, { articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
+        const newLineId = generateId();
+        setItems(prev => [...prev, { lineId: newLineId, articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
         setValidationError(null);
         setSearch('');
         setShowResults(false);
@@ -167,19 +168,24 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const isMachineRelated = categoryFilter === 'ENGINS' || categoryFilter === 'PERFORATEURS';
 
   const addItem = (article: Article) => {
-    if (items.some(i => i.articleId === article.id)) {
-      setItems(items.map(i => i.articleId === article.id ? { ...i, quantity: i.quantity + 1 } : i));
-      toast.info(`Quantité incrémentée pour : "${article.designation}"`);
-      return;
-    }
     if (type === 'SORTIE' && article.quantity === 0) {
       setValidationError(`ERREUR : Stock épuisé pour "${article.designation}".`);
       return;
     }
-    setItems([...items, { articleId: article.id, quantity: 1, price: article.price ?? 0 }]);
+    const newLineId = generateId();
+    setItems(prev => [...prev, { 
+      lineId: newLineId, 
+      articleId: article.id, 
+      quantity: 1, 
+      price: article.price ?? 0,
+      beneficiaryId: '',
+      beneficiaryName: '',
+      beneficiaryService: ''
+    }]);
     setValidationError(null);
     setSearch('');
     setShowResults(false);
+    toast.success(`Ajouté au bon : "${article.designation}"`);
   };
 
   const handleQuickAdd = async (quickItem: { reference: string; designation: string; price: number; unit: string; suggestedType: string }) => {
@@ -220,7 +226,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
         try {
           await onArticleCreate(newArticle);
           setLocalCreatedArticles(prev => [...prev, newArticle]);
-          setItems([...items, { articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
+          const newLineId = generateId();
+          setItems(prev => [...prev, { lineId: newLineId, articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
           setValidationError(null);
           toast.success(`Nouveau stock initialisé : "${newArticle.designation}"`);
         } catch (err: any) {
@@ -253,7 +260,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       try {
         await onArticleCreate(newArticle);
         setLocalCreatedArticles(prev => [...prev, newArticle]);
-        setItems([...items, { articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
+        const newLineId = generateId();
+        setItems(prev => [...prev, { lineId: newLineId, articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
         setValidationError(null);
         toast.success(`Nouveau stock créé : "${newArticle.designation}"`);
       } catch (err: any) {
@@ -262,19 +270,37 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
   };
 
-  const removeItem = (articleId: string) => setItems(items.filter(i => i.articleId !== articleId));
+  const removeItem = (lineId: string) => setItems(items.filter(i => i.lineId !== lineId));
 
-  const updateItem = (articleId: string, updates: Partial<MouvementItem>) => {
+  const updateItem = (lineId: string, updates: Partial<MouvementItem>) => {
     setItems(items.map(i => {
-      if (i.articleId === articleId) {
-        const article = articles.find(a => a.id === articleId) || localCreatedArticles.find(a => a.id === articleId);
+      if (i.lineId === lineId) {
+        const article = articles.find(a => a.id === i.articleId) || localCreatedArticles.find(a => a.id === i.articleId);
         const validQty = updates.quantity !== undefined ? (isNaN(updates.quantity) ? i.quantity : updates.quantity) : i.quantity;
         const validPrice = updates.price !== undefined ? (isNaN(updates.price) ? i.price : updates.price) : i.price;
+        const beneficiaryId = updates.beneficiaryId !== undefined ? updates.beneficiaryId : i.beneficiaryId;
+        const beneficiaryName = updates.beneficiaryName !== undefined ? updates.beneficiaryName : i.beneficiaryName;
+        const beneficiaryService = updates.beneficiaryService !== undefined ? updates.beneficiaryService : i.beneficiaryService;
+
         if (type === 'SORTIE' && article && updates.quantity !== undefined && validQty > article.quantity) {
           setValidationError(`Stock insuffisant (${article.quantity})`);
-          return { ...i, ...updates, quantity: article.quantity, price: validPrice };
+          return { 
+            ...i, 
+            quantity: article.quantity, 
+            price: validPrice,
+            beneficiaryId,
+            beneficiaryName,
+            beneficiaryService
+          };
         }
-        return { ...i, ...updates, quantity: validQty, price: validPrice };
+        return { 
+          ...i, 
+          quantity: validQty, 
+          price: validPrice,
+          beneficiaryId,
+          beneficiaryName,
+          beneficiaryService
+        };
       }
       return i;
     }));
@@ -317,7 +343,16 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       motif: `${interventionType}: ${motif}`,
       notes,
       status,
-      items
+      items: items.map(({ lineId, ...rest }) => ({
+        articleId: rest.articleId,
+        quantity: rest.quantity,
+        price: rest.price,
+        lotNumber: rest.lotNumber,
+        expiryDate: rest.expiryDate,
+        beneficiaryId: rest.beneficiaryId || undefined,
+        beneficiaryName: rest.beneficiaryName || undefined,
+        beneficiaryService: rest.beneficiaryService || undefined,
+      }))
     };
 
     onSubmit(mouvement);
@@ -358,7 +393,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               {[{ id: 'ENGINS', label: 'Engins', icon: Truck }, { id: 'PERFORATEURS', label: 'Perfos', icon: Drill }, { id: 'EPI', label: 'EPI', icon: User }, { id: 'OUTILS_TRAVAUX', label: 'Outils', icon: LayoutGrid }, { id: 'AUTRES', label: 'Autres', icon: Plus }].map(cat => (
                 <button
                   key={cat.id} type="button"
-                  onClick={() => { setCategoryFilter(cat.id); setItems([]); setShowResults(false); }}
+                  onClick={() => { setCategoryFilter(cat.id); setShowResults(false); }}
                   className={cn(
                     "flex flex-col items-center gap-2 p-2 rounded-xl transition-all border-2", 
                     categoryFilter === cat.id 
@@ -695,7 +730,10 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               <thead>
                 <tr className="border-b border-slate-100 text-slate-400 uppercase text-xs font-black tracking-widest">
                   <th className="text-left py-6 px-4">Article</th>
-                  <th className="text-right py-6 w-48 px-4 font-black text-sky-600">Prix Unit. (MAD)</th>
+                  {type === 'SORTIE' && (
+                    <th className="text-left py-6 px-4">Bénéficiaire individuel (Ouvrier/Mineur)</th>
+                  )}
+                  <th className="text-right py-6 w-40 px-4 font-black text-sky-600">Prix Unit. (MAD)</th>
                   <th className="text-center py-6 w-32 px-4">Quantité</th>
                   <th className="text-right py-6 w-16 px-4"></th>
                 </tr>
@@ -704,32 +742,66 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                 {items.map(item => {
                   const article = articles.find(a => a.id === item.articleId) || localCreatedArticles.find(a => a.id === item.articleId);
                   return (
-                    <tr key={item.articleId} className="group hover:bg-slate-50/50 transition-colors">
+                    <tr key={item.lineId} className="group hover:bg-slate-50/50 transition-colors">
                       <td className="py-6 px-4">
-                        <p className="font-black text-xl text-slate-900 leading-tight uppercase tracking-tight">{article?.designation || "Nouvel article"}</p>
-                        <p className="text-sm font-mono font-black text-slate-400 uppercase tracking-widest mt-1">{article?.ref}</p>
+                        <p className="font-black text-lg text-slate-900 leading-tight uppercase tracking-tight">{article?.designation || "Nouvel article"}</p>
+                        <p className="text-xs font-mono font-black text-slate-400 uppercase tracking-widest mt-1">
+                          {article?.ref} | <span className="text-sky-600 font-extrabold">Stock: {article?.quantity ?? 0}</span>
+                        </p>
                       </td>
+                      {type === 'SORTIE' && (
+                        <td className="py-6 px-4">
+                          <select 
+                            className="w-full h-12 text-xs font-black px-3 rounded-xl border-2 border-slate-100 bg-white shadow-sm focus:border-sky-500 outline-none"
+                            value={item.beneficiaryId || ''}
+                            onChange={(e) => {
+                              const selectedAgentId = e.target.value;
+                              const selectedAgent = agents.find(a => a.id === selectedAgentId);
+                              if (selectedAgent) {
+                                updateItem(item.lineId, {
+                                  beneficiaryId: selectedAgent.id,
+                                  beneficiaryName: `${selectedAgent.lastname} ${selectedAgent.firstname}`,
+                                  beneficiaryService: selectedAgent.service
+                                });
+                              } else {
+                                updateItem(item.lineId, {
+                                  beneficiaryId: '',
+                                  beneficiaryName: '',
+                                  beneficiaryService: ''
+                                });
+                              }
+                            }}
+                          >
+                            <option value="">SÉLECTIONNER UN TRAVAILLEUR...</option>
+                            {agents.filter(a => a.site === site).map(a => (
+                              <option key={a.id} value={a.id}>
+                                {a.lastname} {a.firstname} ({a.fonction || 'MINEUR'} - {a.service})
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                      )}
                       <td className="py-6 px-4">
                         <input 
                           type="number" 
                           step="0.01" 
-                          className="w-full h-12 text-right p-4 rounded-xl border border-slate-200 font-black text-xl bg-white shadow-inner focus:border-sky-500 outline-none" 
+                          className="w-full h-12 text-right p-4 rounded-xl border border-slate-200 font-black text-base bg-white shadow-inner focus:border-sky-500 outline-none" 
                           value={item.price} 
-                          onChange={(e) => updateItem(item.articleId, { price: Number(e.target.value) })} 
+                          onChange={(e) => updateItem(item.lineId, { price: Number(e.target.value) })} 
                         />
                       </td>
                       <td className="py-6 px-4">
                         <input 
                           type="number" 
                           min="1" 
-                          className="w-full h-12 text-center p-4 rounded-xl border-2 border-slate-100 font-black text-2xl bg-white focus:border-sky-500 outline-none" 
+                          className="w-full h-12 text-center p-4 rounded-xl border-2 border-slate-100 font-black text-lg bg-white focus:border-sky-500 outline-none" 
                           value={item.quantity} 
-                          onChange={(e) => updateItem(item.articleId, { quantity: Number(e.target.value) })} 
+                          onChange={(e) => updateItem(item.lineId, { quantity: Number(e.target.value) })} 
                         />
                       </td>
                       <td className="py-6 px-4 text-right">
-                        <button type="button" onClick={() => removeItem(item.articleId)} className="w-12 h-12 flex items-center justify-center text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all">
-                          <Trash2 className="w-6 h-6" />
+                        <button type="button" onClick={() => removeItem(item.lineId)} className="w-10 h-10 flex items-center justify-center text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all cursor-pointer">
+                          <Trash2 className="w-5 h-5" />
                         </button>
                       </td>
                     </tr>

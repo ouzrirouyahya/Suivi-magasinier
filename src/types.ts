@@ -143,6 +143,9 @@ export interface MouvementItem {
   price: number;
   lotNumber?: string; // Suivi par lot
   expiryDate?: string; // Date d'expiration
+  beneficiaryId?: string; // ID of worker receiving the item
+  beneficiaryName?: string; // Name of worker receiving the item
+  beneficiaryService?: string; // Service of worker receiving the item
 }
 
 export interface Mouvement {
@@ -190,6 +193,7 @@ export interface AgentMaster {
   lastname: string;
   service: string;
   site: SiteCode;
+  fonction?: string; // Ex: MINEUR, CHEF D'EQUIPE, MECANICIEN, COMMIS
 }
 
 export interface Transfert {

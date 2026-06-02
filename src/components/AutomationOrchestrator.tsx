@@ -216,7 +216,7 @@ export default function AutomationOrchestrator() {
       quantity: 50,
       createdAt: '2026-05-22T10:00:00Z',
       forensicLogs: [
-        '[10:00] Capteur sonore souterrain dépasse le seuil critique (Alerte OMS).',
+        '[10:00] Niveau sonore d\'atelier dépasse le seuil critique (Alerte OMS).',
         '[10:02] Réquisition autorisée sous signature électronique.',
         '[10:15] Approuvé par le Superviseur.'
       ]

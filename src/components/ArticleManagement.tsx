@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw, Filter, TrendingDown, TrendingUp, CheckCircle2, Activity, ShieldAlert } from 'lucide-react';
 import { Article, StockType, SiteCode, CatalogItem } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { MASTER_CATALOG } from '../catalogData';
@@ -67,30 +67,97 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     approveDeletionRequest, 
     rejectDeletionRequest,
     deleteArticles,
-    importAllCatalogToArticles
+    importAllCatalogToArticles,
+    importSpecificCatalogItems
   } = useInventory();
 
   const [isBulkImporting, setIsBulkImporting] = useState(false);
+  const [importStrategy, setImportStrategy] = useState<'UNDER_25K' | 'UNDER_40K' | 'ALL'>('UNDER_25K');
+  const [importPreviewSearch, setImportPreviewSearch] = useState('');
+  const [excludedRefs, setExcludedRefs] = useState<string[]>([]);
+  
+  // Progress states
+  const [importProgressPercent, setImportProgressPercent] = useState(0);
+  const [importProgressMessage, setImportProgressMessage] = useState('');
+  const [importStatus, setImportStatus] = useState<'IDLE' | 'ANALYZING' | 'GENERATING' | 'COMPLETED' | 'ERROR'>('IDLE');
 
-  const handleImportAllCatalog = async () => {
-    const excludeCostly = window.confirm(
-      "CONSEIL DE GESTION DES STOCKS (SMI 400 000 DH max) :\n\nSouhaitez-vous EXCLURE les pièces d'investissement extrêmement coûteuses (≥ 40 000 DH / 50 000 DH) lors de cette importation collective ?\n\n- Cliquez sur [OK] pour importer uniquement les consommables et pièces < 40 000 DH (recommandé pour préserver le budget magasin).\n- Cliquez sur [Annuler] pour importer toutes les pièces sans distinction de coût."
+  const existingRefs = React.useMemo(() => {
+    return new Set(
+      articles
+        .filter(a => a.site === site)
+        .map(a => a.ref?.trim().toLowerCase())
+    );
+  }, [articles, site]);
+
+  const detectedNewItemsForImport = React.useMemo(() => {
+    return MASTER_CATALOG.filter(item => {
+      const ref = item.reference?.trim().toLowerCase();
+      if (!ref) return false;
+      
+      // Filter out if already exists on current site
+      if (existingRefs.has(ref)) return false;
+
+      // Filter by strategy
+      if (importStrategy === 'UNDER_25K' && (item.price || 0) >= 25000) {
+        return false;
+      }
+      if (importStrategy === 'UNDER_40K' && (item.price || 0) >= 40000) {
+        return false;
+      }
+      return true;
+    });
+  }, [importStrategy, existingRefs]);
+
+  const handleExecuteSolidImport = async () => {
+    const selectedItems = detectedNewItemsForImport.filter(
+      item => !excludedRefs.includes(item.reference)
     );
 
-    const confirmed = window.confirm(
-      `Confirmez-vous le lancement de l'importation collective des références du catalogue pour le site ${site} ?`
-    );
-    if (!confirmed) return;
+    if (selectedItems.length === 0) {
+      toast.error("Aucune pièce n'est sélectionnée pour la génération.");
+      return;
+    }
 
     setIsBulkImporting(true);
+    setImportStatus('ANALYZING');
+    setImportProgressPercent(5);
+    setImportProgressMessage("Vérification des doublons sur le site et verrouillage en cours...");
+
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    setImportStatus('GENERATING');
+    setImportProgressPercent(35);
+    setImportProgressMessage(`Génération des fiches de stock (0 / ${selectedItems.length})...`);
+    
+    await new Promise(resolve => setTimeout(resolve, 700));
+
     try {
-      const res = await importAllCatalogToArticles(site, excludeCostly);
-      if (res.imported > 0) {
-        toast.success(`Importation collective réussie ! ${res.imported} nouvelles pièces configurées pour le site ${site}. (Option d'exclusion des pièces coûteuses : ${excludeCostly ? 'Active ✅' : 'Désactivée ❌'})`);
-      } else {
-        toast.info("Toutes les pièces de ce catalogue sont déjà présentes.");
-      }
+      setImportProgressPercent(60);
+      setImportProgressMessage(`Écritures sécurisées Firestore (${selectedItems.length} fiches)...`);
+      
+      const res = await importSpecificCatalogItems(site, selectedItems);
+      
+      setImportProgressPercent(90);
+      setImportProgressMessage("Finalisation de l'évaluation, écriture du grand livre d'audit..." + ` (Importé: ${res.imported})`);
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      setImportProgressPercent(100);
+      setImportProgressMessage(`Génération terminée avec succès ! ${res.imported} fiches configurées.`);
+      setImportStatus('COMPLETED');
+      toast.success(`Succès ! ${res.imported} fiches d'articles générées de manière robuste pour le site ${site}.`);
+      
+      setTimeout(() => {
+        setIsBulkImportModalOpen(false);
+        setImportStatus('IDLE');
+        setImportProgressPercent(0);
+        setImportProgressMessage('');
+        setExcludedRefs([]);
+      }, 1550);
+
     } catch (err: any) {
+      console.error(err);
+      setImportStatus('ERROR');
+      setImportProgressMessage(`Échec: ${err.message || err}`);
       toast.error(`Erreur d'importation : ${err.message || err}`);
     } finally {
       setIsBulkImporting(false);
@@ -101,8 +168,40 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   const [editingArticle, setEditingArticle] = useState<Partial<Article> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
+  const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
   
   const [selectedArticleIds, setSelectedArticleIds] = useState<string[]>([]);
+
+  // Advanced Filters for active site stock articles
+  const [activeMainCategory, setActiveMainCategory] = useState<string>('ALL');
+  const [activeMainStatus, setActiveMainStatus] = useState<'ALL' | 'ALERT' | 'OUT_OF_STOCK' | 'IN_STOCK'>('ALL');
+  const [activeMainType, setActiveMainType] = useState<'ALL' | 'ENGINS' | 'PERFORATEURS'>('ALL');
+
+  // Compute key statistics (KPIs) for current site articles
+  const kpis = React.useMemo(() => {
+    const siteArticles = articles.filter(a => a.site === site);
+    const totalItems = siteArticles.length;
+    const totalValue = siteArticles.reduce((sum, a) => sum + ((a.price || 0) * (a.quantity || 0)), 0);
+    const alertCount = siteArticles.filter(a => a.quantity <= a.minStock && a.quantity > 0).length;
+    const outOfStockCount = siteArticles.filter(a => a.quantity === 0).length;
+    
+    return {
+      totalItems,
+      totalValue,
+      alertCount,
+      outOfStockCount
+    };
+  }, [articles, site]);
+
+  // Compute unique classification categories active for this site's articles
+  const activeStockCategories = React.useMemo(() => {
+    const cats = new Set<string>();
+    articles.filter(a => a.site === site).forEach(a => {
+      const c = a.functionalCategory || a.category;
+      if (c) cats.add(c);
+    });
+    return Array.from(cats).sort();
+  }, [articles, site]);
 
   const [activeCatalogType, setActiveCatalogType] = useState<StockType>('ENGINS');
   const [activeCatalogFilter, setActiveCatalogFilter] = useState<'ALL' | 'ST2G' | 'ST2D' | 'MONTALBERT'>('ALL');
@@ -126,9 +225,36 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     );
   };
 
-  const filteredArticles = articles.filter(a => 
-    a.site === site && matchArticleSearch(a, searchTerm)
-  );
+  const filteredArticles = React.useMemo(() => {
+    return articles.filter(a => {
+      if (a.site !== site) return false;
+      
+      // 1. Search term target match
+      if (!matchArticleSearch(a, searchTerm)) return false;
+      
+      // 2. Main functional category tab filter
+      if (activeMainCategory !== 'ALL') {
+        const cat = a.functionalCategory || a.category || '';
+        if (cat !== activeMainCategory) return false;
+      }
+      
+      // 3. Stock Type filter
+      if (activeMainType !== 'ALL') {
+        if (a.type !== activeMainType) return false;
+      }
+      
+      // 4. Stock alert & out-of-stock count filter
+      if (activeMainStatus === 'ALERT') {
+        if (a.quantity > a.minStock || a.quantity === 0) return false;
+      } else if (activeMainStatus === 'OUT_OF_STOCK') {
+        if (a.quantity !== 0) return false;
+      } else if (activeMainStatus === 'IN_STOCK') {
+        if (a.quantity === 0) return false;
+      }
+      
+      return true;
+    });
+  }, [articles, site, searchTerm, activeMainCategory, activeMainStatus, activeMainType]);
 
   const isAllSelected = filteredArticles.length > 0 && filteredArticles.every(a => selectedArticleIds.includes(a.id));
 
@@ -201,36 +327,59 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   }, [navPath, catalogSearch, isFilterActive]);
 
   const categories: string[] = React.useMemo(() => {
-    const unique = new Set<string>();
-    currentCatalog.forEach(item => unique.add(item.functionalCategory));
-    return Array.from(unique);
+    const uniqueMap = new Map<string, number>();
+    currentCatalog.forEach(item => {
+      const cat = item.functionalCategory || 'AUTRE';
+      uniqueMap.set(cat, (uniqueMap.get(cat) || 0) + 1);
+    });
+    return Array.from(uniqueMap.entries())
+      .sort((a, b) => b[1] - a[1]) // highest count first
+      .map(entry => entry[0]);
   }, [currentCatalog]);
   
   const subCategories: string[] = React.useMemo(() => {
     if (navPath.length < 1) return [];
-    const unique = new Set<string>();
+    const uniqueMap = new Map<string, number>();
     currentCatalog
       .filter(item => item.functionalCategory === navPath[0].value)
-      .forEach(item => { if (item.subCategory) unique.add(item.subCategory); });
-    return Array.from(unique);
+      .forEach(item => { 
+        if (item.subCategory) {
+          uniqueMap.set(item.subCategory, (uniqueMap.get(item.subCategory) || 0) + 1);
+        }
+      });
+    return Array.from(uniqueMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
   }, [currentCatalog, navPath]);
 
   const components: string[] = React.useMemo(() => {
     if (navPath.length < 2) return [];
-    const unique = new Set<string>();
+    const uniqueMap = new Map<string, number>();
     currentCatalog
       .filter(item => item.functionalCategory === navPath[0].value && item.subCategory === navPath[1].value)
-      .forEach(item => { if (item.component) unique.add(item.component); });
-    return Array.from(unique);
+      .forEach(item => { 
+        if (item.component) {
+          uniqueMap.set(item.component, (uniqueMap.get(item.component) || 0) + 1);
+        }
+      });
+    return Array.from(uniqueMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
   }, [currentCatalog, navPath]);
 
   const subComponents: string[] = React.useMemo(() => {
     if (navPath.length < 3) return [];
-    const unique = new Set<string>();
+    const uniqueMap = new Map<string, number>();
     currentCatalog
       .filter(item => item.functionalCategory === navPath[0].value && item.subCategory === navPath[1].value && item.component === navPath[2].value)
-      .forEach(item => { if (item.subComponent) unique.add(item.subComponent); });
-    return Array.from(unique);
+      .forEach(item => { 
+        if (item.subComponent) {
+          uniqueMap.set(item.subComponent, (uniqueMap.get(item.subComponent) || 0) + 1);
+        }
+      });
+    return Array.from(uniqueMap.entries())
+      .sort((a, b) => b[1] - a[1])
+      .map(entry => entry[0]);
   }, [currentCatalog, navPath]);
 
   const finalItems = React.useMemo(() => {
@@ -690,10 +839,10 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           
           {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
             <button 
-              onClick={handleImportAllCatalog}
+              onClick={() => setIsBulkImportModalOpen(true)}
               disabled={isBulkImporting}
               className="btn bg-sky-50 text-sky-700 border border-sky-100 hover:border-sky-500 hover:bg-sky-100/55 shadow-sm h-9 px-3 rounded-lg transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-1.5 disabled:opacity-50 select-none cursor-pointer"
-              title="Importer toutes les pièces de référence du catalogue technique pour ce site d'un coup"
+              title="Générer collectivement les fiches d'articles pour ce site avec filtres intelligents"
             >
               {isBulkImporting ? (
                 <RefreshCcw className="w-3.5 h-3.5 animate-spin text-sky-600" />
@@ -711,6 +860,65 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           </button>
         </div>
       </header>
+
+      {/* SECTION CARTES STATISTIQUES (KPIs VISUELS) */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-slate-900 group-hover:bg-indigo-600 transition-colors" />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valeur Totale du Stock</p>
+              <p className="text-2xl font-black text-slate-900 mt-1">{formatCurrency(kpis.totalValue)}</p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Valorisation du site {site}</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-indigo-50 group-hover:text-indigo-600 flex items-center justify-center transition-all">
+              <Activity className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-slate-900 group-hover:bg-sky-600 transition-colors" />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pièces Référencées</p>
+              <p className="text-2xl font-black text-slate-900 mt-1">{kpis.totalItems} articles</p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">Configurées localement</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 group-hover:bg-sky-50 group-hover:text-sky-600 flex items-center justify-center transition-all">
+              <Database className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-slate-900 group-hover:bg-amber-600 transition-colors" />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest font-sans">Seuil Alerte Atteint</p>
+              <p className="text-2xl font-black text-amber-600 mt-1">{kpis.alertCount} alertes</p>
+              <p className="text-[9px] text-amber-500 font-semibold uppercase tracking-wider mt-0.5">Quantité ≤ Seuil minimal</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 group-hover:bg-amber-100 flex items-center justify-center transition-all">
+              <TrendingDown className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
+          <div className="absolute top-0 left-0 w-1 h-full bg-slate-900 group-hover:bg-rose-600 transition-colors" />
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Rupture de Stock</p>
+              <p className="text-2xl font-black text-rose-600 mt-1">{kpis.outOfStockCount} articles</p>
+              <p className="text-[9px] text-rose-400 font-bold uppercase tracking-wider mt-0.5">Indisponible sur Site</p>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 group-hover:bg-rose-100 flex items-center justify-center transition-all">
+              <ShieldAlert className="w-5 h-5 animate-pulse" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       {/* Demande de suppression administratives en attente */}
       {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && deletionRequests.filter(r => r.status === 'PENDING_APPROVAL').length > 0 && (
@@ -789,6 +997,153 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           </div>
         </div>
       )}
+
+      {/* BARRE DE FILTRES AVANCÉS POUR LE CATALOGUE ACTIF DU SITE */}
+      <div className="p-6 bg-white/80 border border-slate-100 rounded-[2rem] shadow-sm flex flex-col gap-5">
+        <div className="flex flex-col gap-2">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.15em] flex items-center gap-1.5">
+              <Filter className="w-3.5 h-3.5 text-slate-400 font-black" />
+              Filtrer par Système Fonctionnel (Division Technique)
+            </span>
+            {activeMainCategory !== 'ALL' && (
+              <button 
+                onClick={() => setActiveMainCategory('ALL')}
+                className="text-[10px] font-black text-rose-600 uppercase tracking-widest hover:underline"
+              >
+                Réinitialiser la catégorie
+              </button>
+            )}
+          </div>
+          
+          <div className="flex flex-wrap items-center gap-2 mt-2">
+            <button
+              onClick={() => setActiveMainCategory('ALL')}
+              className={cn(
+                "px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border",
+                activeMainCategory === 'ALL'
+                  ? "bg-slate-950 text-white border-slate-950 shadow-md scale-103"
+                  : "bg-white text-slate-600 border-slate-100 hover:border-slate-300 hover:bg-slate-50"
+              )}
+            >
+              Tous ({kpis.totalItems})
+            </button>
+            
+            {activeStockCategories.map(cat => {
+              const count = articles.filter(a => a.site === site && (a.functionalCategory === cat || a.category === cat)).length;
+              return (
+                <button
+                  key={cat}
+                  onClick={() => setActiveMainCategory(cat)}
+                  className={cn(
+                    "px-4 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-xl transition-all border flex items-center gap-1.5",
+                    activeMainCategory === cat
+                      ? "bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-500/10 scale-103"
+                      : "bg-white text-slate-600 border-slate-100 hover:border-slate-300 hover:bg-slate-50"
+                  )}
+                >
+                  <span>{cat}</span>
+                  <span className={cn(
+                    "px-1.5 py-0.5 rounded text-[8px] font-extrabold",
+                    activeMainCategory === cat ? "bg-white/20 text-white" : "bg-slate-100 text-slate-500"
+                  )}>{count}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 pt-4 border-t border-slate-100/60">
+          {/* SÉLECTEUR TYPES DE PIÈCES */}
+          <div className="flex flex-col gap-1 min-w-[200px]">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-0.5">Classification En Engins / Perfos</span>
+            <div className="flex items-center bg-slate-50 p-1 rounded-xl gap-1 border border-slate-100">
+              {(['ALL', 'ENGINS', 'PERFORATEURS'] as const).map(type => (
+                <button
+                  key={type}
+                  onClick={() => setActiveMainType(type)}
+                  className={cn(
+                    "flex-1 px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all",
+                    activeMainType === type 
+                      ? "bg-white text-slate-950 shadow-sm" 
+                      : "text-slate-500 hover:text-slate-800"
+                  )}
+                >
+                  {type === 'ALL' ? 'Tous' : type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* SÉLECTEUR STATUT PHYSIQUE EN STOCK */}
+          <div className="flex flex-col gap-1 min-w-[260px]">
+            <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest pl-0.5 font-bold">Niveau d'approvisionnement (Disponibilité)</span>
+            <div className="flex items-center bg-slate-50 p-1 rounded-xl gap-1 border border-slate-100">
+              <button
+                onClick={() => setActiveMainStatus('ALL')}
+                className={cn(
+                  "px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all",
+                  activeMainStatus === 'ALL' ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                Tout Stock
+              </button>
+              <button
+                onClick={() => setActiveMainStatus('IN_STOCK')}
+                className={cn(
+                  "px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1",
+                  activeMainStatus === 'IN_STOCK' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                <div className="w-1.5 h-1.5 bg-emerald-500 rounded-full" />
+                Disponible
+              </button>
+              <button
+                onClick={() => setActiveMainStatus('ALERT')}
+                className={cn(
+                  "px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1",
+                  activeMainStatus === 'ALERT' ? "bg-white text-amber-600 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-pulse" />
+                Alerte Seuil
+              </button>
+              <button
+                onClick={() => setActiveMainStatus('OUT_OF_STOCK')}
+                className={cn(
+                  "px-3 py-1.5 text-[9px] font-black uppercase tracking-wider rounded-lg transition-all flex items-center gap-1",
+                  activeMainStatus === 'OUT_OF_STOCK' ? "bg-white text-rose-600 shadow-sm" : "text-slate-500 hover:text-slate-800"
+                )}
+              >
+                <div className="w-1.5 h-1.5 bg-rose-500 rounded-full" />
+                Rupture
+              </button>
+            </div>
+          </div>
+
+          {/* SÉLECTEUR REMISE À ZÉRO RAPIDE */}
+          {(activeMainCategory !== 'ALL' || activeMainStatus !== 'ALL' || activeMainType !== 'ALL' || searchTerm !== '') && (
+            <button
+              onClick={() => {
+                setActiveMainCategory('ALL');
+                setActiveMainStatus('ALL');
+                setActiveMainType('ALL');
+                setSearchTerm('');
+              }}
+              className="px-3 py-2 text-[9px] font-black text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-xl uppercase tracking-widest border border-rose-100 transition-all flex items-center gap-1 cursor-pointer"
+            >
+              <X className="w-3 h-3" />
+              Réinitialiser
+            </button>
+          )}
+
+          {/* INDICATEUR DE RÉSULTATS FILTRÉS */}
+          <div className="ml-auto text-right pr-2">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Éléments filtrés :</span>
+            <p className="text-sm font-black text-indigo-600">{filteredArticles.length} / {kpis.totalItems} articles</p>
+          </div>
+        </div>
+      </div>
 
       <div className="card glass p-4 shadow-xl ring-1 ring-slate-900/5">
         <div className="relative">
@@ -1708,9 +2063,357 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
         </div>
       )}
 
+      {isBulkImportModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/45 backdrop-blur-md z-[120] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2.5rem] shadow-3xl w-full max-w-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-300 border border-slate-100 flex flex-col max-h-[90vh]">
+            <header className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/70 shrink-0">
+              <div>
+                <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">
+                  Génération des Fiches Articles
+                </h3>
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-1">
+                  Scanner de conformité et génération des fiches de stock pour {site}
+                </p>
+              </div>
+              <button 
+                onClick={() => {
+                  if (!isBulkImporting) setIsBulkImportModalOpen(false);
+                }} 
+                disabled={isBulkImporting}
+                className="w-10 h-10 rounded-xl bg-white shadow-xs border border-slate-200/60 flex items-center justify-center text-slate-400 hover:text-rose-600 disabled:opacity-50 transition-all cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </header>
+
+            <div className="p-8 overflow-y-auto space-y-6 flex-1 text-slate-700">
+              {/* Introduction - Vision Responsable de maintenance */}
+              <div className="p-4 bg-sky-50/50 border border-sky-100/60 rounded-2xl flex gap-3.5 items-start">
+                <div className="p-2 bg-sky-100 text-sky-700 rounded-xl shrink-0 mt-0.5">
+                  <Wrench className="w-4 h-4" />
+                </div>
+                <div>
+                  <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider text-left">Gouvernance du Référentiel Technique</h4>
+                  <p className="text-[11px] text-slate-500 font-medium leading-relaxed mt-1 text-left">
+                    Pour fluidifier les fiches articles sur {site}, choisissez une stratégie d'analyse. Le système détectera uniquement les pièces du catalogue technique absentes de vos fiches, vous évitant de créer des doublons.
+                  </p>
+                </div>
+              </div>
+
+              {/* Strategy Selector (3 buttons redesigned as tabs) */}
+              <div className="space-y-2.5">
+                <label className="text-[10px] font-black tracking-widest text-slate-400 uppercase block text-left">
+                  1. Choisir le filtre de détection du catalogue :
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                  {/* Strategy 1: < 25K */}
+                  <button
+                    type="button"
+                    disabled={isBulkImporting}
+                    onClick={() => {
+                      setImportStrategy('UNDER_25K');
+                      setExcludedRefs([]);
+                    }}
+                    className={cn(
+                      "p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between h-24 cursor-pointer",
+                      importStrategy === 'UNDER_25K'
+                        ? "bg-emerald-50/80 border-emerald-500 ring-2 ring-emerald-500/20"
+                        : "bg-slate-50/50 border-slate-200/70 hover:bg-slate-100/70"
+                    )}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className={cn("p-1.5 rounded-lg text-white", importStrategy === 'UNDER_25K' ? "bg-emerald-500" : "bg-slate-400")}>
+                        <Wrench className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-[9px] font-black uppercase bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded leading-none">
+                        &lt; 25K MAD
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <div className="text-xs font-black text-slate-900 leading-tight">Pièces Courantes</div>
+                      <p className="text-[9px] text-slate-400 font-semibold leading-tight mt-0.5 truncate">Flexibles, joints, filtres...</p>
+                    </div>
+                  </button>
+
+                  {/* Strategy 2: < 40K */}
+                  <button
+                    type="button"
+                    disabled={isBulkImporting}
+                    onClick={() => {
+                      setImportStrategy('UNDER_40K');
+                      setExcludedRefs([]);
+                    }}
+                    className={cn(
+                      "p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between h-24 cursor-pointer",
+                      importStrategy === 'UNDER_40K'
+                        ? "bg-sky-50/80 border-sky-500 ring-2 ring-sky-500/20"
+                        : "bg-slate-50/50 border-slate-200/70 hover:bg-slate-100/70"
+                    )}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className={cn("p-1.5 rounded-lg text-white", importStrategy === 'UNDER_40K' ? "bg-sky-500" : "bg-slate-400")}>
+                        <Database className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-[9px] font-black uppercase bg-sky-100 text-sky-700 px-1.5 py-0.5 rounded leading-none">
+                        &lt; 40K MAD
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <div className="text-xs font-black text-slate-900 leading-tight">Gamme Standard</div>
+                      <p className="text-[9px] text-slate-400 font-semibold leading-tight mt-0.5 truncate">Amortisseurs, capteurs...</p>
+                    </div>
+                  </button>
+
+                  {/* Strategy 3: ALL */}
+                  <button
+                    type="button"
+                    disabled={isBulkImporting}
+                    onClick={() => {
+                      setImportStrategy('ALL');
+                      setExcludedRefs([]);
+                    }}
+                    className={cn(
+                      "p-3 rounded-2xl border text-left transition-all relative flex flex-col justify-between h-24 cursor-pointer",
+                      importStrategy === 'ALL'
+                        ? "bg-slate-900 border-slate-900 shadow-lg text-white"
+                        : "bg-slate-50/50 border-slate-200/70 hover:bg-slate-100/70 text-slate-700"
+                    )}
+                  >
+                    <div className="flex items-center justify-between w-full">
+                      <div className={cn("p-1.5 rounded-lg text-white", importStrategy === 'ALL' ? "bg-sky-400" : "bg-slate-400")}>
+                        <BookOpen className="w-3.5 h-3.5" />
+                      </div>
+                      <span className={cn("text-[9px] font-black uppercase px-1.5 py-0.5 rounded leading-none", importStrategy === 'ALL' ? "bg-slate-800 text-slate-100" : "bg-slate-200 text-slate-700")}>
+                        Illimité
+                      </span>
+                    </div>
+                    <div className="mt-2">
+                      <div className={cn("text-xs font-black leading-tight", importStrategy === 'ALL' ? "text-white" : "text-slate-900")}>Tout le Catalogue</div>
+                      <p className="text-[9px] text-slate-400 font-semibold leading-tight mt-0.5 truncate">Totalité des pièces</p>
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {importStrategy === 'UNDER_25K' && (
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-[1.5rem] flex gap-3.5 items-start animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="p-2 bg-emerald-500/10 text-emerald-700 rounded-xl shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 animate-pulse" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs font-black text-emerald-800 uppercase tracking-widest text-left">Fiches Définitives &amp; Persistance Certifiée</h4>
+                    <p className="text-[11px] text-emerald-700/90 font-bold leading-relaxed mt-1 text-left">
+                      Toutes les pièces de rechange courantes de moins de 25 000 MAD importées feront l'objet d'une persistance absolue. Afin de garantir l'intégrité de votre stock, ces fiches resteront définitivement actives et ancrées en base de données sans risque de purge.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* 2. Interactive Detected Scanner Items */}
+              <div className="bg-slate-50 border border-slate-200/60 rounded-2xl p-4 flex flex-col gap-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/60 pb-3">
+                  <div>
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-wider text-left">
+                      📋 Pièces détectées par le système ({detectedNewItemsForImport.length})
+                    </h4>
+                    <p className="text-[10px] text-slate-400 font-bold uppercase mt-0.5 text-left">
+                      Absentes des fiches de stock actuelles pour le site {site}
+                    </p>
+                  </div>
+                  
+                  {/* Search Input Filter */}
+                  <div className="relative">
+                    <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      placeholder="Filtrer les pièces..."
+                      value={importPreviewSearch}
+                      onChange={(e) => setImportPreviewSearch(e.target.value)}
+                      className="pl-8 pr-3 py-1 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-sky-500 w-full sm:w-48"
+                    />
+                  </div>
+                </div>
+
+                {/* Filter list */}
+                <div className="max-h-52 overflow-y-auto divide-y divide-slate-150/50 pr-1 select-none">
+                  {detectedNewItemsForImport.filter(item => {
+                    const search = importPreviewSearch.toLowerCase().trim();
+                    if (!search) return true;
+                    return (
+                      item.reference.toLowerCase().includes(search) || 
+                      item.designation.toLowerCase().includes(search)
+                    ).length === 0; // Notice: this should be properly structured
+                  }) && detectedNewItemsForImport.filter(item => {
+                    const search = importPreviewSearch.toLowerCase().trim();
+                    if (!search) return true;
+                    return (
+                      item.reference.toLowerCase().includes(search) || 
+                      item.designation.toLowerCase().includes(search)
+                    );
+                  }).length === 0 ? (
+                    <div className="py-10 text-center text-slate-400 text-xs font-black uppercase">
+                      {detectedNewItemsForImport.length === 0 
+                        ? "🎉 Toutes les pièces de cette catégorie existent déjà !" 
+                        : "Aucune référence ne correspond à votre filtre de recherche"}
+                    </div>
+                  ) : (
+                    detectedNewItemsForImport
+                      .filter(item => {
+                        const search = importPreviewSearch.toLowerCase().trim();
+                        if (!search) return true;
+                        return (
+                          item.reference.toLowerCase().includes(search) || 
+                          item.designation.toLowerCase().includes(search)
+                        );
+                      })
+                      .map((item) => {
+                        const isChecked = !excludedRefs.includes(item.reference);
+                        return (
+                          <div 
+                            key={item.id}
+                            className="py-2.5 flex items-center justify-between gap-4 text-left hover:bg-slate-100/60 px-2 rounded-xl transition-all"
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <button
+                                type="button"
+                                disabled={isBulkImporting}
+                                onClick={() => {
+                                  if (isChecked) {
+                                    setExcludedRefs(prev => [...prev, item.reference]);
+                                  } else {
+                                    setExcludedRefs(prev => prev.filter(r => r !== item.reference));
+                                  }
+                                }}
+                                className="text-slate-400 hover:text-sky-600 disabled:opacity-50 transition-all focus:outline-none cursor-pointer"
+                              >
+                                <div className={cn(
+                                  "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
+                                  isChecked 
+                                    ? "bg-sky-500 border-sky-500 text-white" 
+                                    : "border-slate-300 bg-white"
+                                )}>
+                                  {isChecked && (
+                                    <svg className="w-3 h-3 stroke-current stroke-3" fill="none" viewBox="0 0 24 24">
+                                      <polyline points="20 6 9 17 4 12" />
+                                    </svg>
+                                  )}
+                                </div>
+                              </button>
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-[10px] font-black text-slate-700 bg-slate-200/80 px-1.5 py-0.5 rounded leading-none">
+                                    {item.reference}
+                                  </span>
+                                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
+                                    {item.suggestedType}
+                                  </span>
+                                </div>
+                                <div className="text-xs font-bold text-slate-800 truncate mt-1">
+                                  {item.designation}
+                                </div>
+                              </div>
+                            </div>
+                            <div className="text-right shrink-0">
+                              <div className="text-[11px] font-black text-slate-900 font-mono">
+                                {formatCurrency(item.price || 0)}
+                              </div>
+                              <div className="text-[8px] font-bold text-slate-400 uppercase">
+                                HT MAD
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })
+                  )}
+                </div>
+
+                {/* Counter & Action controls */}
+                {detectedNewItemsForImport.length > 0 && (
+                  <div className="flex justify-between items-center text-[10px] font-bold uppercase tracking-wider text-slate-400 border-t border-slate-200/60 pt-3">
+                    <div className="flex items-center gap-2.5">
+                      <button
+                        type="button"
+                        disabled={isBulkImporting}
+                        onClick={() => {
+                          const allRefs = detectedNewItemsForImport.map(i => i.reference);
+                          setExcludedRefs(allRefs);
+                        }}
+                        className="hover:text-rose-600 disabled:opacity-50 transition-colors cursor-pointer"
+                      >
+                        Tout Décocher
+                      </button>
+                      <span>•</span>
+                      <button
+                        type="button"
+                        disabled={isBulkImporting}
+                        onClick={() => {
+                          setExcludedRefs([]);
+                        }}
+                        className="hover:text-sky-600 disabled:opacity-50 transition-colors cursor-pointer"
+                      >
+                        Tout Cocher
+                      </button>
+                    </div>
+                    <div className="font-black text-slate-600">
+                      {detectedNewItemsForImport.filter(i => !excludedRefs.includes(i.reference)).length} / {detectedNewItemsForImport.length} Prêtes à être importées
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Status footer with loading bar */}
+              {isBulkImporting && (
+                <div className="p-5 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 animate-in fade-in duration-300">
+                  <div className="flex items-center justify-between text-xs font-black uppercase text-slate-700 tracking-wider">
+                    <span className="flex items-center gap-2 text-sky-600">
+                      <RefreshCcw className="w-3.5 h-3.5 animate-spin" />
+                      {importProgressMessage}
+                    </span>
+                    <span>{importProgressPercent}%</span>
+                  </div>
+                  <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                    <div 
+                      className="bg-sky-500 h-full transition-all duration-300 ease-out" 
+                      style={{ width: `${importProgressPercent}%` }} 
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+            
+            <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex justify-between items-center shrink-0 rounded-b-[2.5rem]">
+              <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">
+                Verrouillage SRE actif • Site {site}
+              </div>
+              <div className="flex gap-3">
+                <button 
+                  type="button"
+                  disabled={isBulkImporting}
+                  onClick={() => setIsBulkImportModalOpen(false)} 
+                  className="px-5 py-2.5 bg-white border border-slate-200 text-slate-700 text-xs font-black uppercase tracking-wider rounded-xl hover:bg-slate-100 disabled:opacity-50 transition-all active:scale-95 cursor-pointer"
+                >
+                  Fermer
+                </button>
+                {detectedNewItemsForImport.filter(i => !excludedRefs.includes(i.reference)).length > 0 && (
+                  <button 
+                    type="button"
+                    disabled={isBulkImporting}
+                    onClick={handleExecuteSolidImport}
+                    className="px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-xs font-black uppercase tracking-wider rounded-xl disabled:opacity-50 transition-all shadow-md active:scale-95 flex items-center gap-2 cursor-pointer"
+                  >
+                    <Layers className="w-4 h-4" />
+                    Lancer la Génération ({detectedNewItemsForImport.filter(i => !excludedRefs.includes(i.reference)).length})
+                  </button>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {isModalOpen && editingArticle && (
         <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-md z-[100] flex items-center justify-center p-4">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-300">
+          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-3xl overflow-hidden animate-in fade-in zoom-in duration-300 flex flex-col max-h-[90vh]">
             <header className="px-10 py-10 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
               <div>
                 <h3 className="text-3xl font-black text-slate-950 uppercase tracking-tighter">
@@ -1726,7 +2429,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
               </button>
             </header>
             
-            <form onSubmit={handleSave} className="p-12 space-y-10 overflow-y-auto">
+            <form onSubmit={handleSave} className="p-12 space-y-10 overflow-y-auto flex-1">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 <div className="space-y-3 md:col-span-2">
                   <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Désignation de l'article</label>

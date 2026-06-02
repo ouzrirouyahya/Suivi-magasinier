@@ -238,7 +238,7 @@ export default function AuditIntelligenceMagasin() {
       operationalRisk: 'Fuites chroniques de signal de pilotage => Dérive de pression et perte de la puissance de percussion.',
       expertQuote: {
         author: 'Christian S.',
-        role: "Chef de l'Atelier d'appui SMI souterraine",
+        role: "Chef de l'Atelier d'appui SMI",
         text: '« Un joint standard non recuit ne s\'écrase pas correctement sous le couple de serrage. On perd 10 bars par raccord. »'
       },
       price: 450
@@ -276,8 +276,8 @@ export default function AuditIntelligenceMagasin() {
       operationalRisk: 'Perte de tirage instantanée du train d\'entrainement => Taux d\'abattage quotidien divisé par deux.',
       expertQuote: {
         author: 'Jean-Marc',
-        role: 'Expert Hydraulique (Atelier -350m Office)',
-        text: '« Le Garrett GT25 d\'Epiroc régule la contre-pression à l\'échappement souterrain. Un modèle adaptable fond sous la chaleur de régénération. »'
+        role: 'Expert Hydraulique (Atelier SMI)',
+        text: '« Le Garrett GT25 d\'Epiroc régule la contre-pression à l\'échappement moteur. Un modèle adaptable fond sous la chaleur de régénération. »'
       },
       price: 22800
     },
@@ -657,7 +657,7 @@ export default function AuditIntelligenceMagasin() {
         <button
           onClick={() => {
             setIsEmergencyMode(!isEmergencyMode);
-            toast.success(isEmergencyMode ? "Sortie du mode d'urgence souterraine." : "🚨 MODE URGENCE : Affichage simplifié contrasté pour gants d'atelier.");
+            toast.success(isEmergencyMode ? "Sortie du mode d'urgence atelier." : "🚨 MODE URGENCE : Affichage simplifié contrasté pour gants d'atelier.");
           }}
           className={cn(
             "w-full py-4.5 rounded-2xl font-black uppercase tracking-wider text-xs border cursor-pointer flex items-center justify-center gap-3 transition-all select-none hover:scale-[1.005]",

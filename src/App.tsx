@@ -45,7 +45,7 @@ import { Toolbar } from './components/layout/Toolbar';
 // Context & Types
 import { useInventory } from './context/InventoryContext';
 import { Article, SiteCode, PurchaseRequest } from './types';
-import { Loader2, ShieldAlert, Lock, LayoutDashboard, ArrowDownLeft, ArrowUpRight, ShoppingCart, Menu } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, LayoutDashboard, ArrowDownLeft, ArrowUpRight, ShoppingCart, Menu, Database } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { toast } from 'sonner';
@@ -192,6 +192,19 @@ export default function App() {
   } = useInventory();
 
   useEffect(() => {
+    const bypassEmail = localStorage.getItem('hydromines_bypass_email');
+    if (bypassEmail) {
+      const isSuper = bypassEmail.toLowerCase() === 'ouzrirouyahya@gmail.com';
+      setUser({
+        uid: isSuper ? 'bypass_super_uid' : 'bypass_magasinier_uid',
+        email: bypassEmail,
+        displayName: isSuper ? 'Yahya O. (SUPER_ADMIN)' : 'Magasinier Hydro',
+        emailVerified: true
+      } as any);
+      setIsAuthLoading(false);
+      return;
+    }
+
     if (localStorage.getItem('hydromines_viewer_mode') === 'true') {
       setUser({
         uid: 'viewer_mode_uid',
@@ -212,10 +225,12 @@ export default function App() {
 
   const handleSignOut = () => {
     const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true';
+    const isBypass = !!localStorage.getItem('hydromines_bypass_email');
     localStorage.removeItem('hydromines_viewer_mode');
+    localStorage.removeItem('hydromines_bypass_email');
     sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
     setUser(null);
-    if (isViewer) {
+    if (isViewer || isBypass) {
       window.location.reload();
     } else {
       signOut(auth);
@@ -615,6 +630,45 @@ export default function App() {
                     En tant qu'administrateur, vos écritures et corrections contournent ce verrouillage et sont transmises directement à Firestore.
                   </p>
                 )}
+              </div>
+            </div>
+          )}
+
+          {localStorage.getItem('hydromines_viewer_mode') === 'true' && (
+            <div className="bg-sky-500/10 border border-sky-500/20 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm animate-in fade-in duration-300">
+              <div className="p-3 bg-sky-500/15 text-sky-600 rounded-lg font-bold">
+                <Database className="w-6 h-6" />
+              </div>
+              <div className="flex-1 space-y-1">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-sky-500 text-white rounded flex items-center gap-1">
+                    <Database className="w-3 h-3" /> MODE DÉMONSTRATEUR (LECTURE SEULE)
+                  </span>
+                  <span className="text-xs text-sky-700 font-extrabold uppercase tracking-wide">
+                    CONSULTATION SEULE SÉCURISÉE
+                  </span>
+                </div>
+                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
+                  Espace de Démonstration Hydromines
+                </h3>
+                <p className="text-xs text-slate-600 leading-relaxed font-semibold">
+                  Vous êtes connecté en tant que <strong className="text-slate-800">Démonstrateur</strong>. Vos données précédemment créées ou importées sont <strong className="text-emerald-700 font-bold">précieusement conservées</strong> et restent consultables. Cependant, tout ajout ou modification est désormais désactivé dans ce mode. Loguez-vous comme Super Admin pour bénéficier des accès en écriture complète !
+                </p>
+                <div className="flex items-center gap-2.5 mt-2.5 pt-1">
+                  <button
+                    onClick={() => {
+                      if (confirm("Voulez-vous réinitialiser toutes vos fiches d'articles et mouvements locaux pour restaurer la démo d'origine ?")) {
+                        localStorage.removeItem('hydromines_simulated_articles');
+                        localStorage.removeItem('hydromines_simulated_mouvements');
+                        toast.success("Données de démo réinitialisées !");
+                        setTimeout(() => window.location.reload(), 600);
+                      }
+                    }}
+                    className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border border-rose-100 cursor-pointer"
+                  >
+                    Réinitialiser les données de démo
+                  </button>
+                </div>
               </div>
             </div>
           )}

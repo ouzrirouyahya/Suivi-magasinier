@@ -239,7 +239,7 @@ export const INITIAL_ARTICLES: Article[] = [
     category: 'Électricité', functionalCategory: 'Électricité', subCategory: 'Éclairage', 
     component: 'Projecteur LED minier', subComponent: 'IP69K 24V dc', 
     unit: 'Pcs', quantity: 10, minStock: 3, location: 'RAY-E10', 
-    price: 2200, active: true, compatibility: 'Tous engins souterrains', criticality: 'MOYENNE'
+    price: 2200, active: true, compatibility: 'Tous engins de chantier', criticality: 'MOYENNE'
   },
   { 
     id: 'oua_perf_con_06', site: 'OUANSIMI', ref: 'MB-T23-701', 

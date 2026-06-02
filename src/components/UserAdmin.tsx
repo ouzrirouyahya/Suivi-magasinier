@@ -6,6 +6,21 @@ import { SITES, SERVICES } from '../demoData';
 import { db } from '../lib/firebase';
 import { collection, onSnapshot, query } from 'firebase/firestore';
 
+export const FONCTIONS = [
+  'MINEUR',
+  'OUVRIER',
+  'FOREUR',
+  'MECANICIEN',
+  'CHEF DE POSTE',
+  'CHEF D\'EQUIPE',
+  'ELECTRICIEN',
+  'CHAUFFEUR',
+  'MAGASINIER',
+  'COMMIS',
+  'INGENIEUR',
+  'SUPERVISEUR'
+];
+
 interface UserAdminProps {
   accounts: UserAccount[];
   onToggleStatus: (userId: string) => void;
@@ -183,7 +198,8 @@ export function UserAdmin({
       firstname: 'Nouveau',
       lastname: 'Agent',
       service: 'MAINTENANCE',
-      site: 'SMI'
+      site: 'SMI',
+      fonction: 'MINEUR'
     });
   };
 
@@ -352,47 +368,53 @@ export function UserAdmin({
 
         {activeTab === 'EFFECTIF' && (
           <div className="space-y-4">
-            <div className="flex justify-between items-center">
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registre du Personnel</h3>
-              <button onClick={addAgent} className="btn bg-sky-600 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase gap-2 shadow-sm">
-                <Plus className="w-3.5 h-3.5" /> Ajouter
+            <div className="flex flex-col sm:flex-row sm:justify-between items-start sm:items-center bg-slate-50 p-4 rounded-xl border border-slate-100 gap-3">
+              <div>
+                <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Registre du Personnel</h3>
+                <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Gérez l'effectif des travailleurs du jour pour les attributions de matériel.</p>
+              </div>
+              <button onClick={addAgent} className="bg-sky-600 text-white hover:bg-sky-700 px-4 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-2 shadow-md cursor-pointer transition-all active:scale-95">
+                <Plus className="w-4 h-4" /> Ajouter
               </button>
             </div>
             
-            <div className="grid grid-cols-1 gap-3">
+            <div className="space-y-3">
               {agents.map(agent => (
-                <div key={agent.id} className="p-3 bg-slate-50 rounded-xl border border-slate-100 grid grid-cols-5 gap-3 items-center">
-                  <div className="space-y-1">
-                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Matricule</label>
+                <div key={agent.id} className="p-4 bg-white hover:bg-slate-50/50 rounded-xl border border-slate-150 grid grid-cols-1 md:grid-cols-12 gap-4 items-end shadow-sm transition-all">
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Matricule</label>
                     <input 
                       type="text" 
-                      className="w-full bg-white px-2 py-1 rounded-lg border border-slate-200 text-xs font-black text-sky-600"
+                      className="w-full bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-black text-sky-700 focus:bg-white focus:border-sky-500 outline-none"
+                      placeholder="EX: M-104"
                       value={agent.matricule}
                       onChange={(e) => updateAgent(agent.id, { matricule: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Nom</label>
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Nom</label>
                     <input 
                       type="text" 
-                      className="w-full bg-white px-2 py-1 rounded-lg border border-slate-200 text-xs font-black"
+                      className="w-full bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-black focus:bg-white focus:border-sky-500 outline-none"
+                      placeholder="NOM..."
                       value={agent.lastname}
                       onChange={(e) => updateAgent(agent.id, { lastname: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Prénom</label>
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Prénom</label>
                     <input 
                       type="text" 
-                      className="w-full bg-white px-2 py-1 rounded-lg border border-slate-200 text-xs font-black"
+                      className="w-full bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-black focus:bg-white focus:border-sky-500 outline-none"
+                      placeholder="PRÉNOM..."
                       value={agent.firstname}
                       onChange={(e) => updateAgent(agent.id, { firstname: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-1">
-                    <label className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Service</label>
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Service</label>
                     <select 
-                      className="w-full bg-white px-2 py-1 rounded-lg border border-slate-200 text-xs font-black"
+                      className="w-full bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-black focus:bg-white focus:border-sky-500 outline-none"
                       value={agent.service}
                       onChange={(e) => updateAgent(agent.id, { service: e.target.value })}
                     >
@@ -401,9 +423,33 @@ export function UserAdmin({
                       ))}
                     </select>
                   </div>
-                  <div className="flex justify-end pt-3">
-                    <button onClick={() => deleteAgent(agent.id)} className="p-2 text-slate-300 hover:text-rose-600 bg-white rounded-lg border border-slate-100 transition-all">
-                      <Trash2 className="w-3.5 h-3.5" />
+                  <div className="space-y-1 md:col-span-2">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Fonction / Poste</label>
+                    <select 
+                      className="w-full bg-slate-50 px-3 py-2 rounded-xl border border-slate-200 text-xs font-black focus:bg-white focus:border-sky-500 outline-none"
+                      value={agent.fonction || 'MINEUR'}
+                      onChange={(e) => updateAgent(agent.id, { fonction: e.target.value })}
+                    >
+                      {FONCTIONS.map(f => (
+                        <option key={f} value={f}>{f}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="space-y-1 md:col-span-1">
+                    <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest block">Site</label>
+                    <select 
+                      className="w-full bg-slate-50 px-2 py-2 rounded-xl border border-slate-200 text-xs font-black text-slate-600 focus:bg-white focus:border-sky-500 outline-none"
+                      value={agent.site}
+                      onChange={(e) => updateAgent(agent.id, { site: e.target.value as SiteCode })}
+                    >
+                      {SITES.map(s => (
+                        <option key={s.code} value={s.code}>{s.code}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="flex justify-end md:col-span-1">
+                    <button onClick={() => deleteAgent(agent.id)} className="w-10 h-10 flex items-center justify-center text-slate-350 hover:text-rose-600 hover:bg-rose-50 rounded-xl border border-dashed border-slate-200 hover:border-rose-100 transition-all cursor-pointer">
+                      <Trash2 className="w-4 h-4" />
                     </button>
                   </div>
                 </div>
