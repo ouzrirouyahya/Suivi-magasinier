@@ -821,7 +821,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             if (path === 'mouvements' || path === 'maintenanceLogs' || path === 'auditLogs' || path === 'notifications') {
               const dateField = path === 'auditLogs' || path === 'notifications' ? 'timestamp' : 'date';
               const getSafeTime = (val: any): number => {
-                if (!val) return 0;
+                if (!val) return Date.now();
                 if (typeof val === 'string') {
                   const parsed = Date.parse(val);
                   return isNaN(parsed) ? 0 : parsed;
@@ -2165,10 +2165,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
     checkMaintenanceLock();
     const id = a.id || generateId();
-    await setDoc(doc(db, 'articles', id), cleanObject({ ...a, id }));
+    const item = { ...a, id };
+    await setDoc(doc(db, 'articles', id), cleanObject(item));
+
+    setRawArticles(prev => {
+      const idx = prev.findIndex(x => x.id === id);
+      if (idx !== -1) {
+        const next = [...prev];
+        next[idx] = item;
+        return next;
+      }
+      return [item, ...prev];
+    });
 
     // SRE Immutable Ledger Hook v7.0
-    ImmutableInventoryLedger.appendEntry(`art-${id}`, 'ARTICLE_MUTATION', { ...a, id });
+    ImmutableInventoryLedger.appendEntry(`art-${id}`, 'ARTICLE_MUTATION', item);
     setLedgerEntries(ImmutableInventoryLedger.getEntries());
 
     // SRE Automated Snapshot Trigger

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw, Filter, TrendingDown, TrendingUp, CheckCircle2, Activity, ShieldAlert } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw, Filter, TrendingDown, TrendingUp, CheckCircle2, Activity, ShieldAlert, Download, FileSpreadsheet, Clock, Eye } from 'lucide-react';
 import { Article, StockType, SiteCode, CatalogItem } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { MASTER_CATALOG } from '../catalogData';
@@ -108,6 +108,31 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     });
   }, [importStrategy, existingRefs]);
 
+  const bulkImportFilteredItems = React.useMemo(() => {
+    return detectedNewItemsForImport.filter(item => {
+      const search = importPreviewSearch.toLowerCase().trim();
+      if (!search) return true;
+      return (
+        item.reference.toLowerCase().includes(search) || 
+        item.designation.toLowerCase().includes(search)
+      );
+    });
+  }, [detectedNewItemsForImport, importPreviewSearch]);
+
+  const handleDownloadCsvTemplate = () => {
+    const headers = "catégorie;sous catégorie;Composants;sous-composants;référence;designation;prix\n";
+    const exampleRow1 = "MOTEUR;ALIMENTATION;INJECTEUR;Standard;SMI-INJ-001;INJECTEUR DE CARBURANT HIGH flow;2450.50\n";
+    const exampleRow2 = "HYDRAULIQUE;DISTRIBUTION;FLEXIBLE;Standard;SMI-FLX-002;FLEXIBLE HYDRAULIQUE 1/2 HP;850.00\n";
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(headers + exampleRow1 + exampleRow2);
+    const link = document.createElement("a");
+    link.setAttribute("href", csvContent);
+    link.setAttribute("download", "modele_import_catalogue.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Modèle de catalogue CSV téléchargé avec succès !");
+  };
+
   const handleExecuteSolidImport = async () => {
     const selectedItems = detectedNewItemsForImport.filter(
       item => !excludedRefs.includes(item.reference)
@@ -169,6 +194,8 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
   const [isBulkImportModalOpen, setIsBulkImportModalOpen] = useState(false);
+  const [inspectingCatalogItem, setInspectingCatalogItem] = useState<CatalogItem | null>(null);
+  const [inspectingArticle, setInspectingArticle] = useState<Article | null>(null);
   
   const [selectedArticleIds, setSelectedArticleIds] = useState<string[]>([]);
 
@@ -218,6 +245,29 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   const [selectedCriticality, setSelectedCriticality] = useState<string>('ALL');
   const [catalogPriceFilter, setCatalogPriceFilter] = useState<'ALL' | 'BELOW_40K' | 'BELOW_50K' | 'EXPENSIVE_ONLY'>('BELOW_40K');
   const [selectedSort, setSelectedSort] = useState<string>('DEFAULT');
+
+  const highlightText = (text: string, search: string) => {
+    if (!text) return "";
+    if (!search.trim()) return <>{text}</>;
+    
+    const escapedSearch = search.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(`(${escapedSearch})`, 'gi');
+    const parts = text.split(regex);
+    
+    return (
+      <>
+        {parts.map((part, i) => 
+          regex.test(part) ? (
+            <mark key={i} className="bg-amber-100 text-amber-950 font-semibold rounded px-0.5">
+              {part}
+            </mark>
+          ) : (
+            part
+          )
+        )}
+      </>
+    );
+  };
 
   const toggleSelectArticle = (id: string) => {
     setSelectedArticleIds(prev => 
@@ -1151,10 +1201,19 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           <input 
             type="text" 
             placeholder="Rechercher une nomenclature (REF, OEM, Designation)..." 
-            className="input-field pl-11 h-10 text-sm bg-white/40 border-slate-200/50 rounded-xl font-black tracking-tight"
+            className="input-field pl-11 pr-10 h-10 text-sm bg-white/40 border-slate-200/50 rounded-xl font-black tracking-tight"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
+          {searchTerm && (
+            <button 
+              type="button"
+              onClick={() => setSearchTerm('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
       </div>
 
@@ -1162,16 +1221,9 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
         <table className="w-full text-left">
           <thead>
             <tr>
-              <th className="px-4 py-4 w-12 text-center text-xs font-black text-slate-400">
-                <input 
-                  type="checkbox" 
-                  onChange={toggleSelectAll} 
-                  checked={isAllSelected} 
-                  className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4" 
-                />
-              </th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Référence & Désignation</th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Classification</th>
+              <th className="px-6 py-4 text-center text-xs font-black text-slate-400 uppercase tracking-widest">Stock Actuel</th>
               <th className="px-6 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Prix Unit.</th>
               <th className="px-6 py-4 text-right text-xs font-black text-slate-400 uppercase tracking-widest">Seuil Alerte</th>
               <th className="px-6 py-4 text-xs font-black text-slate-400 uppercase tracking-widest">Localisation</th>
@@ -1180,65 +1232,128 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100/50">
-            {filteredArticles.map(article => (
-              <tr key={article.id} className="group hover:bg-white/60 transition-all duration-300">
-                <td className="px-4 py-4 text-center w-12">
-                  <input 
-                    type="checkbox" 
-                    checked={selectedArticleIds.includes(article.id)} 
-                    onChange={() => toggleSelectArticle(article.id)} 
-                    className="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4" 
-                  />
-                </td>
-                <td className="px-6 py-4">
-                  <p className="font-mono text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">#{article.ref}</p>
-                  <p className="font-black text-slate-900 text-sm leading-tight">{article.designation}</p>
-                  {article.component && (
-                    <div className="flex items-center gap-2 mt-1.5">
-                       <Layers className="w-3 h-3 text-sky-400" />
-                       <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest">
-                         {article.functionalCategory} / {article.component}
-                       </p>
+            {filteredArticles.length === 0 ? (
+              <tr>
+                <td colSpan={8} className="px-6 py-16 text-center">
+                  <div className="flex flex-col items-center justify-center gap-3">
+                    <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 mx-auto">
+                      <Search className="w-6 h-6" />
                     </div>
-                  )}
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-100 uppercase tracking-widest">
-                      {article.type}
-                    </span>
-                    <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{article.category}</span>
-                  </div>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <p className="text-sm font-black text-emerald-600">{formatCurrency(article.price)}</p>
-                </td>
-                <td className="px-6 py-4 text-right">
-                  <p className="text-sm font-black text-slate-950">{article.minStock} <span className="text-[10px] text-slate-400 uppercase">{article.unit}</span></p>
-                </td>
-                <td className="px-6 py-4 text-left">
-                  <span className="font-black text-slate-600 text-sm">{article.location}</span>
-                </td>
-                <td className="px-6 py-4">
-                  <span className={cn(
-                    "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border",
-                    article.active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-100"
-                  )}>
-                    {article.active ? 'Opérationnel' : 'Archivé'}
-                  </span>
-                </td>
-                <td className="px-6 py-4">
-                  <div className="flex justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
-                    <button onClick={() => handleEdit(article)} className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer" title="Modifier">
-                      <Pencil className="w-4 h-4" />
-                    </button>
-                    <button onClick={() => onDelete(article.id)} className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" title="Supprimer">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                    <p className="text-slate-800 font-black text-sm mt-2">Aucun article ne correspond à votre recherche</p>
+                    <p className="text-xs text-slate-400">Essayez de modifier votre mot-clé ou réinitialiser vos paramètres de filtrage.</p>
+                    {(activeMainCategory !== 'ALL' || activeMainStatus !== 'ALL' || activeMainType !== 'ALL' || searchTerm !== '') && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setActiveMainCategory('ALL');
+                          setActiveMainStatus('ALL');
+                          setActiveMainType('ALL');
+                          setSearchTerm('');
+                        }}
+                        className="mt-4 bg-indigo-600 text-white px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-indigo-700 transition-all active:scale-95 cursor-pointer"
+                      >
+                        Tout réinitialiser
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
-            ))}
+            ) : (
+              filteredArticles.map(article => (
+                <tr 
+                  key={article.id} 
+                  onClick={() => setInspectingArticle(article)}
+                  className={cn(
+                    "group hover:bg-slate-50/70 border-b border-slate-100 transition-all duration-300 cursor-pointer select-none",
+                    inspectingArticle?.id === article.id && "bg-sky-50/50 hover:bg-sky-50/50"
+                  )}
+                >
+                  <td className="px-6 py-4">
+                    <p className="font-mono text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">#{highlightText(article.ref, searchTerm)}</p>
+                    <p className="font-black text-slate-900 text-sm leading-tight">{highlightText(article.designation, searchTerm)}</p>
+                    {article.component && (
+                      <div className="flex items-center gap-2 mt-1.5">
+                         <Layers className="w-3 h-3 text-sky-400" />
+                         <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest">
+                           {highlightText(article.functionalCategory || '', searchTerm)} / {highlightText(article.component || '', searchTerm)}
+                         </p>
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-6 py-4">
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[10px] font-black text-sky-700 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-100 uppercase tracking-widest w-fit">
+                        {article.type}
+                      </span>
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">{highlightText(article.category, searchTerm)}</span>
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 text-center">
+                    {article.quantity === 0 ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-rose-700 bg-rose-50 border border-rose-100 uppercase tracking-widest">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                        Rupture (0)
+                      </span>
+                    ) : article.quantity <= article.minStock ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-amber-700 bg-amber-50 border border-amber-100 uppercase tracking-widest">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-bounce" />
+                        Critique ({article.quantity} {article.unit})
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black text-emerald-700 bg-emerald-50 border border-emerald-100 uppercase tracking-widest animate-in fade-in">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        {article.quantity} <span className="text-[10px] text-emerald-600/70">{article.unit}</span>
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <p className="text-sm font-black text-emerald-600">{formatCurrency(article.price)}</p>
+                  </td>
+                  <td className="px-6 py-4 text-right">
+                    <p className="text-sm font-black text-slate-950">{article.minStock} <span className="text-[10px] text-slate-400 uppercase">{article.unit}</span></p>
+                  </td>
+                  <td className="px-6 py-4 text-left">
+                    <span className="font-black text-slate-600 text-sm">{highlightText(article.location, searchTerm)}</span>
+                  </td>
+                  <td className="px-6 py-4">
+                    <span className={cn(
+                      "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border",
+                      article.active ? "bg-emerald-50 text-emerald-600 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-100"
+                    )}>
+                      {article.active ? 'Opérationnel' : 'Archivé'}
+                    </span>
+                  </td>
+                  <td className="px-6 py-4" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity">
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); setInspectingArticle(article); }}
+                        className="p-2 text-sky-600 hover:bg-sky-50 rounded-lg transition-colors cursor-pointer"
+                        title="Détails"
+                      >
+                        <Eye className="w-4 h-4" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); handleEdit(article); }} 
+                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" 
+                        title="Modifier"
+                      >
+                        <Pencil className="w-4 h-4" />
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={(e) => { e.stopPropagation(); onDelete(article.id); }} 
+                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" 
+                        title="Supprimer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
@@ -1431,6 +1546,16 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                         disabled={isImporting}
                       />
                     </label>
+
+                    <button
+                      type="button"
+                      onClick={handleDownloadCsvTemplate}
+                      className="flex items-center gap-3 px-6 h-14 bg-sky-50 text-sky-700 border border-sky-100 hover:border-sky-300 rounded-2xl font-black uppercase text-xs tracking-widest active:scale-95 transition-all shadow-sm"
+                      title="Télécharger le modèle d'importation CSV conforme"
+                    >
+                      <Download className="w-5 h-5 text-sky-600" />
+                      Modèle CSV
+                    </button>
                   </div>
                </div>
                {/* Advanced industrial filters */}
@@ -1867,7 +1992,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                            <div key={item.id} className="group relative animate-in fade-in duration-300">
                              <button
                                type="button"
-                               onClick={() => !isManagingCatalog && handleImportFromCatalog(item)}
+                               onClick={() => !isManagingCatalog && setInspectingCatalogItem(item)}
                                className={cn(
                                  "w-full flex flex-col p-8 bg-white border border-slate-100 rounded-[2.5rem] transition-all text-left relative overflow-hidden h-full",
                                  !isManagingCatalog && "hover:border-sky-500 hover:shadow-[0_20px_40px_rgba(8,145,213,0.1)] cursor-pointer"
@@ -2236,94 +2361,71 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
 
                 {/* Filter list */}
                 <div className="max-h-52 overflow-y-auto divide-y divide-slate-150/50 pr-1 select-none">
-                  {detectedNewItemsForImport.filter(item => {
-                    const search = importPreviewSearch.toLowerCase().trim();
-                    if (!search) return true;
-                    return (
-                      item.reference.toLowerCase().includes(search) || 
-                      item.designation.toLowerCase().includes(search)
-                    ).length === 0; // Notice: this should be properly structured
-                  }) && detectedNewItemsForImport.filter(item => {
-                    const search = importPreviewSearch.toLowerCase().trim();
-                    if (!search) return true;
-                    return (
-                      item.reference.toLowerCase().includes(search) || 
-                      item.designation.toLowerCase().includes(search)
-                    );
-                  }).length === 0 ? (
+                  {bulkImportFilteredItems.length === 0 ? (
                     <div className="py-10 text-center text-slate-400 text-xs font-black uppercase">
                       {detectedNewItemsForImport.length === 0 
                         ? "🎉 Toutes les pièces de cette catégorie existent déjà !" 
                         : "Aucune référence ne correspond à votre filtre de recherche"}
                     </div>
                   ) : (
-                    detectedNewItemsForImport
-                      .filter(item => {
-                        const search = importPreviewSearch.toLowerCase().trim();
-                        if (!search) return true;
-                        return (
-                          item.reference.toLowerCase().includes(search) || 
-                          item.designation.toLowerCase().includes(search)
-                        );
-                      })
-                      .map((item) => {
-                        const isChecked = !excludedRefs.includes(item.reference);
-                        return (
-                          <div 
-                            key={item.id}
-                            className="py-2.5 flex items-center justify-between gap-4 text-left hover:bg-slate-100/60 px-2 rounded-xl transition-all"
-                          >
-                            <div className="flex items-center gap-3 min-w-0">
-                              <button
-                                type="button"
-                                disabled={isBulkImporting}
-                                onClick={() => {
-                                  if (isChecked) {
-                                    setExcludedRefs(prev => [...prev, item.reference]);
-                                  } else {
-                                    setExcludedRefs(prev => prev.filter(r => r !== item.reference));
-                                  }
-                                }}
-                                className="text-slate-400 hover:text-sky-600 disabled:opacity-50 transition-all focus:outline-none cursor-pointer"
-                              >
-                                <div className={cn(
-                                  "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
-                                  isChecked 
-                                    ? "bg-sky-500 border-sky-500 text-white" 
-                                    : "border-slate-300 bg-white"
-                                )}>
-                                  {isChecked && (
-                                    <svg className="w-3 h-3 stroke-current stroke-3" fill="none" viewBox="0 0 24 24">
-                                      <polyline points="20 6 9 17 4 12" />
-                                    </svg>
-                                  )}
-                                </div>
-                              </button>
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-[10px] font-black text-slate-700 bg-slate-200/80 px-1.5 py-0.5 rounded leading-none">
-                                    {item.reference}
-                                  </span>
-                                  <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
-                                    {item.suggestedType}
-                                  </span>
-                                </div>
-                                <div className="text-xs font-bold text-slate-800 truncate mt-1">
-                                  {item.designation}
-                                </div>
+                    bulkImportFilteredItems.map((item) => {
+                      const isChecked = !excludedRefs.includes(item.reference);
+                      return (
+                        <div 
+                          key={item.id}
+                          className="py-2.5 flex items-center justify-between gap-4 text-left hover:bg-slate-100/60 px-2 rounded-xl transition-all"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <button
+                              type="button"
+                              disabled={isBulkImporting}
+                              onClick={() => {
+                                if (isChecked) {
+                                  setExcludedRefs(prev => [...prev, item.reference]);
+                                } else {
+                                  setExcludedRefs(prev => prev.filter(r => r !== item.reference));
+                                }
+                              }}
+                              className="text-slate-400 hover:text-sky-600 disabled:opacity-50 transition-all focus:outline-none cursor-pointer"
+                            >
+                              <div className={cn(
+                                "w-5 h-5 rounded-md border flex items-center justify-center transition-all",
+                                isChecked 
+                                  ? "bg-sky-500 border-sky-500 text-white" 
+                                  : "border-slate-300 bg-white"
+                              )}>
+                                {isChecked && (
+                                  <svg className="w-3 h-3 stroke-current stroke-3" fill="none" viewBox="0 0 24 24">
+                                    <polyline points="20 6 9 17 4 12" />
+                                  </svg>
+                                )}
                               </div>
-                            </div>
-                            <div className="text-right shrink-0">
-                              <div className="text-[11px] font-black text-slate-900 font-mono">
-                                {formatCurrency(item.price || 0)}
+                            </button>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="font-mono text-[10px] font-black text-slate-700 bg-slate-200/80 px-1.5 py-0.5 rounded leading-none">
+                                  {item.reference}
+                                </span>
+                                <span className="text-[9px] font-extrabold text-slate-400 uppercase tracking-widest">
+                                  {item.suggestedType}
+                                </span>
                               </div>
-                              <div className="text-[8px] font-bold text-slate-400 uppercase">
-                                HT MAD
+                              <div className="text-xs font-bold text-slate-800 truncate mt-1">
+                                {item.designation}
                               </div>
                             </div>
                           </div>
-                        );
-                      })
+                          <div className="text-right shrink-0">
+                            <div className="text-[11px] font-black text-slate-900 font-mono">
+                              {formatCurrency(item.price || 0)}
+                            </div>
+                            <div className="text-[8px] font-bold text-slate-400 uppercase">
+                              HT MAD
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
                   )}
                 </div>
 
@@ -2587,6 +2689,223 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
         </div>
       )}
       
+      {/* DRAWER D'INSPECTION D'ARTICLE */}
+      <AnimatePresence>
+        {inspectingArticle && (
+          <div className="fixed inset-0 z-[120] overflow-hidden">
+            {/* Backdrop */}
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setInspectingArticle(null)}
+              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm cursor-pointer"
+            />
+            
+            {/* Panel Container */}
+            <div className="absolute inset-y-0 right-0 max-w-full flex pl-10">
+              <motion.div 
+                initial={{ x: '100%' }}
+                animate={{ x: 0 }}
+                exit={{ x: '100%' }}
+                transition={{ type: 'spring', damping: 25, stiffness: 220 }}
+                className="w-screen max-w-lg bg-white flex flex-col h-full shadow-[0_0_50px_rgba(15,23,42,0.15)] border-l border-slate-100"
+              >
+                {/* Drawer Header */}
+                <header className="p-8 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 uppercase tracking-widest w-fit mb-1">
+                      #{inspectingArticle.ref}
+                    </span>
+                    <h3 className="text-xl font-black text-slate-900 leading-tight">
+                      {inspectingArticle.designation}
+                    </h3>
+                  </div>
+                  <button 
+                    type="button"
+                    onClick={() => setInspectingArticle(null)}
+                    className="w-10 h-10 rounded-xl bg-white shadow-md border border-slate-100 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:rotate-90 transition-all duration-300 cursor-pointer"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </header>
+
+                {/* Drawer Content */}
+                <div className="flex-1 p-8 overflow-y-auto space-y-8">
+                  {/* Status & Quick Stats */}
+                  <div className="bg-slate-50 border border-slate-100 rounded-3xl p-6 space-y-4">
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Niveau de Stock actuel</span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-extrabold text-slate-900">{inspectingArticle.quantity}</span>
+                      <span className="text-xs font-black text-slate-400 uppercase">{inspectingArticle.unit}</span>
+                    </div>
+
+                    {/* Progress bar */}
+                    {(() => {
+                      const maxLimit = Math.max(inspectingArticle.minStock * 2, 10);
+                      const percent = Math.min((inspectingArticle.quantity / maxLimit) * 100, 100);
+                      const isAlert = inspectingArticle.quantity <= inspectingArticle.minStock && inspectingArticle.quantity > 0;
+                      const isRupture = inspectingArticle.quantity === 0;
+                      
+                      return (
+                        <div className="space-y-2">
+                          <div className="w-full bg-slate-200 h-2 rounded-full overflow-hidden">
+                            <div 
+                              className={cn(
+                                "h-full rounded-full transition-all duration-500",
+                                isRupture ? "bg-rose-500 w-0" :
+                                isAlert ? "bg-amber-500 animate-pulse" : "bg-emerald-500"
+                              )}
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                          
+                          <div className="flex justify-between items-center text-[10px] font-black uppercase tracking-wider">
+                            <span className="text-slate-400">Seuil de réapprovisionnement :</span>
+                            <span className="text-slate-800">{inspectingArticle.minStock} {inspectingArticle.unit}</span>
+                          </div>
+
+                          <div className="pt-2">
+                            {isRupture ? (
+                              <div className="bg-rose-50 text-rose-700 border border-rose-100 px-4 py-3 rounded-xl flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 animate-bounce" />
+                                <span className="text-[11px] font-black uppercase tracking-wider">RUPTURE DE STOCK - Commande d'urgence requise</span>
+                              </div>
+                            ) : isAlert ? (
+                              <div className="bg-amber-50 text-amber-700 border border-amber-100 px-4 py-3 rounded-xl flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 text-amber-500 shrink-0" />
+                                <span className="text-[11px] font-black uppercase tracking-wider">STOCK CRITIQUE - Niveau sous le seuil d'alerte</span>
+                              </div>
+                            ) : (
+                              <div className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-4 py-3 rounded-xl flex items-center gap-2">
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                                <span className="text-[11px] font-black uppercase tracking-wider">STOCK CONFORMANT - Niveau optimal</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </div>
+
+                  {/* Classification BOM - Arborescence Technique */}
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Nomenclature & Système Technologique</h4>
+                    <div className="border border-slate-100 rounded-3xl p-6 bg-white space-y-4 relative">
+                      {/* Vertical line indicator */}
+                      <div className="absolute left-9 top-10 bottom-10 w-0.5 bg-slate-100" />
+                      
+                      {/* Level 1 */}
+                      <div className="flex items-start gap-4 relative z-10">
+                        <div className="w-6 h-6 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-black text-[10px] border border-indigo-100 shrink-0 mt-0.5 shadow-sm">
+                          1
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Système Fonctionnel</p>
+                          <p className="text-sm font-black text-slate-800">{inspectingArticle.functionalCategory || 'Non spécifié'}</p>
+                        </div>
+                      </div>
+
+                      {/* Level 2 */}
+                      <div className="flex items-start gap-4 relative z-10">
+                        <div className="w-6 h-6 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center font-black text-[10px] border border-sky-100 shrink-0 mt-0.5 shadow-sm">
+                          2
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Groupe Assemblage</p>
+                          <p className="text-sm font-black text-slate-800">{inspectingArticle.subCategory || 'Non spécifié'}</p>
+                        </div>
+                      </div>
+
+                      {/* Level 3 */}
+                      <div className="flex items-start gap-4 relative z-10">
+                        <div className="w-6 h-6 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-black text-[10px] border border-amber-100 shrink-0 mt-0.5 shadow-sm">
+                          3
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Composant</p>
+                          <p className="text-sm font-black text-slate-800">{inspectingArticle.component || 'Non spécifié'}</p>
+                        </div>
+                      </div>
+
+                      {/* Level 4 */}
+                      <div className="flex items-start gap-4 relative z-10">
+                        <div className="w-6 h-6 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center font-black text-[10px] border border-emerald-100 shrink-0 mt-0.5 shadow-sm">
+                          4
+                        </div>
+                        <div className="space-y-0.5">
+                          <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider">Spécification Technique</p>
+                          <p className="text-sm font-black text-slate-800">{inspectingArticle.subComponent || 'Fiche standard'}</p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fiche Financière & Logistique */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50 flex flex-col gap-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Prix d'acquisition</span>
+                      <p className="text-lg font-extrabold text-emerald-600">{formatCurrency(inspectingArticle.price || 0)}</p>
+                    </div>
+                    <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50 flex flex-col gap-1">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Valeur Globale Stock</span>
+                      <p className="text-lg font-extrabold text-slate-900">{formatCurrency((inspectingArticle.price || 0) * inspectingArticle.quantity)}</p>
+                    </div>
+                    <div className="border border-slate-100 rounded-2xl p-4 bg-slate-50 flex flex-col gap-1 col-span-2">
+                      <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Localisation Magasin</span>
+                      <p className="text-sm font-black text-slate-700 font-mono tracking-tight">{inspectingArticle.location || 'Non spécifiée'}</p>
+                    </div>
+                  </div>
+
+                  {/* Extra specifications */}
+                  <div className="space-y-4 pt-2">
+                    {/* Machine Compatibility */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Compatibilités Matériels</span>
+                      <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+                        <p className="text-xs font-black text-slate-700">
+                          {inspectingArticle.compatibility || 'Consignes universelles / Convient à toutes les marques répertoriées.'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Technical Notes */}
+                    <div className="space-y-2">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Notes Techniques SRE</span>
+                      <div className="p-4 bg-slate-50 border border-slate-100 rounded-2xl italic text-slate-500 text-xs">
+                        "{inspectingArticle.notes || 'Aucun mémo technique renseigné pour cette référence.'}"
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer Controls */}
+                <footer className="p-8 border-t border-slate-100 bg-slate-50 flex gap-4 shrink-0">
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      const itemToEdit = { ...inspectingArticle };
+                      setInspectingArticle(null);
+                      handleEdit(itemToEdit);
+                    }}
+                    className="flex-1 py-4 bg-slate-950 text-white font-black uppercase text-xs tracking-widest rounded-2xl shadow-xl hover:bg-sky-600 transition-colors flex items-center justify-center gap-2 hover:-translate-y-0.5 transition-transform cursor-pointer"
+                  >
+                    <Pencil className="w-4 h-4" /> Modifier la Fiche
+                  </button>
+                  <button 
+                    type="button"
+                    onClick={() => setInspectingArticle(null)}
+                    className="px-6 py-4 border border-slate-200 text-slate-600 hover:text-slate-800 font-black uppercase text-xs tracking-wider rounded-2xl bg-white hover:bg-slate-50 transition-colors cursor-pointer"
+                  >
+                    Fermer
+                  </button>
+                </footer>
+              </motion.div>
+            </div>
+          </div>
+        )}
+      </AnimatePresence>
+
       <NotificationCenter notifications={notifications} />
     </div>
   );

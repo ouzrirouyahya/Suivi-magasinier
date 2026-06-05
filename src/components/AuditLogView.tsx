@@ -12,10 +12,15 @@ export function AuditLogView({ logs }: AuditLogViewProps) {
   const [filterSite, setFilterSite] = useState<SiteCode | 'ALL'>('ALL');
 
   const filteredLogs = logs.filter(log => {
-    const matchesSearch = 
-      log.userEmail.toLowerCase().includes(search.toLowerCase()) ||
-      log.details.toLowerCase().includes(search.toLowerCase()) ||
-      log.action.toLowerCase().includes(search.toLowerCase());
+    const sTerm = search.toLowerCase();
+    const safeContains = (field: any) => {
+      if (typeof field !== 'string') return false;
+      return field.toLowerCase().includes(sTerm);
+    };
+    const matchesSearch = !search ||
+      safeContains(log.userEmail) ||
+      safeContains(log.details) ||
+      safeContains(log.action);
     const matchesSite = filterSite === 'ALL' || log.site === filterSite;
     return matchesSearch && matchesSite;
   });
@@ -86,12 +91,16 @@ export function AuditLogView({ logs }: AuditLogViewProps) {
                     <div className="flex items-center gap-2">
                       <Calendar className="w-3.5 h-3.5 text-slate-300" />
                       <span className="text-xs font-black text-slate-500">
-                        {new Date(log.timestamp).toLocaleString('fr-FR', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
+                        {!log.timestamp || new Date(log.timestamp).getFullYear() <= 1970 ? (
+                          <span className="text-amber-500 animate-pulse uppercase tracking-wider text-[10px]">À l'instant</span>
+                        ) : (
+                          new Date(log.timestamp).toLocaleString('fr-FR', {
+                            day: '2-digit',
+                            month: '2-digit',
+                            hour: '2-digit',
+                            minute: '2-digit'
+                          })
+                        )}
                       </span>
                     </div>
                   </td>

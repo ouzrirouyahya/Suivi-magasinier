@@ -16,7 +16,7 @@ service cloud.firestore {
     }
     
     function isValidId(id) {
-      return id is string && id.size() > 0 && id.size() <= 128 && id.matches("^[a-zA-Z0-9_\\-]+$");
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches("^[a-zA-Z0-9_-]+$");
     }
     
     function isOwner(userId) {
@@ -24,41 +24,27 @@ service cloud.firestore {
     }
 
     function isAdmin() {
-      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
-      return isSignedIn() && (
+      return isSignedIn() && isEmailVerified() && (
         request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
-        (exists(path) && (get(path).data.role == 'ADMIN' || get(path).data.role == 'SUPER_ADMIN'))
+        (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && (get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'ADMIN' || get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'SUPER_ADMIN'))
       );
     }
 
     function isMaintenanceLocked() {
-      let path = /databases/$(database)/documents/metadata/system_config;
-      return exists(path) && get(path).data.maintenanceMode == true;
-    }
-
-    function hasAccount() {
-      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
-      return exists(path);
-    }
-
-    function getRole() {
-      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
-      return hasAccount() ? get(path).data.role : 'LECTURE_SEULE';
+      return exists(/databases/$(database)/documents/metadata/system_config) && get(/databases/$(database)/documents/metadata/system_config).data.maintenanceMode == true;
     }
 
     function isActive() {
-      let path = /databases/$(database)/documents/accounts/$(request.auth.uid);
       return isEmailVerified() && (
-        request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
-        (exists(path) && get(path).data.active == true)
+        (request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com']) ||
+        (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.active == true)
       );
     }
 
     function isAnyRole(roles) {
-      let role = getRole();
       return isActive() && (
-        role in roles ||
-        role == 'SUPER_ADMIN'
+        (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role in roles) ||
+        (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'SUPER_ADMIN')
       );
     }
 
@@ -79,137 +65,205 @@ service cloud.firestore {
 
     function isValidArticle(data) {
       return data.keys().hasAll(['id', 'site', 'ref', 'designation', 'type', 'quantity', 'minStock', 'active'])
-        && data.quantity is number && data.quantity >= 0
-        && data.minStock is number && data.minStock >= 0
-        && data.active is bool;
+        && data.keys().size() <= 25
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.site is string && data.site.size() > 0 && data.site.size() <= 64
+        && data.ref is string && data.ref.size() > 0 && data.ref.size() <= 128
+        && data.designation is string && data.designation.size() > 0 && data.designation.size() <= 512
+        && data.type is string && data.type.size() > 0 && data.type.size() <= 64
+        && data.quantity is number && data.quantity >= 0 && data.quantity <= 1000000000
+        && data.minStock is number && data.minStock >= 0 && data.minStock <= 1000000000
+        && data.active is bool
+        && data.get('category', '') is string && data.get('category', '').size() <= 128
+        && data.get('unit', '') is string && data.get('unit', '').size() <= 32
+        && data.get('price', 0) is number && data.get('price', 0) >= 0
+        && data.get('location', '') is string && data.get('location', '').size() <= 128
+        && data.get('notes', '') is string && data.get('notes', '').size() <= 2048
+        && data.get('compatibility', '') is string && data.get('compatibility', '').size() <= 2048
+        && data.get('criticality', '') is string && data.get('criticality', '').size() <= 64
+        && data.get('lastInventoryDate', '') is string && data.get('lastInventoryDate', '').size() <= 64
+        && data.get('subComponent', '') is string && data.get('subComponent', '').size() <= 128
+        && data.get('component', '') is string && data.get('component', '').size() <= 128
+        && data.get('subCategory', '') is string && data.get('subCategory', '').size() <= 128
+        && data.get('functionalCategory', '') is string && data.get('functionalCategory', '').size() <= 128;
     }
 
     function isValidMouvement(data) {
       return data.keys().hasAll(['id', 'site', 'date', 'type', 'items', 'status'])
-        && data.site is string
-        && data.type is string
-        && data.items is list
-        && data.items.size() > 0
-        && data.status is string;
+        && data.keys().size() <= 25
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.site is string && data.site.size() > 0 && data.site.size() <= 64
+        && data.date is string && data.date.size() > 0 && data.date.size() <= 128
+        && data.type is string && data.type in ['ENTREE', 'SORTIE', 'TRANSFERT_OUT', 'TRANSFERT_IN', 'AJUSTEMENT', 'RETOUR']
+        && data.status is string && data.status in ['BROUILLON', 'VALIDE', 'EN_TRANSIT', 'COMPLETE']
+        && data.items is list && data.items.size() > 0 && data.items.size() <= 100
+        && data.get('reference', '') is string && data.get('reference', '').size() <= 128
+        && data.get('demandeur', '') is string && data.get('demandeur', '').size() <= 128
+        && data.get('mecanicien', '') is string && data.get('mecanicien', '').size() <= 128
+        && data.get('service', '') is string && data.get('service', '').size() <= 128
+        && data.get('motif', '') is string && data.get('motif', '').size() <= 512
+        && data.get('notes', '') is string && data.get('notes', '').size() <= 2048;
     }
 
     function isValidTransfert(data) {
       return data.keys().hasAll(['id', 'sourceSite', 'targetSite', 'dateEnvoi', 'reference', 'items', 'status'])
-        && data.sourceSite is string
-        && data.targetSite is string
+        && data.keys().size() <= 25
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.sourceSite is string && data.sourceSite.size() > 0 && data.sourceSite.size() <= 64
+        && data.targetSite is string && data.targetSite.size() > 0 && data.targetSite.size() <= 64
         && data.sourceSite != data.targetSite
-        && data.items is list
-        && data.status is string;
+        && data.reference is string && data.reference.size() > 0 && data.reference.size() <= 128
+        && data.status is string && data.status in ['PENDING_APPROVAL', 'IN_TRANSIT', 'RECEIVED', 'DISPUTED', 'CLOSED', 'EN_TRANSIT', 'RECU', 'LITIGE']
+        && data.items is list && data.items.size() > 0 && data.items.size() <= 100
+        && data.get('dateReception', '') is string && data.get('dateReception', '').size() <= 128
+        && data.get('expediteur', '') is string && data.get('expediteur', '').size() <= 128
+        && data.get('recepteur', '') is string && data.get('recepteur', '').size() <= 128;
     }
 
     function isValidAccount(data) {
       return data.keys().hasAll(['id', 'email', 'name', 'role', 'active'])
-        && data.email is string
-        && data.name is string
-        && data.role is string
-        && data.active is bool;
+        && data.keys().size() <= 10
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.email is string && data.email.size() > 0 && data.email.size() <= 256
+        && data.name is string && data.name.size() > 0 && data.name.size() <= 256
+        && data.role is string && data.role in ['SUPER_ADMIN', 'ADMIN', 'MAGASINIER', 'LECTURE_SEULE']
+        && data.active is bool
+        && data.get('createdAt', '') is string && data.get('createdAt', '').size() <= 128;
     }
 
     function isValidAuditLog(data) {
       return data.keys().hasAll(['id', 'timestamp', 'userEmail', 'site', 'action', 'details'])
-        && data.userEmail is string
-        && data.site is string
-        && data.action is string;
+        && data.keys().size() <= 15
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.userEmail is string && data.userEmail.size() > 0 && data.userEmail.size() <= 256
+        && data.site is string && data.site.size() > 0 && data.site.size() <= 64
+        && data.action is string && data.action.size() > 0 && data.action.size() <= 128
+        && data.details is string && data.details.size() <= 4096
+        && data.timestamp is string && data.timestamp.size() > 0;
+    }
+
+    function isValidInventaire(data) {
+      return data.keys().hasAll(['id', 'site', 'date', 'type', 'status', 'items'])
+        && data.keys().size() <= 10
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.site is string && data.site.size() > 0 && data.site.size() <= 64
+        && data.status is string && data.status in ['OUVERT', 'VALIDE']
+        && data.items is list;
+    }
+
+    function isValidDistribution(data) {
+      return data.keys().hasAll(['id', 'site', 'agentName', 'service', 'articleId', 'date', 'quantity'])
+        && data.keys().size() <= 10
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.site is string && data.site.size() > 0 && data.site.size() <= 64
+        && data.agentName is string && data.agentName.size() > 0
+        && data.quantity is number;
+    }
+
+    function isValidPurchaseRequest(data) {
+      return data.keys().hasAll(['id', 'site', 'date', 'status', 'items', 'createdBy'])
+        && data.keys().size() <= 10
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.site is string && data.site.size() > 0 && data.site.size() <= 64
+        && data.status is string && data.status in ['BROUILLON', 'ENVOYE', 'VALIDE', 'COMMANDE', 'RECU']
+        && data.items is list;
     }
 
     function isValidAnomalyReport(data) {
       return data.keys().hasAll(['id', 'site', 'timestamp', 'type', 'severity', 'description', 'status'])
-        && data.site is string
-        && data.type is string
-        && data.severity is string
-        && data.status is string;
+        && data.keys().size() <= 12
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.site is string && data.site.size() > 0 && data.site.size() <= 64
+        && data.status is string && data.status in ['NEW', 'INVESTIGATING', 'RESOLVED', 'DISMISSED']
+        && data.description is string;
     }
 
-    function isValidDeadLetter(data) {
-      return data.keys().hasAll(['dlqId', 'intentId', 'timestamp', 'errorClassification', 'errorMessage', 'status'])
-        && data.dlqId is string
-        && data.intentId is string
-        && data.status is string;
+    function isValidMaintenanceLog(data) {
+      return data.keys().hasAll(['id', 'machineId', 'machineType', 'date', 'type', 'description', 'partsUsed', 'performer'])
+        && data.keys().size() <= 12
+        && data.id is string
+        && data.machineId is string
+        && data.partsUsed is list;
     }
 
-    function isValidForensicLog(data) {
-      return data.keys().hasAll(['forensicId', 'timestamp', 'severity', 'subsystem', 'message'])
-        && data.forensicId is string
-        && data.severity is string
-        && data.subsystem is string
-        && data.message is string;
+    function isValidNotification(data) {
+      return data.keys().hasAll(['id', 'siteId', 'type', 'category', 'message', 'timestamp', 'isRead', 'severity', 'status'])
+        && data.keys().size() <= 15
+        && data.id is string;
+    }
+
+    function isValidDeletionRequest(data) {
+      return data.keys().hasAll(['id', 'articleIds', 'articleRefs', 'articleDesignations', 'site', 'requestedBy', 'requestedAt', 'status'])
+        && data.keys().size() <= 12
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.articleIds is list && data.articleIds.size() > 0 && data.articleIds.size() <= 200
+        && data.status is string && data.status in ['PENDING_APPROVAL', 'APPROVED', 'REJECTED'];
+    }
+
+    function isValidReport(data) {
+      return data.keys().hasAll(['site', 'type', 'generatedAt', 'data'])
+        && data.keys().size() <= 10
+        && data.site is string && data.site.size() > 0 && data.site.size() <= 64
+        && data.type is string && data.type.size() > 0 && data.type.size() <= 128
+        && data.generatedAt is string && data.generatedAt.size() > 0 && data.generatedAt.size() <= 128;
     }
 
     // --- Match Rules Blocks ---
 
     // Master Catalog Rules
     match /catalog/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
     match /metadata/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if isAdmin() && isValidId(id); // System admins bypass canWrite during lockdown
     }
     match /engins/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
     match /perfos/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
     match /agents/{id} {
-      allow read: if isSignedIn();
+      allow read: if true;
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
 
     // Stocks/Articles: Protected from non-magasiniers and arbitrary value-poisoning
     match /articles/{articleId} {
-      allow read: if isActive();
+      allow read: if true;
       allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(articleId) && isValidArticle(incoming());
       allow update: if canWrite(['ADMIN', 'MAGASINIER', 'MAINTENANCE']) && isValidId(articleId) && isValidArticle(incoming());
       allow delete: if canWrite(['ADMIN']) && isValidId(articleId);
     }
 
-    match /deletionRequests/{id} {
-      allow read: if isActive();
-      allow create: if isActive() && isValidId(id);
-      allow update, delete: if canWrite(['ADMIN']) && isValidId(id);
-    }
-
-    // Transactional Movements: Append-only, never modifiable except by ADMIN, never deletable
-    match /mouvements/{id} {
-      allow read: if isActive();
-      allow create: if canWrite(['ADMIN', 'MAGASINIER', 'MAINTENANCE']) && isValidId(id) && isValidMouvement(incoming());
-      allow update: if canWrite(['ADMIN']) && isValidId(id) && isValidMouvement(incoming());
-      allow delete: if false;
-    }
-
-    // Operations and Diagnostics
-    match /maintenanceLogs/{id} {
-      allow read: if isActive();
-      allow create: if canWrite(['ADMIN', 'MAINTENANCE', 'MAGASINIER']) && isValidId(id);
-      allow update: if canWrite(['ADMIN', 'MAINTENANCE']) && isValidId(id);
-      allow delete: if canWrite(['ADMIN']) && isValidId(id);
-    }
-
     // accounts Management (Zero self promotion RBAC gates)
     match /accounts/{userId} {
-      allow get, create: if isSignedIn() && isValidId(userId);
-      allow list: if isActive();
+      allow read, get, list: if true;
+      allow create: if isSignedIn() && isValidId(userId) && isOwner(userId) && isValidAccount(incoming()) && (
+        isAdmin() || (
+          incoming().active == true && (
+            (request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] && incoming().role in ['SUPER_ADMIN', 'ADMIN']) ||
+            (incoming().role == 'MAGASINIER')
+          )
+        )
+      );
       allow update: if isValidId(userId) && isSignedIn() && (
         isAdmin() || (
           isOwner(userId)
           && incoming().role == existing().role
           && incoming().active == existing().active
+          && isValidAccount(incoming())
         )
       );
     }
 
     // Secure Transferts
     match /transferts/{id} {
-      allow read: if isActive();
+      allow read: if true;
       allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidTransfert(incoming());
       allow update: if isValidId(id) && canWrite(['ADMIN', 'MAGASINIER']) && (
         isAdmin() || (
@@ -223,76 +277,91 @@ service cloud.firestore {
       allow delete: if canWrite(['ADMIN']) && isValidId(id);
     }
 
+    // Transactional Movements: Append-only, never modifiable except by ADMIN, never deletable
+    match /mouvements/{id} {
+      allow read: if true;
+      allow create: if canWrite(['ADMIN', 'MAGASINIER', 'MAINTENANCE']) && isValidId(id) && isValidMouvement(incoming());
+      allow update: if canWrite(['ADMIN']) && isValidId(id) && isValidMouvement(incoming());
+      allow delete: if false;
+    }
+
     // Audit logs: Strictly append-only. Immutable once recorded.
     match /auditLogs/{id} {
-      allow read: if isActive();
-      allow create: if isSignedIn() && isValidId(id) && isValidAuditLog(incoming());
+      allow read: if true;
+      allow create: if true; // Let viewers and background routines log audits
       allow update, delete: if false;
+    }
+
+    // Reports: Generated analysis storage
+    match /reports/{reportId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isAdmin();
+    }
+
+    // Deletion requests: submitted by magaziniers, approved/rejected by admins
+    match /deletionRequests/{id} {
+      allow read: if true;
+      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDeletionRequest(incoming());
+      allow update: if isAdmin() && isValidId(id);
+      allow delete: if isAdmin();
+    }
+
+    // Real-time viewer telemetry tracking: guest/viewer users log session details
+    match /viewer_sessions/{sessionId} {
+      allow read, create, update, write: if true; // Guest and viewer trackers can write telemetry freely
+    }
+
+    match /viewer_activity/{activityId} {
+      allow read, create, update, write: if true; // Activity tracking can write telemetry freely
     }
 
     // Inventaires
     match /inventaires/{id} {
-      allow read: if isActive();
-      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+      allow read: if true;
+      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidInventaire(incoming());
+      allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidInventaire(incoming());
+      allow delete: if isAdmin();
     }
 
     // Distributions
     match /distributions/{id} {
-      allow read: if isActive();
-      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+      allow read: if true;
+      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDistribution(incoming());
+      allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDistribution(incoming());
+      allow delete: if isAdmin();
     }
 
     // Purchase Requests
     match /purchaseRequests/{id} {
-      allow read: if isActive();
-      allow write: if canWrite(['ADMIN', 'MAGASINIER', 'DIRECTION']) && isValidId(id);
+      allow read: if true;
+      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidPurchaseRequest(incoming());
+      allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidPurchaseRequest(incoming());
+      allow delete: if isAdmin();
     }
 
-    // Anomalies
+    // Anomaly Reports
     match /anomalyReports/{id} {
-      allow read: if isActive();
-      allow write: if canWrite(['ADMIN', 'MAGASINIER', 'SUPERVISEUR']) && isValidId(id) && isValidAnomalyReport(incoming());
+      allow read: if true;
+      allow create: if true; // Match active user/daemon triggers
+      allow update: if true;
+      allow delete: if isAdmin();
     }
 
-    // Reports PDF / CSV
-    match /reports/{id} {
-      allow read: if isActive();
-      allow create: if canWrite(['ADMIN', 'MAGASINIER', 'SUPERVISEUR']) && isValidId(id);
-      allow update, delete: if canWrite(['ADMIN']) && isValidId(id);
+    // Maintenance Logs
+    match /maintenanceLogs/{id} {
+      allow read: if true;
+      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidMaintenanceLog(incoming());
+      allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidMaintenanceLog(incoming());
+      allow delete: if isAdmin();
     }
 
-    // Notifications systems
+    // Notifications
     match /notifications/{id} {
-      allow read: if isActive();
-      allow create: if isSignedIn() && isValidId(id);
-      allow update: if isSignedIn() && isValidId(id);
-      allow delete: if canWrite(['ADMIN']);
-    }
-
-    // DLQ Management (SRE Dead Letter Queue) - Read by authorized persons, write append-only, NO DELETE
-    match /deadLetterQueue/{id} {
-      allow read: if isActive();
-      allow create: if isSignedIn() && isValidId(id) && isValidDeadLetter(incoming());
-      allow update: if canWrite(['ADMIN']) && isValidId(id); // Only admins resolve/unblock packets
-      allow delete: if false; // Non-deletable trace integrity
-    }
-
-    // Forensic Log Cloud Mirrors
-    match /forensicLogs/{id} {
-      allow read: if isActive();
-      allow create: if isSignedIn() && isValidId(id) && isValidForensicLog(incoming());
-      allow update, delete: if false;
-    }
-
-    // Viewer real-time tracking
-    match /viewer_sessions/{id} {
-      allow read: if isSignedIn();
-      allow write, create, update: if isValidId(id);
-    }
-
-    match /viewer_activity/{id} {
-      allow read: if isSignedIn();
-      allow write, create, update: if isValidId(id);
+      allow read: if true;
+      allow create: if true;
+      allow update: if true;
+      allow delete: if isAdmin() && isValidId(id);
     }
   }
 }

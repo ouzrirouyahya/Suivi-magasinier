@@ -85,9 +85,185 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     perfos, 
     agents,
     addMouvement,
+    saveArticle,
     setEngin,
     setPerfo
   } = useInventory();
+
+  // HIGH FREQUENCY QUICK ACTION PANE CONFIG & STATES
+  const HIGH_FREQ_CONFIG = useMemo(() => [
+    {
+      key: 'taillants',
+      title: 'Taillants 38mm',
+      ref: 'MB-T23-801a',
+      designation: "Taillant à boutons coniques 38mm d'injection d'air",
+      type: 'CONSOMMABLES',
+      category: 'Consommables',
+      unit: 'Pcs',
+      price: 380,
+      icon: '🎯'
+    },
+    {
+      key: 'barres',
+      title: 'Barres Coniques 1.8m',
+      ref: 'MB-T23-701',
+      designation: 'Fleuret de forage conique R25 Hex 22 de longueur 1.8m',
+      type: 'CONSOMMABLES',
+      category: 'Consommables',
+      unit: 'Pcs',
+      price: 1180,
+      icon: '⚡'
+    },
+    {
+      key: 'gants',
+      title: 'Gants Miner SRE',
+      ref: 'EPI-GAN-01',
+      designation: 'Gants de protection Kevlar SRE renforcé',
+      type: 'EPI',
+      category: 'Sécurité / EPI',
+      unit: 'Paire',
+      price: 65,
+      icon: '🧤'
+    },
+    {
+      key: 'bottes',
+      title: 'Bottes de Sécurité Mine',
+      ref: 'EPI-BOT-02',
+      designation: 'Bottes de sécurité souples S5 SRE Mine',
+      type: 'EPI',
+      category: 'Sécurité / EPI',
+      unit: 'Paire',
+      price: 210,
+      icon: '🥾'
+    }
+  ], []);
+
+  const resolvedHFArticles = useMemo(() => {
+    return HIGH_FREQ_CONFIG.map(cfg => {
+      const found = articles.find(a => a.site === site && a.ref.trim().toUpperCase() === cfg.ref.trim().toUpperCase() && a.active);
+      return {
+        config: cfg,
+        article: found
+      };
+    });
+  }, [articles, site, HIGH_FREQ_CONFIG]);
+
+  const [highFreqModal, setHighFreqModal] = useState<{
+    isOpen: boolean;
+    type: 'ENTREE' | 'SORTIE';
+    itemConfig: typeof HIGH_FREQ_CONFIG[0];
+    resolvedArticle?: Article;
+  } | null>(null);
+
+  const [hfQty, setHfQty] = useState<number>(1);
+  const [hfBeneficiaire, setHfBeneficiaire] = useState('');
+  const [hfMecanicien, setHfMecanicien] = useState('');
+  const [hfMachine, setHfMachine] = useState('');
+  const [hfBL, setHfBL] = useState('');
+  const [hfFournisseur, setHfFournisseur] = useState('');
+  const [hfService, setHfService] = useState('FORAGE');
+  const [hfMotif, setHfMotif] = useState('');
+  const [isSubmittingHF, setIsSubmittingHF] = useState(false);
+
+  const handleActivateHFArticle = async (cfg: typeof HIGH_FREQ_CONFIG[0]) => {
+    const cleanRef = cfg.ref.trim().toUpperCase().replace(/\s+/g, '_');
+    const deterministicId = `${site}_${cleanRef}`;
+    
+    const newArticle: Article = {
+      id: deterministicId,
+      site: site,
+      ref: cfg.ref,
+      designation: cfg.designation,
+      type: cfg.type as any,
+      category: cfg.category,
+      functionalCategory: cfg.category,
+      subCategory: '',
+      component: '',
+      subComponent: '',
+      unit: cfg.unit,
+      quantity: 0,
+      minStock: 10,
+      price: cfg.price,
+      location: 'RAY-EXPRESS',
+      active: true,
+      notes: `Activé via le Pupitre Saisie Haute-Fréquence`
+    };
+
+    try {
+      await toast.promise(saveArticle(newArticle), {
+        loading: `Création de ${cfg.title} sur le site de ${site}...`,
+        success: `${cfg.title} est maintenant opérationnel sur ${site} !`,
+        error: (err: any) => `Échec : ${err.message || err}`
+      });
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  const handleHFSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!highFreqModal) return;
+    const { type, itemConfig, resolvedArticle } = highFreqModal;
+    
+    if (!resolvedArticle) {
+       toast.error("Veuillez d'abord activer l'article.");
+       return;
+    }
+
+    if (hfQty <= 0) {
+      toast.error("La quantité doit être supérieure à 0.");
+      return;
+    }
+
+    if (type === 'SORTIE' && resolvedArticle.quantity < hfQty) {
+      toast.error(`Stock insuffisant. Disponible : ${resolvedArticle.quantity}`);
+      return;
+    }
+
+    setIsSubmittingHF(true);
+
+    try {
+      const movementId = `mv-${generateId()}`;
+      const mItem: MouvementItem = {
+        articleId: resolvedArticle.id,
+        quantity: hfQty,
+        price: resolvedArticle.price ?? 0
+      };
+
+      const hfBLDoc = hfBL || 'LIVRAISON_HF';
+
+      const movementObj: Mouvement = {
+        id: movementId,
+        site: site,
+        date: new Date().toISOString(),
+        type: type,
+        reference: type === 'ENTREE' ? hfBLDoc : 'BON_SORTIE_HF',
+        demandeur: hfBeneficiaire || 'Agent de Poste',
+        mecanicien: hfMecanicien || '',
+        engin: hfMachine || '',
+        service: hfService || 'FORAGE',
+        items: [mItem],
+        status: 'COMPLETE'
+      };
+
+      await addMouvement(movementObj);
+      toast.success("Mouvement enregistré avec succès ! Stock mis à jour.");
+      setHighFreqModal(null);
+      // Reset inputs
+      setHfQty(1);
+      setHfBeneficiaire('');
+      setHfMecanicien('');
+      setHfMachine('');
+      setHfBL('');
+      setHfFournisseur('');
+      setHfService('FORAGE');
+      setHfMotif('');
+    } catch (err: any) {
+      toast.error(`Erreur : ${err.message || err}`);
+    } finally {
+      setIsSubmittingHF(false);
+    }
+  };
 
   // Mode Selection State
   const [activePane, setActivePane] = useState<'DASHBOARD' | 'SAISIE' | 'PARC'>('DASHBOARD');
@@ -2020,9 +2196,155 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
           </div>
 
           {dashboardViewMode === 'OPERATIONAL' ? (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-              {/* LEFT COLUMN: SAISIE UNITAIRE EXPRESS WITH HIGH-FIDELITY REDESIGN */}
-              <div className="lg:col-span-5 bg-white border border-slate-200/70 p-6 sm:p-7 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all">
+            <div className="space-y-6">
+              {/* ⚡ PUPITRE DE SAISIE RAPIDE - PIÈCES HAUTE FRÉQUENCE (TAILLANTS, BARRES CONIQUES, GANTS, BOTTES) */}
+              <div className="bg-white border-2 border-slate-200/90 rounded-[2rem] p-6 shadow-sm relative overflow-hidden">
+                {/* Visual Accent header lines */}
+                <div className="absolute top-0 left-0 right-0 h-1.5 flex transition-all">
+                  <div className="w-1/4 h-full bg-sky-450" />
+                  <div className="w-1/4 h-full bg-emerald-450" />
+                  <div className="w-1/4 h-full bg-indigo-405" />
+                  <div className="w-1/4 h-full bg-[#991b1b]" />
+                </div>
+                
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 mt-1">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">⚡</span>
+                    <div>
+                      <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Pupitre d'Imputation Express (Haute Fréquence)</h3>
+                      <p className="text-xs text-slate-500 font-semibold leading-tight">Mouvements rapides en 1 clic pour les consommables et EPI les plus actifs de {site}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="h-1.5 w-1.5 rounded-full bg-sky-500 animate-ping" />
+                    <span className="text-[10px] font-black text-sky-700 bg-sky-50/80 border border-sky-100 px-2.5 py-1 rounded-full uppercase tracking-widest font-mono">POSTE DE SAISIE SYSTEME</span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {resolvedHFArticles.map(({ config, article }) => {
+                    const hasStock = article && article.quantity > 0;
+                    const lowStock = article && article.quantity <= article.minStock;
+
+                    return (
+                      <div 
+                        key={config.key} 
+                        className={cn(
+                          "rounded-2xl border p-4.5 flex flex-col justify-between transition-all group bg-white relative overflow-hidden",
+                          article 
+                            ? (lowStock ? "border-amber-200 bg-gradient-to-br from-white to-amber-50/10 shadow-[0_2px_8px_rgba(245,158,11,0.03)]" : "border-slate-200 hover:border-slate-350 shadow-sm")
+                            : "border-dashed border-slate-200 bg-slate-50/30"
+                        )}
+                      >
+                        {/* Circle pattern */}
+                        <div className="absolute -right-3 -top-3 w-16 h-16 rounded-full bg-slate-100/40 group-hover:scale-110 transition-transform pointer-events-none" />
+
+                        <div className="relative z-10">
+                          <div className="flex items-start justify-between gap-2.5 mb-2.5">
+                            <div className="flex items-center gap-2">
+                              <span className="text-2xl shrink-0">{config.icon}</span>
+                              <div>
+                                <h4 className="text-xs font-black text-slate-800 group-hover:text-slate-950 uppercase tracking-tight select-all leading-tight">
+                                  {config.title}
+                                </h4>
+                                <p className="text-[9px] font-mono text-slate-400 font-black tracking-wide mt-0.5 select-all uppercase">
+                                  REF: {config.ref}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-slate-400 leading-tight line-clamp-2 uppercase font-semibold mb-3">
+                            {config.designation}
+                          </p>
+                        </div>
+
+                        <div className="relative z-10 border-t border-slate-100/80 pt-3.5 mt-2.5 flex flex-col gap-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider font-mono">Stock {site} :</span>
+                            {article ? (
+                              <span className={cn(
+                                "text-xs font-black px-2.5 py-1 rounded-lg border font-mono select-none",
+                                article.quantity === 0 
+                                  ? "bg-red-50 text-red-600 border-red-150" 
+                                  : lowStock 
+                                    ? "bg-amber-50 text-amber-700 border-amber-200 animate-pulse" 
+                                    : "bg-emerald-50 text-emerald-700 border-emerald-150"
+                              )}>
+                                {article.quantity} {article.unit}
+                              </span>
+                            ) : (
+                              <span className="text-[9px] font-black text-amber-600 bg-amber-50 border border-amber-100 px-2 py-0.5 rounded-md uppercase tracking-wide">
+                                Non Activé
+                              </span>
+                            )}
+                          </div>
+
+                          {article ? (
+                            <div className="grid grid-cols-2 gap-2">
+                              {/* BOUTON ENTRÉE */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setHighFreqModal({
+                                    isOpen: true,
+                                    type: 'ENTREE',
+                                    itemConfig: config,
+                                    resolvedArticle: article
+                                  });
+                                  setHfQty(1);
+                                  setHfService('MAINTENANCE');
+                                  setHfFournisseur('EPIROC MAROC');
+                                  setHfBL(`BL-${Math.floor(Math.random() * 89999 + 10000)}`);
+                                }}
+                                className="py-2 px-3 bg-emerald-500 hover:bg-emerald-600 text-white font-black text-[10px] uppercase tracking-wider rounded-lg border-0 transition-colors flex items-center justify-center gap-1 cursor-pointer select-none"
+                              >
+                                📥 Entrée
+                              </button>
+
+                              {/* BOUTON SORTIE */}
+                              <button
+                                type="button"
+                                disabled={article.quantity === 0}
+                                onClick={() => {
+                                  setHighFreqModal({
+                                    isOpen: true,
+                                    type: 'SORTIE',
+                                    itemConfig: config,
+                                    resolvedArticle: article
+                                  });
+                                  setHfQty(1);
+                                  setHfService('FORAGE');
+                                }}
+                                className={cn(
+                                  "py-2 px-3 font-black text-[10px] uppercase tracking-wider rounded-lg border-0 transition-colors flex items-center justify-center gap-1 cursor-pointer select-none",
+                                  article.quantity === 0
+                                    ? "bg-slate-100 text-slate-400 cursor-not-allowed"
+                                    : "bg-rose-500 hover:bg-rose-600 text-white"
+                                )}
+                              >
+                                📤 Sortie
+                              </button>
+                            </div>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => handleActivateHFArticle(config)}
+                              className="w-full py-2 bg-slate-950 hover:bg-slate-800 text-sky-400 border-0 font-black text-[10px] uppercase tracking-wider rounded-lg transition-all flex items-center justify-center gap-1.5 cursor-pointer select-none animate-bounce"
+                            >
+                              ⚙️ Ouvrir Fiche sur {site}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                {/* LEFT COLUMN: SAISIE UNITAIRE EXPRESS WITH HIGH-FIDELITY REDESIGN */}
+                <div className="lg:col-span-5 bg-white border border-slate-200/70 p-6 sm:p-7 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all">
                 <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100/80 mb-6 font-sans">
                   <div className="p-2.5 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-xl flex items-center justify-center shadow-md">
                     <Zap className="w-4 h-4 text-sky-400" />
@@ -2500,6 +2822,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 </div>
               </div>
             </div>
+          </div>
           ) : (
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
               {/* CONTROL CENTER BAR FOR FILTERS & SIMULATIONS */}
@@ -3042,6 +3365,242 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 Fermer la vue
               </button>
             </footer>
+          </div>
+        </div>
+      )}
+      {/* EXPRESS HIGH-FREQUENCY IMPUTATION MODAL OVERLAY */}
+      {highFreqModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto no-print">
+          <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+            {/* Background overlay */}
+            <div 
+              className="fixed inset-0 transition-opacity bg-slate-950/80 backdrop-blur-xs" 
+              onClick={() => setHighFreqModal(null)} 
+            />
+
+            {/* Spatial Center Fix */}
+            <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+
+            {/* Modal Body */}
+            <div className="inline-block align-bottom bg-white rounded-[2rem] text-left overflow-hidden shadow-2xl transform transition-all sm:my-8 sm:align-middle sm:max-w-md sm:w-full border border-slate-200">
+              <div className="relative">
+                {/* Accent top gradient line */}
+                <div className={cn(
+                  "h-1.5 w-full",
+                  highFreqModal.type === 'ENTREE' ? "bg-emerald-500" : "bg-rose-500"
+                )} />
+
+                <div className="p-6">
+                  {/* Title & Close */}
+                  <div className="flex justify-between items-start gap-3 mb-5">
+                    <div className="flex items-center gap-3">
+                      <span className="text-3xl">{highFreqModal.itemConfig.icon}</span>
+                      <div>
+                        <span className={cn(
+                          "text-[9px] font-black uppercase tracking-[0.2em] px-2.5 py-0.5 rounded-full border",
+                          highFreqModal.type === 'ENTREE'
+                            ? "bg-emerald-50 text-emerald-800 border-emerald-100"
+                            : "bg-rose-50 text-rose-800 border-rose-100"
+                        )}>
+                          IMPUTATION EXPRESS - {highFreqModal.type === 'ENTREE' ? 'ENTRÉE STOCKS' : 'SORTIE DE PIÈCES'}
+                        </span>
+                        <h3 className="text-base font-black text-slate-800 uppercase mt-1.5 leading-tight tracking-tight">
+                          {highFreqModal.itemConfig.title}
+                        </h3>
+                        <p className="text-[10px] font-mono text-slate-400 mt-0.5 uppercase tracking-wide">
+                          Réf: {highFreqModal.itemConfig.ref} | Stock actuel: {highFreqModal.resolvedArticle?.quantity || 0} {highFreqModal.itemConfig.unit}
+                        </p>
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => setHighFreqModal(null)}
+                      className="text-slate-400 hover:text-slate-600 bg-slate-100 hover:bg-slate-200 w-6 h-6 rounded-full flex items-center justify-center border-0 text-xs font-bold font-mono transition-colors cursor-pointer"
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  {/* Form */}
+                  <form onSubmit={handleHFSubmit} className="space-y-4">
+                    {/* QUANTITY FIELD WITH COCKPIT CHIPS */}
+                    <div>
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-2 font-mono">
+                        Quantité ({highFreqModal.itemConfig.unit}) :
+                      </label>
+                      <div className="relative flex items-center mb-2.5">
+                        <button 
+                          type="button" 
+                          onClick={() => setHfQty(q => Math.max(1, q - 1))}
+                          className="h-10 w-11 bg-slate-100 hover:bg-slate-200 text-slate-700 font-extrabold rounded-l-xl border-0 transition-all flex items-center justify-center cursor-pointer"
+                        >
+                          -
+                        </button>
+                        <input
+                          type="number"
+                          required
+                          min={1}
+                          max={highFreqModal.type === 'SORTIE' ? (highFreqModal.resolvedArticle?.quantity || 1) : 9999}
+                          value={hfQty}
+                          onChange={(e) => setHfQty(Math.max(1, parseInt(e.target.value) || 1))}
+                          className="w-full h-10 text-center font-black text-slate-800 bg-slate-50 border-y border-slate-200 text-sm focus:outline-none"
+                        />
+                        <button 
+                          type="button" 
+                          onClick={() => setHfQty(q => q + 1)}
+                          className="h-10 w-11 bg-slate-100 hover:bg-slate-200 text-slate-705 font-extrabold rounded-r-xl border-0 transition-all flex items-center justify-center cursor-pointer"
+                        >
+                          +
+                        </button>
+                      </div>
+                      
+                      {/* Short chips for fast select */}
+                      <div className="grid grid-cols-5 gap-1.5">
+                        {[1, 2, 5, 10, 12, 15, 20, 24, 30, 40].slice(0, 5).map(v => (
+                          <button
+                            key={v}
+                            type="button"
+                            onClick={() => setHfQty(v)}
+                            className={cn(
+                              "h-7 text-[10px] font-bold font-mono rounded-lg transition-all border cursor-pointer",
+                              hfQty === v
+                                ? "bg-slate-900 border-slate-900 text-white"
+                                : "bg-slate-50 border-slate-200 text-slate-500 hover:bg-slate-100"
+                            )}
+                          >
+                            {v} {highFreqModal.itemConfig.unit}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {highFreqModal.type === 'SORTIE' ? (
+                      <>
+                        {/* DEMANDEUR / BÉNÉFICIAIRE */}
+                        <div>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Bénéficiaire (Demandeur) :</label>
+                          <select
+                            value={hfBeneficiaire}
+                            onChange={(e) => setHfBeneficiaire(e.target.value)}
+                            className="w-full h-10 px-3 text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-xl outline-none focus:border-slate-400 transition-all uppercase cursor-pointer"
+                          >
+                            <option value="">Sélectionner l'agent...</option>
+                            {agents.map(a => (
+                              <option key={a.id} value={a.name}>{a.name} ({a.role || 'Personnel'})</option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* ENGINS / PERFORATEURS IMPUTE */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Engin / Machine :</label>
+                            <select
+                              value={hfMachine}
+                              onChange={(e) => setHfMachine(e.target.value)}
+                              className="w-full h-10 px-2.5 text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-xl outline-none focus:border-slate-400 transition-all uppercase cursor-pointer"
+                            >
+                              <option value="">Aucun engin...</option>
+                              {engins.filter(e => e.site === site).map(e => (
+                                <option key={e.id} value={e.code}>{e.code} - {e.category}</option>
+                              ))}
+                            </select>
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Service :</label>
+                            <select
+                              value={hfService}
+                              onChange={(e) => setHfService(e.target.value)}
+                              className="w-full h-10 px-2.5 text-xs font-bold text-slate-800 bg-white border border-slate-200 rounded-xl outline-none focus:border-slate-400 transition-all uppercase cursor-pointer"
+                            >
+                              <option value="FORAGE">FORAGE (T&B)</option>
+                              <option value="MAINTENANCE">ATELIER MECANIQUE</option>
+                              <option value="EXPLOITATION">EXTRACTION / FOND</option>
+                              <option value="SECURITE">SÉCURITÉ & RADIANCE</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* MÉCANICIEN RESPONSABLE */}
+                        <div>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Mécanicien Affecté :</label>
+                          <input
+                            type="text"
+                            placeholder="Mecano de service (facultatif)"
+                            value={hfMecanicien}
+                            onChange={(e) => setHfMecanicien(e.target.value)}
+                            className="w-full h-10 px-3 text-xs font-bold text-slate-800 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-slate-400 transition-all uppercase"
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        {/* FOURNISSEUR & PIECE JUSTIFICATIVE */}
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Fournisseur *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="Epiroc, Sandvik, etc..."
+                              value={hfFournisseur}
+                              onChange={(e) => setHfFournisseur(e.target.value)}
+                              className="w-full h-10 px-3 text-xs font-bold text-slate-800 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-slate-400 transition-all uppercase"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">N° Bon Livraison *</label>
+                            <input
+                              type="text"
+                              required
+                              placeholder="BL-XXXXX"
+                              value={hfBL}
+                              onChange={(e) => setHfBL(e.target.value)}
+                              className="w-full h-10 px-3 text-xs font-bold text-slate-850 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-slate-400 transition-all uppercase"
+                            />
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-1.5 font-mono">Motif / Notes :</label>
+                          <input
+                            type="text"
+                            placeholder="Entrée de stock initial, appro rôtisseur..."
+                            value={hfMotif}
+                            onChange={(e) => setHfMotif(e.target.value)}
+                            className="w-full h-10 px-3 text-xs font-bold text-slate-800 bg-slate-50/50 border border-slate-200 rounded-xl outline-none focus:bg-white focus:border-slate-400 transition-all uppercase"
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    {/* CONFIRMATION STRAP */}
+                    <div className="border-t border-slate-100 pt-4.5 mt-4.5 flex items-center justify-end gap-3.5">
+                      <button
+                        type="button"
+                        onClick={() => setHighFreqModal(null)}
+                        className="px-4 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-705 rounded-xl font-bold text-xs uppercase border-0 transition-colors cursor-pointer"
+                      >
+                        Annuler
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={isSubmittingHF}
+                        className={cn(
+                          "px-5 py-2.5 text-white font-black text-xs uppercase tracking-wider rounded-xl border-0 transition-all flex items-center justify-center gap-1.5 cursor-pointer shadow-md",
+                          highFreqModal.type === 'ENTREE' ? "bg-emerald-500 hover:bg-emerald-600" : "bg-rose-500 hover:bg-rose-600"
+                        )}
+                      >
+                        {isSubmittingHF ? (
+                          <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin inline-block" />
+                        ) : (
+                          <>⚡ Valider l'Imputation</>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       )}

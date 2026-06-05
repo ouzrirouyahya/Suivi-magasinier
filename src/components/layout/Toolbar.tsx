@@ -122,73 +122,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       </div>
         
         <div className="flex items-center gap-2 px-1">
-          {/* DISCREET INDUSTRIAL SRE TELEMETRY BLOCK */}
-          <div 
-            onClick={onNavigateToForensic}
-            className={`hidden md:flex items-center gap-2.5 mr-2 px-3 py-1.5 bg-slate-100/85 hover:bg-slate-200/80 active:scale-[0.98] border border-slate-200/50 rounded-lg text-[10px] font-mono select-none cursor-pointer transition-all`}
-          >
-            <div className="flex items-center gap-1 text-slate-500">
-              <Activity className="w-3 h-3 text-slate-400" />
-              <span className="font-extrabold uppercase">SOCI:</span>
-            </div>
 
-            <div className="flex items-center gap-1 text-slate-500 mr-1" title="Qualité Réseau de Surface">
-              <span className="text-[10px] font-extrabold text-slate-400">NET:</span>
-              <span className={`px-1 py-0.5 rounded text-[8px] font-black ${
-                networkQuality === 'ONLINE' ? 'bg-emerald-50 text-emerald-600 border border-emerald-100' :
-                networkQuality === 'HIGH_LATENCY' ? 'bg-amber-50 text-amber-600 border border-amber-100' :
-                networkQuality === 'INTERMITTENT' ? 'bg-yellow-50 text-yellow-600 border border-yellow-105' :
-                networkQuality === 'RECOVERING' ? 'bg-sky-50 text-sky-600 border border-sky-100 animate-pulse' :
-                'bg-rose-50 text-rose-600 border border-rose-100 animate-pulse'
-              }`}>
-                {networkQuality}
-              </span>
-            </div>
-
-            <div className="h-3 w-[1px] bg-slate-300" />
-
-            <div className="flex items-center gap-1" title="Statut de Synchronisation Master">
-              <span className={`inline-block w-1.5 h-1.5 rounded-full ${
-                metrics.reconnectStormStatus ? 'bg-red-500 animate-ping' :
-                metrics.queueDepth > 0 ? 'bg-amber-400' : 'bg-emerald-500'
-              }`} />
-              <span className="text-slate-600 font-bold uppercase" title={`${metrics.queueDepth} opérations en attente`}>
-                {metrics.reconnectStormStatus ? 'STORM' : metrics.queueDepth > 0 ? 'SYNCING' : 'OK'}
-              </span>
-            </div>
-
-            <div className="h-3 w-[1px] bg-slate-300" />
-
-            {/* Queue depth */}
-            <div className="flex items-center gap-0.5" title="File de transmission FIFO">
-              <span className="text-slate-400">Q:</span>
-              <span className={`font-black ${metrics.queueDepth > 0 ? 'text-amber-500 font-extrabold' : 'text-slate-600'}`}>
-                {metrics.queueDepth}
-              </span>
-            </div>
-
-            <div className="h-3 w-[1px] bg-slate-300" />
-
-            {/* Confidence metric */}
-            <div className="flex items-center gap-0.5" title="Indicateur de cohérence globale">
-              <span className="text-slate-400">CONF:</span>
-              <span className={`font-extrabold ${
-                metrics.confidenceMode === 'NORMAL' ? 'text-emerald-600' :
-                metrics.confidenceMode === 'DEGRADED' ? 'text-yellow-600' : 'text-rose-600'
-              }`}>
-                {Math.round(metrics.confidenceScore * 100)}%
-              </span>
-            </div>
-
-            {unresolvedDLQCount > 0 && (
-              <>
-                <div className="h-3 w-[1px] bg-slate-300" />
-                <div className="flex items-center gap-0.5 bg-red-15 text-red-500 font-extrabold px-1 rounded animate-pulse" title="Alerte DLQ unresolvable">
-                  <span>DLQ:{unresolvedDLQCount}</span>
-                </div>
-              </>
-            )}
-          </div>
 
           {/* SEGMENTED LAYOUT DENSITY SWITCHER */}
           <div className="hidden sm:flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 font-mono text-[9px] font-black select-none pointer-events-auto shadow-inner gap-0.5" title="Densité d'affichage">

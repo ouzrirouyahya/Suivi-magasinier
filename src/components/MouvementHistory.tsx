@@ -18,20 +18,35 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
 
   const filteredMouvements = mouvements.filter(m => {
     const matchesSite = m.site === site;
-    const matchesSearch = m.id.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                          (m.vendeur?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (m.demandeur?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (m.beneficiaire?.toLowerCase().includes(searchTerm.toLowerCase())) ||
-                          (m.reference?.toLowerCase().includes(searchTerm.toLowerCase()));
+    const sTerm = searchTerm.toLowerCase();
+    
+    const safeContains = (field: any) => {
+      if (typeof field !== 'string') return false;
+      return field.toLowerCase().includes(sTerm);
+    };
+
+    const matchesSearch = !searchTerm || 
+                          (m.id && m.id.toLowerCase().includes(sTerm)) || 
+                          safeContains(m.vendeur) ||
+                          safeContains(m.demandeur) ||
+                          safeContains(m.beneficiaire) ||
+                          safeContains(m.reference);
     
     const matchesType = typeFilter === 'ALL' || m.type === typeFilter;
     
-    const mDate = new Date(m.date).getTime();
-    const matchesStart = !dateStart || mDate >= new Date(dateStart).getTime();
-    const matchesEnd = !dateEnd || mDate <= new Date(dateEnd).getTime();
+    const mDate = m.date ? new Date(m.date).getTime() : 0;
+    const validMDate = isNaN(mDate) ? 0 : mDate;
+    const matchesStart = !dateStart || validMDate >= new Date(dateStart).getTime();
+    const matchesEnd = !dateEnd || validMDate <= new Date(dateEnd).getTime();
     
     return matchesSite && matchesSearch && matchesType && matchesStart && matchesEnd;
-  }).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }).sort((a, b) => {
+    const timeA = a.date ? new Date(a.date).getTime() : 0;
+    const timeB = b.date ? new Date(b.date).getTime() : 0;
+    const validA = isNaN(timeA) ? 0 : timeA;
+    const validB = isNaN(timeB) ? 0 : timeB;
+    return validB - validA;
+  });
 
   const exportCSV = () => {
     // Helper to escape CSV values correctly (handling commas and quotes)

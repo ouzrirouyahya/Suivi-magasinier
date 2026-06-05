@@ -8,9 +8,9 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Sidebar, Page } from './components/Sidebar';
 import { Dashboard } from './components/Dashboard';
 
+import { MouvementForm } from './components/MouvementForm';
 // Lazy loaded components
 const StockTable = lazy(() => import('./components/StockTable').then(m => ({ default: m.StockTable })));
-const MouvementForm = lazy(() => import('./components/MouvementForm').then(m => ({ default: m.MouvementForm })));
 const ArticleManagement = lazy(() => import('./components/ArticleManagement').then(m => ({ default: m.ArticleManagement })));
 const EpiTracking = lazy(() => import('./components/EpiTracking').then(m => ({ default: m.EpiTracking })));
 const TransfertPage = lazy(() => import('./components/TransfertPage').then(m => ({ default: m.TransfertPage })));
@@ -437,6 +437,54 @@ export default function App() {
             activeTab={radarTab} 
             onTabChange={(tab) => setRadarTab(tab)} 
           />
+        );
+
+      case 'TRANSFERS':
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-12"
+          >
+            <TransfertPage 
+              currentSite={currentSite}
+              articles={articles}
+              transferts={transferts}
+              onAddTransfert={async (t) => {
+                try {
+                  await toast.promise(addTransfert(t), {
+                    loading: "Initialisation de l'expédition et lancement du convoi...",
+                    success: "Transfert initié et convoi parti !",
+                    error: (err: any) => `Échoué: ${err.message || err}`
+                  });
+                } catch (e) {
+                  console.error("Transfer dispatch failed:", e);
+                }
+              }}
+              onCompleteTransfert={async (id, recepteur) => {
+                try {
+                  await toast.promise(completeTransfert(id, recepteur), {
+                    loading: "Vérification et déchargement dans le sas...",
+                    success: "Transfert réceptionné avec succès et stock ajusté !",
+                    error: (err: any) => `Échoué: ${err.message || err}`
+                  });
+                } catch (e) {
+                  console.error("Transfer completion failed:", e);
+                }
+              }}
+            />
+          </motion.div>
+        );
+
+      case 'RETURNS':
+        return (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-12"
+          >
+            <ReturnsManagement />
+          </motion.div>
         );
 
       case 'TRANSFERS_RETURNS':

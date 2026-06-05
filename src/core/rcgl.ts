@@ -34,6 +34,26 @@ export interface ConsistencyCheckResult {
 const MAX_STALENESS_WINDOW_MS = 15000;
 
 /**
+ * Safely parses a FirestoreDate into a primitive millisecond timestamp.
+ */
+function getSafeTimestamp(val: any): number {
+  if (!val) return 0;
+  if (typeof val === 'string') {
+    const parsed = Date.parse(val);
+    return isNaN(parsed) ? 0 : parsed;
+  }
+  if (val && typeof val.toDate === 'function') {
+    try {
+      return val.toDate().getTime();
+    } catch (e) {}
+  }
+  if (val && typeof val.seconds === 'number') {
+    return val.seconds * 1000;
+  }
+  return 0;
+}
+
+/**
  * Computes a deterministic version hash representing the collection's logical sequence of updates.
  */
 export function generateCollectionHash(items: any[]): string {
@@ -130,10 +150,19 @@ export function validateGlobalSnapshotState(
 
     const recentTransfers = transferts.slice(0, 10);
     for (const t of recentTransfers) {
-      if (t.status === 'RECU' && !transferRefsInMouvements.has(t.reference)) {
-        hasCollectionVersionSkew = true;
-        skewDescription = `Erreur de liaison mouvement / log : le transfert régularisé (${t.reference || t.id}) ne possède aucun mouvement logistique correspondant en base de données.`;
-        break;
+      const isResolved = t.status === 'RECU' || t.status === 'RECEIVED';
+      if (isResolved && !transferRefsInMouvements.has(t.reference)) {
+        // Temporal Guard: Only trigger violation if the transfer reception/envoi is very recent (last 60 seconds).
+        // This allows client replica synchronization to catch up during updates without permanently bricking
+        // historical data that was committed offline or with legacy/out-of-order logs.
+        const rxTime = getSafeTimestamp(t.dateReception || t.dateEnvoi);
+        const ageMs = rxTime > 0 ? now - rxTime : 0;
+        
+        if (rxTime > 0 && ageMs >= 0 && ageMs < 60000) {
+          hasCollectionVersionSkew = true;
+          skewDescription = `Erreur de liaison mouvement / log : le transfert régularisé (${t.reference || t.id}) ne possède aucun mouvement logistique correspondant en base de données.`;
+          break;
+        }
       }
     }
   }

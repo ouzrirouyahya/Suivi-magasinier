@@ -33,6 +33,7 @@ import { SITES } from '../demoData';
 import { SiteCode } from '../types';
 import { User } from 'firebase/auth';
 import { Background3D } from './Background3D';
+import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 export type Page = 
   | 'COCKPIT' 
@@ -61,7 +62,8 @@ export type Page =
   | 'TRACEABILITY'
   | 'TRANSFERS_RETURNS'
   | 'VISION_IA'
-  | 'HYDROMINES_RADAR';
+  | 'HYDROMINES_RADAR'
+  | 'TRANSFERS';
 
 interface SidebarProps {
   currentPage: Page;
@@ -103,32 +105,33 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
   // Memoized menuItems with precise dependencies
   const menuItems = React.useMemo(() => {
     const rawItems = [
-      // 🟦 1. COCKPIT OPERATIONNEL (ESPACE MAGASINIER first)
-      { id: 'SEP_OPERATIONAL', label: '1. Cockpit Opérationnel', isSeparator: true },
-      { id: 'COCKPIT', label: 'ESPACE MAGASINIER', icon: LayoutDashboard, activeColor: 'bg-slate-900 text-white shadow-md' },
+      // 🟦 1. COCKPIT OPERATIONNEL
+      { id: 'SEP_OPERATIONAL', label: '1. Cockpit Magasinier', isSeparator: true },
+      { id: 'COCKPIT', label: 'Pupitre de Contrôle', icon: LayoutDashboard, activeColor: 'bg-indigo-50 text-indigo-700 font-black border border-indigo-100' },
 
-      // 🟨 2. CENTRE LOGISTIQUE & FLUX
-      { id: 'SEP_LOGISTICS', label: '2. Centre Logistique & Flux', isSeparator: true },
-      { id: 'BON_ENTREE', label: 'Entrées', icon: ArrowDownLeft, activeColor: 'text-emerald-750 bg-emerald-500/10 border border-emerald-500/20 font-black' },
-      { id: 'BON_SORTIE', label: 'Sorties', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black' },
-      { id: 'TRANSFERS_RETURNS', label: 'Transferts & retours', icon: RotateCcw, activeColor: 'text-indigo-755 bg-indigo-500/10 border border-indigo-500/20' },
-      { id: 'STOCK_ENGINS', label: 'Parc engins', icon: Truck },
-      { id: 'STOCK_PERFORATEURS', label: 'Perforateurs', icon: Drill },
-      { id: 'STOCK_CONSOMMABLES', label: 'Consommables & fluides', icon: Droplets },
-      { id: 'STOCK_EPI', label: 'Protections EPI', icon: Shield },
-      { id: 'RESTOCK_MGMT', label: 'RAVITAILLEMENT & alertes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
+      // 🟨 2. BONS DE MOUVEMENTS (SÉPARÉS)
+      { id: 'SEP_LOGISTICS', label: '2. Bons de Mouvement', isSeparator: true },
+      { id: 'BON_ENTREE', label: 'Bons d’Entrée', icon: ArrowDownLeft, activeColor: 'text-emerald-755 bg-emerald-500/10 border border-emerald-500/20 font-black' },
+      { id: 'BON_SORTIE', label: 'Bons de Sortie', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black' },
+      { id: 'TRANSFERS', label: 'Transferts Inter-Sites', icon: Truck, activeColor: 'text-blue-755 bg-blue-500/10 border border-blue-500/20' },
+      { id: 'RETURNS', label: 'Retours Chantiers', icon: RotateCcw, activeColor: 'text-teal-755 bg-teal-500/10 border border-teal-500/20' },
 
-      // 🟣 3. CENTRE D'INTELLIGENCE (AI SYSTEMS)
-      { id: 'SEP_INTELLIGENCE', label: '3. Centre d’Intelligence', isSeparator: true },
-      { id: 'HYDROMINES_RADAR', label: 'Hydromines Radar', icon: Brain, activeColor: 'bg-indigo-950 text-indigo-100 shadow border border-indigo-700/30 font-semibold' },
+      // 🟩 3. STOCKS & ARTICLES
+      { id: 'SEP_STOCKS', label: '3. Niveaux de Stocks', isSeparator: true },
+      { id: 'STOCK_ENGINS', label: 'Pièces Engins', icon: Wrench },
+      { id: 'STOCK_PERFORATEURS', label: 'Pièces Perforateurs', icon: Drill },
+      { id: 'STOCK_CONSOMMABLES', label: 'Consommables & Taillants', icon: Droplets },
+      { id: 'STOCK_EPI', label: 'EPI (Bottes & Gants)', icon: Shield },
+      { id: 'RESTOCK_MGMT', label: 'Alertes & Commandes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
 
-      // 🟥 4. CONTRÔLE & REGISTRES
-      { id: 'SEP_GOVERNANCE', label: '4. Contrôle & Registres', isSeparator: true },
-      { id: 'REPORTS', label: 'Rapports & Consolidation', icon: FileText, activeColor: 'bg-slate-900 text-white shadow-md' },
-      { id: 'FINANCE', label: 'Flux & Valorisation Stock', icon: Landmark, activeColor: 'bg-amber-500/5 text-amber-700 shadow-sm border border-amber-500/10' },
-      { id: 'TRACEABILITY', label: 'Registres & Traçabilité', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white' },
-      { id: 'GESTION_ARTICLES', label: 'Catalogue Maître', icon: Settings2 },
-      { id: 'USER_MGMT', label: 'Utilisateurs & Droits', icon: Users },
+      // 🟣 4. CENTRE D’INTELLIGENCE & HISTORIQUE
+      { id: 'SEP_GOVERNANCE', label: '4. Registres & Contrôle', isSeparator: true },
+      { id: 'TRACEABILITY', label: 'Grand Registre des Bons', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white font-black' },
+      { id: 'REPORTS', label: 'Rapports d’Activité', icon: FileText, activeColor: 'bg-slate-900 text-white font-black' },
+      { id: 'FINANCE', label: 'Valeur du Stock Mère', icon: Landmark, activeColor: 'bg-amber-500/5 text-amber-700 shadow-sm border border-amber-500/10 font-bold' },
+      { id: 'GESTION_ARTICLES', label: 'Catalogue des Articles', icon: Settings2 },
+      { id: 'USER_MGMT', label: 'Équipe & Utilisateurs', icon: Users },
+      { id: 'HYDROMINES_RADAR', label: 'Système IA Radar', icon: Brain, activeColor: 'bg-indigo-950 text-indigo-100 shadow border border-indigo-700/30 font-semibold' },
     ];
 
     return rawItems.filter(item => isAllowed(item.id));
@@ -160,17 +163,19 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
         <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent" />
       </div>
 
-      <div className="p-4 pb-2 relative z-10">
-        <h1 className="text-2xl font-black tracking-tighter flex flex-col shiny-logo drop-shadow-sm">
-          <div className="flex items-center gap-1">
-            <span className="logo-hydro">HYDRO</span>
-            <span className="logo-mines">MINES</span>
-          </div>
-          <span className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-0.5">Suivi magasinier</span>
-        </h1>
-        <div className="flex items-center gap-2 mt-1">
-          <div className="h-[1.5px] w-3 bg-sky-500 rounded-full"></div>
-          <span className="text-xs text-slate-400 font-extrabold uppercase tracking-[0.2em]">v2.0 Sync</span>
+      <div className="p-4 pb-2 relative z-10 flex items-center gap-3">
+        <img 
+          src={hydrominesLogo} 
+          alt="Hydromines" 
+          className="w-10 h-10 object-contain drop-shadow"
+          referrerPolicy="no-referrer"
+        />
+        <div className="flex flex-col">
+          <h1 className="text-lg font-black tracking-tighter flex items-center gap-0.5 leading-none">
+            <span className="logo-hydro text-sky-500">HYDRO</span>
+            <span className="logo-mines text-[#FF5252]">MINES</span>
+          </h1>
+          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.05em] mt-1 leading-none">Suivi magasinier</span>
         </div>
       </div>
 
