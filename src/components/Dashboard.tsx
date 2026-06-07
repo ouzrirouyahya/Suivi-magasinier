@@ -52,7 +52,7 @@ import { Article, Mouvement, SiteCode, MouvementItem } from '../types';
 import { cn, formatCurrency, generateId } from '../lib/utils';
 import { useInventory } from '../context/InventoryContext';
 import { toast } from 'sonner';
-import dashboardBg from '../assets/images/dashboard_bg.jpg';
+import dashboardBg from '../assets/images/dashboard_bg.png';
 
 interface DashboardProps {
   site: SiteCode;
