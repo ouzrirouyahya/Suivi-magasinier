@@ -18,23 +18,12 @@ const InventairePage = lazy(() => import('./components/InventairePage').then(m =
 const StockAlertView = lazy(() => import('./components/StockAlertView').then(m => ({ default: m.StockAlertView })));
 const ReportPage = lazy(() => import('./components/ReportPage').then(m => ({ default: m.ReportPage })));
 const RestockModule = lazy(() => import('./components/RestockModule').then(m => ({ default: m.RestockModule })));
-const AIAnalytics = lazy(() => import('./components/AIAnalytics').then(m => ({ default: m.AIAnalytics })));
-const AIChatExpert = lazy(() => import('./components/AIChatExpert').then(m => ({ default: m.AIChatExpert })));
-const ProductionChecklist = lazy(() => import('./components/ProductionChecklist').then(m => ({ default: m.ProductionChecklist })));
 const TraceabilityCenter = lazy(() => import('./components/TraceabilityCenter').then(m => ({ default: m.TraceabilityCenter })));
 const ArticleDetail = lazy(() => import('./components/ArticleDetail').then(m => ({ default: m.ArticleDetail })));
 const MaintenanceModule = lazy(() => import('./components/MaintenanceModule').then(m => ({ default: m.MaintenanceModule })));
 const ReturnsManagement = lazy(() => import('./components/ReturnsManagement').then(m => ({ default: m.ReturnsManagement })));
 const FinancialDashboard = lazy(() => import('./components/FinancialDashboard').then(m => ({ default: m.FinancialDashboard })));
-const ForensicDashboard = lazy(() => import('./components/ForensicDashboard'));
-const IndustrialIntelligenceDashboard = lazy(() => import('./components/IndustrialIntelligenceDashboard'));
-const FieldOperatorWorkspace = lazy(() => import('./components/FieldOperatorWorkspace'));
 const UserAdmin = lazy(() => import('./components/UserAdmin').then(m => ({ default: m.UserAdmin })));
-const IntelligenceCenter = lazy(() => import('./components/IntelligenceCenter').then(m => ({ default: m.IntelligenceCenter })));
-
-// Tracking
-import { ViewerTracker } from './components/ViewerTracker';
-import { ViewerNotificationModal } from './components/common/ViewerNotificationModal';
 
 // Shared Components
 import LoginPage from './components/LoginPage';
@@ -129,7 +118,6 @@ export default function App() {
   const [currentPageRaw, setCurrentPageRaw] = useState<Page>('COCKPIT');
   const [showAdminAlert, setShowAdminAlert] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentSite, setCurrentSite] = useState<SiteCode>('SMI');
   const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
   const [user, setUser] = useState<User | null>(null);
   const [isAuthLoading, setIsAuthLoading] = useState(true);
@@ -188,7 +176,8 @@ export default function App() {
     deleteArticle, toggleUser, setEngin, setPerfo, setAgent, saveCatalogItem, 
     deleteCatalogItem, addPurchaseRequest, updatePRStatus,
     isSafeMode, rcglResult,
-    maintenanceMode, maintenanceReason
+    maintenanceMode, maintenanceReason,
+    currentSite, setCurrentSite
   } = useInventory();
 
   useEffect(() => {
@@ -250,10 +239,7 @@ export default function App() {
 
   if (!user) {
     return (
-      <>
-        <ViewerTracker currentPage="LOGIN" />
-        <LoginPage />
-      </>
+      <LoginPage />
     );
   }
 
@@ -419,26 +405,6 @@ export default function App() {
           </div>
         );
 
-      case 'HYDROMINES_RADAR':
-      case 'MAGASINIER_IA':
-      case 'AUDIT_INTELLIGENCE':
-      case 'AUTOMATION_WORKFLOWS':
-      case 'IA_CHECKLIST':
-      case 'FORENSIC':
-      case 'VISION_IA':
-        if (!isAdmin) {
-          setShowAdminAlert(true);
-          setCurrentPage('COCKPIT');
-          return null;
-        }
-        return (
-          <IntelligenceCenter 
-            currentSite={currentSite} 
-            activeTab={radarTab} 
-            onTabChange={(tab) => setRadarTab(tab)} 
-          />
-        );
-
       case 'TRANSFERS':
         return (
           <motion.div 
@@ -487,46 +453,6 @@ export default function App() {
           </motion.div>
         );
 
-      case 'TRANSFERS_RETURNS':
-        return (
-          <motion.div 
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="space-y-12"
-          >
-            <TransfertPage 
-              currentSite={currentSite}
-              articles={articles}
-              transferts={transferts}
-              onAddTransfert={async (t) => {
-                try {
-                  await toast.promise(addTransfert(t), {
-                    loading: "Initialisation de l'expédition et lancement du convoi...",
-                    success: "Transfert initié et convoi parti !",
-                    error: (err: any) => `Échoué: ${err.message || err}`
-                  });
-                } catch (e) {
-                  console.error("Transfer dispatch failed:", e);
-                }
-              }}
-              onCompleteTransfert={async (id, recepteur) => {
-                try {
-                  await toast.promise(completeTransfert(id, recepteur), {
-                    loading: "Vérification et déchargement dans le sas...",
-                    success: "Transfert réceptionné avec succès et stock ajusté !",
-                    error: (err: any) => `Échoué: ${err.message || err}`
-                  });
-                } catch (e) {
-                  console.error("Transfer completion failed:", e);
-                }
-              }}
-            />
-            <div className="border-t border-slate-100 pt-12">
-              <ReturnsManagement />
-            </div>
-          </motion.div>
-        );
-
       case 'MAINTENANCE':
         if (!isAdmin) {
           setShowAdminAlert(true);
@@ -569,6 +495,7 @@ export default function App() {
               agents={agents}
               onSetAgent={setAgent}
               isSuperAdmin={isSuperAdmin}
+              currentSite={currentSite}
             />
           </motion.div>
         );
@@ -579,25 +506,35 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#0c101d] flex relative overflow-hidden transition-colors duration-300" data-density={density}>
+    <div className="min-h-screen bg-[#F4F5F7] dark:bg-[#070b13] flex relative overflow-hidden transition-colors duration-305" data-density={density}>
+      {/* Elegant Aesthetic Ambient Background (Hydro & Mines Theme) */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden no-print z-0 select-none">
+        {/* Soft radial lights mimicking copper earth exploration & deep water reservoirs */}
+        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-[#0ea5e9]/12 to-transparent blur-[110px] dark:from-[#38bdf8]/8" />
+        <div className="absolute -bottom-[15%] -right-[5%] w-[50%] h-[50%] rounded-full bg-gradient-to-tl from-[#f59e0b]/6 to-transparent blur-[115px] dark:from-[#d97706]/6" />
+        <div className="absolute top-[35%] left-[55%] w-[40%] h-[40%] rounded-full bg-[#818cf8]/4 dark:bg-[#312e81]/8 blur-[130px]" />
+        
+        {/* Premium blueprint mining grid pattern */}
+        <div className="absolute inset-0 grid-pattern opacity-[0.25] dark:opacity-[0.14]" />
+        
+        {/* Horizon structural leveling lines (Mining elevation reference lines) */}
+        <div className="absolute top-1/4 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-200/40 to-transparent dark:via-slate-800/30" />
+        <div className="absolute top-[70%] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-200/40 to-transparent dark:via-slate-800/30" />
+      </div>
+
       {showAdminAlert && <HydrominesSecurityAlert onClose={() => setShowAdminAlert(false)} />}
-      
-      <ViewerTracker currentPage={currentPage} user={user} isAdmin={isAdmin} />
-      
-      {/* Professional HYDROMINES Visitor Notice Modal */}
-      <ViewerNotificationModal />
       
       <Sidebar 
         currentPage={currentPage} 
         setPage={(page) => {
-          if ((page === 'HYDROMINES_RADAR' || page === 'MAGASINIER_IA' || page === 'AUDIT_INTELLIGENCE' || page === 'IA_CHECKLIST' || page === 'FORENSIC' || page === 'VISION_IA' || page === 'USER_MGMT') && !isAdmin) {
-            setShowAdminAlert(true);
-            return;
-          }
           setCurrentPage(page);
         }} 
         currentSite={currentSite}
-        setSite={setCurrentSite}
+        setSite={(site) => {
+          if (isAdmin) {
+            setCurrentSite(site);
+          }
+        }} 
         user={user}
         isAdmin={isAdmin}
         notifications={notifications}
@@ -608,7 +545,7 @@ export default function App() {
         onToggleDarkMode={handleToggleDarkMode}
       />
       
-      <main className={`flex-grow transition-all duration-350 relative min-h-screen ${
+      <main className={`flex-grow transition-all duration-350 relative z-10 min-h-screen ${
         isMobile ? 'pb-24' : 'pb-8'
       } ${
         density === 'compact' ? 'p-2.5 sm:p-4 md:p-5' : 

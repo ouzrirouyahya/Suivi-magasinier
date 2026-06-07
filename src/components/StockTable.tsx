@@ -21,6 +21,7 @@ import { exportToCSV } from '../lib/exportUtils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { matchArticleSearch } from '../lib/searchUtils';
+import { CarnetsModal } from './CarnetsModal';
 
 interface StockTableProps {
   type: ArticleType | 'ALL';
@@ -37,6 +38,7 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
   const [showGlobal, setShowGlobal] = useState(initialSearch.length > 0);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('GRID');
+  const [isCarnetsOpen, setIsCarnetsOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'RUPTURE' | 'CRITIQUE' | 'OPTIMAL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('');
   
@@ -104,6 +106,13 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
         </div>
 
         <div className="flex items-center gap-3">
+          <button 
+            id="btn-open-carnets"
+            onClick={() => setIsCarnetsOpen(true)}
+            className="btn bg-slate-900 text-white font-black uppercase tracking-widest px-6 h-11 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 cursor-pointer shadow-sm shadow-slate-900/10 no-print"
+          >
+            📋 CARNETS DE BORD
+          </button>
           <button 
             onClick={() => {
               exportToCSV(filteredArticles, `STOCKS_${site}_${type}`);
@@ -455,6 +464,13 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
           </button>
         </div>
       )}
+
+      <CarnetsModal 
+        isOpen={isCarnetsOpen} 
+        onClose={() => setIsCarnetsOpen(false)} 
+        site={site} 
+        articles={articles} 
+      />
     </div>
   );
 });

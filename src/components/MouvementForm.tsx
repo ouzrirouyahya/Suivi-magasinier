@@ -68,13 +68,16 @@ interface MouvementFormProps {
 }
 
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
-  const [date] = useState(new Date().toISOString());
+  const date = new Date().toISOString();
   const [reference, setReference] = useState('');
   const [beneficiaire, setBeneficiaire] = useState('');
   const [entityName, setEntityName] = useState(''); 
   const [receptionSource, setReceptionSource] = useState<'CENTRAL' | 'ACHAT_EXTERNE'>('CENTRAL');
   const [buyerName, setBuyerName] = useState('');
   const [mecanicien, setMecanicien] = useState(''); 
+  const [mecanicienFreeText, setMecanicienFreeText] = useState(false);
+  const [beneficiaireFreeText, setBeneficiaireFreeText] = useState(false);
+  const [formSubmitted, setFormSubmitted] = useState(false);
   const [targetEngin, setTargetEngin] = useState(''); 
   const [targetPerfo, setTargetPerfo] = useState('');
   const [motif, setMotif] = useState('');
@@ -98,7 +101,9 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [localCreatedArticles, setLocalCreatedArticles] = useState<Article[]>([]);
 
   const prefix = type === 'ENTREE' ? 'BE' : 'BS';
-  const autoId = `${prefix}/${site}/${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+  const autoId = useMemo(() => {
+    return `${prefix}/${site}/${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+  }, [type, site]);
 
   const siteEngins = engins.filter(e => e.site === site);
   const sitePerfos = perfos.filter(p => p.site === site);
@@ -310,10 +315,17 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    setFormSubmitted(true);
     if (items.length === 0) { setValidationError('Ajoutez des articles.'); return; }
     if (type === 'SORTIE' && !categoryFilter) { setValidationError('Sélectionnez une catégorie.'); return; }
 
+    if (type === 'ENTREE' && !reference.trim()) {
+      setValidationError("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
+      return;
+    }
+
     const resolvedMecanicien = agents.find(a => a.id === mecanicien);
+    const resolvedBeneficiaire = agents.find(a => a.id === beneficiaire);
     const resolvedEngin = engins.find(e => e.id === targetEngin);
     const resolvedPerfo = perfos.find(p => p.id === targetPerfo);
 
@@ -334,12 +346,14 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       reference,
       vendeur: type === 'ENTREE' ? resolvedEntityName : undefined,
       demandeur: (type === 'SORTIE' && isEpiOrOutils) ? entityName : undefined,
-      beneficiaire: (type === 'SORTIE') ? (beneficiaire || entityName) : undefined,
+      beneficiaire: (type === 'SORTIE') ? (
+        resolvedBeneficiaire ? `${resolvedBeneficiaire.lastname} ${resolvedBeneficiaire.firstname}` : (beneficiaire || entityName)
+      ) : undefined,
       mecanicien: resolvedMecanicien ? `${resolvedMecanicien.firstname} ${resolvedMecanicien.lastname}` : mecanicien,
       engin: resolvedEngin ? resolvedEngin.code : targetEngin,
       perforateur: resolvedPerfo ? resolvedPerfo.code : targetPerfo,
       category: categoryFilter,
-      service: service || resolvedMecanicien?.service || '',
+      service: service || resolvedMecanicien?.service || resolvedBeneficiaire?.service || '',
       motif: `${interventionType}: ${motif}`,
       notes,
       status,
@@ -423,10 +437,41 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                     <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Mécanicien / Opérateur</label>
                     <div className="relative">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
-                      <select className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white" value={mecanicien} onChange={(e) => setMecanicien(e.target.value)} required>
-                        <option value="">SÉLECTIONNER UN AGENT...</option>
-                        {agents.filter(a => a.site === site).map(a => <option key={a.id} value={a.id}>{a.lastname} {a.firstname} ({a.service})</option>)}
-                      </select>
+                      {mecanicienFreeText ? (
+                        <input
+                          type="text"
+                          className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase w-full"
+                          placeholder="NOM DU MÉCANICIEN..."
+                          value={mecanicien}
+                          onChange={(e) => setMecanicien(e.target.value)}
+                          required
+                        />
+                      ) : (
+                        <select className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full" value={mecanicien} onChange={(e) => setMecanicien(e.target.value)} required>
+                          <option value="">SÉLECTIONNER UN AGENT...</option>
+                          {agents.filter(a => a.site === site).map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.matricule} - {a.lastname.toUpperCase()} {a.firstname.toUpperCase()} ({a.service.toUpperCase()})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    {/* Toggle Saisie libre */}
+                    <div className="flex items-center gap-2 mt-2">
+                      <input 
+                        type="checkbox" 
+                        id="mecanicienFreeTextToggle" 
+                        checked={mecanicienFreeText} 
+                        onChange={(e) => {
+                          setMecanicienFreeText(e.target.checked);
+                          setMecanicien('');
+                        }} 
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                      />
+                      <label htmlFor="mecanicienFreeTextToggle" className="text-xs font-bold text-indigo-600/80 cursor-pointer select-none">
+                        Saisie libre / Agent non listé
+                      </label>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -445,14 +490,53 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                     <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Bénéficiaire / Demandeur</label>
                     <div className="relative">
                       <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                      {beneficiaireFreeText ? (
+                        <input 
+                          type="text" 
+                          className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase w-full" 
+                          placeholder="NOM DU BÉNÉFICIAIRE..." 
+                          value={beneficiaire} 
+                          onChange={(e) => setBeneficiaire(e.target.value)}
+                          required
+                        />
+                      ) : (
+                        <select 
+                          className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full" 
+                          value={beneficiaire} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            setBeneficiaire(val);
+                            const ag = agents.find(a => a.id === val);
+                            if (ag) {
+                              setService(ag.service);
+                            }
+                          }} 
+                          required
+                        >
+                          <option value="">SÉLECTIONNER UN BÉNÉFICIAIRE...</option>
+                          {agents.filter(a => a.site === site).map(a => (
+                            <option key={a.id} value={a.id}>
+                              {a.matricule} - {a.lastname.toUpperCase()} {a.firstname.toUpperCase()} ({a.service.toUpperCase()})
+                            </option>
+                          ))}
+                        </select>
+                      )}
+                    </div>
+                    {/* Toggle Saisie libre */}
+                    <div className="flex items-center gap-2 mt-2">
                       <input 
-                        type="text" 
-                        className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase" 
-                        placeholder="NOM DU BÉNÉFICIAIRE..." 
-                        value={beneficiaire} 
-                        onChange={(e) => setBeneficiaire(e.target.value)}
-                        required
+                        type="checkbox" 
+                        id="beneficiaireFreeTextToggle" 
+                        checked={beneficiaireFreeText} 
+                        onChange={(e) => {
+                          setBeneficiaireFreeText(e.target.checked);
+                          setBeneficiaire('');
+                        }} 
+                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                       />
+                      <label htmlFor="beneficiaireFreeTextToggle" className="text-xs font-bold text-indigo-600/80 cursor-pointer select-none">
+                        Saisie libre / Agent non listé
+                      </label>
                     </div>
                   </div>
                   <div className="space-y-2">
@@ -577,13 +661,21 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               )}
 
               <div className="space-y-2">
-                <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">
-                  {receptionSource === 'CENTRAL' ? 'N° Bon de Transfert / Référence' : 'N° Facture ou Ticket d\'achat'}
+                <label className={cn(
+                  "text-[10px] font-black uppercase tracking-widest ml-1 transition-colors duration-300",
+                  formSubmitted && !reference.trim() ? "text-red-500" : "text-emerald-600"
+                )}>
+                  N° Bon de Livraison Fournisseur *
                 </label>
                 <input 
                   type="text" 
-                  className="input-field h-12 text-sm font-black px-4 bg-white uppercase w-full" 
-                  placeholder={receptionSource === 'CENTRAL' ? "EX: BT-2026-XXXX" : "EX: FACT-XXXXX / TICKET"} 
+                  className={cn(
+                    "input-field h-12 text-sm font-black px-4 bg-white uppercase w-full transition-all duration-300",
+                    formSubmitted && !reference.trim()
+                      ? "border-red-500 focus:border-red-500 ring-2 ring-red-500/20 text-red-950 placeholder-red-300"
+                      : "border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/5"
+                  )}
+                  placeholder="EX: BL-YYYY-XXXXX" 
                   value={reference} 
                   onChange={(e) => setReference(e.target.value)}
                   required

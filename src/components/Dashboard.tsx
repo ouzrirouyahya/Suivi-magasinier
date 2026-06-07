@@ -52,6 +52,7 @@ import { Article, Mouvement, SiteCode, MouvementItem } from '../types';
 import { cn, formatCurrency, generateId } from '../lib/utils';
 import { useInventory } from '../context/InventoryContext';
 import { toast } from 'sonner';
+import dashboardBg from '../assets/images/dashboard_bg.jpg';
 
 interface DashboardProps {
   site: SiteCode;
@@ -1253,7 +1254,14 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-12 select-none">
+    <div 
+      className="relative -mx-4 -my-4 md:-mx-8 md:-my-8 px-4 py-4 md:px-8 md:py-8 min-h-screen bg-cover bg-center bg-fixed rounded-[2rem] select-none"
+      style={{ backgroundImage: `url(${dashboardBg})` }}
+    >
+      {/* Light white overlay covering the photo subtle layer */}
+      <div className="absolute inset-0 bg-white/60 rounded-[2rem] pointer-events-none -z-10" />
+
+      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-12">
       {/* 🌟 PREMIUM GRAPHICAL OVERHAUL BANNER HEADER (WHITE BACKGROUND WITH INTENTIONAL HYDROMINES GRADIENT GLOWS) */}
       <header className="relative overflow-hidden bg-white text-slate-900 rounded-[2.5rem] p-8 md:p-10 border border-slate-150 shadow-[0_10px_35px_-5px_rgba(0,0,0,0.03)] no-print">
         {/* Decorative Grid & Glow Elements representing premium transparent tech design */}
@@ -2167,7 +2175,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                   if (stat.action === 'ALERTES_STOCK') onAction('RESTOCK_MGMT');
                 }}
                 className={cn(
-                  "bg-white border border-slate-200/60 p-5 rounded-2xl transition-all duration-300 hover:shadow-[0_4px_12px_rgba(0,0,0,0.02)] h-full flex flex-col justify-between select-none relative overflow-hidden",
+                  "bg-white/70 backdrop-blur-md border border-white/80 shadow-lg p-5 rounded-2xl transition-all duration-300 h-full flex flex-col justify-between select-none relative overflow-hidden",
                   stat.action || stat.alert ? "cursor-pointer hover:border-slate-350" : ""
                 )}
               >
@@ -2176,7 +2184,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 )}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider leading-none">{stat.label}</p>
+                    <p className="text-[11px] font-semibold text-slate-600 uppercase tracking-wider leading-none">{stat.label}</p>
                     <div className={cn("p-1.5 rounded-xl border border-slate-100", stat.bg, stat.color)}>
                       <stat.icon className="w-4 h-4 stroke-[1.5]" />
                     </div>
@@ -2188,7 +2196,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                     {stat.value}
                   </p>
                 </div>
-                <p className="text-[10px] text-slate-400 font-medium mt-2 leading-normal border-t border-slate-100/60 pt-2 font-mono">
+                <p className="text-[10px] text-slate-600 font-medium mt-2 leading-normal border-t border-slate-100/60 pt-2 font-mono">
                   {stat.sub}
                 </p>
               </div>
@@ -2198,7 +2206,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
           {dashboardViewMode === 'OPERATIONAL' ? (
             <div className="space-y-6">
               {/* ⚡ PUPITRE DE SAISIE RAPIDE - PIÈCES HAUTE FRÉQUENCE (TAILLANTS, BARRES CONIQUES, GANTS, BOTTES) */}
-              <div className="bg-white border-2 border-slate-200/90 rounded-[2rem] p-6 shadow-sm relative overflow-hidden">
+              <div className="bg-white/70 backdrop-blur-md border-2 border-white/80 rounded-[2rem] p-6 shadow-lg relative overflow-hidden">
                 {/* Visual Accent header lines */}
                 <div className="absolute top-0 left-0 right-0 h-1.5 flex transition-all">
                   <div className="w-1/4 h-full bg-sky-450" />
@@ -2212,7 +2220,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                     <span className="text-2xl">⚡</span>
                     <div>
                       <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">Pupitre d'Imputation Express (Haute Fréquence)</h3>
-                      <p className="text-xs text-slate-500 font-semibold leading-tight">Mouvements rapides en 1 clic pour les consommables et EPI les plus actifs de {site}</p>
+                      <p className="text-xs text-slate-600 font-semibold leading-tight">Mouvements rapides en 1 clic pour les consommables et EPI les plus actifs de {site}</p>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
@@ -2220,7 +2228,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                     <span className="text-[10px] font-black text-sky-700 bg-sky-50/80 border border-sky-100 px-2.5 py-1 rounded-full uppercase tracking-widest font-mono">POSTE DE SAISIE SYSTEME</span>
                   </div>
                 </div>
-
+                
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                   {resolvedHFArticles.map(({ config, article }) => {
                     const hasStock = article && article.quantity > 0;
@@ -2230,9 +2238,9 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                       <div 
                         key={config.key} 
                         className={cn(
-                          "rounded-2xl border p-4.5 flex flex-col justify-between transition-all group bg-white relative overflow-hidden",
+                          "rounded-2xl border p-4.5 flex flex-col justify-between transition-all group bg-white/70 backdrop-blur-md border-white/80 shadow-lg relative overflow-hidden",
                           article 
-                            ? (lowStock ? "border-amber-200 bg-gradient-to-br from-white to-amber-50/10 shadow-[0_2px_8px_rgba(245,158,11,0.03)]" : "border-slate-200 hover:border-slate-350 shadow-sm")
+                            ? (lowStock ? "border-amber-300/80 bg-gradient-to-br from-white/70 to-amber-50/20" : "border-white/80 hover:border-slate-350")
                             : "border-dashed border-slate-200 bg-slate-50/30"
                         )}
                       >
@@ -2247,14 +2255,14 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                                 <h4 className="text-xs font-black text-slate-800 group-hover:text-slate-950 uppercase tracking-tight select-all leading-tight">
                                   {config.title}
                                 </h4>
-                                <p className="text-[9px] font-mono text-slate-400 font-black tracking-wide mt-0.5 select-all uppercase">
+                                <p className="text-[9px] font-mono text-slate-600 font-black tracking-wide mt-0.5 select-all uppercase">
                                   REF: {config.ref}
                                 </p>
                               </div>
                             </div>
                           </div>
 
-                          <p className="text-[10px] text-slate-400 leading-tight line-clamp-2 uppercase font-semibold mb-3">
+                          <p className="text-[10px] text-slate-600 leading-tight line-clamp-2 uppercase font-semibold mb-3">
                             {config.designation}
                           </p>
                         </div>
@@ -2344,14 +2352,14 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* LEFT COLUMN: SAISIE UNITAIRE EXPRESS WITH HIGH-FIDELITY REDESIGN */}
-                <div className="lg:col-span-5 bg-white border border-slate-200/70 p-6 sm:p-7 rounded-[2rem] shadow-[0_8px_30px_rgb(0,0,0,0.02)] transition-all">
+                <div className="lg:col-span-5 bg-white/70 backdrop-blur-md border border-white/80 p-6 sm:p-7 rounded-[2rem] shadow-lg transition-all">
                 <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100/80 mb-6 font-sans">
                   <div className="p-2.5 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-xl flex items-center justify-center shadow-md">
                     <Zap className="w-4 h-4 text-sky-400" />
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest font-sans">Saisie Unitaire Express</h3>
-                    <p className="text-[10px] text-slate-400 font-extrabold uppercase mt-1 tracking-wider leading-none font-sans font-sans">Enregistrement Ultra-Rapide d'un Article</p>
+                    <p className="text-[10px] text-slate-600 font-extrabold uppercase mt-1 tracking-wider leading-none font-sans">Enregistrement Ultra-Rapide d'un Article</p>
                   </div>
                 </div>
 
@@ -2690,7 +2698,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               {/* RIGHT COLUMN: STOCK ALERTS & TRACKING FLUX */}
               <div className="lg:col-span-7 space-y-6">
                 {/* 1. SEUILS DE RUPTURE CRITIQUES SECTION */}
-                <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-50 text-slate-700 rounded-lg flex items-center justify-center border border-slate-200/60">
@@ -2698,7 +2706,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                       </div>
                       <div>
                         <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none font-sans">Ruptures & Seuils d'Alerte Actifs</h3>
-                        <p className="text-[10px] text-slate-400 mt-1 leading-none font-sans">Besoin de ravitaillement à {site}</p>
+                        <p className="text-[10px] text-slate-600 mt-1 leading-none font-sans">Besoin de ravitaillement à {site}</p>
                       </div>
                     </div>
                     <span className="bg-red-50 text-red-600 text-[10px] font-semibold px-2.5 py-0.5 rounded-full border border-red-100/80">
@@ -2725,7 +2733,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                                   <div 
                                     className={cn(
                                       "h-full rounded-full transition-all", 
-                                      item.quantity === 0 ? "w-0 bg-red-505" : safetyPct <= 45 ? "bg-red-400" : "bg-amber-400"
+                                      item.quantity === 0 ? "w-0 bg-red-555" : safetyPct <= 45 ? "bg-red-400" : "bg-amber-400"
                                     )}
                                     style={{ width: `${Math.min(100, safetyPct)}%` }}
                                   />
@@ -2756,7 +2764,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 </div>
 
                 {/* 2. SUIVI TERRAIN ET DERNIERS MOUVEMENTS (Timeline style) */}
-                <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-50 text-slate-700 rounded-lg flex items-center justify-center border border-slate-200/60">
@@ -2764,7 +2772,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                       </div>
                       <div>
                         <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none font-sans">Journal d'Imputations Récentes</h3>
-                        <p className="text-[10px] text-slate-400 mt-1 leading-none font-sans">Derniers déstockages observés sur site</p>
+                        <p className="text-[10px] text-slate-600 mt-1 leading-none font-sans">Derniers déstockages observés sur site</p>
                       </div>
                     </div>
                   </div>
@@ -2895,13 +2903,13 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               </div>
 
               <div className="lg:col-span-8 space-y-6">
-                <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-2">
                         <TrendingUp className="w-4 h-4 text-slate-800 font-semibold" /> Flux de Consommation Magasin (MAD)
                       </h3>
-                      <p className="text-[10px] text-slate-400 font-sans leading-none">
+                      <p className="text-[10px] text-slate-600 font-sans leading-none">
                         Courbe de valorisation globale des sorties magasin en Dirhams (MAD) cumulées par mois sur l'année en cours.
                       </p>
                     </div>
@@ -2941,12 +2949,12 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* COÛT PAR ENGIN */}
-                  <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                  <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-1.5">
                         <Truck className="w-4 h-4 text-slate-800" /> Dépenses de Maintenance par Machine
                       </h3>
-                      <p className="text-[10px] text-slate-400 font-sans leading-none mb-5">Valorisation globale des sorties imputées par engin lourd</p>
+                      <p className="text-[10px] text-slate-600 font-sans leading-none mb-5">Valorisation globale des sorties imputées par engin lourd</p>
                     </div>
                     <div className="h-[250px] min-h-[250px]">
                       {machineChartData.length > 0 ? (
@@ -2970,12 +2978,12 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                   </div>
 
                   {/* TOP CONSOMMATION CATEGORIES TABBED */}
-                  <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)] flex flex-col justify-between">
+                  <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg flex flex-col justify-between">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-1.5">
                         <Package className="w-4 h-4 text-slate-800" /> Dépenses par Catégorie de Pièce
                       </h3>
-                      <p className="text-[10px] text-slate-400 font-sans leading-none mb-4">Valorisation absolue (MAD) des pièces détachées sorties</p>
+                      <p className="text-[10px] text-slate-600 font-sans leading-none mb-4">Valorisation absolue (MAD) des pièces détachées sorties</p>
                       
                       {/* Category Switcher Tabs */}
                       <div className="flex bg-slate-50 border border-slate-200/60 p-0.5 rounded-xl gap-0.5 mb-4 no-print flex-wrap">
@@ -3034,7 +3042,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                  <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
                       <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none flex items-center gap-2">
                         <ArrowRightLeft className="w-4 h-4 text-slate-800" /> Flux d'Entrées vs Sorties
@@ -3043,11 +3051,11 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                     
                     <div className="flex gap-4 mb-5">
                       <div className="flex-1 bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-sm">
-                        <p className="text-[10px] font-semibold text-slate-450 uppercase tracking-widest leading-none">Entrées</p>
+                        <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest leading-none">Entrées</p>
                         <p className="text-sm font-bold text-slate-900 mt-2">{formatCurrency(currentMonthStats.entrees)}</p>
                       </div>
                       <div className="flex-1 bg-slate-50/50 p-4 rounded-xl border border-slate-100 shadow-sm">
-                        <p className="text-[10px] font-semibold text-slate-450 uppercase tracking-widest leading-none">Sorties</p>
+                        <p className="text-[10px] font-semibold text-slate-600 uppercase tracking-widest leading-none">Sorties</p>
                         <p className="text-sm font-bold text-slate-900 mt-2">{formatCurrency(currentMonthStats.sorties)}</p>
                       </div>
                     </div>
@@ -3067,7 +3075,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                     </div>
                   </div>
 
-                  <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)]">
+                  <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
                     <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-6 flex items-center gap-2">
                       <PieIcon className="w-4 h-4 text-slate-800" /> Analyse & Dispersion ABC
                     </h3>
@@ -3092,7 +3100,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                     <div className="mt-4 space-y-1">
                       {abcChartData.map(item => (
                         <div key={item.name} className="flex items-center justify-between text-xs font-sans">
-                          <span className="font-semibold text-slate-400 uppercase">{item.name}</span>
+                          <span className="font-semibold text-slate-600 uppercase">{item.name}</span>
                           <span className="font-semibold text-slate-900">{item.value} Réf</span>
                         </div>
                       ))}
@@ -3101,7 +3109,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 </div>
               </div>
 
-              <div className="lg:col-span-4 bg-white border border-slate-200/60 p-6 rounded-2xl shadow-[0_1px_3px_rgba(0,0,0,0.01),0_8px_24px_rgba(0,0,0,0.01)] flex flex-col h-full overflow-hidden self-stretch no-print">
+              <div className="lg:col-span-4 bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg flex flex-col h-full overflow-hidden self-stretch no-print">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
                   <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none flex items-center gap-1.5 font-sans">
                     <Activity className="w-4 h-4 text-slate-850" /> Flux Live Interactif
@@ -3605,5 +3613,6 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
         </div>
       )}
     </div>
+  </div>
   );
 }

@@ -178,12 +178,15 @@ export interface EnginMaster {
   label: string;
   site: SiteCode;
   type: 'PELLE' | 'DUMPER' | 'VEHICULE' | 'AUTRE';
+  workingLocation?: string; // IMITER 2, IMITER 1, IMITER EST, IMITER EST BURE, etc.
 }
 
 export interface PerfoMaster {
   id: string;
   code: string; // Ex: PERFO 1
   site: SiteCode;
+  location?: string; // IMITER 2, IMITER 1, IMITER EST, etc.
+  sectorManager?: string; // Nom & Prénom du responsable de secteur
 }
 
 export interface AgentMaster {
