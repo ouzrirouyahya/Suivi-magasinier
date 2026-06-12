@@ -171,6 +171,7 @@ export interface Mouvement {
   category?: string;
   notes?: string;
   motif?: string; // Justification for the exit
+  interventionType?: string;
 }
 
 export interface EnginMaster {

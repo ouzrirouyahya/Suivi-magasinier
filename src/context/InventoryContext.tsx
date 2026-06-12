@@ -43,14 +43,188 @@ import {
 import { db, auth } from '../lib/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { toast } from 'sonner';
+import { offlineQueue } from '../lib/offlineQueue';
+
+const FSM_resolvers: Record<string, (payload: any, intentId: string) => Promise<any>> = {};
+let isProcessingQueue = false;
+
 const RetryQueueFSM = {
-  getQueue: () => [],
-  registerResolver: (...args: any[]) => {},
-  reconcilePendingQueueWithAuthority: (...args: any[]) => Promise.resolve(),
-  triggerProcessing: (...args: any[]) => Promise.resolve(),
-  enqueue: (...args: any[]) => Promise.resolve()
+  getQueue: () => {
+    try {
+      const items = offlineQueue.load();
+      return items.map(item => ({
+        id: item.id,
+        timestamp: item.timestamp,
+        type: item.payload?.type,
+        payload: item.payload?.payload,
+        intentId: item.payload?.intentId,
+        siteId: item.payload?.siteId
+      }));
+    } catch (err) {
+      console.error("Error reading queue: ", err);
+      return [];
+    }
+  },
+
+  registerResolver: (type: string, resolver: (payload: any, intentId: string) => Promise<any>) => {
+    FSM_resolvers[type] = resolver;
+  },
+
+  enqueue: async (type: string, payload: any, intentId: string, siteId?: string) => {
+    try {
+      const current = offlineQueue.load();
+      if (current.some(it => it.payload?.intentId === intentId)) {
+        return;
+      }
+      offlineQueue.add({
+        type,
+        payload,
+        intentId,
+        siteId
+      });
+      RetryQueueFSM.triggerProcessing();
+    } catch (err) {
+      console.error("Error enqueuing to FSM: ", err);
+    }
+  },
+
+  reconcilePendingQueueWithAuthority: async (database: any) => {
+    try {
+      const queue = offlineQueue.load();
+      if (queue.length === 0) return;
+
+      for (const item of queue) {
+        if (!item.payload) continue;
+        const { type, payload, intentId } = item.payload;
+        let alreadyCommitted = false;
+
+        try {
+          if (type === 'MOUVEMENT') {
+            const docSnap = await getDoc(doc(database, 'mouvements', payload.id));
+            if (docSnap.exists()) alreadyCommitted = true;
+          } else if (type === 'MAINTENANCE') {
+            const docSnap = await getDoc(doc(database, 'maintenanceLogs', payload.id));
+            if (docSnap.exists()) alreadyCommitted = true;
+          } else if (type === 'TRANSFERT') {
+            const docSnap = await getDoc(doc(database, 'transferts', payload.id));
+            if (docSnap.exists()) alreadyCommitted = true;
+          } else if (type === 'APPROVE_TRANSFERT' || type === 'COMPLETE_TRANSFERT' || type === 'CLOSE_TRANSFERT') {
+            const docSnap = await getDoc(doc(database, 'transferts', payload.id));
+            if (docSnap.exists()) {
+              const txData = docSnap.data();
+              if (type === 'APPROVE_TRANSFERT' && txData?.status !== 'PENDING_APPROVAL') {
+                alreadyCommitted = true;
+              }
+              if (type === 'COMPLETE_TRANSFERT' && (txData?.status === 'RECEIVED' || txData?.status === 'DISPUTED' || txData?.status === 'CLOSED')) {
+                alreadyCommitted = true;
+              }
+              if (type === 'CLOSE_TRANSFERT' && txData?.status === 'CLOSED') {
+                alreadyCommitted = true;
+              }
+            }
+          }
+        } catch (err) {
+          console.warn(`Could not check authority for ${intentId}`, err);
+        }
+
+        if (alreadyCommitted) {
+          offlineQueue.remove(item.id);
+        }
+      }
+    } catch (err) {
+      console.error("Error in reconcilePendingQueueWithAuthority: ", err);
+    }
+  },
+
+  triggerProcessing: async () => {
+    if (isProcessingQueue) return;
+    isProcessingQueue = true;
+
+    try {
+      let queue = offlineQueue.load();
+      while (queue.length > 0) {
+        if (typeof navigator !== 'undefined' && !navigator.onLine) {
+          break;
+        }
+
+        const item = queue[0];
+        if (!item.payload) {
+          offlineQueue.remove(item.id);
+          queue = offlineQueue.load();
+          continue;
+        }
+
+        const { type, payload, intentId } = item.payload;
+        const resolver = FSM_resolvers[type];
+
+        if (!resolver) {
+          console.warn(`No resolver registered for type ${type}`);
+          offlineQueue.remove(item.id);
+          queue = offlineQueue.load();
+          continue;
+        }
+
+        try {
+          await resolver(payload, intentId);
+          offlineQueue.remove(item.id);
+        } catch (err: any) {
+          const errMsg = err?.message || String(err);
+          const isNetErr = errMsg.toLowerCase().includes('network') || 
+                          errMsg.toLowerCase().includes('offline') || 
+                          errMsg.toLowerCase().includes('failed-precondition') || 
+                          errMsg.toLowerCase().includes('unavailable') || 
+                          errMsg.toLowerCase().includes('timeout') ||
+                          errMsg.toLowerCase().includes('internet');
+                          
+          if (isNetErr) {
+            break;
+          } else {
+            // Business error. Move to DLQ structure.
+            const dlqItem = {
+              id: 'dlq_' + Math.random().toString(36).substring(2) + '_' + Date.now(),
+              intentId,
+              timestamp: new Date().toISOString(),
+              type,
+              payload,
+              error: errMsg,
+              status: 'PENDING'
+            };
+
+            let dlqList: any[] = [];
+            try {
+              const cached = localStorage.getItem('hydromines_dlq');
+              dlqList = cached ? JSON.parse(cached) : [];
+            } catch {}
+
+            dlqList.push(dlqItem);
+            localStorage.setItem('hydromines_dlq', JSON.stringify(dlqList));
+
+            try {
+              toast.error(`Erreur de synchronisation métier sur ${type}: ${errMsg}`);
+            } catch {}
+
+            offlineQueue.remove(item.id);
+          }
+        }
+
+        queue = offlineQueue.load();
+      }
+    } catch (err) {
+      console.error("Error in triggerProcessing: ", err);
+    } finally {
+      isProcessingQueue = false;
+    }
+  }
 };
-const getDLQEntries = () => [];
+
+const getDLQEntries = () => {
+  try {
+    const cached = localStorage.getItem('hydromines_dlq');
+    return cached ? JSON.parse(cached) : [];
+  } catch {
+    return [];
+  }
+};
 const validateGlobalSnapshotState = (...args: any[]) => ({
   isHighlyStale: false,
   hasCollectionVersionSkew: false,
@@ -575,6 +749,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       handleSelfHealingReconciliation();
     }
   }, [isLoaded, authStateReady]);
+
+  // Window online automatic trigger listener
+  useEffect(() => {
+    const handleOnline = async () => {
+      addTechLog('INFO', 'Connexion réseau rétablie détectée. Lancement de la synchronisation...');
+      toast.success("Connexion réseau rétablie. Lancement de la synchronisation de vos opérations...");
+      try {
+        await RetryQueueFSM.reconcilePendingQueueWithAuthority(db);
+        await RetryQueueFSM.triggerProcessing();
+        refreshFSMStates();
+      } catch (err) {
+        console.warn("Error reconciling on online event: ", err);
+      }
+    };
+
+    window.addEventListener('online', handleOnline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+    };
+  }, [isLoaded]);
 
   // Anti-replay and cross-session pending operations tracking
   const [pendingOperations, setPendingOperations] = useState<string[]>(() => {
@@ -2828,11 +3022,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const forceRunQueue = async () => {
     addTechLog('INFO', "Force d'exécution de la file d'attente initiée manuellement.");
-    if (retryQueue.length === 0) {
+    const currentQ = RetryQueueFSM.getQueue();
+    if (currentQ.length === 0) {
       toast.info("La file d'attente est vide.");
       return;
     }
-    setRetryQueue(prev => prev.map(x => ({ ...x, retryCount: 0 })));
+    toast.info("Tentative de resynchronisation des opérations...");
+    await RetryQueueFSM.reconcilePendingQueueWithAuthority(db);
+    await RetryQueueFSM.triggerProcessing();
+    refreshFSMStates();
   };
 
   const simulateRuleFailure = async () => {

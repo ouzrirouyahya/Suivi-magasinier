@@ -200,33 +200,34 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                     {articleMouvements.length > 0 ? (
                       articleMouvements.map(m => {
                         const item = m.items.find(it => it.articleId === article.id);
+                        const isStockIncrease = ['ENTREE', 'TRANSFERT_IN', 'RETOUR'].includes(m.type);
                         return (
                           <tr key={m.id}>
                             <td className="text-xs text-neutral-500">{formatDate(m.date).split(' ')[0]}</td>
-                            <td className="font-bold text-neutral-800">{m.id}</td>
+                            <td className="font-bold text-neutral-800 text-xs tracking-tight">{m.reference || m.id}</td>
                             <td>
                               <span className={cn(
                                 "text-[10px] uppercase font-bold px-2 py-0.5 rounded",
-                                m.type === 'ENTREE' ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+                                isStockIncrease ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
                               )}>
                                 {m.type}
                               </span>
                             </td>
                             <td className="text-xs">
-                              {m.type === 'ENTREE' ? (
+                              {isStockIncrease && m.type === 'ENTREE' ? (
                                 <span className="font-medium">{m.vendeur}</span>
                               ) : (
                                 <div>
-                                  <p className="font-bold">{m.beneficiaire || m.demandeur}</p>
+                                  <p className="font-bold text-neutral-800">{m.beneficiaire || m.demandeur || '—'}</p>
                                   {m.engin && <p className="text-[10px] text-neutral-400">ENGIN: {m.engin}</p>}
                                 </div>
                               )}
                             </td>
                             <td className={cn(
-                              "text-right font-bold text-lg",
-                              m.type === 'ENTREE' ? "text-green-600" : "text-red-600"
+                              "text-right font-bold text-lg tabular-nums",
+                              isStockIncrease ? "text-green-600" : "text-red-600"
                             )}>
-                              {m.type === 'ENTREE' ? '+' : '-'}{item?.quantity}
+                              {isStockIncrease ? '+' : '-'}{item?.quantity}
                             </td>
                           </tr>
                         );

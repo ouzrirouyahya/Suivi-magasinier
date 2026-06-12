@@ -43,7 +43,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     networkQuality, 
     notifications, 
     markNotificationAsRead, 
-    markAllNotificationsAsRead 
+    markAllNotificationsAsRead,
+    retryQueue = [],
+    forceRunQueue
   } = useInventory();
 
   const [notifOpen, setNotifOpen] = React.useState(false);
@@ -161,6 +163,37 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               LRG
             </button>
           </div>
+
+          <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
+
+          {/* OFFLINE SYNCHRONIZATION STATUS COMPONENT */}
+          <button
+            onClick={() => {
+              if (forceRunQueue) forceRunQueue();
+            }}
+            className={cn(
+              "px-2.5 py-1.5 h-8 rounded-lg border transition-all active:scale-95 flex items-center gap-1.5 pointer-events-auto text-[9px] font-black uppercase tracking-wider shadow-sm cursor-pointer md:flex",
+              retryQueue.length > 0
+                ? "bg-amber-100/80 border-amber-300 text-amber-700 hover:bg-amber-200/50"
+                : "bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100/50"
+            )}
+            title={retryQueue.length > 0 ? "Des opérations sont en attente de synchronisation. Cliquez pour forcer." : "Toutes les opérations sont synchronisées."}
+          >
+            {retryQueue.length > 0 ? (
+              <>
+                <span className="relative flex h-1.5 w-1.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-amber-500"></span>
+                </span>
+                <span>{retryQueue.length} Opération{retryQueue.length > 1 ? 's' : ''} en attente ⏳</span>
+              </>
+            ) : (
+              <>
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500"></span>
+                <span>Tout synchronisé ✅</span>
+              </>
+            )}
+          </button>
 
           <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
 

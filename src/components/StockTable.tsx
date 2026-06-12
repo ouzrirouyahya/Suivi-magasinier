@@ -13,9 +13,13 @@ import {
   TrendingUp,
   LayoutGrid,
   List,
-  FileDown
+  FileDown,
+  Wrench,
+  Drill,
+  Droplets,
+  Shield
 } from 'lucide-react';
-import { Article, ArticleType, SiteCode } from '../types';
+import { Article, ArticleType, SiteCode, Mouvement } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 import { exportToCSV } from '../lib/exportUtils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -27,32 +31,68 @@ interface StockTableProps {
   type: ArticleType | 'ALL';
   site: SiteCode;
   articles: Article[];
+  mouvements?: Mouvement[];
   initialSearch?: string;
   onAction?: (id: string, action: 'IN' | 'OUT') => void;
   onViewDetail?: (article: Article) => void;
   onManageCatalog?: () => void;
 }
 
-export const StockTable = memo(({ type, site, articles, initialSearch = '', onAction, onViewDetail, onManageCatalog }: StockTableProps) => {
+export const StockTable = memo(({ type, site, articles, mouvements = [], initialSearch = '', onAction, onViewDetail, onManageCatalog }: StockTableProps) => {
   const [search, setSearch] = useState(initialSearch);
-  const [showGlobal, setShowGlobal] = useState(initialSearch.length > 0);
+  const [selectedStockType, setSelectedStockType] = useState<ArticleType | 'ALL'>(type);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('GRID');
+  const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('TABLE');
   const [isCarnetsOpen, setIsCarnetsOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'RUPTURE' | 'CRITIQUE' | 'OPTIMAL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('');
   
   useEffect(() => {
     setSearch(initialSearch);
-    if (initialSearch.length > 0) {
-      setShowGlobal(true);
-    }
   }, [initialSearch]);
+
+  useEffect(() => {
+    setSelectedStockType(type);
+  }, [type]);
+
+  const entriesLast24h = useMemo(() => {
+    const now = Date.now();
+    const dayInMs = 24 * 60 * 60 * 1000;
+    
+    return mouvements
+      .filter(m => {
+        if (m.site !== site) return false;
+        
+        const mDate = new Date(m.date);
+        if (isNaN(mDate.getTime())) return false;
+        
+        const isRecent = (now - mDate.getTime()) <= dayInMs && (now - mDate.getTime()) >= 0;
+        const isEntry = ['ENTREE', 'TRANSFERT_IN', 'RETOUR'].includes(m.type);
+        
+        return isRecent && isEntry;
+      })
+      .reduce((acc, m) => {
+        const siteMType = selectedStockType === 'ALL' || m.items.some(it => {
+          const art = articles.find(a => a.id === it.articleId);
+          return art && art.type === selectedStockType;
+        });
+        if (!siteMType) return acc;
+        
+        const qtySum = m.items.reduce((sum, item) => {
+          if (selectedStockType !== 'ALL') {
+            const art = articles.find(a => a.id === item.articleId);
+            if (!art || art.type !== selectedStockType) return sum;
+          }
+          return sum + (item.quantity || 0);
+        }, 0);
+        return acc + qtySum;
+      }, 0);
+  }, [mouvements, site, selectedStockType, articles]);
 
   const filteredArticles = useMemo(() => {
     return articles.filter(a => {
-      const matchesSite = showGlobal || a.site === site;
-      const matchesType = type === 'ALL' || a.type === type;
+      const matchesSite = a.site === site;
+      const matchesType = selectedStockType === 'ALL' || a.type === selectedStockType;
       
       const matchesSearch = matchArticleSearch(a, search);
       const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
@@ -65,15 +105,35 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
 
       return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation;
     });
-  }, [articles, site, type, search, showGlobal, categoryFilter, statusFilter, locationFilter]);
+  }, [articles, site, selectedStockType, search, categoryFilter, statusFilter, locationFilter]);
+
+  const sortedAndFilteredArticles = useMemo(() => {
+    const list = [...filteredArticles];
+    list.sort((a, b) => {
+      const aRupture = a.quantity === 0 ? 1 : 0;
+      const bRupture = b.quantity === 0 ? 1 : 0;
+      if (aRupture !== bRupture) {
+        return bRupture - aRupture; // Rupture first
+      }
+      
+      const aCritique = a.quantity <= a.minStock ? 1 : 0;
+      const bCritique = b.quantity <= b.minStock ? 1 : 0;
+      if (aCritique !== bCritique) {
+        return bCritique - aCritique; // Critique next
+      }
+      
+      return a.designation.localeCompare(b.designation);
+    });
+    return list;
+  }, [filteredArticles]);
 
   const categories = useMemo(() => {
-    return Array.from(new Set(articles.filter(a => (type === 'ALL' || a.type === type) && (showGlobal || a.site === site)).map(a => a.category)));
-  }, [articles, type, site, showGlobal]);
+    return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (a.site === site)).map(a => a.category)));
+  }, [articles, selectedStockType, site]);
 
   const locations = useMemo(() => {
-    return Array.from(new Set(articles.filter(a => (type === 'ALL' || a.type === type) && (showGlobal || a.site === site)).map(a => a.location))).filter(Boolean);
-  }, [articles, type, site, showGlobal]);
+    return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (a.site === site)).map(a => a.location))).filter(Boolean);
+  }, [articles, selectedStockType, site]);
 
   const getStockStatus = (article: Article) => {
     if (article.quantity === 0) return { label: 'RUPTURE', class: 'bg-rose-500 text-white', icon: AlertTriangle };
@@ -85,82 +145,122 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-3">
-            <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase flex items-center gap-3">
-              <span className="w-2 h-10 bg-sky-600 rounded-full"></span>
-              {type === 'ALL' ? 'Résultats Recherche' : `Stock ${type.replace('_', ' ')}`}
+          <div className="flex items-center gap-3 animate-in fade-in duration-300">
+            <h2 className="text-[2.75rem] font-black text-slate-950 tracking-tighter uppercase flex items-center gap-3 leading-none">
+              <span className="w-2.5 h-10 bg-sky-600 rounded-full"></span>
+              {selectedStockType === 'ALL' ? 'État Général des Stocks' : `Stock Pièces ${selectedStockType.toLowerCase().replace('_', ' ')}`}
             </h2>
-            <button 
-              onClick={onManageCatalog}
-              className="p-1.5 text-slate-400 hover:text-sky-600 transition-colors"
-              title="Gérer le catalogue"
-            >
-              <PlusIcon className="w-8 h-8" />
-            </button>
+            {onManageCatalog && (
+              <button 
+                onClick={onManageCatalog}
+                className="p-1.5 text-slate-400 hover:text-sky-600 transition-colors cursor-pointer"
+                title="Gérer le catalogue"
+              >
+                <PlusIcon className="w-8 h-8" />
+              </button>
+            )}
           </div>
-          <div className="flex items-center gap-3 mt-3">
-            <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] opacity-70">SITE DE SURVEILLANCE : <span className="text-sky-600">{site}</span></p>
+          <div className="flex items-center gap-3 mt-3.5">
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.1em] opacity-80">
+              Site de surveillance : <span className="text-sky-600 font-extrabold">{site}</span>
+            </p>
             <span className="text-slate-300">|</span>
-            <p className="text-xl text-sky-600 font-black uppercase tracking-widest">{filteredArticles.length} RÉFÉRENCES ACTIVES</p>
+            <p className="text-sm text-sky-600 font-black uppercase tracking-wider">
+              {sortedAndFilteredArticles.length} Références listées
+            </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3 no-print">
           <button 
             id="btn-open-carnets"
             onClick={() => setIsCarnetsOpen(true)}
-            className="btn bg-slate-900 text-white font-black uppercase tracking-widest px-6 h-11 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 cursor-pointer shadow-sm shadow-slate-900/10 no-print"
+            className="btn bg-slate-900 text-white font-black uppercase tracking-wider text-xs px-5 h-11 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 cursor-pointer shadow-sm shadow-slate-900/10"
           >
             📋 CARNETS DE BORD
           </button>
           <button 
             onClick={() => {
-              exportToCSV(filteredArticles, `STOCKS_${site}_${type}`);
+              exportToCSV(sortedAndFilteredArticles, `STOCKS_${site}_${selectedStockType}`);
               toast.success("Inventaire exporté en CSV");
             }}
-            className="btn bg-white border border-slate-200 shadow-sm text-slate-700 px-4 h-11 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+            className="btn bg-white border border-slate-200 shadow-sm text-slate-755 text-xs font-black uppercase tracking-wider px-4 h-11 rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 cursor-pointer"
           >
-            <FileDown className="w-5 h-5 text-emerald-600" /> Export
+            <FileDown className="w-4 h-4 text-emerald-600" /> Export CSV
           </button>
           {onManageCatalog && (
              <button 
                 onClick={onManageCatalog}
-                className="btn bg-white border border-slate-200 shadow-sm text-slate-700 px-4 h-11 rounded-xl font-black uppercase text-sm tracking-widest hover:bg-slate-50 transition-all flex items-center gap-2"
+                className="btn bg-white border border-slate-200 shadow-sm text-slate-755 text-xs font-black uppercase tracking-wider px-4 h-11 rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 cursor-pointer"
              >
-                <Package className="w-5 h-5 text-sky-600" /> Catalogue
+                <Package className="w-4 h-4 text-sky-600" /> catalogue
              </button>
           )}
-          <div className="flex items-center gap-1.5 bg-white/50 backdrop-blur-xl p-0.5 rounded-lg border border-slate-200/50 shadow-sm ring-1 ring-slate-900/5">
+          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/50 shadow-inner">
             <button 
               onClick={() => setViewMode('TABLE')}
-              className={cn("p-1.5 rounded-md transition-all duration-300", viewMode === 'TABLE' ? "bg-white shadow-md text-sky-600 scale-105" : "text-slate-400 hover:text-slate-600")}
+              className={cn("p-1.5 rounded-lg transition-all cursor-pointer", viewMode === 'TABLE' ? "bg-white shadow-md text-sky-600 font-bold" : "text-slate-400 hover:text-slate-600")}
+              title="Vue Tableau de terrain dense"
             >
-              <List className="w-3.5 h-3.5" />
+              <List className="w-4 h-4" />
             </button>
             <button 
               onClick={() => setViewMode('GRID')}
-              className={cn("p-1.5 rounded-md transition-all duration-300", viewMode === 'GRID' ? "bg-white shadow-md text-sky-600 scale-105" : "text-slate-400 hover:text-slate-600")}
+              className={cn("p-1.5 rounded-lg transition-all cursor-pointer", viewMode === 'GRID' ? "bg-white shadow-md text-sky-600 font-bold" : "text-slate-400 hover:text-slate-600")}
+              title="Vue Grille de cartes"
             >
-              <LayoutGrid className="w-3.5 h-3.5" />
+              <LayoutGrid className="w-4 h-4" />
             </button>
           </div>
         </div>
       </header>
+
+      {/* Segmented Selectors for unified stock type switching (replaces 4 screen navigation) */}
+      <div className="p-1.5 bg-slate-100 rounded-2xl border border-slate-200/40 flex flex-wrap gap-1.5 items-center w-full max-w-fit no-print">
+        {[
+          { value: 'ALL', label: 'Tous les Stocks', icon: Package },
+          { value: 'ENGINS', label: 'Pièces Engins', icon: Wrench },
+          { value: 'PERFORATEURS', label: 'Pièces Perforateurs', icon: Drill },
+          { value: 'CONSOMMABLES', label: 'Consommables & Taillants', icon: Droplets },
+          { value: 'EPI', label: 'EPI', icon: Shield },
+        ].map((tab) => {
+          const Icon = tab.icon;
+          const isActive = selectedStockType === tab.value;
+          return (
+            <button
+              key={tab.value}
+              onClick={() => {
+                setSelectedStockType(tab.value as any);
+                setCategoryFilter('ALL');
+              }}
+              className={cn(
+                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer border",
+                isActive 
+                  ? "bg-white text-slate-900 border-slate-200 shadow-sm font-black" 
+                  : "bg-transparent text-slate-500 border-transparent hover:text-slate-700"
+              )}
+            >
+              <Icon className={cn("w-4 h-4", isActive ? "text-sky-600" : "text-slate-400")} />
+              {tab.label}
+            </button>
+          );
+        })}
+      </div>
 
       {/* Dynamic KPIs for the current category */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 no-print">
         {[
           { 
             label: 'Total Références', 
-            value: filteredArticles.length, 
+            value: sortedAndFilteredArticles.length, 
             unit: 'Réf', 
             color: 'text-sky-600', 
             bg: 'bg-white',
-            details: `${Array.from(new Set(filteredArticles.map(a => a.category))).length} Catégories`
+            details: `${Array.from(new Set(sortedAndFilteredArticles.map(a => a.category))).length} Catégories`
           },
           { 
             label: 'Valeur Totale', 
-            value: formatCurrency(filteredArticles.reduce((sum, a) => sum + (a.quantity * a.price), 0)).split(',')[0], 
+            value: formatCurrency(sortedAndFilteredArticles.reduce((sum, a) => sum + (a.quantity * a.price), 0)).split(',')[0], 
             unit: 'MAD', 
             color: 'text-emerald-600', 
             bg: 'bg-white',
@@ -168,7 +268,7 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
           },
           { 
             label: 'Ruptures Stock', 
-            value: filteredArticles.filter(a => a.quantity === 0).length, 
+            value: sortedAndFilteredArticles.filter(a => a.quantity === 0).length, 
             unit: 'Critique', 
             color: 'text-rose-600', 
             bg: 'bg-rose-50/50',
@@ -176,57 +276,45 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
           },
           { 
             label: 'Articles Entrés', 
-            value: site === 'SMI' ? '74+' : '12+', 
-            unit: 'H/24', 
+            value: `${entriesLast24h}`, 
+            unit: 'qté H/24', 
             color: 'text-amber-600', 
             bg: 'bg-white',
-            details: 'Mouvements récents'
+            details: 'Nombre d\'entrées (24h)'
           }
         ].map((kpi) => (
           <div key={kpi.label} className={cn(
-            "card p-8 relative overflow-hidden group shadow-xl transition-all hover:shadow-2xl hover:-translate-y-1 rounded-3xl border border-slate-100",
+            "card p-6 relative overflow-hidden group shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 rounded-2xl border border-slate-100",
             kpi.bg
           )}>
-            <p className="text-lg font-black text-slate-400 uppercase mb-3 tracking-tighter truncate">{kpi.label}</p>
-            <h4 className={cn("text-5xl font-black tracking-tighter leading-none mb-4", kpi.color)}>
-              {kpi.value} <span className="text-base text-slate-400 font-black tracking-widest ml-1">{kpi.unit}</span>
+            <p className="text-xs font-black text-slate-400 uppercase mb-2 tracking-wider truncate">{kpi.label}</p>
+            <h4 className={cn("text-3xl font-black tracking-tight leading-none mb-3", kpi.color)}>
+              {kpi.value} <span className="text-xs text-slate-400 font-extrabold tracking-widest ml-1">{kpi.unit}</span>
             </h4>
-            <div className="pt-4 border-t border-slate-50 flex items-center justify-between">
-              <span className="text-xs font-black text-slate-400 uppercase tracking-widest">{kpi.details}</span>
-              <TrendingUp className="w-4 h-4 text-slate-200" />
+            <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.details}</span>
+              <TrendingUp className="w-3.5 h-3.5 text-slate-200" />
             </div>
           </div>
         ))}
       </div>
 
-      <div className="card glass p-2 flex flex-col md:flex-row items-center gap-2 shadow-xl ring-1 ring-slate-900/5">
-        <div className="relative flex-1 flex gap-2 w-full">
-          <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-6 h-6 text-slate-300" />
-            <input 
-              type="text" 
-              placeholder="Rechercher par désignation ou référence..."
-              className="input-field pl-12 h-14 text-xl font-black bg-white/40 border-slate-200/50 rounded-2xl"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-            />
-          </div>
-          <button 
-            onClick={() => setShowGlobal(!showGlobal)}
-            className={cn(
-              "btn px-6 h-14 rounded-2xl gap-3 font-black uppercase text-base tracking-widest transition-all whitespace-nowrap",
-              showGlobal ? "bg-sky-600 text-white" : "bg-white text-slate-400 border-slate-100"
-            )}
-          >
-            <MapPin className={cn("w-5 h-5", showGlobal ? "text-white" : "text-slate-300")} /> 
-            Global
-          </button>
+      <div className="card glass p-2 flex flex-col md:flex-row items-center gap-2 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] ring-1 ring-slate-900/5">
+        <div className="relative flex-1 w-full">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-350" />
+          <input 
+            type="text" 
+            placeholder="Rechercher par désignation ou référence..."
+            className="input-field pl-12 h-12 text-base font-bold bg-white/40 border-slate-200/50 rounded-xl"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
         </div>
         <div className="w-full lg:w-auto flex flex-wrap items-center gap-1.5">
           <div className="relative">
             <AlertTriangle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
             <select 
-              className="pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-lg text-sm font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-sky-500 appearance-none min-w-[140px]"
+              className="pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-sky-500 appearance-none min-w-[140px]"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
             >
@@ -241,17 +329,17 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
 
       {/* Category filter pills - handled separately (filter buttons only) */}
       {categories.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-50/80 border border-slate-100 rounded-xl px-4 py-2.5">
-          <span className="text-xs font-black text-slate-400 uppercase tracking-widest mr-2 flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-slate-400" /> Filtrer par Catégorie :
+        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-50/85 border border-slate-100 rounded-xl px-4 py-2">
+          <span className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2 flex items-center gap-1.5">
+            <Filter className="w-3.5 h-3.5 text-slate-400" /> Filtrer par Sous-Catégorie :
           </span>
           <button
             onClick={() => setCategoryFilter('ALL')}
             className={cn(
-              "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all border",
+              "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border cursor-pointer",
               categoryFilter === 'ALL'
                 ? "bg-sky-600 text-white border-sky-600 shadow-sm"
-                : "bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 border-slate-200"
+                : "bg-white text-slate-400 hover:text-slate-650 hover:bg-slate-50 border-slate-200"
             )}
           >
             Tous
@@ -261,10 +349,10 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
               key={cat}
               onClick={() => setCategoryFilter(cat)}
               className={cn(
-                "px-3 py-1.5 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all border",
+                "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border cursor-pointer",
                 categoryFilter === cat
                   ? "bg-sky-600 text-white border-sky-600 shadow-sm"
-                  : "bg-white text-slate-400 hover:text-slate-600 hover:bg-slate-50 border-slate-200"
+                  : "bg-white text-slate-400 hover:text-slate-650 hover:bg-slate-50 border-slate-200"
               )}
             >
               {cat}
@@ -282,7 +370,7 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
             exit={{ opacity: 0, scale: 0.95 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
           >
-            {filteredArticles.map((article, idx) => {
+            {sortedAndFilteredArticles.map((article, idx) => {
               const status = getStockStatus(article);
               const totalValue = article.quantity * article.price;
               
@@ -291,70 +379,68 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
                   key={article.id}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: idx * 0.02 }}
+                  transition={{ delay: idx * 0.015 }}
                   className="group relative"
                 >
                   <div 
                     onClick={() => onViewDetail?.(article)}
-                    className="relative card glass p-4 h-full flex flex-col bg-white border-slate-100 hover:-translate-y-1 transition-all duration-300 overflow-hidden shadow-sm ring-1 ring-slate-900/5 cursor-pointer"
+                    className="relative card bg-white p-4 h-full flex flex-col border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer rounded-2xl"
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <div className={cn("px-2.5 py-1 rounded text-xs font-black tracking-widest flex items-center gap-1.5 shadow-sm", status.class)}>
-                        <status.icon className="w-3.5 h-3.5" />
+                      <div className={cn("px-2 py-0.5 rounded text-[10px] font-black tracking-widest flex items-center gap-1 shadow-sm uppercase", status.class)}>
+                        <status.icon className="w-3 h-3" />
                         {status.label}
                       </div>
-                      <span className="text-sm font-mono font-black text-slate-300 group-hover:text-sky-500 transition-colors uppercase tracking-tight">
+                      <span className="text-xs font-mono font-black text-slate-350 group-hover:text-sky-600 transition-colors uppercase tracking-tight">
                         #{article.ref}
                       </span>
                     </div>
 
-                    {(article.price || 0) < 25000 && (
-                      <div className="mb-2 w-fit">
-                        <span className="px-2 py-0.5 bg-emerald-500/10 text-emerald-700 text-[9px] font-black uppercase rounded border border-emerald-500/15" title="Importée comme fiche définitive durable < 25K MAD">
-                          Fiche Définitive &lt; 25K MAD
-                        </span>
-                      </div>
-                    )}
-
-                    <h3 className="text-xl font-black text-slate-900 leading-snug mb-2 min-h-[3.5rem] line-clamp-2">
+                    <h3 className="text-base font-extrabold text-slate-905 leading-snug mb-2 min-h-[2.5rem] line-clamp-2 uppercase">
                       {article.designation}
                     </h3>
 
                     {article.component && (
-                      <p className="text-sm font-black text-sky-600 bg-sky-50 px-3 py-1.5 rounded border border-sky-100 uppercase tracking-tighter mb-4 w-fit">
+                      <p className="text-[10px] font-black text-sky-600 bg-sky-50 px-2.5 py-1 rounded border border-sky-100 uppercase tracking-tighter mb-4 w-fit">
                         {article.component}
                       </p>
                     )}
 
-                    <div className="space-y-2 mb-4">
+                    <div className="space-y-2 mb-4 pt-3 border-t border-slate-50">
                        <div className="flex items-center gap-2 text-slate-400">
-                         <MapPin className="w-3 h-3" />
-                         <p className="text-[11px] font-bold text-slate-600">{article.location}</p>
+                         <MapPin className="w-3.5 h-3.5" />
+                         <p className="text-xs font-bold text-slate-600">{article.location || '—'}</p>
                        </div>
                        <div className="flex items-center gap-2 text-slate-400">
-                         <TrendingUp className="w-3 h-3" />
-                         <p className="text-[11px] font-black text-emerald-600">{formatCurrency(totalValue)}</p>
+                         <TrendingUp className="w-3.5 h-3.5" />
+                         <p className="text-xs font-black text-emerald-600">{formatCurrency(totalValue)}</p>
                        </div>
                     </div>
 
                     <div className="mt-auto pt-3 border-t border-slate-50">
                       <div className="flex items-end justify-between">
                          <div>
-                            <p className={cn("text-xl font-black tracking-tighter leading-none", article.quantity <= article.minStock ? "text-rose-600" : "text-slate-900")}>
+                            <p className={cn("text-2xl font-black tracking-tight leading-none", article.quantity <= article.minStock ? "text-rose-600" : "text-slate-900")}>
                                {article.quantity}
                             </p>
-                            <p className="text-[9px] font-black text-slate-400 uppercase mt-0.5">{article.unit}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase mt-1">Stk requis: {article.minStock} {article.unit}</p>
                          </div>
                          <div className="flex gap-1.5 focus-within:z-10">
                             <button 
-                              onClick={() => onAction?.(article.id, 'IN')}
-                              className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center hover:bg-sky-600 hover:text-white transition-all shadow-sm border border-sky-100/50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAction?.(article.id, 'IN');
+                              }}
+                              className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center hover:bg-sky-600 hover:text-white transition-all shadow-sm border border-sky-100/50 cursor-pointer"
                             >
                               <PlusIcon className="w-4 h-4" />
                             </button>
                             <button 
-                              onClick={() => onAction?.(article.id, 'OUT')}
-                              className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-rose-100/50"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                onAction?.(article.id, 'OUT');
+                              }}
+                              className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-rose-100/50 cursor-pointer"
                             >
                               <ArrowUpRight className="w-4 h-4" />
                             </button>
@@ -369,99 +455,121 @@ export const StockTable = memo(({ type, site, articles, initialSearch = '', onAc
         ) : (
           <motion.div 
             key="table"
-            initial={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0, scale: 0.99 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, x: -20 }}
-            className="table-container glass border-0 shadow-2xl ring-1 ring-slate-900/5 overflow-hidden"
+            exit={{ opacity: 0, x: -10 }}
+            className="border border-slate-150 rounded-2xl shadow-sm bg-white overflow-hidden"
           >
-            <table className="data-table w-full">
-              <thead>
+            <table className="min-w-full divide-y divide-slate-150 bg-white">
+              <thead className="bg-slate-50/70">
                 <tr>
-                  <th className="px-8 py-6 text-left text-lg font-black uppercase tracking-widest text-slate-400">Désignation & Détails</th>
-                  <th className="px-8 py-6 text-lg font-black uppercase tracking-widest text-slate-400">Section</th>
-                  <th className="px-8 py-6 text-center text-lg font-black uppercase tracking-widest text-slate-400">Quantité</th>
-                  <th className="px-8 py-6 text-right text-lg font-black uppercase tracking-widest text-slate-400">Valeur Unit.</th>
-                  <th className="px-8 py-6 text-right text-lg font-black uppercase tracking-widest text-slate-400">Actions</th>
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-400">Article / Désignation</th>
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-400 font-sans">Sous-Catégorie</th>
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-400">Emplacement</th>
+                  <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-400">Seuil Min.</th>
+                  <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-400">Stock Actuel</th>
+                  <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-400">Statut</th>
+                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-400">Valeur HT</th>
+                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-400 no-print">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100">
-                {filteredArticles.map((article) => (
-                  <tr 
-                    key={article.id} 
-                    className="group hover:bg-white/60 transition-all cursor-pointer"
-                    onClick={(e) => {
-                       // Only trigger if not clicking an action button
-                       if (!(e.target as HTMLElement).closest('button')) {
-                          onViewDetail?.(article);
-                       }
-                    }}
-                  >
-                <td className="px-8 py-8">
-                  <div className="flex flex-col">
-                    <span className="font-black text-slate-900 text-3xl tracking-tighter leading-tight uppercase">{article.designation}</span>
-                    <div className="flex items-center gap-4 mt-3 flex-wrap">
-                      <code className="text-lg font-black bg-slate-100 px-3 py-1 rounded-xl text-slate-500 uppercase tracking-widest border border-slate-200/50">#{article.ref}</code>
-                      <span className="text-lg font-black text-slate-400 tracking-tighter uppercase">• {article.location}</span>
-                      {(article.price || 0) < 25000 && (
-                        <span className="px-2.5 py-0.5 bg-emerald-500/10 text-emerald-700 text-[10px] font-black uppercase rounded-lg border border-emerald-500/15" title="Importée comme fiche définitive durable < 25K MAD">
-                          Fiche Définitive &lt; 25K MAD
+              <tbody className="divide-y divide-slate-100 bg-white">
+                {sortedAndFilteredArticles.map((article) => {
+                  const status = getStockStatus(article);
+                  const isZero = article.quantity === 0;
+                  const isCritical = article.quantity <= article.minStock;
+                  
+                  return (
+                    <tr 
+                      key={article.id} 
+                      className="group hover:bg-slate-50/60 transition-all cursor-pointer"
+                      onClick={(e) => {
+                         if (!(e.target as HTMLElement).closest('button')) {
+                            onViewDetail?.(article);
+                         }
+                      }}
+                    >
+                      <td className="px-4 py-3.5">
+                        <div className="flex flex-col">
+                          <span className="font-extrabold text-slate-900 text-sm uppercase leading-tight group-hover:text-sky-600 transition-colors">
+                            {article.designation}
+                          </span>
+                          <span className="font-mono text-[10px] text-slate-400 mt-1 uppercase tracking-wider">
+                            Ref: #{article.ref}
+                          </span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className="text-[10px] font-black text-slate-500 bg-slate-100 px-2.5 py-1 rounded-md uppercase border border-slate-200/50">
+                          {article.category}
                         </span>
-                      )}
-                    </div>
-                  </div>
-                </td>
-                    <td className="px-8 py-8">
-                      <span className="text-sm font-black text-sky-700 bg-sky-50 px-4 py-2 rounded-xl uppercase tracking-widest border border-sky-100">
-                        {article.category}
-                      </span>
-                    </td>
-                    <td className="px-8 py-8 text-center border-x border-slate-50">
-                      <div className="flex flex-col items-center">
+                      </td>
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 text-slate-650">
+                          <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                          <span className="text-xs font-bold">{article.location || '—'}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                        <span className="text-xs font-extrabold text-slate-404">{article.minStock} {article.unit}</span>
+                      </td>
+                      <td className="px-4 py-3.5 text-center whitespace-nowrap">
                         <span className={cn(
-                          "text-5xl font-black tracking-tighter",
-                          article.quantity <= article.minStock ? "text-rose-600" : "text-sky-600"
+                          "text-base font-black tabular-nums",
+                          isZero ? "text-rose-600" : isCritical ? "text-amber-500" : "text-slate-900"
                         )}>
-                          {article.quantity}
+                          {article.quantity} <span className="text-[10px] font-extrabold text-slate-400">{article.unit}</span>
                         </span>
-                        <span className="text-sm font-black text-slate-400 uppercase tracking-widest mt-1">{article.unit}</span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-8 text-right font-black text-slate-900 text-2xl tracking-tighter">
-                      {formatCurrency(article.price)}
-                    </td>
-                    <td className="px-8 py-8">
-                      <div className="flex justify-end gap-3 opacity-50 group-hover:opacity-100 transition-all">
-                         <button onClick={() => onAction?.(article.id, 'IN')} className="w-12 h-12 flex items-center justify-center bg-emerald-50 text-emerald-600 rounded-xl hover:scale-110 active:scale-95 transition-all shadow-sm">
-                           <PlusIcon className="w-6 h-6" />
-                         </button>
-                         <button onClick={() => onAction?.(article.id, 'OUT')} className="w-12 h-12 flex items-center justify-center bg-rose-50 text-rose-600 rounded-xl hover:scale-110 active:scale-95 transition-all shadow-sm">
-                           <ArrowUpRight className="w-6 h-6" />
-                         </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-4 py-3.5 text-center whitespace-nowrap">
+                        <span className={cn(
+                          "px-2.5 py-0.5 rounded text-[10px] font-black tracking-wider uppercase inline-block font-sans",
+                          isZero ? "bg-rose-100 text-rose-700 border border-rose-200" :
+                          isCritical ? "bg-amber-100 text-amber-700 border border-amber-205" :
+                          "bg-emerald-100 text-emerald-700 border border-emerald-205"
+                        )}>
+                          {isZero ? 'Rupture' : isCritical ? 'Critique' : 'Optimal'}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 text-right font-semibold text-slate-700 font-mono text-xs whitespace-nowrap">
+                        {formatCurrency(article.price)}
+                      </td>
+                      <td className="px-4 py-3.5 text-right whitespace-nowrap no-print">
+                        <div className="flex justify-end gap-1.5 opacity-60 group-hover:opacity-100 transition-all focus-within:opacity-100">
+                          <button 
+                            onClick={() => onAction?.(article.id, 'IN')} 
+                            className="w-8 h-8 flex items-center justify-center bg-sky-50 text-sky-600 rounded-lg hover:bg-sky-600 hover:text-white transition-all shadow-sm border border-sky-100/50 cursor-pointer"
+                            title="Ajouter du Stock (Bon d'Entrée)"
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                          </button>
+                          <button 
+                            onClick={() => onAction?.(article.id, 'OUT')} 
+                            className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-rose-100/50 cursor-pointer"
+                            title="Sortir du Stock (Bon de Sortie)"
+                          >
+                            <ArrowUpRight className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {filteredArticles.length === 0 && (
+      {sortedAndFilteredArticles.length === 0 && (
         <div className="card glass p-8 text-center flex flex-col items-center justify-center border-dashed border border-slate-200">
           <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-3">
-            <Package className="w-6 h-6 text-slate-200" />
+            <Package className="w-6 h-6 text-slate-250" />
           </div>
-          <h3 className="text-base font-black text-slate-950 uppercase tracking-tighter">Inventaire Vide</h3>
-          <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-1 max-w-sm leading-relaxed">
-            Aucun article n'est enregistré.
+          <h3 className="text-base font-black text-slate-950 uppercase tracking-tighter">Aucun Article Sélectionné</h3>
+          <p className="text-slate-405 font-bold uppercase text-[10px] tracking-widest mt-1 max-w-sm leading-relaxed">
+            Aucun article ne correspond aux filtres de recherche. Tous les filtres sont locaux à votre chantier.
           </p>
-          <button 
-             onClick={onManageCatalog}
-             className="mt-4 btn bg-sky-600 text-white shadow-sm px-4 py-2.5 rounded-lg font-black uppercase text-[10px] tracking-widest hover:bg-sky-700 transition-all"
-          >
-            Créer Référence
-          </button>
         </div>
       )}
 

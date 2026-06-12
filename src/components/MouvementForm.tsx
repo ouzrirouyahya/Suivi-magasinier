@@ -70,22 +70,18 @@ interface MouvementFormProps {
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
   const [date, setDate] = useState(() => new Date().toISOString());
   const [reference, setReference] = useState('');
-  const [beneficiaire, setBeneficiaire] = useState('');
   const [entityName, setEntityName] = useState(''); 
   const [receptionSource, setReceptionSource] = useState<'CENTRAL' | 'ACHAT_EXTERNE'>('CENTRAL');
   const [buyerName, setBuyerName] = useState('');
   const [mecanicien, setMecanicien] = useState(''); 
   const [mecanicienFreeText, setMecanicienFreeText] = useState(false);
-  const [beneficiaireFreeText, setBeneficiaireFreeText] = useState(false);
   const [formSubmitted, setFormSubmitted] = useState(false);
   const [targetEngin, setTargetEngin] = useState(''); 
   const [targetPerfo, setTargetPerfo] = useState('');
-  const [motif, setMotif] = useState('');
   const [interventionType, setInterventionType] = useState<'CORRECTIF' | 'PREVENTIF' | 'ROUTINE' | 'PROPRIO'>('ROUTINE');
   const [service, setService] = useState('');
   const [notes, setNotes] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>(type === 'SORTIE' ? '' : 'ALL');
-  const [status, setStatus] = useState<'BROUILLON' | 'VALIDE'>('VALIDE');
   const [items, setItems] = useState<(MouvementItem & { lineId: string })[]>(() => {
     if (initialArticleId) {
       const art = articles.find(a => a.id === initialArticleId);
@@ -108,25 +104,47 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const siteEngins = engins.filter(e => e.site === site);
   const sitePerfos = perfos.filter(p => p.site === site);
 
-  const filteredArticles = articles.filter(a => {
-    const matchesSearch = !search || a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase());
-    const matchesSite = a.site === site;
-    const matchesCategory = !categoryFilter || categoryFilter === 'ALL' || a.type === categoryFilter;
-    return matchesSearch && matchesSite && matchesCategory && a.active;
-  }).slice(0, 50);
+  const filteredArticles = useMemo(() => {
+    return articles.filter(a => {
+      const matchesSearch = !search || a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase());
+      const matchesSite = a.site === site;
+      return matchesSearch && matchesSite && a.active;
+    });
+  }, [articles, search, site]);
+
+  const sortedArticles = useMemo(() => {
+    const sorted = [...filteredArticles];
+    if (categoryFilter && categoryFilter !== 'ALL') {
+      sorted.sort((a, b) => {
+        const aMatch = a.type === categoryFilter ? 1 : 0;
+        const bMatch = b.type === categoryFilter ? 1 : 0;
+        return bMatch - aMatch;
+      });
+    }
+    return sorted.slice(0, 50);
+  }, [filteredArticles, categoryFilter]);
 
   const filteredCatalogItems = useMemo(() => {
     if (type !== 'ENTREE' || !search) return [];
     if (search.length < 2) return [];
 
     const normSearch = search.toLowerCase();
-    return (catalog || []).filter(c => {
+    const matches = (catalog || []).filter(c => {
       const matchesSearch = (c.designation || '').toLowerCase().includes(normSearch) || 
                             (c.reference || '').toLowerCase().includes(normSearch);
-      const matchesCategory = !categoryFilter || categoryFilter === 'ALL' || c.suggestedType === categoryFilter;
       const existsLocally = articles.some(a => a.site === site && a.ref.trim().toUpperCase() === (c.reference || '').trim().toUpperCase());
-      return matchesSearch && matchesCategory && !existsLocally;
-    }).slice(0, 15);
+      return matchesSearch && !existsLocally;
+    });
+
+    if (categoryFilter && categoryFilter !== 'ALL') {
+      matches.sort((a, b) => {
+        const aMatch = a.suggestedType === categoryFilter ? 1 : 0;
+        const bMatch = b.suggestedType === categoryFilter ? 1 : 0;
+        return bMatch - aMatch;
+      });
+    }
+
+    return matches.slice(0, 15);
   }, [type, search, catalog, categoryFilter, articles, site]);
 
   const addCatalogItem = async (catalogItem: CatalogItem) => {
@@ -317,7 +335,14 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     e.preventDefault();
     setFormSubmitted(true);
     if (items.length === 0) { setValidationError('Ajoutez des articles.'); return; }
-    if (type === 'SORTIE' && !categoryFilter) { setValidationError('Sélectionnez une catégorie.'); return; }
+
+    if (type === 'SORTIE' && !isMachineRelated) {
+      const missingBeneficiary = items.some(item => !item.beneficiaryId);
+      if (missingBeneficiary) {
+        setValidationError("Veuillez sélectionner un bénéficiaire individuel pour chaque ligne d'article.");
+        return;
+      }
+    }
 
     if (type === 'ENTREE' && !reference.trim()) {
       setValidationError("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
@@ -325,7 +350,6 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
 
     const resolvedMecanicien = agents.find(a => a.id === mecanicien);
-    const resolvedBeneficiaire = agents.find(a => a.id === beneficiaire);
     const resolvedEngin = engins.find(e => e.id === targetEngin);
     const resolvedPerfo = perfos.find(p => p.id === targetPerfo);
 
@@ -338,6 +362,20 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       }
     }
 
+    let finalBeneficiaireRef: string | undefined = undefined;
+    if (type === 'SORTIE') {
+      if (isMachineRelated) {
+        finalBeneficiaireRef = resolvedMecanicien ? `${resolvedMecanicien.lastname} ${resolvedMecanicien.firstname}` : mecanicien;
+      } else {
+        const uniqueBeneficiaryNames = Array.from(new Set(items.map(it => it.beneficiaryName).filter(Boolean))) as string[];
+        if (uniqueBeneficiaryNames.length === 1) {
+          finalBeneficiaireRef = uniqueBeneficiaryNames[0];
+        } else if (uniqueBeneficiaryNames.length > 1) {
+          finalBeneficiaireRef = "Plusieurs bénéficiaires";
+        }
+      }
+    }
+
     const mouvement: Mouvement = {
       id: generateId(),
       site,
@@ -346,17 +384,16 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       reference,
       vendeur: type === 'ENTREE' ? resolvedEntityName : undefined,
       demandeur: (type === 'SORTIE' && isEpiOrOutils) ? entityName : undefined,
-      beneficiaire: (type === 'SORTIE') ? (
-        resolvedBeneficiaire ? `${resolvedBeneficiaire.lastname} ${resolvedBeneficiaire.firstname}` : (beneficiaire || entityName)
-      ) : undefined,
-      mecanicien: resolvedMecanicien ? `${resolvedMecanicien.firstname} ${resolvedMecanicien.lastname}` : mecanicien,
-      engin: resolvedEngin ? resolvedEngin.code : targetEngin,
-      perforateur: resolvedPerfo ? resolvedPerfo.code : targetPerfo,
+      beneficiaire: finalBeneficiaireRef,
+      mecanicien: isMachineRelated ? (resolvedMecanicien ? `${resolvedMecanicien.firstname} ${resolvedMecanicien.lastname}` : mecanicien) : undefined,
+      engin: (isMachineRelated && categoryFilter === 'ENGINS') ? (resolvedEngin ? resolvedEngin.code : targetEngin) : undefined,
+      perforateur: (isMachineRelated && categoryFilter === 'PERFORATEURS') ? (resolvedPerfo ? resolvedPerfo.code : targetPerfo) : undefined,
       category: categoryFilter,
-      service: service || resolvedMecanicien?.service || resolvedBeneficiaire?.service || '',
-      motif: `${interventionType}: ${motif}`,
+      service: service || resolvedMecanicien?.service || '',
+      motif: notes,
       notes,
-      status,
+      interventionType: isMachineRelated ? interventionType : undefined,
+      status: 'VALIDE',
       items: items.map(({ lineId, ...rest }) => ({
         articleId: rest.articleId,
         quantity: rest.quantity,
@@ -392,10 +429,6 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             <h2 className="text-4xl font-black uppercase text-slate-950 tracking-tighter leading-tight">{type === 'ENTREE' ? "Bon de Réception" : "Bon de Sortie"}</h2>
             <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-1 opacity-70">MAGASIN: {site}</p>
           </div>
-        </div>
-        <div className="px-4 py-2 bg-white/45 backdrop-blur-md border border-slate-200/60 rounded-xl shadow-sm text-right">
-          <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ID DOCUMENT</p>
-          <p className="text-lg font-mono font-black text-slate-950">{autoId}</p>
         </div>
       </header>
 
@@ -451,135 +484,65 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             </div>
           </div>
 
-          {type === 'SORTIE' && (
+          {type === 'SORTIE' && isMachineRelated && (
             <div className="md:col-span-2 p-6 bg-indigo-50/45 backdrop-blur-md border border-indigo-200/50 rounded-3xl shadow-inner grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {isMachineRelated ? (
-                <>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Référence Machine</label>
-                    <select className="input-field h-12 text-sm font-black px-4 bg-white" value={categoryFilter === 'ENGINS' ? targetEngin : targetPerfo} onChange={(e) => categoryFilter === 'ENGINS' ? setTargetEngin(e.target.value) : setTargetPerfo(e.target.value)} required>
-                      <option value="">SÉLECTIONNER UNE MACHINE...</option>
-                      {categoryFilter === 'ENGINS' ? siteEngins.map(e => <option key={e.id} value={e.id}>{e.code}</option>) : sitePerfos.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
-                    </select>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Mécanicien / Opérateur</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
-                      {mecanicienFreeText ? (
-                        <input
-                          type="text"
-                          className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase w-full"
-                          placeholder="NOM DU MÉCANICIEN..."
-                          value={mecanicien}
-                          onChange={(e) => setMecanicien(e.target.value)}
-                          required
-                        />
-                      ) : (
-                        <select className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full" value={mecanicien} onChange={(e) => setMecanicien(e.target.value)} required>
-                          <option value="">SÉLECTIONNER UN AGENT...</option>
-                          {agents.filter(a => a.site === site).map(a => (
-                            <option key={a.id} value={a.id}>
-                              {a.matricule} - {a.lastname.toUpperCase()} {a.firstname.toUpperCase()} ({a.service.toUpperCase()})
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    {/* Toggle Saisie libre */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <input 
-                        type="checkbox" 
-                        id="mecanicienFreeTextToggle" 
-                        checked={mecanicienFreeText} 
-                        onChange={(e) => {
-                          setMecanicienFreeText(e.target.checked);
-                          setMecanicien('');
-                        }} 
-                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                      <label htmlFor="mecanicienFreeTextToggle" className="text-xs font-bold text-indigo-600/80 cursor-pointer select-none">
-                        Saisie libre / Agent non listé
-                      </label>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Type d'Intervention</label>
-                    <select className="input-field h-12 text-sm font-black px-4 bg-white" value={interventionType} onChange={(e) => setInterventionType(e.target.value as any)}>
-                      <option value="ROUTINE">MAINTENANCE ROUTINE</option>
-                      <option value="PREVENTIF">PRÉVENTIF (VISITE)</option>
-                      <option value="CORRECTIF">CORRECTIF (PANNE)</option>
-                      <option value="PROPRIO">TRAVAUX PROPRIÉTAIRE</option>
-                    </select>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="space-y-2 lg:col-span-2">
-                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Bénéficiaire / Demandeur</label>
-                    <div className="relative">
-                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
-                      {beneficiaireFreeText ? (
-                        <input 
-                          type="text" 
-                          className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase w-full" 
-                          placeholder="NOM DU BÉNÉFICIAIRE..." 
-                          value={beneficiaire} 
-                          onChange={(e) => setBeneficiaire(e.target.value)}
-                          required
-                        />
-                      ) : (
-                        <select 
-                          className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full" 
-                          value={beneficiaire} 
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            setBeneficiaire(val);
-                            const ag = agents.find(a => a.id === val);
-                            if (ag) {
-                              setService(ag.service);
-                            }
-                          }} 
-                          required
-                        >
-                          <option value="">SÉLECTIONNER UN BÉNÉFICIAIRE...</option>
-                          {agents.filter(a => a.site === site).map(a => (
-                            <option key={a.id} value={a.id}>
-                              {a.matricule} - {a.lastname.toUpperCase()} {a.firstname.toUpperCase()} ({a.service.toUpperCase()})
-                            </option>
-                          ))}
-                        </select>
-                      )}
-                    </div>
-                    {/* Toggle Saisie libre */}
-                    <div className="flex items-center gap-2 mt-2">
-                      <input 
-                        type="checkbox" 
-                        id="beneficiaireFreeTextToggle" 
-                        checked={beneficiaireFreeText} 
-                        onChange={(e) => {
-                          setBeneficiaireFreeText(e.target.checked);
-                          setBeneficiaire('');
-                        }} 
-                        className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                      />
-                      <label htmlFor="beneficiaireFreeTextToggle" className="text-xs font-bold text-indigo-600/80 cursor-pointer select-none">
-                        Saisie libre / Agent non listé
-                      </label>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Service</label>
-                    <input 
-                      type="text" 
-                      className="input-field h-12 text-sm font-black px-4 bg-white uppercase" 
-                      placeholder="EX: FOND, SURFACE..." 
-                      value={service} 
-                      onChange={(e) => setService(e.target.value)}
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Référence Machine</label>
+                <select className="input-field h-12 text-sm font-black px-4 bg-white" value={categoryFilter === 'ENGINS' ? targetEngin : targetPerfo} onChange={(e) => categoryFilter === 'ENGINS' ? setTargetEngin(e.target.value) : setTargetPerfo(e.target.value)} required>
+                  <option value="">SÉLECTIONNER UNE MACHINE...</option>
+                  {categoryFilter === 'ENGINS' ? siteEngins.map(e => <option key={e.id} value={e.id}>{e.code}</option>) : sitePerfos.map(p => <option key={p.id} value={p.id}>{p.code}</option>)}
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Mécanicien / Opérateur</label>
+                <div className="relative">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-indigo-400" />
+                  {mecanicienFreeText ? (
+                    <input
+                      type="text"
+                      className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase w-full"
+                      placeholder="NOM DU MÉCANICIEN..."
+                      value={mecanicien}
+                      onChange={(e) => setMecanicien(e.target.value)}
+                      required
                     />
-                  </div>
-                </>
-              )}
+                  ) : (
+                    <select className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full" value={mecanicien} onChange={(e) => setMecanicien(e.target.value)} required>
+                      <option value="">SÉLECTIONNER UN AGENT...</option>
+                      {agents.filter(a => a.site === site).map(a => (
+                        <option key={a.id} value={a.id}>
+                          {a.matricule} - {a.lastname.toUpperCase()} {a.firstname.toUpperCase()} ({a.service.toUpperCase()})
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
+                {/* Toggle Saisie libre */}
+                <div className="flex items-center gap-2 mt-2">
+                  <input 
+                    type="checkbox" 
+                    id="mecanicienFreeTextToggle" 
+                    checked={mecanicienFreeText} 
+                    onChange={(e) => {
+                      setMecanicienFreeText(e.target.checked);
+                      setMecanicien('');
+                    }} 
+                    className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                  />
+                  <label htmlFor="mecanicienFreeTextToggle" className="text-xs font-bold text-indigo-600/80 cursor-pointer select-none">
+                    Saisie libre / Agent non listé
+                  </label>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-indigo-600 uppercase tracking-widest ml-1">Type d'Intervention</label>
+                <select className="input-field h-12 text-sm font-black px-4 bg-white" value={interventionType} onChange={(e) => setInterventionType(e.target.value as any)}>
+                  <option value="ROUTINE">MAINTENANCE ROUTINE</option>
+                  <option value="PREVENTIF">PRÉVENTIF (VISITE)</option>
+                  <option value="CORRECTIF">CORRECTIF (PANNE)</option>
+                  <option value="PROPRIO">TRAVAUX PROPRIÉTAIRE</option>
+                </select>
+              </div>
             </div>
           )}
 
@@ -772,14 +735,13 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               value={search}
               onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
               onFocus={() => setShowResults(true)}
-              disabled={type === 'SORTIE' && !categoryFilter}
             />
             {showResults && search && (
               <div ref={dropdownRef} className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[60] max-h-80 overflow-y-auto p-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
-                {filteredArticles.length > 0 && (
+                {sortedArticles.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest px-2 mb-2">Articles enregistrés à ce site</p>
-                    {filteredArticles.map(article => (
+                    {sortedArticles.map(article => (
                       <button key={article.id} type="button" onClick={() => addItem(article)} className="w-full text-left p-4 hover:bg-sky-50 rounded-xl border border-transparent hover:border-sky-100 transition-all group/item flex items-center justify-between">
                         <div>
                           <p className="font-black text-base text-slate-900 group-hover/item:text-sky-900 transition-colors uppercase tracking-tight">{article.designation}</p>
@@ -820,7 +782,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   </div>
                 )}
 
-                {filteredArticles.length === 0 && filteredCatalogItems.length === 0 && (
+                {sortedArticles.length === 0 && filteredCatalogItems.length === 0 && (
                   <div className="p-6 text-center text-slate-400 font-bold uppercase text-xs tracking-wider">
                     Aucun article trouvé pour "{search}"
                   </div>
@@ -834,7 +796,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               <thead>
                 <tr className="border-b border-slate-100 text-slate-400 uppercase text-xs font-black tracking-widest">
                   <th className="text-left py-6 px-4">Article</th>
-                  {type === 'SORTIE' && (
+                  {type === 'SORTIE' && !isMachineRelated && (
                     <th className="text-left py-6 px-4">Bénéficiaire individuel (Ouvrier/Mineur)</th>
                   )}
                   <th className="text-right py-6 w-40 px-4 font-black text-sky-600">Prix Unit. (MAD)</th>
@@ -853,7 +815,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                           {article?.ref} | <span className="text-sky-600 font-extrabold">Stock: {article?.quantity ?? 0}</span>
                         </p>
                       </td>
-                      {type === 'SORTIE' && (
+                      {type === 'SORTIE' && !isMachineRelated && (
                         <td className="py-6 px-4">
                           <select 
                             className="w-full h-12 text-xs font-black px-3 rounded-xl border-2 border-slate-100 bg-white shadow-sm focus:border-sky-500 outline-none"
@@ -885,14 +847,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                           </select>
                         </td>
                       )}
-                      <td className="py-6 px-4">
-                        <input 
-                          type="number" 
-                          step="0.01" 
-                          className="w-full h-12 text-right p-4 rounded-xl border border-slate-200 font-black text-base bg-white shadow-inner focus:border-sky-500 outline-none" 
-                          value={item.price} 
-                          onChange={(e) => updateItem(item.lineId, { price: Number(e.target.value) })} 
-                        />
+                      <td className="py-6 px-4 text-right font-black text-sm text-slate-800 font-mono">
+                        {formatCurrency(item.price)}
                       </td>
                       <td className="py-6 px-4">
                         <input 
@@ -927,15 +883,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             </div>
             <div className="flex gap-4 w-full sm:w-auto">
               <button 
-                type="button" 
-                onClick={() => { setStatus('BROUILLON'); setTimeout(() => (document.querySelector('form') as any)?.requestSubmit(), 10); }} 
-                className="flex-1 sm:flex-none px-10 h-16 border-2 border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-50 transition-all"
-              >
-                Brouillon
-              </button>
-              <button 
                 type="submit" 
-                onClick={() => setStatus('VALIDE')} 
                 disabled={items.length === 0} 
                 className="flex-1 sm:flex-none px-12 h-16 bg-slate-950 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl hover:bg-sky-600 transition-all disabled:opacity-50"
               >

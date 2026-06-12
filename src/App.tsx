@@ -275,24 +275,24 @@ export default function App() {
       case 'STOCK_ENGINS':
       case 'STOCK_PERFORATEURS':
       case 'STOCK_CONSOMMABLES':
+      case 'STOCK_EPI':
       case 'SEARCH_RESULTS':
         const stockType = currentPage === 'STOCK_ENGINS' ? 'ENGINS' : 
                           currentPage === 'STOCK_PERFORATEURS' ? 'PERFORATEURS' : 
-                          currentPage === 'STOCK_CONSOMMABLES' ? 'CONSOMMABLES' : 'ALL';
+                          currentPage === 'STOCK_CONSOMMABLES' ? 'CONSOMMABLES' : 
+                          currentPage === 'STOCK_EPI' ? 'EPI' : 'ALL';
         return (
           <StockTable 
             type={stockType} 
             site={currentSite} 
             articles={articles} 
+            mouvements={mouvements}
             initialSearch={globalSearch}
             onAction={navigateToMouvement}
             onViewDetail={setSelectedArticle}
             onManageCatalog={() => setCurrentPage('GESTION_ARTICLES')}
           />
         );
-      
-      case 'STOCK_EPI':
-        return <EpiTracking site={currentSite} articles={articles} distributions={distributions} />;
       
       case 'BON_ENTREE':
       case 'BON_SORTIE':

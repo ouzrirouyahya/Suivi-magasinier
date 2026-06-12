@@ -9,6 +9,7 @@ import {
   ArrowUpRight, 
   History as HistoryIcon,
   MapPin,
+  Package,
   RefreshCw,
   ClipboardCheck,
   ShieldCheck,
@@ -101,10 +102,7 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
 
       // 🟩 3. STOCKS & ARTICLES
       { id: 'SEP_STOCKS', label: '3. Niveaux de Stocks', isSeparator: true },
-      { id: 'STOCK_ENGINS', label: 'Pièces Engins', icon: Wrench },
-      { id: 'STOCK_PERFORATEURS', label: 'Pièces Perforateurs', icon: Drill },
-      { id: 'STOCK_CONSOMMABLES', label: 'Consommables & Taillants', icon: Droplets },
-      { id: 'STOCK_EPI', label: 'EPI', icon: Shield },
+      { id: 'STOCK_ENGINS', label: 'État Général des Stocks', icon: Package },
       { id: 'RESTOCK_MGMT', label: 'Alertes & Commandes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
 
       // 🟣 4. CENTRE D’INTELLIGENCE & HISTORIQUE
