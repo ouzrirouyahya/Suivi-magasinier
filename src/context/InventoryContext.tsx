@@ -263,19 +263,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   const isSimulationMode = () => {
-    return localStorage.getItem('hydromines_viewer_mode') === 'true' || 
-           !auth.currentUser || 
-           currentUser?.email === 'viewer@hydromines.local' ||
-           localStorage.getItem('hydromines_bypass_email') === 'viewer@hydromines.local';
+    return false;
   };
 
   const checkMaintenanceLock = () => {
-    if (isSimulationMode()) {
-      // In viewer mode, we let operations run smoothly by simulating them locally (or allowing local modifications)
-      // to ensure a continuous and perfect user flow.
-      console.log("[Simulation Mode] Read-only check bypassed. Simulating operation.");
-      return;
-    }
     if (maintenanceMode && currentUser?.role !== 'ADMIN') {
       const msg = `PROTECTED_MAINTENANCE_LOCK: Toutes les opérations d'écriture sont temporairement verrouillées pour maintenance de sécurité. Raison: ${maintenanceReason || 'Lock global de sécurité'}`;
       toast.error(msg);
@@ -700,20 +691,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         createdAt: new Date().toISOString()
       };
       setCurrentUser(bypassUser);
-      setIsLoaded(true);
-      return;
-    }
-
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true') {
-      const viewerUser: UserAccount = {
-        id: 'viewer_mode_uid',
-        email: 'viewer@hydromines.local',
-        name: 'Démonstrateur',
-        role: 'ADMIN',
-        active: true,
-        createdAt: new Date().toISOString()
-      };
-      setCurrentUser(viewerUser);
       setIsLoaded(true);
       return;
     }

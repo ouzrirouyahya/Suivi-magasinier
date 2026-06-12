@@ -13,9 +13,6 @@ const LoginPage: React.FC = () => {
     try {
       setAuthError(null);
       console.log("[Google Auth] Initialisation du flux Google Sign-In...");
-      localStorage.removeItem('hydromines_viewer_mode');
-      localStorage.removeItem('hydromines_bypass_email');
-      sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
       googleProvider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, googleProvider);
       console.log("[Google Auth] Connexion réussie ! Utilisateur Authentifié :", result.user.email);

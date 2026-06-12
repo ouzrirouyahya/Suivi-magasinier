@@ -203,16 +203,8 @@ export default function App() {
   }, []);
 
   const handleSignOut = () => {
-    const isBypass = !!localStorage.getItem('hydromines_bypass_email');
-    localStorage.removeItem('hydromines_viewer_mode');
-    localStorage.removeItem('hydromines_bypass_email');
-    sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
+    signOut(auth);
     setUser(null);
-    if (isBypass) {
-      window.location.reload();
-    } else {
-      signOut(auth);
-    }
   };
 
   if (isAuthLoading) {
