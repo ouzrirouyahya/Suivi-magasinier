@@ -23,7 +23,7 @@ async function startServer() {
 
   // Helper for retries with fallback model support
   const withRetry = async (fn: (model: string) => Promise<any>, retries = 3, delay = 1000) => {
-    const models = ["gemini-3-flash-preview", "gemini-3.1-pro-preview"];
+    const models = ["gemini-3.5-flash", "gemini-3.1-pro-preview"];
     let lastError: any = null;
 
     for (const model of models) {

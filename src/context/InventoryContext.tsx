@@ -128,6 +128,7 @@ type InventoryContextType = {
   deletionRequests: DeletionRequest[];
   toggleUser: (id: string) => Promise<void>;
   setUserRole: (id: string, role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER') => Promise<void>;
+  setUserAssignedSite: (id: string, site: SiteCode | '') => Promise<void>;
   setEngin: (id: string, data: Partial<EnginMaster> | null) => Promise<void>;
   setPerfo: (id: string, data: Partial<PerfoMaster> | null) => Promise<void>;
   setAgent: (id: string, data: Partial<AgentMaster> | null) => Promise<void>;
@@ -255,23 +256,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
   const [snapshots, setSnapshots] = useState<any[]>([]);
 
-  const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true' && currentUser?.email?.toLowerCase() !== 'ouzrirouyahya@gmail.com';
+  const isViewer = false;
 
   const checkWritePermission = () => {
-    if (isViewer || currentUser?.email === 'viewer@hydromines.local') {
-      const msg = "Accès refusé : Le mode démonstrateur est strictement limité à la consultation seule. Veuillez vous connecter avec un compte administrateur.";
-      toast.error(msg, { duration: 6000 });
-      throw new Error("VIEWER_READ_ONLY_RESTRICITON");
-    }
+    // Permanent removal of viewer mode
   };
 
   const isSimulationMode = () => {
-    if (currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
-      return false;
-    }
-    return isViewer || 
-           !!localStorage.getItem('hydromines_bypass_email') || 
-           currentUser?.email === 'viewer@hydromines.local';
+    return localStorage.getItem('hydromines_viewer_mode') === 'true' || 
+           !auth.currentUser || 
+           currentUser?.email === 'viewer@hydromines.local' ||
+           localStorage.getItem('hydromines_bypass_email') === 'viewer@hydromines.local';
   };
 
   const checkMaintenanceLock = () => {
@@ -736,6 +731,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         if (auth.currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
           userData.role = 'SUPER_ADMIN';
         }
+        if (userData.assignedSite) {
+          setCurrentSite(userData.assignedSite);
+        }
         setCurrentUser(userData);
         setIsLoaded(true);
       } else {
@@ -1056,7 +1054,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       unsubs.push(safeOnSnapshot(collection(db, 'articles'), setRawArticles, 'articles'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'mouvements'), orderBy('date', 'desc'), limit(1000)), setRawMouvements, 'mouvements'));
-      unsubs.push(safeOnSnapshot(query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(100)), setAuditLogs, 'auditLogs'));
+      unsubs.push(safeOnSnapshot(query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(200)), setAuditLogs, 'auditLogs'));
       unsubs.push(safeOnSnapshot(collection(db, 'transferts'), setRawTransferts, 'transferts'));
       unsubs.push(safeOnSnapshot(collection(db, 'inventaires'), setInventaires, 'inventaires'));
       unsubs.push(safeOnSnapshot(collection(db, 'catalog'), setCatalog, 'catalog'));
@@ -1096,7 +1094,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       unsubs.push(safeOnSnapshot(collection(db, 'distributions'), setDistributions, 'distributions'));
       unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'anomalyReports')), setAnomalyReports, 'anomalyReports'));
-      unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc')), setRawMaintenanceLogs, 'maintenanceLogs'));
+      unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc'), limit(1000)), setRawMaintenanceLogs, 'maintenanceLogs'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), setNotifications, 'notifications'));
       unsubs.push(safeOnSnapshot(collection(db, 'deletionRequests'), setDeletionRequests, 'deletionRequests'));
 
@@ -1154,7 +1152,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const deviceInfo = typeof navigator !== 'undefined' ? `${navigator.userAgent} (${navigator.language || 'fr'})` : 'Unknown client environment';
     transaction.set(doc(db, 'auditLogs', id), cleanObject({
       id, 
-      timestamp: serverTimestamp(), 
+      timestamp: new Date().toISOString(), 
       userEmail: auth.currentUser?.email || 'Système',
       site, 
       action, 
@@ -2653,6 +2651,27 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (user) await setDoc(doc(db, 'accounts', id), { role }, { merge: true });
   };
 
+  const setUserAssignedSite = async (id: string, site: SiteCode | '') => {
+    checkWritePermission();
+    if (isSimulationMode()) {
+      setAccounts(prev => {
+        const idx = prev.findIndex(x => x.id === id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], assignedSite: site || undefined };
+          return next;
+        }
+        return prev;
+      });
+      return;
+    }
+    checkMaintenanceLock();
+    const user = accounts.find(u => u.id === id);
+    if (user) {
+      await setDoc(doc(db, 'accounts', id), { assignedSite: site || null }, { merge: true });
+    }
+  };
+
   const setEngin = async (id: string, data: any) => {
     checkWritePermission();
     
@@ -3141,7 +3160,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     currentSite, setCurrentSite,
     currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
-    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setEngin, setPerfo,
+    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus,
     networkQuality,
 

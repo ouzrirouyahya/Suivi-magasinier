@@ -69,32 +69,6 @@ const getMockReports = (site: SiteCode): any[] => {
 
 export const reportService = {
   saveReport: async (site: SiteCode, type: string, data: any) => {
-    const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true';
-
-    if (isViewer) {
-      // Viewer mode is read-only. Block Firestore writes and notify.
-      toast.error("Viewer mode is read-only. Critical operations are protected by HydroMines WMS.");
-      
-      // Save locally to localStorage so the report is dynamically displayed in the session
-      try {
-        const stored = localStorage.getItem('hydromines_viewer_reports');
-        const customReports = stored ? JSON.parse(stored) : [];
-        const newReport = {
-          id: `custom-viewer-rep-${Date.now()}`,
-          site,
-          type,
-          generatedAt: new Date().toISOString(),
-          data
-        };
-        customReports.unshift(newReport);
-        localStorage.setItem('hydromines_viewer_reports', JSON.stringify(customReports));
-      } catch (e) {
-        console.error("Failed to store custom viewer report in localStorage", e);
-      }
-      
-      return { id: `custom-viewer-rep-${Date.now()}` };
-    }
-
     return addDoc(collection(db, 'reports'), {
       site,
       type,
@@ -105,21 +79,6 @@ export const reportService = {
   },
 
   getLatestReports: async (site: SiteCode, limitCount: number = 20) => {
-    const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true';
-
-    if (isViewer) {
-      // Combine static mock reports with any generated in the current viewer session
-      const baseMock = getMockReports(site);
-      try {
-        const stored = localStorage.getItem('hydromines_viewer_reports');
-        const customReports = stored ? JSON.parse(stored) : [];
-        const filteredCustom = customReports.filter((r: any) => r.site === site);
-        return [...filteredCustom, ...baseMock];
-      } catch (e) {
-        return baseMock;
-      }
-    }
-
     try {
       // Attempt compound composite index-dependent query on Firestore
       const q = query(

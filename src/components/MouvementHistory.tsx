@@ -25,12 +25,20 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
       return field.toLowerCase().includes(sTerm);
     };
 
+    const matchesItems = m.items?.some(it => {
+      const art = articles.find(a => a.id === it.articleId);
+      if (!art) return false;
+      return (art.designation || '').toLowerCase().includes(sTerm) || 
+             (art.ref || '').toLowerCase().includes(sTerm);
+    }) || false;
+
     const matchesSearch = !searchTerm || 
                           (m.id && m.id.toLowerCase().includes(sTerm)) || 
                           safeContains(m.vendeur) ||
                           safeContains(m.demandeur) ||
                           safeContains(m.beneficiaire) ||
-                          safeContains(m.reference);
+                          safeContains(m.reference) ||
+                          matchesItems;
     
     const matchesType = typeFilter === 'ALL' || m.type === typeFilter;
     

@@ -2107,6 +2107,19 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                        <button onClick={() => setIsCatalogModalOpen(false)} className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center text-slate-500 hover:text-rose-600 transition-colors"><X className="w-6 h-6" /></button>
                     </header>
                     <div className="p-10 space-y-6 overflow-y-auto">
+                        <div className="space-y-2">
+                           <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Famille / Type d'article (Master)</label>
+                           <select 
+                              className="input-field font-bold bg-white border border-slate-200"
+                              value={editingCatalogItem.suggestedType || 'ENGINS'}
+                              onChange={e => setEditingCatalogItem({...editingCatalogItem, suggestedType: e.target.value as any})}
+                           >
+                              <option value="ENGINS">Pièces Engins (ST2G/ST2D)</option>
+                              <option value="PERFORATEURS">Perfo (Tiges/Taillants)</option>
+                              <option value="CONSOMMABLES">Consommables Généraux</option>
+                              <option value="EPI">Protection (EPI)</option>
+                           </select>
+                        </div>
                        <div className="grid grid-cols-2 gap-6">
                           <div className="space-y-2">
                              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Système / Catégorie</label>

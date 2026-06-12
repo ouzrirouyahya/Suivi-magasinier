@@ -39,6 +39,7 @@ import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { toast } from 'sonner';
 import { cn } from './lib/utils';
+import dashboardBg from './assets/images/dashboard_bg.png';
 
 export default function App() {
   const [isDesktopViewport, setIsDesktopViewport] = useState<boolean>(() => {
@@ -194,17 +195,6 @@ export default function App() {
       return;
     }
 
-    if (localStorage.getItem('hydromines_viewer_mode') === 'true') {
-      setUser({
-        uid: 'viewer_mode_uid',
-        email: 'viewer@hydromines.local',
-        displayName: 'Démonstrateur',
-        emailVerified: true
-      } as any);
-      setIsAuthLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsAuthLoading(false);
@@ -213,13 +203,12 @@ export default function App() {
   }, []);
 
   const handleSignOut = () => {
-    const isViewer = localStorage.getItem('hydromines_viewer_mode') === 'true';
     const isBypass = !!localStorage.getItem('hydromines_bypass_email');
     localStorage.removeItem('hydromines_viewer_mode');
     localStorage.removeItem('hydromines_bypass_email');
     sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
     setUser(null);
-    if (isViewer || isBypass) {
+    if (isBypass) {
       window.location.reload();
     } else {
       signOut(auth);
@@ -506,9 +495,26 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F4F5F7] dark:bg-[#070b13] flex relative overflow-hidden transition-colors duration-305" data-density={density}>
+    <div className="min-h-screen bg-white dark:bg-[#070b13] flex relative overflow-hidden transition-colors duration-305" data-density={density}>
       {/* Elegant Aesthetic Ambient Background (Hydro & Mines Theme) */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden no-print z-0 select-none">
+      <div 
+        className="absolute inset-0 bg-cover bg-center bg-fixed pointer-events-none overflow-hidden no-print z-0 select-none"
+        style={{ backgroundImage: `url(${dashboardBg})` }}
+      >
+        {/* Soft, beautiful semi-transparent overlay to ensure text visibility without blur */}
+        <div className="absolute inset-0 bg-white/5 dark:bg-[#070b13]/40" />
+
+        {/* Soft, flawless white fading gradients on all four edges to blend with background (3 to 4 cm of rich white edge transition) */}
+        <div className="absolute top-0 inset-x-0 h-36 bg-white dark:bg-[#070b13] pointer-events-none" />
+        <div className="absolute bottom-0 inset-x-0 h-36 bg-white dark:bg-[#070b13] pointer-events-none" />
+        <div className="absolute left-0 inset-y-0 w-36 bg-white dark:bg-[#070b13] pointer-events-none" />
+        <div className="absolute right-0 inset-y-0 w-36 bg-white dark:bg-[#070b13] pointer-events-none" />
+
+        <div className="absolute inset-x-0 top-36 h-64 bg-gradient-to-b from-white via-white/70 to-transparent dark:from-[#070b13] dark:via-[#070b13]/10 pointer-events-none" />
+        <div className="absolute inset-x-0 bottom-36 h-64 bg-gradient-to-t from-white via-white/70 to-transparent dark:from-[#070b13] dark:via-[#070b13]/10 pointer-events-none" />
+        <div className="absolute inset-y-0 left-36 w-64 bg-gradient-to-r from-white via-white/70 to-transparent dark:from-[#070b13] dark:via-[#070b13]/10 pointer-events-none" />
+        <div className="absolute inset-y-0 right-36 w-64 bg-gradient-to-l from-white via-white/70 to-transparent dark:from-[#070b13] dark:via-[#070b13]/10 pointer-events-none" />
+
         {/* Soft radial lights mimicking copper earth exploration & deep water reservoirs */}
         <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-[#0ea5e9]/12 to-transparent blur-[110px] dark:from-[#38bdf8]/8" />
         <div className="absolute -bottom-[15%] -right-[5%] w-[50%] h-[50%] rounded-full bg-gradient-to-tl from-[#f59e0b]/6 to-transparent blur-[115px] dark:from-[#d97706]/6" />
@@ -619,44 +625,7 @@ export default function App() {
             </div>
           )}
 
-          {localStorage.getItem('hydromines_viewer_mode') === 'true' && (
-            <div className="bg-sky-500/10 border border-sky-500/20 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm animate-in fade-in duration-300">
-              <div className="p-3 bg-sky-500/15 text-sky-600 rounded-lg font-bold">
-                <Database className="w-6 h-6" />
-              </div>
-              <div className="flex-1 space-y-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-sky-500 text-white rounded flex items-center gap-1">
-                    <Database className="w-3 h-3" /> MODE DÉMONSTRATEUR (LECTURE SEULE)
-                  </span>
-                  <span className="text-xs text-sky-700 font-extrabold uppercase tracking-wide">
-                    CONSULTATION SEULE SÉCURISÉE
-                  </span>
-                </div>
-                <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest">
-                  Espace de Démonstration Hydromines
-                </h3>
-                <p className="text-xs text-slate-600 leading-relaxed font-semibold">
-                  Vous êtes connecté en tant que <strong className="text-slate-800">Démonstrateur</strong>. Vos données précédemment créées ou importées sont <strong className="text-emerald-700 font-bold">précieusement conservées</strong> et restent consultables. Cependant, tout ajout ou modification est désormais désactivé dans ce mode. Loguez-vous comme Super Admin pour bénéficier des accès en écriture complète !
-                </p>
-                <div className="flex items-center gap-2.5 mt-2.5 pt-1">
-                  <button
-                    onClick={() => {
-                      if (confirm("Voulez-vous réinitialiser toutes vos fiches d'articles et mouvements locaux pour restaurer la démo d'origine ?")) {
-                        localStorage.removeItem('hydromines_simulated_articles');
-                        localStorage.removeItem('hydromines_simulated_mouvements');
-                        toast.success("Données de démo réinitialisées !");
-                        setTimeout(() => window.location.reload(), 600);
-                      }
-                    }}
-                    className="px-3 py-1.5 bg-rose-50 text-rose-600 hover:bg-rose-100 rounded-lg text-[9px] font-black uppercase tracking-wider transition-all border border-rose-100 cursor-pointer"
-                  >
-                    Réinitialiser les données de démo
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+
 
           <div className="max-w-[1600px] mx-auto">
             {renderPage()}

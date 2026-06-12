@@ -139,7 +139,7 @@ service cloud.firestore {
         && data.site is string && data.site.size() > 0 && data.site.size() <= 64
         && data.action is string && data.action.size() > 0 && data.action.size() <= 128
         && data.details is string && data.details.size() <= 4096
-        && data.timestamp is string && data.timestamp.size() > 0;
+        && (data.timestamp is string || data.timestamp is timestamp);
     }
 
     function isValidInventaire(data) {

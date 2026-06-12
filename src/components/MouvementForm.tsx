@@ -68,7 +68,7 @@ interface MouvementFormProps {
 }
 
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
-  const date = new Date().toISOString();
+  const [date, setDate] = useState(() => new Date().toISOString());
   const [reference, setReference] = useState('');
   const [beneficiaire, setBeneficiaire] = useState('');
   const [entityName, setEntityName] = useState(''); 
@@ -393,7 +393,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-1 opacity-70">MAGASIN: {site}</p>
           </div>
         </div>
-        <div className="px-4 py-2 bg-white border border-slate-100 rounded-xl shadow-sm text-right">
+        <div className="px-4 py-2 bg-white/45 backdrop-blur-md border border-slate-200/60 rounded-xl shadow-sm text-right">
           <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">ID DOCUMENT</p>
           <p className="text-lg font-mono font-black text-slate-950">{autoId}</p>
         </div>
@@ -401,6 +401,35 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="card glass p-4 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-xl border-slate-100">
+          {/* Dynamic Date and Reference Controller */}
+          <div className="md:col-span-2 p-4 bg-slate-50 border border-slate-100 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-4 select-none">
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">Date & Heure du Document</label>
+              <input
+                type="datetime-local"
+                value={new Date(date).getTime() ? new Date(new Date(date).getTime() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16) : ''}
+                onChange={(e) => {
+                  if (e.target.value) {
+                    setDate(new Date(e.target.value).toISOString());
+                  }
+                }}
+                className="input-field h-10 px-3 text-xs bg-white font-mono font-bold border border-slate-205 rounded-lg w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">
+                {type === 'ENTREE' ? "N° Bon (Livraison Fournisseur)" : "N° de Bon de Sortie (Série)"}
+              </label>
+              <input
+                type="text"
+                placeholder={type === 'ENTREE' ? "EX: BL-YYYY-XXXXX" : "EX: BS-YYYY-XXXX"}
+                value={reference}
+                onChange={(e) => setReference(e.target.value)}
+                className="input-field h-10 px-3 text-xs bg-white font-mono font-bold border border-slate-205 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
+          </div>
+
           <div className="md:col-span-2 p-4 bg-slate-950 rounded-2xl text-white shadow-2xl">
             <label className="text-[10px] font-black text-sky-400 uppercase tracking-widest ml-1 opacity-70">Type de Matériel</label>
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 mt-2">
@@ -423,7 +452,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
           </div>
 
           {type === 'SORTIE' && (
-            <div className="md:col-span-2 p-6 bg-indigo-50 border border-indigo-100 rounded-3xl shadow-inner grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="md:col-span-2 p-6 bg-indigo-50/45 backdrop-blur-md border border-indigo-200/50 rounded-3xl shadow-inner grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {isMachineRelated ? (
                 <>
                   <div className="space-y-2">
@@ -555,7 +584,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
           )}
 
           {type === 'ENTREE' && (
-            <div className="md:col-span-2 p-6 bg-emerald-500/5 border border-emerald-500/10 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="md:col-span-2 p-6 bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Provenance Switcher */}
               <div className="md:col-span-2 space-y-2 col-span-1 md:col-span-2">
                 <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Provenance des pièces</label>
@@ -660,26 +689,9 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                 </div>
               )}
 
-              <div className="space-y-2">
-                <label className={cn(
-                  "text-[10px] font-black uppercase tracking-widest ml-1 transition-colors duration-300",
-                  formSubmitted && !reference.trim() ? "text-red-500" : "text-emerald-600"
-                )}>
-                  N° Bon de Livraison Fournisseur *
-                </label>
-                <input 
-                  type="text" 
-                  className={cn(
-                    "input-field h-12 text-sm font-black px-4 bg-white uppercase w-full transition-all duration-300",
-                    formSubmitted && !reference.trim()
-                      ? "border-red-500 focus:border-red-500 ring-2 ring-red-500/20 text-red-950 placeholder-red-300"
-                      : "border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/5"
-                  )}
-                  placeholder="EX: BL-YYYY-XXXXX" 
-                  value={reference} 
-                  onChange={(e) => setReference(e.target.value)}
-                  required
-                />
+              <div className="flex items-center gap-2.5 p-4 bg-emerald-550/10 rounded-2xl border border-emerald-500/20 text-emerald-800 text-xs">
+                <AlertCircle className="w-4 h-4 text-emerald-600 shrink-0 select-none animate-pulse" />
+                <span className="font-bold uppercase tracking-wide">Information : Le N° Bon de Livraison est obligatoire et géré au sommet du formulaire.</span>
               </div>
             </div>
           )}
@@ -692,7 +704,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
         <div className="card glass p-4 space-y-4 shadow-xl border-slate-100 rounded-2xl">
           {type === 'ENTREE' && (
-            <div className="bg-slate-50 border border-slate-100 p-5 rounded-2xl space-y-4">
+            <div className="bg-slate-50/50 backdrop-blur-md border border-slate-100/60 p-5 rounded-2xl space-y-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">

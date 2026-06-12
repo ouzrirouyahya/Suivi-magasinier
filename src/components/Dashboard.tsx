@@ -1254,16 +1254,9 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
   ];
 
   return (
-    <div 
-      className="relative -mx-4 -my-4 md:-mx-8 md:-my-8 px-4 py-4 md:px-8 md:py-8 min-h-screen bg-cover bg-center bg-fixed rounded-[2rem] select-none"
-      style={{ backgroundImage: `url(${dashboardBg})` }}
-    >
-      {/* Light white overlay covering the photo subtle layer */}
-      <div className="absolute inset-0 bg-white/60 rounded-[2rem] pointer-events-none -z-10" />
-
-      <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-12">
-      {/* 🌟 PREMIUM GRAPHICAL OVERHAUL BANNER HEADER (WHITE BACKGROUND WITH INTENTIONAL HYDROMINES GRADIENT GLOWS) */}
-      <header className="relative overflow-hidden bg-white text-slate-900 rounded-[2.5rem] p-8 md:p-10 border border-slate-150 shadow-[0_10px_35px_-5px_rgba(0,0,0,0.03)] no-print">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-12 select-none">
+      {/* 🌟 PREMIUM GRAPHICAL OVERHAUL BANNER HEADER (SOLID WHITE BACKGROUND WITH GENTLE ACCENTS) */}
+      <header className="relative overflow-hidden bg-white text-slate-900 rounded-[2.5rem] p-8 md:p-10 border border-slate-200 shadow-[0_10px_30px_-5px_rgba(0,0,0,0.05)] no-print">
         {/* Decorative Grid & Glow Elements representing premium transparent tech design */}
         <div className="absolute inset-0 bg-[linear-gradient(rgba(0,0,0,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(0,0,0,0.015)_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none opacity-80" />
         {/* Soft, beautiful semi-transparent Hydromines brand colors */}
@@ -1273,13 +1266,13 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
         <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
           <div className="space-y-3.5">
             <div className="flex items-center gap-2.5 flex-wrap">
-              <span className="px-3 py-1 bg-slate-50 text-[10px] font-black rounded-lg border border-slate-150 shadow-xs flex items-center gap-1.5 backdrop-blur-md">
+              <span className="px-3 py-1 bg-slate-50 text-[10px] font-black rounded-lg border border-slate-200/80 shadow-xs flex items-center gap-1.5">
                 <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
-                <span className="text-sky-500 font-black tracking-wider uppercase">HYDRO</span>
+                <span className="text-sky-600 font-black tracking-wider uppercase">HYDRO</span>
                 <span className="text-[#b91c1c] font-black tracking-wider uppercase -ml-0.5">MINES</span>
               </span>
               <span className="text-slate-300 font-bold">•</span>
-              <span className="text-[10px] text-slate-600 font-bold tracking-wider font-mono bg-slate-50 border border-slate-200/60 px-3 py-1 rounded-lg shadow-2xs">
+              <span className="text-[10px] text-slate-600 font-bold tracking-wider font-mono bg-slate-50 border border-slate-200/80 px-3 py-1 rounded-lg shadow-2xs">
                 {(() => {
                   const d = currentTime;
                   const day = d.getDate();
@@ -1304,7 +1297,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 <div className="w-1 bg-gradient-to-b from-red-700 to-red-900" />
               </div>
               <div>
-                <h2 className="text-3xl font-black text-slate-950 uppercase tracking-tighter sm:text-5xl lg:text-5xl leading-none">
+                <h2 className="text-3xl font-black text-slate-900 uppercase tracking-tighter sm:text-5xl lg:text-5xl leading-none">
                   ESPACE MAGASINIÈRE
                 </h2>
                 <p className="text-xs md:text-sm text-slate-500 font-semibold tracking-tight mt-2">
@@ -1314,11 +1307,43 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
             </div>
           </div>
           
-          {/* Connection status and live telemetry rapid indicators */}
-          <div className="flex items-center gap-3.5 flex-wrap shrink-0">
-            <div className="px-4 py-3 bg-emerald-500/15 border border-emerald-500/20 rounded-2xl shadow-sm flex items-center gap-2.5">
-              <span className="w-2.5 h-2.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_10px_#10b981]" />
-              <span className="text-[10px] font-black text-emerald-700 uppercase tracking-[0.15em] font-mono">LIAISON CLOUD OK</span>
+          {/* Connection status, view selectors & live telemetry indicators */}
+          <div className="flex items-center gap-4 flex-wrap shrink-0">
+            {/* Elegant Header Tab switcher for Operational & Statistical modes */}
+            <div className="flex bg-slate-50 border border-slate-200 p-1 rounded-xl shadow-xs">
+              <button
+                onClick={() => {
+                  setDashboardViewMode('OPERATIONAL');
+                  setActivePane('DASHBOARD');
+                }}
+                className={cn(
+                  "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 flex items-center gap-1.5 cursor-pointer select-none",
+                  activePane === 'DASHBOARD' && dashboardViewMode === 'OPERATIONAL'
+                    ? "bg-slate-950 text-sky-400 border border-sky-500/30 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                )}
+              >
+                📋 Mode Opérationnel
+              </button>
+              <button
+                onClick={() => {
+                  setDashboardViewMode('ANALYTICAL');
+                  setActivePane('DASHBOARD');
+                }}
+                className={cn(
+                  "px-4 py-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition-all duration-300 flex items-center gap-1.5 cursor-pointer select-none",
+                  activePane === 'DASHBOARD' && dashboardViewMode === 'ANALYTICAL'
+                    ? "bg-slate-950 text-red-500 border border-red-500/30 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-100"
+                )}
+              >
+                📊 Mode Statistique
+              </button>
+            </div>
+
+            <div className="px-4 py-2.5 bg-emerald-50/80 border border-emerald-200 rounded-xl shadow-[0_1px_2px_rgba(0,0,0,0.02)] flex items-center gap-2">
+              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]" />
+              <span className="text-[9px] font-black text-emerald-800 uppercase tracking-[0.12em] font-mono">LIAISON CLOUD OK</span>
             </div>
           </div>
         </div>
@@ -1975,7 +2000,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
             {/* 1. RÉCEPTION (ENTRÉES) */}
             <button 
               onClick={() => onAction('BON_ENTREE')}
-              className="group relative text-left bg-white border border-slate-250/60 p-6 pl-10 rounded-2.5xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-sky-300 hover:shadow-[0_12px_28px_-4px_rgba(56,189,248,0.12)] focus:outline-none overflow-hidden hover:-translate-y-1 active:scale-98"
+              className="group relative text-left bg-white/45 backdrop-blur-md border border-white/60 p-6 pl-10 rounded-2.5xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-sky-300 hover:bg-white/60 hover:shadow-[0_12px_28px_-4px_rgba(56,189,248,0.12)] focus:outline-none overflow-hidden hover:-translate-y-1 active:scale-98"
             >
               {/* Double Ligne Verticale Hydromines: BLEU CIEL (première) & ROUGE FONCÉ (deuxième) */}
               <div className="absolute left-0 top-0 bottom-0 flex w-3 shadow-[2px_0_12px_rgba(56,189,248,0.2)]">
@@ -2013,7 +2038,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
             {/* 2. SORTIE DE PIÈCES */}
             <button 
               onClick={() => onAction('BON_SORTIE')}
-              className="group relative text-left bg-white border border-slate-250/60 p-6 pl-10 rounded-2.5xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-rose-300 hover:shadow-[0_12px_28px_-4px_rgba(244,63,94,0.12)] focus:outline-none overflow-hidden hover:-translate-y-1 active:scale-98"
+              className="group relative text-left bg-white/45 backdrop-blur-md border border-white/60 p-6 pl-10 rounded-2.5xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-rose-300 hover:bg-white/60 hover:shadow-[0_12px_28px_-4px_rgba(244,63,94,0.12)] focus:outline-none overflow-hidden hover:-translate-y-1 active:scale-98"
             >
               {/* Double Ligne Verticale Hydromines: ROUGE FONCÉ (première) & BLEU CIEL (deuxième) */}
               <div className="absolute left-0 top-0 bottom-0 flex w-3 shadow-[2px_0_12px_rgba(244,63,94,0.15)]">
@@ -2051,7 +2076,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
             {/* 3. TRANSFERTS & RETOURS */}
             <button 
               onClick={() => onAction('TRANSFERS_RETURNS')}
-              className="group relative text-left bg-white border border-slate-250/60 p-6 pl-10 rounded-2.5xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-indigo-300 hover:shadow-[0_12px_28px_-4px_rgba(99,102,241,0.12)] focus:outline-none overflow-hidden hover:-translate-y-1 active:scale-98"
+              className="group relative text-left bg-white/45 backdrop-blur-md border border-white/60 p-6 pl-10 rounded-2.5xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.03)] transition-all duration-300 hover:border-indigo-300 hover:bg-white/60 hover:shadow-[0_12px_28px_-4px_rgba(99,102,241,0.12)] focus:outline-none overflow-hidden hover:-translate-y-1 active:scale-98"
             >
               {/* Double Ligne Verticale Hydromines: BLEU CIEL (première) & ROUGE FONCÉ (deuxième) */}
               <div className="absolute left-0 top-0 bottom-0 flex w-3 shadow-[2px_0_12px_rgba(99,102,241,0.15)]">
@@ -2088,7 +2113,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
           </div>
 
           {/* CATALOG NAVIGATION SHORTCUTS */}
-          <div className="relative bg-white border border-slate-200/60 p-6 pl-10 rounded-3xl shadow-[0_4px_24px_-6px_rgba(0,0,0,0.02)] hover:border-slate-350 hover:shadow-[0_8px_32px_-6px_rgba(0,0,0,0.04)] transition-all duration-300 no-print overflow-hidden">
+          <div className="relative bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 pl-10 rounded-3xl shadow-[0_4px_24px_-6px_rgba(0,0,0,0.02)] hover:border-slate-350 hover:shadow-[0_8px_32px_-6px_rgba(0,0,0,0.04)] transition-all duration-300 no-print overflow-hidden">
             {/* Double Ligne Verticale Hydromines: BLEU CIEL & ROUGE FONCÉ */}
             <div className="absolute left-0 top-0 bottom-0 flex w-3 shadow-[1px_0_10px_rgba(56,189,248,0.15)]">
               <div className="w-1.5 h-full bg-gradient-to-b from-[#38bdf8] to-sky-500" />
@@ -2129,43 +2154,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
             </div>
           </div>
 
-          {/* VIEW SWITCHER CONTROL */}
-          <div className="flex justify-center my-6 no-print">
-            <div className="flex bg-slate-100/90 p-1.5 rounded-2xl w-fit gap-2 border border-slate-200/60 shadow-inner">
-              <button
-                onClick={() => setDashboardViewMode('OPERATIONAL')}
-                className={cn(
-                  "px-6 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all duration-300 relative overflow-hidden flex items-center gap-1.5 cursor-pointer select-none",
-                  dashboardViewMode === 'OPERATIONAL'
-                    ? "bg-slate-950 text-white shadow-[0_0_20px_rgba(56,189,248,0.6)] border border-sky-450 scale-[1.02]"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
-                )}
-              >
-                {dashboardViewMode === 'OPERATIONAL' && (
-                  <span className="absolute left-0 top-0 bottom-0 w-1 bg-sky-400 shadow-[0_0_8px_#38bdf8]" />
-                )}
-                <span className={cn("relative z-10 flex items-center gap-1.5", dashboardViewMode === 'OPERATIONAL' && "text-sky-400 font-black")}>
-                  📋 Mode Opérationnel
-                </span>
-              </button>
-              <button
-                onClick={() => setDashboardViewMode('ANALYTICAL')}
-                className={cn(
-                  "px-6 py-3 text-xs font-black uppercase tracking-widest rounded-xl transition-all duration-300 relative overflow-hidden flex items-center gap-1.5 cursor-pointer select-none",
-                  dashboardViewMode === 'ANALYTICAL'
-                    ? "bg-slate-950 text-white shadow-[0_0_20px_rgba(239,68,68,0.6)] border border-red-500 scale-[1.02]"
-                    : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/50"
-                )}
-              >
-                {dashboardViewMode === 'ANALYTICAL' && (
-                  <span className="absolute left-0 top-0 bottom-0 w-1 bg-red-600 shadow-[0_0_8px_#dc2626]" />
-                )}
-                <span className={cn("relative z-10 flex items-center gap-1.5", dashboardViewMode === 'ANALYTICAL' && "text-red-400 font-black")}>
-                  📊 Mode Statistique
-                </span>
-              </button>
-            </div>
-          </div>
+          {/* VIEW SWITCHER CONTROL MOVED TO HEADER */}
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
             {stats.map((stat) => (
@@ -2175,7 +2164,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                   if (stat.action === 'ALERTES_STOCK') onAction('RESTOCK_MGMT');
                 }}
                 className={cn(
-                  "bg-white/70 backdrop-blur-md border border-white/80 shadow-lg p-5 rounded-2xl transition-all duration-300 h-full flex flex-col justify-between select-none relative overflow-hidden",
+                  "bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-lg p-5 rounded-2xl transition-all duration-300 h-full flex flex-col justify-between select-none relative overflow-hidden",
                   stat.action || stat.alert ? "cursor-pointer hover:border-slate-350" : ""
                 )}
               >
@@ -2206,7 +2195,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
           {dashboardViewMode === 'OPERATIONAL' ? (
             <div className="space-y-6">
               {/* ⚡ PUPITRE DE SAISIE RAPIDE - PIÈCES HAUTE FRÉQUENCE (TAILLANTS, BARRES CONIQUES, GANTS, BOTTES) */}
-              <div className="bg-white/70 backdrop-blur-md border-2 border-white/80 rounded-[2rem] p-6 shadow-lg relative overflow-hidden">
+              <div className="bg-white/90 backdrop-blur-md border-2 border-slate-200/85 rounded-[2rem] p-6 shadow-lg relative overflow-hidden">
                 {/* Visual Accent header lines */}
                 <div className="absolute top-0 left-0 right-0 h-1.5 flex transition-all">
                   <div className="w-1/4 h-full bg-sky-450" />
@@ -2352,7 +2341,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
               <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
                 {/* LEFT COLUMN: SAISIE UNITAIRE EXPRESS WITH HIGH-FIDELITY REDESIGN */}
-                <div className="lg:col-span-5 bg-white/70 backdrop-blur-md border border-white/80 p-6 sm:p-7 rounded-[2rem] shadow-lg transition-all">
+                <div className="lg:col-span-5 bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 sm:p-7 rounded-[2rem] shadow-lg transition-all">
                 <div className="flex items-center gap-3.5 pb-4 border-b border-slate-100/80 mb-6 font-sans">
                   <div className="p-2.5 bg-gradient-to-br from-slate-900 to-slate-950 text-white rounded-xl flex items-center justify-center shadow-md">
                     <Zap className="w-4 h-4 text-sky-400" />
@@ -2698,7 +2687,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               {/* RIGHT COLUMN: STOCK ALERTS & TRACKING FLUX */}
               <div className="lg:col-span-7 space-y-6">
                 {/* 1. SEUILS DE RUPTURE CRITIQUES SECTION */}
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
+                <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-50 text-slate-700 rounded-lg flex items-center justify-center border border-slate-200/60">
@@ -2764,7 +2753,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 </div>
 
                 {/* 2. SUIVI TERRAIN ET DERNIERS MOUVEMENTS (Timeline style) */}
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
+                <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-lg">
                   <div className="flex items-center justify-between pb-3 border-b border-slate-100 mb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-2 bg-slate-50 text-slate-700 rounded-lg flex items-center justify-center border border-slate-200/60">
@@ -2903,7 +2892,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               </div>
 
               <div className="lg:col-span-8 space-y-6">
-                <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
+                <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-lg">
                   <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 mb-6">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-2">
@@ -2949,7 +2938,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {/* COÛT PAR ENGIN */}
-                  <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
+                  <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-lg">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-1.5">
                         <Truck className="w-4 h-4 text-slate-800" /> Dépenses de Maintenance par Machine
@@ -2978,7 +2967,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                   </div>
 
                   {/* TOP CONSOMMATION CATEGORIES TABBED */}
-                  <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg flex flex-col justify-between">
+                  <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-lg flex flex-col justify-between">
                     <div>
                       <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-1.5 flex items-center gap-1.5">
                         <Package className="w-4 h-4 text-slate-800" /> Dépenses par Catégorie de Pièce
@@ -3042,7 +3031,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
+                  <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-lg">
                     <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50">
                       <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none flex items-center gap-2">
                         <ArrowRightLeft className="w-4 h-4 text-slate-800" /> Flux d'Entrées vs Sorties
@@ -3075,7 +3064,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                     </div>
                   </div>
 
-                  <div className="bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg">
+                  <div className="bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-lg">
                     <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none mb-6 flex items-center gap-2">
                       <PieIcon className="w-4 h-4 text-slate-800" /> Analyse & Dispersion ABC
                     </h3>
@@ -3109,7 +3098,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                 </div>
               </div>
 
-              <div className="lg:col-span-4 bg-white/70 backdrop-blur-md border border-white/80 p-6 rounded-2xl shadow-lg flex flex-col h-full overflow-hidden self-stretch no-print">
+              <div className="lg:col-span-4 bg-white/90 backdrop-blur-md border border-slate-200/80 p-6 rounded-2xl shadow-lg flex flex-col h-full overflow-hidden self-stretch no-print">
                 <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-100">
                   <h3 className="text-sm font-semibold text-slate-900 tracking-tight leading-none flex items-center gap-1.5 font-sans">
                     <Activity className="w-4 h-4 text-slate-850" /> Flux Live Interactif
@@ -3613,6 +3602,5 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
         </div>
       )}
     </div>
-  </div>
   );
 }

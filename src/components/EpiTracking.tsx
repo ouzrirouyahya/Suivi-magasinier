@@ -87,7 +87,7 @@ export function EpiTracking({ site, articles, distributions }: EpiTrackingProps)
     try {
       const year = new Date(receptionDate).getFullYear();
       const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      const movementId = `BE/${site}/${year}-${rand}`;
+      const movementId = `BE-${site}-${year}-${rand}`;
 
       const movementObj: Mouvement = {
         id: movementId,

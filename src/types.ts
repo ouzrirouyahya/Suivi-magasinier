@@ -29,6 +29,7 @@ export interface UserAccount {
   role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER';
   active: boolean;
   createdAt: FirestoreDate;
+  assignedSite?: SiteCode;
 }
 
 export interface Article {

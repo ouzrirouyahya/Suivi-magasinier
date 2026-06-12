@@ -40,15 +40,6 @@ const LoginPage: React.FC = () => {
     }
   };
 
-  const handleViewerLogin = () => {
-    localStorage.setItem('hydromines_viewer_mode', 'true');
-    localStorage.removeItem('hydromines_bypass_email');
-    sessionStorage.removeItem('hydromines_viewer_notice_dismissed');
-    toast.success("Accès Visiteur Démo Activé. Mode Lecture Seule.");
-    setTimeout(() => {
-      window.location.reload();
-    }, 600);
-  };
 
   return (
     <div className="fixed inset-0 min-h-screen bg-white overflow-hidden font-sans select-none flex flex-col lg:flex-row" style={{ fontSize: '16px' }}>
@@ -198,16 +189,6 @@ const LoginPage: React.FC = () => {
                  Connexion Google Auth
               </button>
 
-              <button 
-                onClick={handleViewerLogin}
-                className="w-full py-4 bg-white hover:bg-slate-50 text-slate-700 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest transition-all hover:-translate-y-0.5 active:scale-95 shadow-sm border border-slate-200"
-              >
-                 <svg className="w-5 h-5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                   <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z" />
-                   <circle cx="12" cy="12" r="3" />
-                  </svg>
-                 Accès Visiteur Démo
-              </button>
             </div>
 
             {authError && (

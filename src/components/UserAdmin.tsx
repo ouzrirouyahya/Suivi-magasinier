@@ -78,6 +78,7 @@ export function UserAdmin({
     setPerfo: onSetPerfo, 
     setAgent: onSetAgent,
     setUserRole,
+    setUserAssignedSite,
     currentUser
   } = useInventory();
 
@@ -553,6 +554,31 @@ export function UserAdmin({
                             <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                             <option value="ADMIN">ADMIN</option>
                             <option value="MAGASINIER">MAGASINIER</option>
+                          </select>
+                        )}
+                      </div>
+
+                      <div className="mt-2 pt-2 border-t border-slate-50 flex items-center justify-between gap-2">
+                        <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block whitespace-nowrap">Site Assigné</label>
+                        {isPrimaryAdmin ? (
+                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                            Tous les sites
+                          </span>
+                        ) : (
+                          <select
+                            value={user.assignedSite || ''}
+                            onChange={(e) => {
+                              const siteVal = e.target.value as SiteCode | '';
+                              setUserAssignedSite(user.id, siteVal)
+                                .then(() => toast.success(`Site assigné mis à jour`))
+                                .catch((err: any) => toast.error(`Erreur: ${err.message || err}`));
+                            }}
+                            className="text-[9px] font-black uppercase tracking-widest text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer animate-in fade-in duration-300"
+                          >
+                            <option value="">Tous les sites</option>
+                            {SITES.map(s => (
+                              <option key={s.code} value={s.code}>{s.label}</option>
+                            ))}
                           </select>
                         )}
                       </div>
