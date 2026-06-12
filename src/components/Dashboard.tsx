@@ -40,8 +40,8 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     lastEntreeText,
     lastEntreeSub
   } = useMemo(() => {
-    const siteArticles = articles.filter(a => a.site === site);
-    const siteMouvements = mouvements.filter(m => m.site === site);
+    const siteArticles = site === 'ALL' ? articles : articles.filter(a => a.site === site);
+    const siteMouvements = site === 'ALL' ? mouvements : mouvements.filter(m => m.site === site);
 
     const totalArticles = siteArticles.length;
     const stockValue = siteArticles.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price || 0)), 0);
@@ -175,7 +175,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
                   MON MAGASIN
                 </h2>
                 <p className="text-xs md:text-sm text-slate-500 font-semibold tracking-tight mt-2">
-                  Stock du site <span className="font-black text-slate-900 underline decoration-sky-450 decoration-4 underline-offset-4">{site}</span>
+                  Stock du site <span className="font-black text-slate-900 underline decoration-sky-450 decoration-4 underline-offset-4">{site === 'ALL' ? 'Tous les sites (Global)' : site}</span>
                 </p>
               </div>
             </div>
@@ -251,7 +251,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               <span className="text-slate-400 font-bold uppercase font-sans">Mouvements ce jour</span>
               <span className="px-3 py-1 rounded-lg bg-sky-50 border border-sky-100 text-sky-800 font-black font-mono shadow-xs">
                 {(() => {
-                  const mvs = mouvements.filter(m => m.site === site && (m.type === 'ENTREE'));
+                  const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'ENTREE'));
                   const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
                   return `${count} ENTRÉE${count > 1 ? 'S' : ''}`;
                 })()}
@@ -289,7 +289,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               <span className="text-slate-400 font-bold uppercase font-sans">Mouvements ce jour</span>
               <span className="px-3 py-1 rounded-lg bg-rose-50 border border-rose-100 text-rose-800 font-black font-mono shadow-xs">
                 {(() => {
-                  const mvs = mouvements.filter(m => m.site === site && m.type === 'SORTIE');
+                  const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && m.type === 'SORTIE');
                   const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
                   return `${count} SORTIE${count > 1 ? 'S' : ''}`;
                 })()}
@@ -327,7 +327,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               <span className="text-slate-400 font-bold uppercase font-sans">Mouvements ce jour</span>
               <span className="px-3 py-1 rounded-lg bg-indigo-50 border border-indigo-100 text-indigo-800 font-black font-mono shadow-xs">
                 {(() => {
-                  const mvs = mouvements.filter(m => m.site === site && (m.type === 'TRANSFERT_OUT' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR'));
+                  const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'TRANSFERT_OUT' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR'));
                   const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
                   return `${count} TRANSFERT${count > 1 ? 'S' : ''}`;
                 })()}

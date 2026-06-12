@@ -34,7 +34,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
   const [search, setSearch] = useState('');
 
   const filteredArticles = articles.filter(a => 
-    a.site === currentSite && a.active && 
+    (currentSite === 'ALL' ? true : a.site === currentSite) && a.active && 
     (a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase()))
   ).slice(0, 5);
 
@@ -72,7 +72,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
     setTargetSite('');
   };
 
-  const siteTransferts = transferts.filter(t => t.sourceSite === currentSite || t.targetSite === currentSite);
+  const siteTransferts = transferts.filter(t => currentSite === 'ALL' ? true : (t.sourceSite === currentSite || t.targetSite === currentSite));
 
   return (
     <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20 mission-control-bg p-4 flex-1">

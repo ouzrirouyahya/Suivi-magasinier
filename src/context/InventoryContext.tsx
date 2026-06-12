@@ -380,6 +380,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [authStateReady, setAuthStateReady] = useState(false);
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [deletionRequests, setDeletionRequests] = useState<DeletionRequest[]>([]);
+  const hasSetInitialSite = useRef(false);
 
   const addNotification = async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead' | 'severity' | 'status'> & { severity?: any; status?: any }) => {
     const id = generateSecureUUID();
@@ -891,6 +892,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     if (!auth.currentUser) {
       setCurrentUser(null);
+      hasSetInitialSite.current = false;
       setIsLoaded(true);
       return;
     }
@@ -902,8 +904,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         if (auth.currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
           userData.role = 'SUPER_ADMIN';
         }
-        if (userData.assignedSite) {
+        if (userData.assignedSite && !hasSetInitialSite.current) {
           setCurrentSite(userData.assignedSite);
+          hasSetInitialSite.current = true;
         }
         setCurrentUser(userData);
         setIsLoaded(true);

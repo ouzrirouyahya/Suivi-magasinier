@@ -173,6 +173,7 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
                 onChange={(e) => setSite(e.target.value as SiteCode)}
                 className="w-full bg-transparent text-sm font-black text-slate-800 outline-none cursor-pointer appearance-none mt-0.5"
               >
+                <option value="ALL">Tous les sites (Global)</option>
                 {SITES.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
               </select>
             ) : (

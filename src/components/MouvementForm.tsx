@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Article, Mouvement, MouvementItem, SiteCode, EnginMaster, PerfoMaster, AgentMaster, CatalogItem } from '../types';
 import { cn, formatCurrency, generateId } from '../lib/utils';
+import { SITES } from '../demoData';
 
 const QUICK_ITEMS = [
   {
@@ -68,6 +69,7 @@ interface MouvementFormProps {
 }
 
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
+  const [selectedSite, setSelectedSite] = useState<SiteCode>(site === 'ALL' ? 'SMI' : site);
   const [date, setDate] = useState(() => new Date().toISOString());
   const [reference, setReference] = useState('');
   const [entityName, setEntityName] = useState(''); 
@@ -98,19 +100,19 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const prefix = type === 'ENTREE' ? 'BE' : 'BS';
   const autoId = useMemo(() => {
-    return `${prefix}/${site}/${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-  }, [type, site]);
+    return `${prefix}/${selectedSite}/${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+  }, [type, selectedSite]);
 
-  const siteEngins = engins.filter(e => e.site === site);
-  const sitePerfos = perfos.filter(p => p.site === site);
+  const siteEngins = engins.filter(e => e.site === selectedSite);
+  const sitePerfos = perfos.filter(p => p.site === selectedSite);
 
   const filteredArticles = useMemo(() => {
     return articles.filter(a => {
       const matchesSearch = !search || a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase());
-      const matchesSite = a.site === site;
+      const matchesSite = a.site === selectedSite;
       return matchesSearch && matchesSite && a.active;
     });
-  }, [articles, search, site]);
+  }, [articles, search, selectedSite]);
 
   const sortedArticles = useMemo(() => {
     const sorted = [...filteredArticles];
@@ -132,7 +134,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     const matches = (catalog || []).filter(c => {
       const matchesSearch = (c.designation || '').toLowerCase().includes(normSearch) || 
                             (c.reference || '').toLowerCase().includes(normSearch);
-      const existsLocally = articles.some(a => a.site === site && a.ref.trim().toUpperCase() === (c.reference || '').trim().toUpperCase());
+      const existsLocally = articles.some(a => a.site === selectedSite && a.ref.trim().toUpperCase() === (c.reference || '').trim().toUpperCase());
       return matchesSearch && !existsLocally;
     });
 
@@ -145,15 +147,15 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
 
     return matches.slice(0, 15);
-  }, [type, search, catalog, categoryFilter, articles, site]);
+  }, [type, search, catalog, categoryFilter, articles, selectedSite]);
 
   const addCatalogItem = async (catalogItem: CatalogItem) => {
     const cleanRef = (catalogItem.reference || '').trim().toUpperCase().replace(/\s+/g, '_');
-    const deterministicId = `${site}_${cleanRef}`;
+    const deterministicId = `${selectedSite}_${cleanRef}`;
 
     const newArticle: Article = {
       id: deterministicId,
-      site: site,
+      site: selectedSite,
       ref: catalogItem.reference,
       designation: catalogItem.designation,
       type: catalogItem.suggestedType || 'CONSOMMABLES',
@@ -213,7 +215,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const handleQuickAdd = async (quickItem: { reference: string; designation: string; price: number; unit: string; suggestedType: string }) => {
     const existingArticle = articles.find(
-      a => a.site === site && a.ref.trim().toUpperCase() === quickItem.reference.trim().toUpperCase()
+      a => a.site === selectedSite && a.ref.trim().toUpperCase() === quickItem.reference.trim().toUpperCase()
     );
 
     if (existingArticle) {
@@ -227,11 +229,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
     if (catalogItem) {
       const cleanRef = (catalogItem.reference || '').trim().toUpperCase().replace(/\s+/g, '_');
-      const deterministicId = `${site}_${cleanRef}`;
+      const deterministicId = `${selectedSite}_${cleanRef}`;
       
       const newArticle: Article = {
         id: deterministicId,
-        site: site,
+        site: selectedSite,
         ref: catalogItem.reference,
         designation: catalogItem.designation,
         type: catalogItem.suggestedType || 'CONSOMMABLES',
@@ -261,11 +263,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
 
     const cleanRef = quickItem.reference.trim().toUpperCase().replace(/\s+/g, '_');
-    const deterministicId = `${site}_${cleanRef}`;
+    const deterministicId = `${selectedSite}_${cleanRef}`;
 
     const newArticle: Article = {
       id: deterministicId,
-      site: site,
+      site: selectedSite,
       ref: quickItem.reference,
       designation: quickItem.designation,
       type: quickItem.suggestedType as any,
@@ -378,7 +380,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
     const mouvement: Mouvement = {
       id: generateId(),
-      site,
+      site: selectedSite,
       date,
       type,
       reference,
@@ -427,7 +429,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
           </div>
           <div>
             <h2 className="text-4xl font-black uppercase text-slate-950 tracking-tighter leading-tight">{type === 'ENTREE' ? "Bon de Réception" : "Bon de Sortie"}</h2>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-1 opacity-70">MAGASIN: {site}</p>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-1 opacity-70">MAGASIN: {selectedSite === 'ALL' ? 'Tous les sites (Global)' : selectedSite}</p>
           </div>
         </div>
       </header>
@@ -435,8 +437,21 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="card glass p-4 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-xl border-slate-100">
           {/* Dynamic Date and Reference Controller */}
-          <div className="md:col-span-2 p-4 bg-slate-50 border border-slate-100 rounded-xl grid grid-cols-1 sm:grid-cols-2 gap-4 select-none">
-            <div className="space-y-1">
+          <div className="md:col-span-2 p-4 bg-slate-50 border border-slate-100 rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 select-none">
+            {site === 'ALL' && (
+              <div className="space-y-1 lg:col-span-1">
+                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">Site de Réalisation</label>
+                <select 
+                  value={selectedSite} 
+                  onChange={(e) => setSelectedSite(e.target.value as SiteCode)} 
+                  className="input-field h-10 px-3 text-xs bg-white font-sans font-extrabold border border-slate-205 rounded-lg w-full transition-all focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  required
+                >
+                  {SITES.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
+                </select>
+              </div>
+            )}
+            <div className={cn("space-y-1", site === 'ALL' ? "lg:col-span-1" : "")}>
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">Date & Heure du Document</label>
               <input
                 type="datetime-local"
@@ -509,7 +524,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   ) : (
                     <select className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full" value={mecanicien} onChange={(e) => setMecanicien(e.target.value)} required>
                       <option value="">SÉLECTIONNER UN AGENT...</option>
-                      {agents.filter(a => a.site === site).map(a => (
+                      {agents.filter(a => a.site === selectedSite).map(a => (
                         <option key={a.id} value={a.id}>
                           {a.matricule} - {a.lastname.toUpperCase()} {a.firstname.toUpperCase()} ({a.service.toUpperCase()})
                         </option>
@@ -632,7 +647,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                       required
                     >
                       <option value="">SÉLECTIONNER L'ACHETEUR...</option>
-                      {agents.filter(a => a.site === site).map(a => (
+                      {agents.filter(a => a.site === selectedSite).map(a => (
                         <option key={a.id} value={`${a.firstname} ${a.lastname}`}>{a.lastname} {a.firstname} ({a.service})</option>
                       ))}
                       <option value="AUTRE_PERSONNE">AUTRE (Taper manuellement...)</option>
@@ -839,7 +854,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                             }}
                           >
                             <option value="">SÉLECTIONNER UN TRAVAILLEUR...</option>
-                            {agents.filter(a => a.site === site).map(a => (
+                            {agents.filter(a => a.site === selectedSite).map(a => (
                               <option key={a.id} value={a.id}>
                                 {a.lastname} {a.firstname} ({a.fonction || 'MINEUR'} - {a.service})
                               </option>

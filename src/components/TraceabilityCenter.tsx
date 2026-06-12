@@ -42,7 +42,7 @@ export const TraceabilityCenter = memo(({ site, logs, mouvements, articles }: Tr
           <div>
             <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Centre de Traçabilité</h2>
             <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">
-              Registre immuable des opérations & flux — {site}
+              Registre immuable des opérations & flux — {site === 'ALL' ? 'Tous les sites (Global)' : site}
             </p>
           </div>
         </div>
@@ -83,7 +83,7 @@ export const TraceabilityCenter = memo(({ site, logs, mouvements, articles }: Tr
         <div className="card p-6 bg-slate-950 text-white border-none relative overflow-hidden group">
           <div className="absolute top-0 right-0 w-32 h-32 bg-sky-500/10 blur-[50px] -mr-16 -mt-16 group-hover:bg-sky-500/20 transition-all duration-700" />
           <h4 className="text-sm font-black uppercase tracking-widest text-sky-400 mb-2">Total Mouvements</h4>
-          <p className="text-4xl font-black tracking-tighter mb-4">{mouvements.filter(m => m.site === site).length}</p>
+          <p className="text-4xl font-black tracking-tighter mb-4">{mouvements.filter(m => site === 'ALL' ? true : m.site === site).length}</p>
           <div className="h-1 bg-white/10 rounded-full overflow-hidden">
             <div className="h-full bg-sky-500 w-3/4 rounded-full" />
           </div>
@@ -91,7 +91,7 @@ export const TraceabilityCenter = memo(({ site, logs, mouvements, articles }: Tr
         
         <div className="card p-6 bg-emerald-900/10 border-emerald-100 relative group">
           <h4 className="text-sm font-black uppercase tracking-widest text-emerald-600 mb-2">Opérations Audit</h4>
-          <p className="text-4xl font-black text-slate-900 tracking-tighter mb-4">{logs.filter(l => l.site === site).length}</p>
+          <p className="text-4xl font-black text-slate-900 tracking-tighter mb-4">{logs.filter(l => site === 'ALL' ? true : l.site === site).length}</p>
           <div className="h-1 bg-emerald-100 rounded-full overflow-hidden">
             <div className="h-full bg-emerald-500 w-1/2 rounded-full" />
           </div>

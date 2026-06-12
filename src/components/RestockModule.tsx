@@ -17,13 +17,13 @@ export function RestockModule({ site, articles, purchaseRequests, onCreatePR, on
   const [selectedItems, setSelectedItems] = React.useState<Record<string, number>>({});
 
   const lowStockArticles = articles.filter(a => 
-    a.site === site && 
+    (site === 'ALL' ? true : a.site === site) && 
     a.quantity <= a.minStock && 
     (a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase()))
   );
 
   const siteRequests = purchaseRequests
-    .filter(pr => pr.site === site)
+    .filter(pr => site === 'ALL' ? true : pr.site === site)
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
   const toggleSelection = (article: Article) => {

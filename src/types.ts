@@ -3,7 +3,7 @@ import { Timestamp, FieldValue } from 'firebase/firestore';
 
 export type FirestoreDate = string | Timestamp | FieldValue | any;
 
-export type SiteCode = 'SMI' | 'OUMEJRANE' | 'KOUDIA' | 'BOU-AZZER' | 'OUANSIMI';
+export type SiteCode = 'SMI' | 'OUMEJRANE' | 'KOUDIA' | 'BOU-AZZER' | 'OUANSIMI' | 'ALL';
 
 export type StockType = 'ENGINS' | 'PERFORATEURS' | 'CONSOMMABLES' | 'EPI' | 'OUTILS_TRAVAUX' | 'AUTRES';
 export type ArticleType = StockType;

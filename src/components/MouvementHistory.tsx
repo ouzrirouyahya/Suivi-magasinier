@@ -17,7 +17,7 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
   const [selectedMouvement, setSelectedMouvement] = useState<Mouvement | null>(null);
 
   const filteredMouvements = mouvements.filter(m => {
-    const matchesSite = m.site === site;
+    const matchesSite = site === 'ALL' ? true : m.site === site;
     const sTerm = searchTerm.toLowerCase();
     
     const safeContains = (field: any) => {
@@ -123,7 +123,7 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
             </div>
             Archives Stock
           </h2>
-          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-4 opacity-70">Registre officiel immuable des flux du site {site}</p>
+          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-4 opacity-70">Registre officiel immuable des flux du site {site === 'ALL' ? 'Tous les sites (Global)' : site}</p>
         </div>
         <button onClick={exportCSV} className="btn bg-slate-950 text-white hover:bg-sky-600 shadow-sm self-start md:self-auto h-10 px-4 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
           <Download className="w-6 h-6 group-hover:-translate-y-1 transition-transform" /> Exporter Data (.CSV)
@@ -301,7 +301,7 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
                   <h1 className="text-2xl font-black tracking-tighter mb-2 uppercase">HYDROMINES SUIVI MAGASINIER</h1>
                   <p className="text-lg font-bold text-slate-500 uppercase tracking-[0.3em]">Official Logistics Document</p>
                   <div className="mt-6 flex items-center gap-6">
-                    <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-base font-black uppercase tracking-widest">{site}</div>
+                    <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-base font-black uppercase tracking-widest">{selectedMouvement.site}</div>
                     <div className="text-base font-bold text-slate-400 uppercase tracking-widest">Document ID: {selectedMouvement.id}</div>
                   </div>
                 </div>

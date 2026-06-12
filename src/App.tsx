@@ -39,7 +39,6 @@ import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { toast } from 'sonner';
 import { cn } from './lib/utils';
-import dashboardBg from './assets/images/dashboard_bg.png';
 
 export default function App() {
   const [isDesktopViewport, setIsDesktopViewport] = useState<boolean>(() => {
@@ -487,39 +486,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-white dark:bg-[#070b13] flex relative overflow-hidden transition-colors duration-305" data-density={density}>
-      {/* Elegant Aesthetic Ambient Background (Hydro & Mines Theme) */}
-      <div 
-        className="absolute inset-0 bg-cover bg-center bg-fixed pointer-events-none overflow-hidden no-print z-0 select-none"
-        style={{ backgroundImage: `url(${dashboardBg})` }}
-      >
-        {/* Soft, beautiful semi-transparent overlay to ensure text visibility without blur */}
-        <div className="absolute inset-0 bg-white/5 dark:bg-[#070b13]/40" />
-
-        {/* Soft, flawless white fading gradients on all four edges to blend with background (3 to 4 cm of rich white edge transition) */}
-        <div className="absolute top-0 inset-x-0 h-36 bg-white dark:bg-[#070b13] pointer-events-none" />
-        <div className="absolute bottom-0 inset-x-0 h-36 bg-white dark:bg-[#070b13] pointer-events-none" />
-        <div className="absolute left-0 inset-y-0 w-36 bg-white dark:bg-[#070b13] pointer-events-none" />
-        <div className="absolute right-0 inset-y-0 w-36 bg-white dark:bg-[#070b13] pointer-events-none" />
-
-        <div className="absolute inset-x-0 top-36 h-64 bg-gradient-to-b from-white via-white/70 to-transparent dark:from-[#070b13] dark:via-[#070b13]/10 pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-36 h-64 bg-gradient-to-t from-white via-white/70 to-transparent dark:from-[#070b13] dark:via-[#070b13]/10 pointer-events-none" />
-        <div className="absolute inset-y-0 left-36 w-64 bg-gradient-to-r from-white via-white/70 to-transparent dark:from-[#070b13] dark:via-[#070b13]/10 pointer-events-none" />
-        <div className="absolute inset-y-0 right-36 w-64 bg-gradient-to-l from-white via-white/70 to-transparent dark:from-[#070b13] dark:via-[#070b13]/10 pointer-events-none" />
-
-        {/* Soft radial lights mimicking copper earth exploration & deep water reservoirs */}
-        <div className="absolute -top-[20%] -left-[10%] w-[60%] h-[60%] rounded-full bg-gradient-to-br from-[#0ea5e9]/12 to-transparent blur-[110px] dark:from-[#38bdf8]/8" />
-        <div className="absolute -bottom-[15%] -right-[5%] w-[50%] h-[50%] rounded-full bg-gradient-to-tl from-[#f59e0b]/6 to-transparent blur-[115px] dark:from-[#d97706]/6" />
-        <div className="absolute top-[35%] left-[55%] w-[40%] h-[40%] rounded-full bg-[#818cf8]/4 dark:bg-[#312e81]/8 blur-[130px]" />
-        
-        {/* Premium blueprint mining grid pattern */}
-        <div className="absolute inset-0 grid-pattern opacity-[0.25] dark:opacity-[0.14]" />
-        
-        {/* Horizon structural leveling lines (Mining elevation reference lines) */}
-        <div className="absolute top-1/4 left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-200/40 to-transparent dark:via-slate-800/30" />
-        <div className="absolute top-[70%] left-0 right-0 h-[1px] bg-gradient-to-r from-transparent via-slate-200/40 to-transparent dark:via-slate-800/30" />
-      </div>
-
+    <div className="min-h-screen bg-white flex relative overflow-hidden" data-density={density}>
       {showAdminAlert && <HydrominesSecurityAlert onClose={() => setShowAdminAlert(false)} />}
       
       <Sidebar 

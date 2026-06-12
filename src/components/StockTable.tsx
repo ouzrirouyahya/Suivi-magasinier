@@ -61,7 +61,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
     
     return mouvements
       .filter(m => {
-        if (m.site !== site) return false;
+        if (site !== 'ALL' && m.site !== site) return false;
         
         const mDate = new Date(m.date);
         if (isNaN(mDate.getTime())) return false;
@@ -91,7 +91,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
 
   const filteredArticles = useMemo(() => {
     return articles.filter(a => {
-      const matchesSite = a.site === site;
+      const matchesSite = site === 'ALL' ? true : a.site === site;
       const matchesType = selectedStockType === 'ALL' || a.type === selectedStockType;
       
       const matchesSearch = matchArticleSearch(a, search);
@@ -128,11 +128,11 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   }, [filteredArticles]);
 
   const categories = useMemo(() => {
-    return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (a.site === site)).map(a => a.category)));
+    return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (site === 'ALL' ? true : a.site === site)).map(a => a.category)));
   }, [articles, selectedStockType, site]);
 
   const locations = useMemo(() => {
-    return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (a.site === site)).map(a => a.location))).filter(Boolean);
+    return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (site === 'ALL' ? true : a.site === site)).map(a => a.location))).filter(Boolean);
   }, [articles, selectedStockType, site]);
 
   const getStockStatus = (article: Article) => {
@@ -162,7 +162,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
           </div>
           <div className="flex items-center gap-3 mt-3.5">
             <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.1em] opacity-80">
-              Site de surveillance : <span className="text-sky-600 font-extrabold">{site}</span>
+              Site de surveillance : <span className="text-sky-600 font-extrabold">{site === 'ALL' ? 'Tous les sites (Global)' : site}</span>
             </p>
             <span className="text-slate-300">|</span>
             <p className="text-sm text-sky-600 font-black uppercase tracking-wider">
@@ -391,9 +391,16 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                         <status.icon className="w-3 h-3" />
                         {status.label}
                       </div>
-                      <span className="text-xs font-mono font-black text-slate-350 group-hover:text-sky-600 transition-colors uppercase tracking-tight">
-                        #{article.ref}
-                      </span>
+                      <div className="flex flex-col items-end">
+                        {site === 'ALL' && (
+                          <span className="px-1.5 py-0.5 rounded-lg bg-slate-900 text-white font-mono font-black text-[9px] mb-1 uppercase tracking-wider">
+                            {article.site}
+                          </span>
+                        )}
+                        <span className="text-xs font-mono font-black text-slate-350 group-hover:text-sky-600 transition-colors uppercase tracking-tight">
+                          #{article.ref}
+                        </span>
+                      </div>
                     </div>
 
                     <h3 className="text-base font-extrabold text-slate-905 leading-snug mb-2 min-h-[2.5rem] line-clamp-2 uppercase">
@@ -494,9 +501,16 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                           <span className="font-extrabold text-slate-900 text-sm uppercase leading-tight group-hover:text-sky-600 transition-colors">
                             {article.designation}
                           </span>
-                          <span className="font-mono text-[10px] text-slate-400 mt-1 uppercase tracking-wider">
-                            Ref: #{article.ref}
-                          </span>
+                          <div className="flex items-center gap-2 mt-1">
+                            {site === 'ALL' && (
+                              <span className="px-1.5 py-0.5 rounded-sm bg-slate-900 text-white font-mono font-black text-[9px] uppercase tracking-wider">
+                                {article.site}
+                              </span>
+                            )}
+                            <span className="font-mono text-[10px] text-slate-400 uppercase tracking-wider">
+                              Ref: #{article.ref}
+                            </span>
+                          </div>
                         </div>
                       </td>
                       <td className="px-4 py-3.5 whitespace-nowrap">

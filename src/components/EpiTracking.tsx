@@ -29,13 +29,13 @@ export function EpiTracking({ site, articles, distributions }: EpiTrackingProps)
 
   // Filter articles of type EPI for the current site
   const epiArticles = useMemo(() => {
-    return articles.filter(a => a.type === 'EPI' && a.site === site);
+    return articles.filter(a => a.type === 'EPI' && (site === 'ALL' ? true : a.site === site));
   }, [articles, site]);
 
   // Distributions for current site matching search terms
   const filteredDistributions = useMemo(() => {
     return distributions.filter(d => 
-      d.site === site &&
+      (site === 'ALL' ? true : d.site === site) &&
       (d.agentName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       d.service.toLowerCase().includes(searchTerm.toLowerCase()))
     );
@@ -85,13 +85,15 @@ export function EpiTracking({ site, articles, distributions }: EpiTrackingProps)
 
     setIsSubmitting(true);
     try {
+      const firstArticle = articles.find(a => a.id === itemsToSave[0].articleId);
+      const targetSite = firstArticle ? firstArticle.site : (site === 'ALL' ? 'SMI' : site);
       const year = new Date(receptionDate).getFullYear();
       const rand = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
-      const movementId = `BE-${site}-${year}-${rand}`;
+      const movementId = `BE-${targetSite}-${year}-${rand}`;
 
       const movementObj: Mouvement = {
         id: movementId,
-        site,
+        site: targetSite,
         date: new Date(receptionDate).toISOString(),
         type: 'ENTREE',
         reference: reference.toUpperCase().trim(),
