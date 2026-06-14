@@ -7,7 +7,7 @@ interface AuditLogViewProps {
   logs: AuditLog[];
 }
 
-export function AuditLogView({ logs }: AuditLogViewProps) {
+export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogViewProps) {
   const [search, setSearch] = useState('');
   const [filterSite, setFilterSite] = useState<SiteCode | 'ALL'>('ALL');
 
@@ -151,4 +151,4 @@ export function AuditLogView({ logs }: AuditLogViewProps) {
       </div>
     </div>
   );
-}
+});

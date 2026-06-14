@@ -181,19 +181,6 @@ export default function App() {
   } = useInventory();
 
   useEffect(() => {
-    const bypassEmail = localStorage.getItem('hydromines_bypass_email');
-    if (bypassEmail) {
-      const isSuper = bypassEmail.toLowerCase() === 'ouzrirouyahya@gmail.com';
-      setUser({
-        uid: isSuper ? 'bypass_super_uid' : 'bypass_magasinier_uid',
-        email: bypassEmail,
-        displayName: isSuper ? 'Yahya O. (SUPER_ADMIN)' : 'Magasinier Hydro',
-        emailVerified: true
-      } as any);
-      setIsAuthLoading(false);
-      return;
-    }
-
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setIsAuthLoading(false);

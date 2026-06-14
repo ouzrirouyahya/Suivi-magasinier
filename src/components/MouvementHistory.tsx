@@ -9,7 +9,7 @@ interface MouvementHistoryProps {
   articles: Article[];
 }
 
-export function MouvementHistory({ site, mouvements, articles }: MouvementHistoryProps) {
+export const MouvementHistory = React.memo(function MouvementHistory({ site, mouvements, articles }: MouvementHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'TRANSFERT_IN' | 'TRANSFERT_OUT'>('ALL');
   const [dateStart, setDateStart] = useState('');
@@ -403,4 +403,4 @@ export function MouvementHistory({ site, mouvements, articles }: MouvementHistor
       `}} />
     </div>
   );
-}
+});

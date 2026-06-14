@@ -64,7 +64,7 @@ interface UserAdminProps {
 
 type AdminTab = 'USERS' | 'ENGINS' | 'EFFECTIF' | 'PERFOS';
 
-export function UserAdmin({ 
+export const UserAdmin = React.memo(function UserAdmin({ 
   accounts, 
   onToggleStatus, 
   isSuperAdmin = false
@@ -1088,4 +1088,4 @@ export function UserAdmin({
       </div>
     </div>
   );
-}
+});

@@ -1,4 +1,17 @@
 import React, { createContext, useContext, ReactNode, useState, useEffect, useRef } from 'react';
+import { useAuthStore } from '../modules/auth/auth.store';
+import { useArticlesStore } from '../modules/articles/articles.store';
+import { useMovementsStore } from '../modules/movements/movements.store';
+import { useTransfersStore } from '../modules/transfers/transfers.store';
+import { useNotificationsStore } from '../modules/notifications/notifications.store';
+import { useMaintenanceStore } from '../modules/maintenance/maintenance.store';
+import { useSystemStore } from '../modules/system/system.store';
+
+import { articlesService } from '../modules/articles/articles.service';
+import { movementsService } from '../modules/movements/movements.service';
+import { transfersService } from '../modules/transfers/transfers.service';
+import { notificationsService } from '../modules/notifications/notifications.service';
+import { maintenanceService } from '../modules/maintenance/maintenance.service';
 import { 
   Article, 
   Mouvement, 
@@ -33,6 +46,8 @@ import {
   writeBatch,
   orderBy,
   limit,
+  startAfter,
+  where,
   serverTimestamp,
   getDocs,
   getDoc,
@@ -225,31 +240,6 @@ const getDLQEntries = () => {
     return [];
   }
 };
-const validateGlobalSnapshotState = (...args: any[]) => ({
-  isHighlyStale: false,
-  hasCollectionVersionSkew: false,
-  isGloballyConsistent: true,
-  skewDescription: undefined as string | undefined,
-  freshnessGapMs: 0,
-  confidenceScore: 1.0,
-  mode: 'NORMAL' as 'NORMAL' | 'DEGRADED' | 'VALIDATION_REQUIRED',
-  classification: 'VALID' as 'NETWORK_DRIFT' | 'STATE_INCONSISTENCY' | 'TRANSACTION_CONFLICT' | 'VALID'
-});
-const collectLiveSystemHealth = (...args: any[]) => ({});
-const exportForensicSnapshot = (...args: any[]) => '';
-const logForensicEvent = (...args: any[]) => {};
-const ImmutableInventoryLedger = {
-  getEntries: () => [],
-  verifyIntegrity: () => ({ isCorrupted: false, brokenIndex: -1 }),
-  appendEntry: (...args: any[]) => {}
-};
-const SnapshotRecoveryEngine = {
-  getSnapshots: () => [],
-  saveAutomaticSnapshot: (...args: any[]) => {},
-  rollbackToSnapshot: (...args: any[]) => [],
-  selectiveSKURollback: (sku: string, snapshotId: string, articles: any[]) => articles
-};
-const runDeepIntegrityScan = (...args: any[]) => ({});
 
 import { IndexedDBStorage } from '../core/indexedDBStorage';
 import { getOrCreateIntent, isAlreadyCommittedInLocalRegistry } from '../core/operationIntent';
@@ -259,7 +249,6 @@ import {
   validateTransferInvariants,
   validateCompleteTransferInvariants
 } from '../core/BusinessStateValidator';
-import { MaintenanceLock, validatePayloadIntegrity } from '../core/securityPolicy';
 
 type InventoryContextType = {
   articles: Article[];
@@ -310,6 +299,7 @@ type InventoryContextType = {
   deleteCatalogItem: (id: string) => Promise<void>;
   addPurchaseRequest: (pr: PurchaseRequest) => Promise<void>;
   updatePRStatus: (id: string, status: any) => Promise<void>;
+  loadMoreMouvements?: (lastVisibleDoc: any) => Promise<any>;
 
   networkQuality: 'ONLINE' | 'HIGH_LATENCY' | 'INTERMITTENT' | 'OFFLINE' | 'RECOVERING';
   isSafeMode: boolean;
@@ -346,43 +336,72 @@ type InventoryContextType = {
   collectSystemMetrics: () => any;
   exportForensic: () => string;
 
-  // SRE Snapshot Recovery & Integrity Engine v7.0
-  ledgerEntries: any[];
-  snapshots: any[];
-  triggerDeepScan: () => any;
-  triggerRollback: (snapshotId: string) => Promise<void>;
-  triggerSKURollback: (sku: string, snapshotId: string) => Promise<void>;
-  saveManualStateSnapshot: (label: string) => void;
-  importEmergencyBackup: (backupData: any) => Promise<boolean>;
-  reconstructStateFromLedger: () => Promise<void>;
+
 };
 
 const InventoryContext = createContext<InventoryContextType | null>(null);
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  const [rawArticles, setRawArticles] = useState<Article[]>([]);
-  const [rawMouvements, setRawMouvements] = useState<Mouvement[]>([]);
-  const [distributions, setDistributions] = useState<DistributionEPI[]>([]);
-  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
-  const [rawTransferts, setRawTransferts] = useState<Transfert[]>([]);
+  // --- Backing Zustand selectors to replace manual React states ---
+  const rawArticles = useArticlesStore(s => s.articles);
+  const setRawArticles = useArticlesStore(s => s.setArticles) as unknown as React.Dispatch<React.SetStateAction<Article[]>>;
+
+  const rawMouvements = useMovementsStore(s => s.mouvements);
+  const setRawMouvements = useMovementsStore(s => s.setMouvements) as unknown as React.Dispatch<React.SetStateAction<Mouvement[]>>;
+
+  const distributions = useMovementsStore(s => s.distributions);
+  const setDistributions = useMovementsStore(s => s.setDistributions) as unknown as React.Dispatch<React.SetStateAction<DistributionEPI[]>>;
+
+  const rawTransferts = useTransfersStore(s => s.transferts);
+  const setRawTransferts = useTransfersStore(s => s.setTransferts) as unknown as React.Dispatch<React.SetStateAction<Transfert[]>>;
+
+  const purchaseRequests = useMovementsStore(s => s.purchaseRequests);
+  const setPurchaseRequests = useMovementsStore(s => s.setPurchaseRequests) as unknown as React.Dispatch<React.SetStateAction<PurchaseRequest[]>>;
+
+  const anomalyReports = useMovementsStore(s => s.anomalyReports);
+  const setAnomalyReports = useMovementsStore(s => s.setAnomalyReports) as unknown as React.Dispatch<React.SetStateAction<AnomalyReport[]>>;
+
+  const rawMaintenanceLogs = useMaintenanceStore(s => s.maintenanceLogs);
+  const setRawMaintenanceLogs = useMaintenanceStore(s => s.setMaintenanceLogs) as unknown as React.Dispatch<React.SetStateAction<MaintenanceLog[]>>;
+
+  const engins = useMaintenanceStore(s => s.engins);
+  const setEngins = useMaintenanceStore(s => s.setEngins) as unknown as React.Dispatch<React.SetStateAction<EnginMaster[]>>;
+
+  const perfos = useMaintenanceStore(s => s.perfos);
+  const setPerfos = useMaintenanceStore(s => s.setPerfos) as unknown as React.Dispatch<React.SetStateAction<PerfoMaster[]>>;
+
+  const agents = useMaintenanceStore(s => s.agents);
+  const setAgents = useMaintenanceStore(s => s.setAgents) as unknown as React.Dispatch<React.SetStateAction<AgentMaster[]>>;
+
+  const catalog = useArticlesStore(s => s.catalog);
+  const setCatalog = useArticlesStore(s => s.setCatalog) as unknown as React.Dispatch<React.SetStateAction<CatalogItem[]>>;
+
+  const deletionRequests = useArticlesStore(s => s.deletionRequests);
+  const setDeletionRequests = useArticlesStore(s => s.setDeletionRequests) as unknown as React.Dispatch<React.SetStateAction<DeletionRequest[]>>;
+
+  const notifications = useNotificationsStore(s => s.notifications);
+  const setNotifications = useNotificationsStore(s => s.setNotifications) as unknown as React.Dispatch<React.SetStateAction<AppNotification[]>>;
+
+  const accounts = useAuthStore(s => s.accounts);
+  const setAccounts = useAuthStore(s => s.setAccounts) as unknown as React.Dispatch<React.SetStateAction<UserAccount[]>>;
+
   const [inventaires, setInventaires] = useState<Inventaire[]>([]);
-  const [engins, setEngins] = useState<EnginMaster[]>([]);
-  const [perfos, setPerfos] = useState<PerfoMaster[]>([]);
-  const [agents, setAgents] = useState<AgentMaster[]>([]);
-  const [catalog, setCatalog] = useState<CatalogItem[]>([]);
-  const [accounts, setAccounts] = useState<UserAccount[]>([]);
-  const [purchaseRequests, setPurchaseRequests] = useState<PurchaseRequest[]>([]);
-  const [anomalyReports, setAnomalyReports] = useState<AnomalyReport[]>([]);
-  const [rawMaintenanceLogs, setRawMaintenanceLogs] = useState<MaintenanceLog[]>([]);
-  const [currentSite, setCurrentSite] = useState<SiteCode>('SMI');
-  const [currentUser, setCurrentUser] = useState<UserAccount | null>(null);
-  const [isLoaded, setIsLoaded] = useState(false);
+
+  // Auth & Roles
+  const currentUser = useAuthStore(s => s.currentUser) as any;
+  const setCurrentUser = useAuthStore(s => s.setCurrentUser);
+
+  const currentSite = useAuthStore(s => s.currentSite);
+  const setCurrentSite = useAuthStore(s => s.setCurrentSite);
+
+  const isLoaded = useAuthStore(s => s.isLoaded);
+  const setIsLoaded = useAuthStore(s => s.setIsLoaded);
+
   const [authStateReady, setAuthStateReady] = useState(false);
-  const [notifications, setNotifications] = useState<AppNotification[]>([]);
-  const [deletionRequests, setDeletionRequests] = useState<DeletionRequest[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const hasSetInitialSite = useRef(false);
 
-  const addNotification = async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead' | 'severity' | 'status'> & { severity?: any; status?: any }) => {
+  const addNotification = React.useCallback(async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead' | 'severity' | 'status'> & { severity?: any; status?: any }) => {
     const id = generateSecureUUID();
     const typeVal = notif.type || 'INFO';
     const severityVal = notif.severity || (typeVal as any);
@@ -402,17 +421,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       console.warn("Failed to write notification to Firestore, saving in local state", err);
       setNotifications(prev => [newNotif, ...prev]);
     }
-  };
+  }, []);
 
-  const markNotificationAsRead = async (id: string) => {
+  const markNotificationAsRead = React.useCallback(async (id: string) => {
     try {
       await setDoc(doc(db, 'notifications', id), { isRead: true, status: 'read' }, { merge: true });
     } catch (err) {
       setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true, status: 'read' as any } : n));
     }
-  };
+  }, []);
 
-  const markAllNotificationsAsRead = async (siteId: SiteCode) => {
+  const markAllNotificationsAsRead = React.useCallback(async (siteId: SiteCode) => {
     const unread = notifications.filter(n => n.siteId === siteId && !n.isRead);
     for (const notif of unread) {
       try {
@@ -421,15 +440,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         setNotifications(prev => prev.map(n => n.siteId === siteId ? { ...n, isRead: true, status: 'read' as any } : n));
       }
     }
-  };
+  }, [notifications]);
 
   // Mode Protected Maintenance SRE States
-  const [maintenanceMode, setMaintenanceMode] = useState<boolean>(false);
-  const [maintenanceReason, setMaintenanceReason] = useState<string>('');
+  const maintenanceMode = useSystemStore(s => s.maintenanceMode);
+  const setMaintenanceMode = useSystemStore(s => s.setMaintenanceMode);
 
-  // SRE States & Triggers v7.0
-  const [ledgerEntries, setLedgerEntries] = useState<any[]>([]);
-  const [snapshots, setSnapshots] = useState<any[]>([]);
+  const maintenanceReason = useSystemStore(s => s.maintenanceReason);
+  const setMaintenanceReason = useSystemStore(s => s.setMaintenanceReason);
+
+
 
   const isViewer = false;
 
@@ -450,25 +470,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   };
 
   // --- INDUSTRIAL OBSERVABILITY & SECURE QUEUE STATES ---
-  const [techLogs, setTechLogs] = useState<{ id: string; timestamp: string; type: 'INFO' | 'WARN' | 'ERROR'; message: string; duration?: number }[]>([
-    { id: 'baseline', timestamp: new Date().toISOString(), type: 'INFO', message: 'Moteur d\'observabilité HydroMines initialisé.' }
-  ]);
-  const [retryQueue, setRetryQueue] = useState<any[]>(() => {
-    try {
-      const cached = localStorage.getItem('hydromines_retry_queue');
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
-  const [dlq, setDlq] = useState<any[]>(() => {
-    try {
-      const cached = localStorage.getItem('hydromines_dlq');
-      return cached ? JSON.parse(cached) : [];
-    } catch {
-      return [];
-    }
-  });
+  const techLogs = useSystemStore(s => s.techLogs) as any;
+  const setTechLogs = useSystemStore(s => s.addTechLog) as any;
+
+  const retryQueue = useSystemStore(s => s.retryQueue);
+  const setRetryQueue = useSystemStore(s => s.setRetryQueue);
+
+  const dlq = useSystemStore(s => s.dlq);
+  const setDlq = useSystemStore(s => s.setDLQ);
 
   // Dynamic status check synchronizer
   const refreshFSMStates = () => {
@@ -510,17 +519,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return Array.from(mergedMap.values());
   }, [rawArticles, retryQueue, dlq]);
 
-  useEffect(() => {
-    // Initial sync of local ledger and SRE snapshot stores
-    setLedgerEntries(ImmutableInventoryLedger.getEntries());
-    setSnapshots(SnapshotRecoveryEngine.getSnapshots());
 
-    // Create baseline if none exists
-    if (isLoaded && articles.length > 0 && SnapshotRecoveryEngine.getSnapshots().length === 0) {
-      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, "Baseline d'initialisation SRE");
-      setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-    }
-  }, [isLoaded, articles.length]);
 
   const mouvements = React.useMemo(() => {
     const list = [...rawMouvements];
@@ -585,7 +584,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return list;
   }, [rawMaintenanceLogs, retryQueue, dlq]);
   const [lastSnapshotTimestamp, setLastSnapshotTimestamp] = useState<number>(Date.now());
-  const [rcglResult, setRcglResult] = useState({
+  const rcglResult = {
     isHighlyStale: false,
     hasCollectionVersionSkew: false,
     isGloballyConsistent: true,
@@ -594,27 +593,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     confidenceScore: 1.0,
     mode: 'NORMAL' as 'NORMAL' | 'DEGRADED' | 'VALIDATION_REQUIRED',
     classification: 'VALID' as 'NETWORK_DRIFT' | 'STATE_INCONSISTENCY' | 'TRANSACTION_CONFLICT' | 'VALID'
-  });
+  };
 
-  const isSafeMode = rcglResult.classification === 'STATE_INCONSISTENCY';
-
-  useEffect(() => {
-    const runCheck = () => {
-      const result = validateGlobalSnapshotState(
-        articles,
-        mouvements,
-        transferts,
-        lastSnapshotTimestamp,
-        retryQueue.length,
-        dlq.length
-      );
-      setRcglResult(result);
-    };
-
-    runCheck();
-    const interval = setInterval(runCheck, 3000);
-    return () => clearInterval(interval);
-  }, [articles, mouvements, transferts, lastSnapshotTimestamp, retryQueue, dlq]);
+  const isSafeMode = false;
 
   const [avgTxDuration, setAvgTxDuration] = useState<number>(145);
   const [txStats, setTxStats] = useState({ total: 0, success: 0, failed: 0, contentions: 0 });
@@ -874,22 +855,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!authStateReady) return;
 
-    const bypassEmail = localStorage.getItem('hydromines_bypass_email');
-    if (bypassEmail) {
-      const isSuper = bypassEmail.toLowerCase() === 'ouzrirouyahya@gmail.com';
-      const bypassUser: UserAccount = {
-        id: isSuper ? 'bypass_super_uid' : 'bypass_magasinier_uid',
-        email: bypassEmail,
-        name: isSuper ? 'Yahya O.' : 'Magasinier Hydro',
-        role: isSuper ? 'SUPER_ADMIN' : 'MAGASINIER',
-        active: true,
-        createdAt: new Date().toISOString()
-      };
-      setCurrentUser(bypassUser);
-      setIsLoaded(true);
-      return;
-    }
-
     if (!auth.currentUser) {
       setCurrentUser(null);
       hasSetInitialSite.current = false;
@@ -951,57 +916,36 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoaded, articles.length, authStateReady, currentUser]);
 
-  // Persist simulated data under Simulation/Viewer Mode so additions, modifications & imports remain across page reloads
   useEffect(() => {
-    if (isLoaded && isSimulationMode()) {
-      if (rawArticles.length > 0) {
-        localStorage.setItem('hydromines_simulated_articles', JSON.stringify(rawArticles));
-      }
-    }
-  }, [rawArticles, isLoaded]);
-
-  useEffect(() => {
-    if (isLoaded && isSimulationMode()) {
-      if (rawMouvements.length > 0) {
-        localStorage.setItem('hydromines_simulated_mouvements', JSON.stringify(rawMouvements));
-      }
-    }
-  }, [rawMouvements, isLoaded]);
-
-  useEffect(() => {
-    if (!isLoaded || !currentUser || !currentUser.active) return;
-
-    if (isSimulationMode() && !auth.currentUser) {
-      const storedArticles = localStorage.getItem('hydromines_simulated_articles');
-      const storedMouvements = localStorage.getItem('hydromines_simulated_mouvements');
-
-      setRawArticles(storedArticles ? JSON.parse(storedArticles) : INITIAL_ARTICLES);
-      setCatalog(MASTER_CATALOG);
-      setRawMouvements(storedMouvements ? JSON.parse(storedMouvements) : INITIAL_MOUVEMENTS);
-      setEngins(INITIAL_ENGINS);
-      setPerfos(INITIAL_PERFOS);
-      setAgents(INITIAL_AGENTS);
-      setAccounts([
-        { id: '1', email: 'ouzrirouyahya@gmail.com', name: 'Yahya O.', role: 'SUPER_ADMIN', active: true },
-        { id: '2', email: 'hydro.magasinier@gmail.com', name: 'Magasinier Hydro', role: 'MAGASINIER', active: true },
-        { id: 'viewer_mode_uid', email: 'viewer@hydromines.local', name: 'Démonstrateur', role: 'ADMIN', active: true }
-      ]);
-      setNotifications([
-        {
-          id: 'demo-notif-1',
-          siteId: 'SMI',
-          type: 'INFO',
-          category: 'SYNC',
-          message: 'Mode Démonstration Actif — Données lues localement en tant que Visiteur.',
-          timestamp: new Date().toISOString()
-        }
-      ]);
-      return;
-    }
+    if (!isLoaded || !currentUser || !currentUser.active || !auth.currentUser) return;
 
     const unsubs: (() => void)[] = [];
 
     const setupDataListeners = async () => {
+      const loadStaticCollection = async (
+        colName: string, 
+        setter: (data: any[]) => void
+      ) => {
+        try {
+          const cached = await IndexedDBStorage.getCollection<any>(colName);
+          if (cached && cached.length > 0) {
+            setter(cached);
+          }
+          const snap = await getDocs(collection(db, colName));
+          const data = snap.docs.map(doc => ({
+            id: doc.id,
+            ...serializeFirestoreData(doc.data())
+          })).filter((item: any) => !item.deleted);
+          setter(data);
+          await IndexedDBStorage.saveCollection(colName, data);
+        } catch (err: any) {
+          console.error(`Error loading static collection ${colName}:`, err);
+          if (err.code !== 'permission-denied') {
+            handleFirestoreError(err, OperationType.LIST, colName);
+          }
+        }
+      };
+
       const safeOnSnapshot = (ref: any, setter: any, path: string) => {
         return onSnapshot(ref, (snapshot: any) => {
           const data = snapshot.docs.map((doc: any) => {
@@ -1226,45 +1170,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       runSeedingAndMigrations();
 
-      unsubs.push(safeOnSnapshot(collection(db, 'articles'), setRawArticles, 'articles'));
+      const articlesRef = collection(db, 'articles');
+      let articlesQuery;
+      if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
+        articlesQuery = articlesRef;
+      } else {
+        articlesQuery = query(articlesRef, where('site', '==', currentSite));
+      }
+      unsubs.push(safeOnSnapshot(articlesQuery, setRawArticles, 'articles'));
+
       unsubs.push(safeOnSnapshot(query(collection(db, 'mouvements'), orderBy('date', 'desc'), limit(1000)), setRawMouvements, 'mouvements'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(200)), setAuditLogs, 'auditLogs'));
       unsubs.push(safeOnSnapshot(collection(db, 'transferts'), setRawTransferts, 'transferts'));
       unsubs.push(safeOnSnapshot(collection(db, 'inventaires'), setInventaires, 'inventaires'));
-      unsubs.push(safeOnSnapshot(collection(db, 'catalog'), setCatalog, 'catalog'));
-      unsubs.push(onSnapshot(collection(db, 'engins'), (snapshot) => {
-        console.log("SNAPSHOT ENGINS:", snapshot.docs.length)
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...serializeFirestoreData(doc.data())
-        })).filter((item: any) => !item.deleted);
-        setEngins(data as any[]);
-      }, (err) => {
-        console.error("SNAPSHOT ENGINS ERROR:", err);
-        toast.error(`Erreur de synchronisation 'engins': ${err.message || err}`);
-      }));
-      unsubs.push(onSnapshot(collection(db, 'perfos'), (snapshot) => {
-        console.log("SNAPSHOT PERFOS:", snapshot.docs.length)
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...serializeFirestoreData(doc.data())
-        })).filter((item: any) => !item.deleted);
-        setPerfos(data as any[]);
-      }, (err) => {
-        console.error("SNAPSHOT PERFOS ERROR:", err);
-        toast.error(`Erreur de synchronisation 'perfos': ${err.message || err}`);
-      }));
-      unsubs.push(onSnapshot(collection(db, 'agents'), (snapshot) => {
-        console.log("SNAPSHOT AGENTS:", snapshot.docs.length)
-        const data = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...serializeFirestoreData(doc.data())
-        })).filter((item: any) => !item.deleted);
-        setAgents(data as any[]);
-      }, (err) => {
-        console.error("SNAPSHOT AGENTS ERROR:", err);
-        toast.error(`Erreur de synchronisation 'agents': ${err.message || err}`);
-      }));
+
+      loadStaticCollection('catalog', setCatalog);
+      loadStaticCollection('engins', setEngins);
+      loadStaticCollection('perfos', setPerfos);
+      loadStaticCollection('agents', setAgents);
       unsubs.push(safeOnSnapshot(collection(db, 'distributions'), setDistributions, 'distributions'));
       unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
       unsubs.push(safeOnSnapshot(query(collection(db, 'anomalyReports')), setAnomalyReports, 'anomalyReports'));
@@ -1282,15 +1205,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           const data = snap.data();
           setMaintenanceMode(data.maintenanceMode === true);
           setMaintenanceReason(data.lockReason || '');
-          if (data.maintenanceMode === true) {
-            MaintenanceLock.enableLock(data.lockReason || 'Maintenance de sécurité');
-          } else {
-            MaintenanceLock.disableLock();
-          }
         } else {
           setMaintenanceMode(false);
           setMaintenanceReason('');
-          MaintenanceLock.disableLock();
         }
       }, (err) => {
         console.warn("Telemetry lock read restrictions active or document uninitialized:", err.message);
@@ -1299,10 +1216,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     setupDataListeners();
     return () => unsubs.forEach(u => u());
-  }, [isLoaded, currentUser]);
+  }, [isLoaded, currentUser, currentSite]);
 
   // Handlers (Simplified and wrapped in promises)
-  const logAction = async (action: string, details: string, site: any, amount: number = 0) => {
+  const logAction = React.useCallback(async (action: string, details: string, site: any, amount: number = 0) => {
     const id = generateSecureUUID();
     const deviceInfo = typeof navigator !== 'undefined' ? `${navigator.userAgent} (${navigator.language || 'fr'})` : 'Unknown client environment';
     await setDoc(doc(db, 'auditLogs', id), cleanObject({
@@ -1318,7 +1235,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       deviceInfo,
       sourcePlatform: 'HydroMines Web Application Core'
     }));
-  };
+  }, [currentUser?.role]);
 
   // Transaction-bound audit logger
   const logActionTx = (transaction: Transaction, action: string, details: string, site: any, amount: number = 0) => {
@@ -1339,7 +1256,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }));
   };
 
-  const executeMouvementDirect = async (mouvement: Mouvement) => {
+  const executeMouvementDirect = React.useCallback(async (mouvement: Mouvement) => {
     if (isSimulationMode()) {
       const movementId = mouvement.id || generateSecureUUID();
       let updatedArticles = [...rawArticles];
@@ -1407,9 +1324,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } finally {
       unregisterPendingOp(movementId);
     }
-  };
+  }, [rawArticles]);
 
-  const addMouvement = async (mouvement: Mouvement) => {
+  const addMouvement = React.useCallback(async (mouvement: Mouvement) => {
     checkWritePermission();
     checkMaintenanceLock();
     const movementId = mouvement.id || generateSecureUUID();
@@ -1449,13 +1366,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         await executeMouvementDirect(mouvement);
 
-        // Immutable Ledger Entry v7.0 SRE
-        ImmutableInventoryLedger.appendEntry(intentId, 'MOUVEMENT_SUBMISSION', { ...mouvement, status: 'VALIDE' });
-        setLedgerEntries(ImmutableInventoryLedger.getEntries());
 
-        // Snapshot Trigger
-        SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Flux de Stock: ${mouvement.type}`);
-        setSnapshots(SnapshotRecoveryEngine.getSnapshots());
 
         const duration = performance.now() - startTime;
         updateAvgTxDuration(duration);
@@ -1506,9 +1417,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         if (isNetworkError(errMsg)) {
           addTechLog('WARN', `Panne réseau détectée. Mouvement mis en file de reprise : ${errMsg}`, duration);
           
-          // Immutable Ledger Entry for offline transactions v7.0 SRE
-          ImmutableInventoryLedger.appendEntry(intentId, 'MOUVEMENT_SUBMISSION', { ...mouvement, status: 'BROUILLON_OFFLINE' });
-          setLedgerEntries(ImmutableInventoryLedger.getEntries());
+
 
           // Enqueue directly using SRE system-hardened RetryQueueFSM with immutable intentId
           RetryQueueFSM.enqueue('MOUVEMENT', mouvement, intentId);
@@ -1528,9 +1437,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     activePromisesRef.current[movementId] = promise;
     return promise;
-  };
+  }, [isSafeMode, rcglResult, articles, mouvements, isDegradedNetwork, executeMouvementDirect, addNotification, currentUser]);
 
-  const executeMaintenanceLogDirect = async (log: MaintenanceLog) => {
+  const executeMaintenanceLogDirect = React.useCallback(async (log: MaintenanceLog) => {
     if (isSimulationMode()) {
       const id = log.id || generateSecureUUID();
       let updatedArticles = [...rawArticles];
@@ -1617,9 +1526,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } finally {
       unregisterPendingOp(id);
     }
-  };
+  }, [rawArticles, engins]);
 
-  const addMaintenanceLog = async (log: MaintenanceLog) => {
+  const addMaintenanceLog = React.useCallback(async (log: MaintenanceLog) => {
     checkWritePermission();
     checkMaintenanceLock();
     const id = log.id || generateSecureUUID();
@@ -1687,9 +1596,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     activePromisesRef.current[id] = promise;
     return promise;
-  };
+  }, [isSafeMode, rcglResult, articles, isDegradedNetwork, executeMaintenanceLogDirect]);
 
-  const executeTransfertDirect = async (t: Transfert) => {
+  const executeTransfertDirect = React.useCallback(async (t: Transfert) => {
     if (isSimulationMode()) {
       const id = t.id || generateSecureUUID();
       let updatedArticles = [...rawArticles];
@@ -1765,9 +1674,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } finally {
       unregisterPendingOp(id);
     }
-  };
+  }, [rawArticles]);
 
-  const addTransfert = async (t: Transfert) => {
+  const addTransfert = React.useCallback(async (t: Transfert) => {
     checkWritePermission();
     checkMaintenanceLock();
     const id = t.id || generateSecureUUID();
@@ -1853,9 +1762,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     activePromisesRef.current[id] = promise;
     return promise;
-  };
+  }, [isSafeMode, rcglResult, articles, isDegradedNetwork, executeTransfertDirect, addNotification]);
 
-  const executeApproveTransfertDirect = async (id: string, approuvePar: string) => {
+  const executeApproveTransfertDirect = React.useCallback(async (id: string, approuvePar: string) => {
     if (isSimulationMode()) {
       let updatedTransferts = [...rawTransferts];
       const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
@@ -1924,9 +1833,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } finally {
       unregisterPendingOp(id);
     }
-  };
+  }, [rawArticles, rawTransferts]);
 
-  const approveTransfert = async (id: string, approuvePar: string) => {
+  const approveTransfert = React.useCallback(async (id: string, approuvePar: string) => {
     checkWritePermission();
     checkMaintenanceLock();
     const sourceT = transferts.find(t => t.id === id);
@@ -1980,9 +1889,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     activePromisesRef.current[`approve-${id}`] = promise;
     return promise;
-  };
+  }, [transferts, isSafeMode, rcglResult, isDegradedNetwork, executeApproveTransfertDirect]);
 
-  const executeCompleteTransfertDirect = async (
+  const executeCompleteTransfertDirect = React.useCallback(async (
     id: string, 
     recepteur: string, 
     receivedItems?: MouvementItem[], 
@@ -2185,9 +2094,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } finally {
       unregisterPendingOp(id);
     }
-  };
+  }, [rawArticles, rawTransferts]);
 
-  const completeTransfert = async (
+  const completeTransfert = React.useCallback(async (
     id: string, 
     recepteur: string, 
     receivedItems?: MouvementItem[], 
@@ -2281,9 +2190,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     activePromisesRef.current[id] = promise;
     return promise;
-  };
+  }, [transferts, isSafeMode, rcglResult, isDegradedNetwork, executeCompleteTransfertDirect, addNotification]);
 
-  const executeCloseTransfertDirect = async (id: string, motifCloture: string) => {
+  const executeCloseTransfertDirect = React.useCallback(async (id: string, motifCloture: string) => {
     registerPendingOp(id);
     try {
       await runTransaction(db, async (transaction) => {
@@ -2301,9 +2210,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } finally {
       unregisterPendingOp(id);
     }
-  };
+  }, []);
 
-  const closeTransfert = async (id: string, motifCloture: string) => {
+  const closeTransfert = React.useCallback(async (id: string, motifCloture: string) => {
     checkWritePermission();
     checkMaintenanceLock();
     const sourceT = transferts.find(t => t.id === id);
@@ -2349,9 +2258,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     activePromisesRef.current[`close-${id}`] = promise;
     return promise;
-  };
+  }, [transferts, isSafeMode, executeCloseTransfertDirect]);
 
-  const saveInventaire = async (i: Inventaire) => {
+  const saveInventaire = React.useCallback(async (i: Inventaire) => {
     checkWritePermission();
     if (isSimulationMode()) {
       const id = i.id || generateId();
@@ -2371,16 +2280,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const id = i.id || generateId();
     await setDoc(doc(db, 'inventaires', id), cleanObject({ ...i, id }));
 
-    // SRE Immutable Ledger Hook v7.0
-    ImmutableInventoryLedger.appendEntry(`inv-${id}`, 'INVENTAIRE_ALIGN', { ...i, id });
-    setLedgerEntries(ImmutableInventoryLedger.getEntries());
 
-    // SRE Automated Snapshot Trigger
-    SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Ajustement inventaire: ${i.type}`);
-    setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-  };
+  }, []);
 
-  const saveArticle = async (a: Article) => {
+  const saveArticle = React.useCallback(async (a: Article) => {
     checkWritePermission();
     if (isSimulationMode()) {
       const id = a.id || generateId();
@@ -2411,16 +2314,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return [item, ...prev];
     });
 
-    // SRE Immutable Ledger Hook v7.0
-    ImmutableInventoryLedger.appendEntry(`art-${id}`, 'ARTICLE_MUTATION', item);
-    setLedgerEntries(ImmutableInventoryLedger.getEntries());
 
-    // SRE Automated Snapshot Trigger
-    SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Modification d'article: ${a.ref}`);
-    setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-  };
+  }, []);
 
-  const deleteArticles = async (ids: string[]) => {
+  const deleteArticles = React.useCallback(async (ids: string[]) => {
     checkWritePermission();
     if (ids.length === 0) return;
     const isViewer = isSimulationMode();
@@ -2453,13 +2350,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const details = `Suppression définitive de ${ids.length} article(s): ${designationsText}`;
         await logAction('DELETE_ARTICLE', details, targetArticles[0]?.site || 'SMI');
 
-        // SRE Immutable Ledger Hook v7.0
-        ImmutableInventoryLedger.appendEntry(`art-bulk-del-${ids.join('-')}`, 'ARTICLE_MUTATION', { ids, deleted: true });
-        setLedgerEntries(ImmutableInventoryLedger.getEntries());
-
-        // SRE Automated Snapshot Trigger
-        SnapshotRecoveryEngine.saveAutomaticSnapshot(articles.filter(a => !ids.includes(a.id)), `Suppression de ${ids.length} articles`);
-        setSnapshots(SnapshotRecoveryEngine.getSnapshots());
 
         toast.success(ids.length === 1 
           ? "Article supprimé avec succès." 
@@ -2498,13 +2388,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         toast.error(`Échec lors de la création de la demande: ${err.message || err}`);
       }
     }
-  };
+  }, [rawArticles, currentUser, logAction]);
 
-  const deleteArticle = async (id: string) => {
+  const deleteArticle = React.useCallback(async (id: string) => {
     await deleteArticles([id]);
-  };
+  }, [deleteArticles]);
 
-  const importAllCatalogToArticles = async (targetSite: SiteCode, excludeCostly: boolean | number = true) => {
+  const importAllCatalogToArticles = React.useCallback(async (targetSite: SiteCode, excludeCostly: boolean | number = true) => {
     checkWritePermission();
     const isViewer = isSimulationMode();
     
@@ -2556,10 +2446,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       setRawArticles(prev => [...newArticles, ...prev]);
       
-      // SRE Automated Snapshot Trigger
-      SnapshotRecoveryEngine.saveAutomaticSnapshot([...newArticles, ...articles], `Importation de ${newArticles.length} articles (Simulé)`);
-      if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-
       return { imported: newArticles.length, skipped: MASTER_CATALOG.length - newArticles.length };
     }
 
@@ -2607,17 +2493,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           chunkArticles.forEach(art => mergedMap.set(art.id, art));
           return Array.from(mergedMap.values());
         });
-        
-        for (const art of chunkArticles) {
-          ImmutableInventoryLedger.appendEntry(`art-${art.id}`, 'ARTICLE_MUTATION', art);
-        }
       }
-
-      setLedgerEntries(ImmutableInventoryLedger.getEntries());
-
-      // SRE Automated Snapshot Trigger
-      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Importation globale de ${importedCount} articles du catalogue master`);
-      if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
 
       // Log action
       await logAction('IMPORT_ALL_CATALOG_ARTICLES', `Importation de ${importedCount} articles du catalogue de référence technique`, targetSite);
@@ -2627,9 +2503,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       console.error(err);
       throw new Error(`Erreur lors de l'importation groupée : ${err.message || err}`);
     }
-  };
+  }, [rawArticles, logAction]);
 
-  const importSpecificCatalogItems = async (targetSite: SiteCode, itemsToImport: CatalogItem[]) => {
+  const importSpecificCatalogItems = React.useCallback(async (targetSite: SiteCode, itemsToImport: CatalogItem[]) => {
     checkWritePermission();
     const isViewer = isSimulationMode();
     
@@ -2660,9 +2536,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
       setRawArticles(prev => [...newArticles, ...prev]);
       
-      SnapshotRecoveryEngine.saveAutomaticSnapshot([...newArticles, ...articles], `Importation de ${newArticles.length} articles (Simulé)`);
-      if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-
       return { imported: newArticles.length, skipped: 0 };
     }
 
@@ -2709,17 +2582,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           chunkArticles.forEach(art => mergedMap.set(art.id, art));
           return Array.from(mergedMap.values());
         });
-        
-        for (const art of chunkArticles) {
-          ImmutableInventoryLedger.appendEntry(`art-${art.id}`, 'ARTICLE_MUTATION', art);
-        }
       }
-
-      setLedgerEntries(ImmutableInventoryLedger.getEntries());
-
-      // SRE Automated Snapshot Trigger
-      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, `Importation ciblée de ${importedCount} articles du catalogue master`);
-      if (typeof setSnapshots === 'function') setSnapshots(SnapshotRecoveryEngine.getSnapshots());
 
       // Log action
       const details = `Importation collective ciblée de ${importedCount} fiches d'articles pour le site ${targetSite}`;
@@ -2730,9 +2593,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       console.error(err);
       throw new Error(`Erreur lors de l'importation groupée ciblée : ${err.message || err}`);
     }
-  };
+  }, [logAction]);
 
-  const approveDeletionRequest = async (requestId: string) => {
+  const approveDeletionRequest = React.useCallback(async (requestId: string) => {
     checkMaintenanceLock();
     const req = deletionRequests.find(r => r.id === requestId);
     if (!req) {
@@ -2752,20 +2615,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       const details = `Validation de la suppression d'articles réclamée par ${req.requestedBy}: ${req.articleDesignations.join(', ')}`;
       await logAction('APPROVE_DELETE_ARTICLE', details, req.site);
 
-      // SRE Ledger and recovery hooks
-      ImmutableInventoryLedger.appendEntry(`art-approve-del-${requestId}`, 'ARTICLE_MUTATION', { ids: req.articleIds, deleted: true });
-      setLedgerEntries(ImmutableInventoryLedger.getEntries());
 
-      SnapshotRecoveryEngine.saveAutomaticSnapshot(articles.filter(a => !req.articleIds.includes(a.id)), `Validation suppression demande ID ${requestId}`);
-      setSnapshots(SnapshotRecoveryEngine.getSnapshots());
 
       toast.success("La demande de suppression a été validée.");
     } catch (err: any) {
       toast.error(`Échec: ${err.message || err}`);
     }
-  };
+  }, [deletionRequests, logAction]);
 
-  const rejectDeletionRequest = async (requestId: string) => {
+  const rejectDeletionRequest = React.useCallback(async (requestId: string) => {
     checkMaintenanceLock();
     const req = deletionRequests.find(r => r.id === requestId);
     if (!req) {
@@ -2784,9 +2642,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } catch (err: any) {
       toast.error(`Échec: ${err.message || err}`);
     }
-  };
+  }, [deletionRequests, logAction]);
 
-  const toggleUser = async (id: string) => {
+  const toggleUser = React.useCallback(async (id: string) => {
     checkWritePermission();
     if (isSimulationMode()) {
       setAccounts(prev => {
@@ -2804,9 +2662,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     checkMaintenanceLock();
     const user = accounts.find(u => u.id === id);
     if (user) await setDoc(doc(db, 'accounts', id), { active: !user.active }, { merge: true });
-  };
+  }, [accounts]);
 
-  const setUserRole = async (id: string, role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER') => {
+  const setUserRole = React.useCallback(async (id: string, role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER') => {
     checkWritePermission();
     if (isSimulationMode()) {
       setAccounts(prev => {
@@ -2823,9 +2681,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     checkMaintenanceLock();
     const user = accounts.find(u => u.id === id);
     if (user) await setDoc(doc(db, 'accounts', id), { role }, { merge: true });
-  };
+  }, [accounts]);
 
-  const setUserAssignedSite = async (id: string, site: SiteCode | '') => {
+  const setUserAssignedSite = React.useCallback(async (id: string, site: SiteCode | '') => {
     checkWritePermission();
     if (isSimulationMode()) {
       setAccounts(prev => {
@@ -2844,9 +2702,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (user) {
       await setDoc(doc(db, 'accounts', id), { assignedSite: site || null }, { merge: true });
     }
-  };
+  }, [accounts]);
 
-  const setEngin = async (id: string, data: any) => {
+  const setEngin = React.useCallback(async (id: string, data: any) => {
     checkWritePermission();
     
     // Update local React state instantly (optimistic UI) so additions display immediately
@@ -2876,9 +2734,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     console.log("SAVING ENGIN:", data)
     if (!data) await setDoc(doc(db, 'engins', id), { deleted: true }, { merge: true });
     else await setDoc(doc(db, 'engins', id), cleanObject({ ...data, id }), { merge: true });
-  };
+  }, []);
 
-  const setPerfo = async (id: string, data: any) => {
+  const setPerfo = React.useCallback(async (id: string, data: any) => {
     checkWritePermission();
     
     // Update local React state instantly (optimistic UI) so additions display immediately
@@ -2908,9 +2766,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     console.log("SAVING PERFO:", data)
     if (!data) await setDoc(doc(db, 'perfos', id), { deleted: true }, { merge: true });
     else await setDoc(doc(db, 'perfos', id), cleanObject({ ...data, id }), { merge: true });
-  };
+  }, []);
 
-  const setAgent = async (id: string, data: any) => {
+  const setAgent = React.useCallback(async (id: string, data: any) => {
     checkWritePermission();
     
     // Update local React state instantly (optimistic UI) so additions display immediately
@@ -2940,9 +2798,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     console.log("SAVING AGENT:", data)
     if (!data) await setDoc(doc(db, 'agents', id), { deleted: true }, { merge: true });
     else await setDoc(doc(db, 'agents', id), cleanObject({ ...data, id }), { merge: true });
-  };
+  }, []);
 
-  const saveCatalogItem = async (item: CatalogItem) => {
+  const saveCatalogItem = React.useCallback(async (item: CatalogItem) => {
     checkWritePermission();
     if (isSimulationMode()) {
       setCatalog(prev => {
@@ -2958,9 +2816,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
     checkMaintenanceLock();
     await setDoc(doc(db, 'catalog', item.id), cleanObject(item), { merge: true });
-  };
+  }, []);
 
-  const deleteCatalogItem = async (id: string) => {
+  const deleteCatalogItem = React.useCallback(async (id: string) => {
     checkWritePermission();
     if (isSimulationMode()) {
       setCatalog(prev => {
@@ -2976,9 +2834,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
     checkMaintenanceLock();
     await setDoc(doc(db, 'catalog', id), { deleted: true }, { merge: true });
-  };
+  }, []);
 
-  const addPurchaseRequest = async (pr: PurchaseRequest) => {
+  const addPurchaseRequest = React.useCallback(async (pr: PurchaseRequest) => {
     checkWritePermission();
     if (isSimulationMode()) {
       const rId = pr.id || generateId();
@@ -2997,9 +2855,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     checkMaintenanceLock();
     const id = pr.id || generateId();
     await setDoc(doc(db, 'purchaseRequests', id), cleanObject({ ...pr, id }));
-  };
+  }, []);
 
-  const updatePRStatus = async (id: string, status: any) => {
+  const updatePRStatus = React.useCallback(async (id: string, status: any) => {
     checkWritePermission();
     if (isSimulationMode()) {
       setPurchaseRequests(prev => {
@@ -3015,7 +2873,35 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
     checkMaintenanceLock();
     await setDoc(doc(db, 'purchaseRequests', id), { status }, { merge: true });
-  };
+  }, []);
+
+  const loadMoreMouvements = React.useCallback(async (lastVisibleDoc: any) => {
+    try {
+      const q = query(
+        collection(db, 'mouvements'), 
+        orderBy('date', 'desc'), 
+        startAfter(lastVisibleDoc), 
+        limit(50)
+      );
+      const snap = await getDocs(q);
+      const data = snap.docs.map(doc => ({
+        id: doc.id,
+        ...serializeFirestoreData(doc.data())
+      })).filter((item: any) => !item.deleted);
+      
+      setRawMouvements(prev => {
+        const merged = new Map<string, Mouvement>(prev.map(m => [m.id, m]));
+        data.forEach(m => merged.set(m.id, m));
+        return Array.from(merged.values()).sort((a: any, b: any) => {
+          return Date.parse(b.date) - Date.parse(a.date);
+        });
+      });
+      return snap.docs[snap.docs.length - 1];
+    } catch (err) {
+      console.error("Pagination movements error:", err);
+      return null;
+    }
+  }, []);
 
   const clearDLQ = () => {
     setDlq([]);
@@ -3091,7 +2977,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     toast.success("Simulation concurrente terminée !");
   };
 
-  const toggleMaintenanceLock = async (enabled: boolean, reason?: string) => {
+  const toggleMaintenanceLock = React.useCallback(async (enabled: boolean, reason?: string) => {
     try {
       if (currentUser?.role !== 'ADMIN') {
         throw new Error("PRIVILEGE_ESCALATION_BLOCKED: Only administrators can alter global maintenance locks.");
@@ -3107,213 +2993,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       toast.error("Échec de la mutation du verrou système.");
       console.error(error);
     }
-  };
+  }, [currentUser]);
 
-  const collectSystemMetrics = () => {
-    return collectLiveSystemHealth(lastSnapshotTimestamp, retryQueue.length, retryQueue);
-  };
 
-  const exportForensic = () => {
-    return exportForensicSnapshot(lastSnapshotTimestamp, retryQueue, rcglResult);
-  };
 
-  const triggerDeepScan = (site: string) => {
-    return runDeepIntegrityScan(articles, mouvements, site);
-  };
+  const collectSystemMetrics = React.useCallback(() => {
+    return {
+      status: 'OK',
+      payloadVersion: 'v8.0',
+      queueLength: retryQueue.length,
+      latency: isDegradedNetwork ? 'HIGH' : 'LOW'
+    };
+  }, [retryQueue.length, isDegradedNetwork]);
 
-  const triggerRollback = async (snapshotId: string) => {
-    checkMaintenanceLock();
-    try {
-      const restored = SnapshotRecoveryEngine.rollbackToSnapshot(snapshotId);
-      
-      const batch = writeBatch(db);
-      restored.forEach((art) => {
-        batch.set(doc(db, 'articles', art.id), cleanObject(art));
-      });
-      await batch.commit();
-
-      ImmutableInventoryLedger.appendEntry(
-        `rollback-${snapshotId}`,
-        'LEDGER_RESTORE',
-        { snapshotId, label: 'Full State Rollback' }
-      );
-
-      SnapshotRecoveryEngine.saveAutomaticSnapshot(restored, `Post-Restauration (${snapshotId})`);
-
-      setLedgerEntries(ImmutableInventoryLedger.getEntries());
-      setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-
-      addTechLog('INFO', `Restauration complète de l'inventaire au Snapshot [${snapshotId}] exécutée.`);
-      toast.success("Restauration complète effectuée avec succès.");
-    } catch (error: any) {
-      addTechLog('ERROR', `Échec de la restauration complète : ${error.message || error}`);
-      toast.error(`Erreur de restauration: ${error.message || error}`);
-      throw error;
-    }
-  };
-
-  const triggerSKURollback = async (sku: string, snapshotId: string) => {
-    checkMaintenanceLock();
-    try {
-      const restored = SnapshotRecoveryEngine.selectiveSKURollback(sku, snapshotId, articles);
-      
-      const targetArticle = restored.find((a) => a.ref === sku);
-      if (targetArticle) {
-        await setDoc(doc(db, 'articles', targetArticle.id), cleanObject(targetArticle));
-      }
-
-      ImmutableInventoryLedger.appendEntry(
-        `sku-rollback-${sku}-${snapshotId}`,
-        'LEDGER_RESTORE',
-        { sku, snapshotId, label: `Selective SKU Rollback` }
-      );
-
-      setLedgerEntries(ImmutableInventoryLedger.getEntries());
-      setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-
-      addTechLog('INFO', `Restauration sélective du SKU [${sku}] au Snapshot [${snapshotId}] exécutée.`);
-      toast.success(`SKU ${sku} restauré avec succès.`);
-    } catch (error: any) {
-      addTechLog('ERROR', `Échec de la restauration sélective : ${error.message || error}`);
-      toast.error(`Erreur SKU: ${error.message || error}`);
-      throw error;
-    }
-  };
-
-  const saveManualStateSnapshot = (label: string) => {
-    SnapshotRecoveryEngine.saveAutomaticSnapshot(articles, label || "Snapshot de sécurité manuel");
-    setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-    toast.success("Snapshot manuel créé avec succès.");
-  };
-
-  const importEmergencyBackup = async (backupData: any): Promise<boolean> => {
-    checkMaintenanceLock();
-    try {
-      if (!backupData || typeof backupData !== 'object') throw new Error("Format de sauvegarde invalide.");
-      if (!Array.isArray(backupData.articles) || !Array.isArray(backupData.ledger)) {
-        throw new Error("La structure de sauvegarde doit contenir la liste d'articles et le ledger d'intégrité.");
-      }
-
-      const previousLedgerRaw = localStorage.getItem('hydromines_immutable_ledger');
-      localStorage.setItem('hydromines_immutable_ledger', JSON.stringify(backupData.ledger));
-      const integrity = ImmutableInventoryLedger.verifyIntegrity();
-      if (integrity.isCorrupted) {
-        if (previousLedgerRaw) localStorage.setItem('hydromines_immutable_ledger', previousLedgerRaw);
-        else localStorage.removeItem('hydromines_immutable_ledger');
-        throw new Error(`COHÉRENCE_ERREUR: Chaîne de ledger importée corrompue au bloc #${integrity.brokenIndex}. Importation annulée.`);
-      }
-
-      const batch = writeBatch(db);
-      backupData.articles.forEach((art: any) => {
-        if (!art.id || !art.ref || art.quantity === undefined) {
-          throw new Error("Structure d'article importé corrompue dans le jeu de données.");
-        }
-        batch.set(doc(db, 'articles', art.id), cleanObject(art));
-      });
-      await batch.commit();
-
-      ImmutableInventoryLedger.appendEntry(
-        `import-${Date.now()}`,
-        'LEDGER_RESTORE',
-        { label: "Importation de sauvegarde d'urgence", size: backupData.articles.length }
-      );
-
-      SnapshotRecoveryEngine.saveAutomaticSnapshot(backupData.articles, "Post-Importation de Sauvegarde SRE");
-
-      setLedgerEntries(ImmutableInventoryLedger.getEntries());
-      setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-
-      addTechLog('INFO', "Importation complète et restauration d'urgence terminée avec succès.");
-      toast.success("Base d'inventaire et chaine d'intégrité restaurées avec succès !");
-      return true;
-    } catch (err: any) {
-      addTechLog('ERROR', `Échec critique import sauvegarde : ${err.message || err}`);
-      toast.error(`Échec d'importation: ${err.message || err}`);
-      return false;
-    }
-  };
-
-  const reconstructStateFromLedger = async () => {
-    checkMaintenanceLock();
-    try {
-      const entries = ImmutableInventoryLedger.getEntries();
-      if (entries.length === 0) {
-        throw new Error("Aucune entrée dans le ledger pour reconstruire l'état.");
-      }
-
-      const integrity = ImmutableInventoryLedger.verifyIntegrity();
-      if (integrity.isCorrupted) {
-        throw new Error(`Blockchain d'inventaire corrompue au bloc ${integrity.brokenIndex}. Reconstitution impossible par sécurité.`);
-      }
-
-      const virtualStock: Record<string, number> = {};
-      
-      entries.forEach((entry) => {
-        if (entry.actionType === 'ARTICLE_MUTATION') {
-          const a = entry.payload;
-          if (a && a.id && !a.deleted) {
-            virtualStock[a.id] = a.quantity || 0;
-          }
-        }
-      });
-
-      entries.forEach((entry) => {
-        if (entry.actionType === 'MOUVEMENT_SUBMISSION') {
-          const mov = entry.payload;
-          if (mov && (mov.status === 'VALIDE' || mov.status === 'COMPLETE')) {
-            (mov.items || []).forEach((item: any) => {
-              const current = virtualStock[item.articleId] || 0;
-              const isAdd = mov.type === 'ENTREE' || mov.type === 'TRANSFERT_IN' || mov.type === 'RETOUR';
-              virtualStock[item.articleId] = isAdd ? current + item.quantity : current - item.quantity;
-            });
-          }
-        } else if (entry.actionType === 'INVENTAIRE_ALIGN') {
-          const i = entry.payload;
-          if (i && i.items) {
-            i.items.forEach((item: any) => {
-              virtualStock[item.articleId] = item.countedQuantity;
-            });
-          }
-        }
-      });
-
-      const batch = writeBatch(db);
-      let updatedCount = 0;
-      articles.forEach((art) => {
-        const reconstructedQty = virtualStock[art.id];
-        if (reconstructedQty !== undefined && reconstructedQty !== art.quantity) {
-          batch.update(doc(db, 'articles', art.id), { quantity: reconstructedQty });
-          updatedCount++;
-        }
-      });
-
-      if (updatedCount > 0) {
-        await batch.commit();
-      }
-
-      ImmutableInventoryLedger.appendEntry(
-        `reconstruct-ledger-${Date.now()}`,
-        'MANUAL_OVERWRITE',
-        { label: 'Reconstitution SRE des balances depuis Ledger immuable', updatedSKUs: updatedCount }
-      );
-
-      const refreshedList = articles.map(a => {
-        const q = virtualStock[a.id];
-        return q !== undefined ? { ...a, quantity: q } : a;
-      });
-      SnapshotRecoveryEngine.saveAutomaticSnapshot(refreshedList, "Reconstruction d'urgence post-incident (Ledger-led)");
-
-      setLedgerEntries(ImmutableInventoryLedger.getEntries());
-      setSnapshots(SnapshotRecoveryEngine.getSnapshots());
-
-      addTechLog('INFO', `Reconstruction d'inventaire depuis le Ledger immuable terminée. SKUs alignés : ${updatedCount}.`);
-      toast.success(`Consolidation par Ledger terminée! ${updatedCount} articles alignés.`);
-    } catch (err: any) {
-      addTechLog('ERROR', `Échec de consolidation Ledger : ${err.message || err}`);
-      toast.error(`Reconstruction avortée: ${err.message || err}`);
-      throw err;
-    }
-  };
+  const exportForensic = React.useCallback(() => {
+    return JSON.stringify({
+      timestamp: new Date().toISOString(),
+      queueLength: retryQueue.length,
+      isDegradedNetwork
+    }, null, 2);
+  }, [retryQueue.length, isDegradedNetwork]);
 
   const networkQuality = React.useMemo(() => {
     if (typeof window !== 'undefined' && !navigator.onLine) {
@@ -3331,7 +3030,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return 'ONLINE';
   }, [isDegradedNetwork, retryQueue.length]);
 
-  const value = {
+  const value = React.useMemo(() => ({
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs, deletionRequests,
@@ -3340,6 +3039,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     approveTransfert, closeTransfert,
     saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus,
+    loadMoreMouvements,
     networkQuality,
 
     isSafeMode,
@@ -3355,18 +3055,28 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     // Observability & Industrial systems
     techLogs, retryQueue, dlq, avgTxDuration, txStats, isDegradedNetwork, setDegradedNetwork,
     forceRunQueue, clearDLQ, simulateRuleFailure, simulateConcurrentConflicts,
-    collectSystemMetrics, exportForensic,
-
-    // SRE Snapshot Recovery & Integrity Engine v7.0 exports
-    ledgerEntries,
-    snapshots,
-    triggerDeepScan,
-    triggerRollback,
-    triggerSKURollback,
-    saveManualStateSnapshot,
-    importEmergencyBackup,
-    reconstructStateFromLedger
-  };
+    collectSystemMetrics, exportForensic
+  }), [
+    articles, mouvements, distributions, auditLogs, transferts, inventaires,
+    engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
+    maintenanceLogs, deletionRequests,
+    currentSite, setCurrentSite,
+    currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
+    approveTransfert, closeTransfert,
+    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
+    setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus,
+    loadMoreMouvements,
+    networkQuality,
+    isSafeMode,
+    rcglResult,
+    lastSnapshotTimestamp,
+    maintenanceMode,
+    maintenanceReason,
+    toggleMaintenanceLock,
+    techLogs, retryQueue, dlq, avgTxDuration, txStats, isDegradedNetwork, setDegradedNetwork,
+    forceRunQueue, clearDLQ, simulateRuleFailure, simulateConcurrentConflicts,
+    collectSystemMetrics, exportForensic
+  ]);
 
   return (
     <InventoryContext.Provider value={value}>
