@@ -399,6 +399,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const [authStateReady, setAuthStateReady] = useState(false);
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
+  const [recentlyCreatedArticles, setRecentlyCreatedArticles] = useState<Article[]>([]);
   const hasSetInitialSite = useRef(false);
 
   const addNotification = React.useCallback(async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead' | 'severity' | 'status'> & { severity?: any; status?: any }) => {
@@ -488,6 +489,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   // --- STATE RECONCILIATION & CONSENSUS MERGE ENGINE (Rule 1) ---
   const articles = React.useMemo(() => {
     const mergedMap = new Map<string, Article>(rawArticles.map(a => [a.id, { ...a }]));
+    
+    // Merge recently created articles that might not have synced via Firestore snapshot yet
+    for (const a of recentlyCreatedArticles) {
+      if (!mergedMap.has(a.id)) {
+        mergedMap.set(a.id, { ...a });
+      }
+    }
+
     const pendingItems = RetryQueueFSM.getQueue();
     const dlqExclusionIntents = new Set(getDLQEntries().map(d => d.intentId));
 
@@ -517,7 +526,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       }
     }
     return Array.from(mergedMap.values());
-  }, [rawArticles, retryQueue, dlq]);
+  }, [rawArticles, recentlyCreatedArticles, retryQueue, dlq]);
+
+  // Clean up recentlyCreatedArticles once they appear in rawArticles
+  useEffect(() => {
+    if (rawArticles.length > 0 && recentlyCreatedArticles.length > 0) {
+      setRecentlyCreatedArticles(prev => prev.filter(req => !rawArticles.some(a => a.id === req.id)));
+    }
+  }, [rawArticles, recentlyCreatedArticles.length]);
 
 
 
@@ -1285,16 +1301,40 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
 
         let totalValue = 0;
-        const articleUpdates: { ref: any, newQty: number }[] = [];
-
+        
+        // Collect article reads and handle newly created/imported local documents
+        const articleDataMap = new Map<string, { ref: any; data: Article; isNew: boolean }>();
+        
         // 1. All reads must occur before any writes
         for (const item of mouvement.items) {
           const articleRef = doc(db, 'articles', item.articleId);
           const articleSnap = await transaction.get(articleRef);
-          if (!articleSnap.exists()) {
-            throw new Error("ARTICLE_INTROUVABLE");
+          
+          if (articleSnap.exists()) {
+            articleDataMap.set(item.articleId, {
+              ref: articleRef,
+              data: articleSnap.data() as Article,
+              isNew: false
+            });
+          } else {
+            // Defensive Fallback: If document does not exist on server yet, retrieve from local registry/state
+            const localArt = articles.find(a => a.id === item.articleId);
+            if (!localArt) {
+              throw new Error("ARTICLE_INTROUVABLE");
+            }
+            articleDataMap.set(item.articleId, {
+              ref: articleRef,
+              data: { ...localArt, quantity: 0 },
+              isNew: true
+            });
           }
-          const article = articleSnap.data() as Article;
+        }
+
+        const articleUpdates: { ref: any; newQty: number; data: Article; isNew: boolean }[] = [];
+
+        for (const item of mouvement.items) {
+          const artInfo = articleDataMap.get(item.articleId)!;
+          const article = artInfo.data;
           totalValue += item.quantity * (article.price || 0);
           
           const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
@@ -1303,12 +1343,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           if (newQty < 0) {
             throw new Error("STOCK_INSUFFISANT");
           }
-          articleUpdates.push({ ref: articleRef, newQty });
+          articleUpdates.push({ 
+            ref: artInfo.ref, 
+            newQty, 
+            data: { ...article, quantity: newQty }, 
+            isNew: artInfo.isNew 
+          });
         }
 
-        // 2. Perform all updates
+        // 2. Perform all updates or transactional creations
         for (const update of articleUpdates) {
-          transaction.update(update.ref, { quantity: update.newQty });
+          if (update.isNew) {
+            transaction.set(update.ref, cleanObject(update.data));
+          } else {
+            transaction.update(update.ref, { quantity: update.newQty });
+          }
         }
 
         // 3. Set movement document
@@ -1324,7 +1373,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     } finally {
       unregisterPendingOp(movementId);
     }
-  }, [rawArticles]);
+  }, [rawArticles, articles]);
 
   const addMouvement = React.useCallback(async (mouvement: Mouvement) => {
     checkWritePermission();
@@ -1402,10 +1451,10 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
                 type: futureQty <= 0 ? 'CRITICAL' : 'WARNING',
                 category: 'STOCK',
                 message: futureQty <= 0 
-                  ? `Rupture de stock critique détectée pour ${art.designation} (Solde: ${futureQty})` 
-                  : `Seuil de réapprovisionnement atteint pour ${art.designation} (Stock: ${futureQty}, Seuil: ${art.minStock})`,
+                  ? `🔴 Rupture de stock : ${art.designation} (${art.type || 'Stock général'}) — Solde : 0 unité` 
+                  : `⚠️ Stock faible : ${art.designation} (${art.type || 'Stock général'}) — ${futureQty} restant(s), seuil : ${art.minStock}`,
                 relatedEntityId: art.id,
-                actionRoute: 'STOCK_CONSOMMABLES'
+                actionRoute: 'STOCK_ENGINS'
               });
             }
           }
@@ -2274,14 +2323,99 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
         return [item, ...prev];
       });
+
+      if (i.status === 'VALIDE') {
+        const adjustedItems = item.items.filter(item => item.difference !== 0);
+        const adjustedCount = adjustedItems.length;
+
+        // update rawArticles
+        setRawArticles(prev => {
+          const next = [...prev];
+          for (const adjusted of adjustedItems) {
+            const idx = next.findIndex(a => a.id === adjusted.articleId);
+            if (idx !== -1) {
+              let updatedQty = adjusted.countedQuantity;
+              if (updatedQty === undefined || updatedQty === null || isNaN(updatedQty)) {
+                updatedQty = adjusted.theoricQuantity;
+              }
+              next[idx] = { ...next[idx], quantity: updatedQty };
+            }
+          }
+          return next;
+        });
+
+        // Add audit log mock for simulation mode
+        for (const adjusted of adjustedItems) {
+          const formattedDate = new Date(i.date).toLocaleDateString('fr-FR');
+          const detailsString = `Inventaire ${i.type} du ${formattedDate} — Écart : ${adjusted.difference > 0 ? '+' : ''}${adjusted.difference} pour article ${adjusted.articleId}. Compteur : ${i.compteur || 'N/A'}.`;
+          
+          setAuditLogs(prev => [
+            {
+              id: generateSecureUUID(),
+              timestamp: new Date().toISOString(),
+              userEmail: auth.currentUser?.email || 'Système',
+              site: i.site,
+              action: 'AJUSTEMENT_INVENTAIRE',
+              details: detailsString,
+              amount: 0,
+              userId: auth.currentUser?.uid || 'system_service_account',
+              userRole: currentUser?.role || 'LECTURE_SEULE'
+            },
+            ...prev
+          ]);
+        }
+
+        toast.success(`Inventaire validé — ${adjustedCount} article(s) ajusté(s) dans le stock.`);
+      }
       return;
     }
     checkMaintenanceLock();
     const id = i.id || generateId();
-    await setDoc(doc(db, 'inventaires', id), cleanObject({ ...i, id }));
 
+    if (i.status === 'VALIDE') {
+      const finishedItem = { ...i, id };
+      const adjustedItems = finishedItem.items.filter(item => item.difference !== 0);
+      const adjustedCount = adjustedItems.length;
 
-  }, []);
+      await runTransaction(db, async (transaction) => {
+        // Read articles first (all transaction reads first)
+        const articleRevisions: { ref: any; updatedQty: number }[] = [];
+        for (const item of adjustedItems) {
+          const articleRef = doc(db, 'articles', item.articleId);
+          const articleSnap = await transaction.get(articleRef);
+          if (articleSnap.exists()) {
+            let updatedQty = item.countedQuantity;
+            if (updatedQty === undefined || updatedQty === null || isNaN(updatedQty)) {
+              updatedQty = item.theoricQuantity;
+            }
+            articleRevisions.push({ ref: articleRef, updatedQty });
+          }
+        }
+
+        // Writes section
+        // 1. Save the inventory document
+        const inventaireRef = doc(db, 'inventaires', id);
+        transaction.set(inventaireRef, cleanObject(finishedItem));
+
+        // 2. Update the adjusted articles
+        for (const rev of articleRevisions) {
+          transaction.update(rev.ref, { quantity: rev.updatedQty });
+        }
+
+        // 3. Record transaction-bound audit logs for adjusted items
+        for (const item of adjustedItems) {
+          const formattedDate = new Date(i.date).toLocaleDateString('fr-FR');
+          const detailsString = `Inventaire ${i.type} du ${formattedDate} — Écart : ${item.difference > 0 ? '+' : ''}${item.difference} pour article ${item.articleId}. Compteur : ${i.compteur || 'N/A'}.`;
+          logActionTx(transaction, 'AJUSTEMENT_INVENTAIRE', detailsString, i.site, 0);
+        }
+      });
+
+      toast.success(`Inventaire validé — ${adjustedCount} article(s) ajusté(s) dans le stock.`);
+    } else {
+      // Draft mode (OPEN/OUVERT) - only save the inventory document without affecting stock
+      await setDoc(doc(db, 'inventaires', id), cleanObject({ ...i, id }));
+    }
+  }, [rawArticles, currentUser?.role]);
 
   const saveArticle = React.useCallback(async (a: Article) => {
     checkWritePermission();
@@ -2303,6 +2437,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const id = a.id || generateId();
     const item = { ...a, id };
     await setDoc(doc(db, 'articles', id), cleanObject(item));
+
+    setRecentlyCreatedArticles(prev => {
+      if (prev.some(x => x.id === id)) return prev;
+      return [...prev, item];
+    });
 
     setRawArticles(prev => {
       const idx = prev.findIndex(x => x.id === id);

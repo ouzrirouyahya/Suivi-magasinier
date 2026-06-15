@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ClipboardCheck, 
   Search, 
@@ -14,11 +14,13 @@ import {
   Database,
   Truck,
   Drill,
-  Droplets
+  Droplets,
+  Eye
 } from 'lucide-react';
 import { Article, SiteCode, Inventaire } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
+import { useInventory } from '../context/InventoryContext';
 
 interface InventairePageProps {
   currentSite: SiteCode;
@@ -29,9 +31,18 @@ interface InventairePageProps {
 }
 
 export function InventairePage({ currentSite, articles, inventaires, onSaveInventaire, isAdmin = false }: InventairePageProps) {
+  const { currentUser } = useInventory();
   const [activeSession, setActiveSession] = useState<Inventaire | null>(null);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
+  const [compteur, setCompteur] = useState(currentUser?.name || currentUser?.email || '');
+  const [viewingInventaire, setViewingInventaire] = useState<Inventaire | null>(null);
+
+  useEffect(() => {
+    if (currentUser && !compteur) {
+      setCompteur(currentUser.name || currentUser.email || '');
+    }
+  }, [currentUser]);
 
   const siteArticles = articles.filter(a => a.site === currentSite && a.active);
   
@@ -41,7 +52,42 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     return matchesSearch && matchesType;
   });
 
+  // CORRECTION 4: KPI CALCULATIONS
+  // A) Delay / non-audited count
+  const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+  const recentlyAuditedIds = new Set(
+    inventaires
+      .filter(i => i.site === currentSite &&
+                   i.status === 'VALIDE' &&
+                   new Date(i.date).getTime() > thirtyDaysAgo)
+      .flatMap(i => i.items.map(item => item.articleId))
+  );
+  const notAuditedCount = siteArticles.filter(
+    a => !recentlyAuditedIds.has(a.id)
+  ).length;
+
+  // B) Last validated accuracy
+  const lastValidated = [...inventaires]
+    .filter(i => i.site === currentSite && i.status === 'VALIDE')
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+
+  let accuracy = '—';
+  let lastValidatedDate = '';
+  let exactItems = 0;
+  let totalItems = 0;
+  if (lastValidated) {
+    totalItems = lastValidated.items.length;
+    exactItems = lastValidated.items.filter(item => item.difference === 0).length;
+    accuracy = totalItems > 0 ? ((exactItems / totalItems) * 100).toFixed(1) : '—';
+    lastValidatedDate = new Date(lastValidated.date).toLocaleDateString('fr-FR');
+  }
+
   const startInventory = (type: 'TOURNANT' | 'ANNUEL', category?: string) => {
+    if (!compteur.trim()) {
+      toast.error('Veuillez saisir le nom du compteur.');
+      return;
+    }
+
     const listToAudit = category && category !== 'ALL' 
       ? siteArticles.filter(a => a.type === category)
       : siteArticles;
@@ -52,6 +98,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       date: new Date().toISOString(),
       type,
       status: 'OUVERT',
+      compteur: compteur.trim(),
       items: listToAudit.map(a => ({
         articleId: a.id,
         theoricQuantity: a.quantity,
@@ -60,6 +107,21 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       }))
     };
     setActiveSession(session);
+  };
+
+  const handleResumeInventory = (inv: Inventaire) => {
+    const refreshedItems = inv.items.map(item => {
+      const currentArticle = articles.find(a => a.id === item.articleId);
+      const theoric = currentArticle?.quantity ?? item.theoricQuantity;
+      return {
+        ...item,
+        theoricQuantity: theoric,
+        countedQuantity: item.countedQuantity,
+        difference: item.countedQuantity - theoric
+      };
+    });
+    setActiveSession({ ...inv, items: refreshedItems });
+    setCompteur(inv.compteur || '');
   };
 
   const updateCount = (articleId: string, count: number) => {
@@ -91,7 +153,11 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   const handleValidate = () => {
     if (!activeSession) return;
     if (confirm('Voulez-vous valider cet inventaire ? Les stocks seront mis à jour définitivement.')) {
-      onSaveInventaire({ ...activeSession, status: 'VALIDE' });
+      onSaveInventaire({ 
+        ...activeSession, 
+        status: 'VALIDE',
+        validePar: currentUser?.name || currentUser?.email || 'Admin'
+      });
       setActiveSession(null);
     }
   };
@@ -114,6 +180,16 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
         </div>
         {!activeSession && (
           <div className="flex flex-wrap gap-6 justify-end items-center">
+            <div className="flex flex-col text-left">
+              <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Nom du compteur</label>
+              <input
+                type="text"
+                value={compteur}
+                onChange={(e) => setCompteur(e.target.value)}
+                placeholder="Prénom et Nom du magasinier"
+                className="input-field h-12 px-4 shadow-sm border border-slate-200 focus:border-sky-500 font-black tracking-tight rounded-xl bg-white w-64 text-sm"
+              />
+            </div>
             <div className="flex bg-white p-3 rounded-2xl border border-slate-100 shadow-sm gap-3">
               {[
                 { id: 'ENGINS', label: 'Engins', icon: Truck },
@@ -152,6 +228,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                 <div className="flex items-center gap-6 mt-3">
                    <span className="text-xs font-black px-4 py-1.5 bg-sky-100 text-sky-700 rounded-xl uppercase tracking-widest">{activeSession.type}</span>
                    <span className="text-base font-bold text-slate-500 flex items-center gap-2.5"><Calendar className="w-5 h-5 text-sky-400" /> {new Date(activeSession.date).toLocaleDateString()}</span>
+                   <span className="text-sm font-black text-slate-600 bg-slate-100 px-4 py-1.5 rounded-xl uppercase tracking-widest">Compteur : {activeSession.compteur || 'Inconnu'}</span>
                 </div>
               </div>
             </div>
@@ -288,7 +365,17 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
              </div>
              <div className="w-full space-y-4 pt-6">
                 {inventaires.filter(i => i.site === currentSite).map(inv => (
-                  <div key={inv.id} className="p-6 bg-white rounded-[2rem] border border-slate-100 flex items-center justify-between group hover:border-sky-400 hover:shadow-xl transition-all duration-300 cursor-pointer">
+                  <div 
+                    key={inv.id} 
+                    onClick={() => {
+                      if (inv.status === 'VALIDE') {
+                        setViewingInventaire(inv);
+                      } else {
+                        handleResumeInventory(inv);
+                      }
+                    }}
+                    className="p-6 bg-white rounded-[2rem] border border-slate-100 flex items-center justify-between group hover:border-sky-400 hover:shadow-xl transition-all duration-300 cursor-pointer"
+                  >
                     <div className="flex items-center gap-6">
                        <div className="w-14 h-14 rounded-2xl bg-sky-50 flex items-center justify-center text-sky-500 group-hover:bg-sky-600 group-hover:text-white transition-all">
                           <ClipboardCheck className="w-7 h-7" />
@@ -300,11 +387,23 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                              "w-2 h-2 rounded-full ring-2 ring-white",
                              inv.status === 'VALIDE' ? "bg-emerald-500" : "bg-amber-500"
                            )} />
-                           {inv.status}
+                           {inv.status === 'VALIDE' ? 'VALIDE' : 'En cours'}
                          </p>
                        </div>
                     </div>
-                    <CheckCircle2 className="w-8 h-8 text-emerald-500 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0" />
+                    {inv.status === 'OUVERT' ? (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleResumeInventory(inv);
+                        }}
+                        className="px-4 py-2 bg-sky-50 text-sky-700 border border-sky-100 rounded-xl text-xs font-black uppercase tracking-widest hover:bg-sky-600 hover:text-white transition-all relative z-10"
+                      >
+                        Reprendre
+                      </button>
+                    ) : (
+                      <CheckCircle2 className="w-8 h-8 text-emerald-500 opacity-0 group-hover:opacity-100 transition-all translate-x-4 group-hover:translate-x-0" />
+                    )}
                   </div>
                 ))}
                 {inventaires.filter(i => i.site === currentSite).length === 0 && (
@@ -333,7 +432,11 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                     </div>
                     <div>
                       <p className="text-[11px] font-black uppercase tracking-[0.2em] text-sky-300 mb-1">Alerte de Retard</p>
-                      <p className="text-sm font-black text-white uppercase tracking-widest">24 articles non audités depuis +30j</p>
+                      {notAuditedCount === 0 ? (
+                        <p className="text-sm font-black text-emerald-400 uppercase tracking-widest">✓ Tous les articles ont été audités ce mois</p>
+                      ) : (
+                        <p className="text-sm font-black text-white uppercase tracking-widest">{notAuditedCount} article(s) non audités depuis +30j</p>
+                      )}
                     </div>
                  </div>
               </div>
@@ -346,17 +449,150 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                     <div className="flex justify-between items-end">
                        <div className="space-y-1">
                          <p className="text-xs font-black text-slate-400 uppercase tracking-[0.2em]">Taux de fiabilité réel</p>
-                         <p className="text-5xl font-black text-slate-950 tracking-tighter">98.4<span className="text-sky-600 text-3xl">%</span></p>
+                         <p className="text-5xl font-black text-slate-950 tracking-tighter">{accuracy}{accuracy !== '—' && <span className="text-sky-600 text-3xl">%</span>}</p>
                        </div>
-                       <span className="text-emerald-500 font-black text-sm flex items-center gap-1 mb-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">+0.5% (Mois)</span>
+                       {accuracy !== '—' && (
+                          <span className="text-emerald-500 font-black text-sm flex items-center gap-1 mb-2 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-100">
+                            {exactItems} / {totalItems} exacts
+                          </span>
+                        )}
                     </div>
                     <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden shadow-inner ring-4 ring-slate-50">
-                       <div className="h-full bg-sky-500 w-[98.4%] relative">
+                       <div className="h-full bg-sky-500 relative" style={{ width: accuracy === '—' ? '0%' : `${accuracy}%` }}>
                           <div className="absolute inset-0 bg-white/20 animate-pulse" />
                        </div>
                     </div>
                     <div className="pt-4 flex items-center gap-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                       <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Objectif KPI : 99.5%
+                       <CheckCircle2 className="w-5 h-5 text-emerald-500" /> Taux de concordance &mdash; dernier inventaire {lastValidatedDate ? `du ${lastValidatedDate}` : 'indisponible'}
+                       {viewingInventaire && (
+                         <div className="fixed inset-0 bg-slate-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4 print:absolute print:inset-0 print:bg-white print:p-0 print:overflow-visible">
+                           <div className="bg-white text-slate-900 rounded-[2rem] w-full max-w-4xl max-h-[85vh] overflow-hidden flex flex-col border border-slate-200/50 shadow-2xl animate-in zoom-in-95 duration-200 print:shadow-none print:border-none print:w-full print:max-h-full print:overflow-visible">
+                             
+                             {/* Header */}
+                             <div className="px-8 py-6 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0 print:bg-white">
+                               <div>
+                                 <div className="flex items-center gap-3 print:hidden">
+                                   <span className={cn(
+                                     "text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest",
+                                     viewingInventaire.status === 'VALIDE' ? "bg-emerald-100 text-emerald-800" : "bg-amber-100 text-amber-800"
+                                   )}>
+                                     {viewingInventaire.status}
+                                   </span>
+                                   <span className="text-xs font-black px-3 py-1 bg-sky-100 text-sky-800 rounded-lg uppercase tracking-widest">
+                                     {viewingInventaire.type}
+                                   </span>
+                                 </div>
+                                 <h4 className="text-2xl font-black text-slate-950 uppercase tracking-tight mt-2">
+                                   Fiche d'Inventaire — Site {viewingInventaire.site}
+                                 </h4>
+                                 <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mt-1">
+                                   Réalisé le {new Date(viewingInventaire.date).toLocaleDateString('fr-FR')} à {new Date(viewingInventaire.date).toLocaleTimeString('fr-FR', {hour: '2-digit', minute:'2-digit'})}
+                                 </p>
+                               </div>
+                               <button
+                                 onClick={() => setViewingInventaire(null)}
+                                 className="p-3 text-slate-400 hover:text-slate-900 rounded-full hover:bg-slate-100 transition-colors print:hidden"
+                               >
+                                 <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>
+                               </button>
+                             </div>
+
+                             {/* Meta Infos */}
+                             <div className="px-8 py-4 bg-white border-b border-slate-100 grid grid-cols-2 gap-4 text-sm font-bold text-slate-600 shrink-0">
+                               <div className="flex items-center gap-2">
+                                 <span className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Compteur :</span>
+                                 <span className="text-slate-800 font-extrabold">{viewingInventaire.compteur || 'N/A'}</span>
+                               </div>
+                               <div className="flex items-center gap-2">
+                                 <span className="text-slate-400 font-black uppercase tracking-widest text-[10px]">Validé par :</span>
+                                 <span className="text-slate-800 font-extrabold">{viewingInventaire.validePar || 'N/A'}</span>
+                               </div>
+                             </div>
+
+                             {/* Inventory Items List */}
+                             <div className="flex-1 overflow-y-auto p-8 print:overflow-visible">
+                               <table className="w-full text-left border-collapse">
+                                 <thead>
+                                   <tr className="border-b border-slate-100 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                     <th className="pb-3 pl-4">Référence & Désignation</th>
+                                     <th className="pb-3 text-center w-24">Théorique</th>
+                                     <th className="pb-3 text-center w-24">Compté Réel</th>
+                                     <th className="pb-3 text-center w-24">Écart</th>
+                                     <th className="pb-3 pr-4">Observations / Justification</th>
+                                   </tr>
+                                 </thead>
+                                 <tbody className="divide-y divide-slate-100">
+                                   {viewingInventaire.items
+                                     .map(item => {
+                                       const article = articles.find(a => a.id === item.articleId);
+                                       return {
+                                         ...item,
+                                         designation: article?.designation || 'Article supprimé ou inconnu',
+                                         ref: article?.ref || 'N/A'
+                                       };
+                                     })
+                                     .sort((a, b) => {
+                                       const aDiff = a.difference !== 0 ? 1 : 0;
+                                       const bDiff = b.difference !== 0 ? 1 : 0;
+                                       return bDiff - aDiff;
+                                       return bDiff - aDiff;
+                                     })
+                                     .map((item, index) => {
+                                       const hasDiff = item.difference !== 0;
+                                       return (
+                                         <tr key={index} className={cn("hover:bg-slate-50/50 transition-colors", hasDiff ? "bg-amber-550/40 text-amber-900 bg-amber-50" : "")}>
+                                           <td className="py-3 pl-4">
+                                             <p className="font-extrabold text-slate-900 text-sm">{item.designation}</p>
+                                             <p className="text-[10px] text-slate-400 font-mono font-bold uppercase tracking-wider">{item.ref}</p>
+                                           </td>
+                                           <td className="py-3 text-center font-mono font-bold text-slate-600">
+                                             {item.theoricQuantity}
+                                           </td>
+                                           <td className="py-3 text-center font-mono font-bold text-slate-900">
+                                             {item.countedQuantity}
+                                           </td>
+                                           <td className="py-3 text-center">
+                                             <span className={cn(
+                                               "text-xs font-black inline-block px-2.5 py-0.5 rounded-lg",
+                                               item.difference > 0 ? "text-emerald-700 bg-emerald-50" : item.difference < 0 ? "text-rose-700 bg-rose-50" : "text-slate-400"
+                                             )}>
+                                               {item.difference > 0 ? '+' : ''}{item.difference}
+                                             </span>
+                                           </td>
+                                           <td className="py-3 pr-4 text-xs font-bold text-slate-500 italic">
+                                             {item.justification || '—'}
+                                           </td>
+                                         </tr>
+                                       );
+                                     })}
+                                 </tbody>
+                               </table>
+                             </div>
+
+                             {/* Footer */}
+                             <div className="px-8 py-5 bg-slate-50 border-t border-slate-100 flex items-center justify-between shrink-0 print:hidden">
+                               <p className="text-xs text-slate-400 font-black uppercase tracking-widest">
+                                 {viewingInventaire.items.length} Article(s) audité(s)
+                               </p>
+                               <div className="flex gap-3">
+                                 <button
+                                   onClick={() => window.print()}
+                                   className="btn bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 px-6 h-10 rounded-xl text-xs font-black uppercase tracking-widest transition-all"
+                                 >
+                                   Imprimer
+                                 </button>
+                                 <button
+                                   onClick={() => setViewingInventaire(null)}
+                                   className="btn btn-primary px-6 h-10 rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-sky-500/20"
+                                 >
+                                   Fermer
+                                 </button>
+                               </div>
+                             </div>
+
+                           </div>
+                         </div>
+                       )}
                     </div>
                  </div>
               </div>

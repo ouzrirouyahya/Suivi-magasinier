@@ -14,7 +14,6 @@ import {
   Printer,
   History,
   Activity,
-  Zap,
   HardDrive
 } from 'lucide-react';
 import { AuditLog, Mouvement, Article, SiteCode } from '../types';
@@ -31,6 +30,14 @@ interface TraceabilityCenterProps {
 
 export const TraceabilityCenter = memo(({ site, logs, mouvements, articles }: TraceabilityCenterProps) => {
   const [activeTab, setActiveTab] = React.useState<'FLUX' | 'AUDIT'>('FLUX');
+
+  const todayCount = useMemo(() => {
+    const todayStr = new Date().toDateString();
+    return mouvements.filter(m => 
+      (site === 'ALL' ? true : m.site === site) && 
+      new Date(m.date).toDateString() === todayStr
+    ).length;
+  }, [mouvements, site]);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -98,12 +105,13 @@ export const TraceabilityCenter = memo(({ site, logs, mouvements, articles }: Tr
         </div>
 
         <div className="card p-6 bg-slate-50 border-slate-100 flex items-center gap-6">
-          <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-slate-400">
-            <Zap className="w-8 h-8" />
+          <div className="w-14 h-14 rounded-2xl bg-white border border-slate-200 flex items-center justify-center text-sky-500">
+            <Calendar className="w-8 h-8" />
           </div>
           <div>
-            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Intégrité Blockchain</p>
-            <p className="text-sm font-black text-emerald-600 uppercase">Vérifiée à 100%</p>
+            <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Aujourd'hui</p>
+            <p className="text-2xl font-black text-slate-900 leading-none mt-1">{todayCount}</p>
+            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mt-1">mouvements enregistrés ce jour</p>
           </div>
         </div>
       </div>

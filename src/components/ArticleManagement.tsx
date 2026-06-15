@@ -837,46 +837,59 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     }
   };
 
+  const isReadOnly = currentUser?.role === 'MAGASINIER' || currentUser?.role === 'LECTURE_SEULE';
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      {isReadOnly && (
+        <div className="flex items-center gap-3 px-6 py-3 bg-amber-50 
+                       border border-amber-200 rounded-2xl text-amber-700 
+                       text-sm font-bold">
+          <Eye className="w-4 h-4 shrink-0" />
+          <span>Mode consultation — Les modifications sont réservées aux administrateurs.</span>
+        </div>
+      )}
+
       <header className="flex flex-col md:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
           <h2 className="text-3xl font-black text-slate-950 tracking-tight uppercase leading-none">Articles &amp; Références Stock</h2>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1 opacity-70">Gestion du référentiel et des pièces de rechange configurées sur le site : {site}</p>
         </div>
-        <div className="flex gap-2 flex-wrap justify-end">
-          <button 
-            onClick={() => {
-              changeCatalogFilter('ALL');
-              setIsCatalogOpen(true);
-            }} 
-            className="btn bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm h-10 px-4 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 cursor-pointer"
-          >
-            <BookOpen className="w-4 h-4 text-indigo-200 group-hover:scale-110 transition-transform" /> 
-            <span>Rechercher dans le Catalogue National</span>
-          </button>
-
-          {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
+        {!isReadOnly && (
+          <div className="flex gap-2 flex-wrap justify-end">
             <button 
-              onClick={() => setIsBulkImportModalOpen(true)}
-              disabled={isBulkImporting}
-              className="btn bg-sky-50 text-sky-700 border border-sky-100 hover:border-sky-500 hover:bg-sky-100 shadow-sm h-10 px-3 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 disabled:opacity-50 select-none cursor-pointer"
-              title="Générer collectivement les fiches d'articles pour ce site avec filtres intelligents"
+              onClick={() => {
+                changeCatalogFilter('ALL');
+                setIsCatalogOpen(true);
+              }} 
+              className="btn bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm h-10 px-4 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 cursor-pointer"
             >
-              {isBulkImporting ? (
-                <RefreshCcw className="w-3.5 h-3.5 animate-spin text-sky-600" />
-              ) : (
-                <Upload className="w-3.5 h-3.5 text-sky-500 group-hover:scale-110 transition-transform" />
-              )}
-              <span>Générer d'après le Master</span>
+              <BookOpen className="w-4 h-4 text-indigo-200 group-hover:scale-110 transition-transform" /> 
+              <span>Rechercher dans le Catalogue National</span>
             </button>
-          )}
 
-          <button onClick={handleCreate} className="btn bg-slate-950 hover:bg-slate-800 text-white shadow-sm h-10 px-4 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 cursor-pointer">
-            <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" /> 
-            <span>Création Manuelle</span>
-          </button>
-        </div>
+            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
+              <button 
+                onClick={() => setIsBulkImportModalOpen(true)}
+                disabled={isBulkImporting}
+                className="btn bg-sky-50 text-sky-700 border border-sky-100 hover:border-sky-500 hover:bg-sky-100 shadow-sm h-10 px-3 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 disabled:opacity-50 select-none cursor-pointer"
+                title="Générer collectivement les fiches d'articles pour ce site avec filtres intelligents"
+              >
+                {isBulkImporting ? (
+                  <RefreshCcw className="w-3.5 h-3.5 animate-spin text-sky-600" />
+                ) : (
+                  <Upload className="w-3.5 h-3.5 text-sky-500 group-hover:scale-110 transition-transform" />
+                )}
+                <span>Générer d'après le Master</span>
+              </button>
+            )}
+
+            <button onClick={handleCreate} className="btn bg-slate-950 hover:bg-slate-800 text-white shadow-sm h-10 px-4 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 cursor-pointer">
+              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" /> 
+              <span>Création Manuelle</span>
+            </button>
+          </div>
+        )}
       </header>
 
       {/* SECTION CARTES STATISTIQUES (KPIs VISUELS) */}
@@ -988,7 +1001,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       )}
 
       {/* Barre d'action de suppression groupée */}
-      {selectedArticleIds.length > 0 && (
+      {!isReadOnly && selectedArticleIds.length > 0 && (
         <div className="bg-slate-900 text-white px-6 py-4 rounded-[2rem] flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-2xl relative overflow-hidden animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-xl bg-sky-500/10 flex items-center justify-center text-sky-400 font-extrabold text-xs">
@@ -1301,22 +1314,26 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                       >
                         <Eye className="w-4 h-4" />
                       </button>
-                      <button 
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); handleEdit(article); }} 
-                        className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" 
-                        title="Modifier"
-                      >
-                        <Pencil className="w-4 h-4" />
-                      </button>
-                      <button 
-                        type="button"
-                        onClick={(e) => { e.stopPropagation(); onDelete(article.id); }} 
-                        className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" 
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                      {!isReadOnly && (
+                        <>
+                          <button 
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); handleEdit(article); }} 
+                            className="p-2 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors cursor-pointer" 
+                            title="Modifier"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button 
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); onDelete(article.id); }} 
+                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer" 
+                            title="Supprimer"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </td>
                 </tr>

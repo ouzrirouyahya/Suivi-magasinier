@@ -177,7 +177,8 @@ export default function App() {
     deleteCatalogItem, addPurchaseRequest, updatePRStatus,
     isSafeMode, rcglResult,
     maintenanceMode, maintenanceReason,
-    currentSite, setCurrentSite
+    currentSite, setCurrentSite,
+    currentUser
   } = useInventory();
 
   useEffect(() => {
@@ -229,7 +230,53 @@ export default function App() {
     setCurrentPage(type === 'IN' ? 'BON_ENTREE' : 'BON_SORTIE');
   };
 
+  const canAccessPage = (page: string, role: string): boolean => {
+    const SUPER_ADMIN_ONLY = ['FINANCE'];
+    const ADMIN_AND_ABOVE = ['REPORTS', 'USER_MGMT'];
+    const MAGASINIER_AND_ABOVE = [
+      'COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 
+      'RETURNS', 'STOCK_ENGINS', 'STOCK_PERFORATEURS', 'STOCK_CONSOMMABLES',
+      'STOCK_EPI', 'SEARCH_RESULTS', 'INVENTAIRE',
+      'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES',
+      'ALERTES_STOCK'
+    ];
+    
+    if (SUPER_ADMIN_ONLY.includes(page)) {
+      return role === 'SUPER_ADMIN';
+    }
+    if (ADMIN_AND_ABOVE.includes(page)) {
+      return role === 'ADMIN' || role === 'SUPER_ADMIN';
+    }
+    if (MAGASINIER_AND_ABOVE.includes(page)) {
+      return ['MAGASINIER', 'ADMIN', 'SUPER_ADMIN'].includes(role);
+    }
+    // LECTURE_SEULE : accès limité
+    return ['COCKPIT', 'STOCK_ENGINS', 'STOCK_PERFORATEURS', 'STOCK_CONSOMMABLES', 
+            'STOCK_EPI', 'SEARCH_RESULTS', 'TRACEABILITY', 'GESTION_ARTICLES'].includes(page);
+  };
+
   const renderPage = () => {
+    const userRole = currentUser?.role || 'LECTURE_SEULE';
+    if (!canAccessPage(currentPage, userRole)) {
+      return (
+        <div className="flex flex-col items-center justify-center h-full gap-6 text-slate-400 p-8">
+          <ShieldAlert className="w-16 h-16 opacity-30 text-rose-500" />
+          <p className="font-black uppercase tracking-[0.2em] text-sm text-slate-700">
+            Accès non autorisé
+          </p>
+          <p className="text-xs text-slate-400 text-center max-w-xs -mt-3">
+            Votre profil ({userRole}) ne dispose pas des permissions requises pour accéder à cette rubrique.
+          </p>
+          <button 
+            onClick={() => setCurrentPage('COCKPIT')}
+            className="px-6 py-3 bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl text-xs uppercase tracking-widest shadow-lg shadow-slate-500/10 transition-all border border-slate-900"
+          >
+            Retour au tableau de bord
+          </button>
+        </div>
+      );
+    }
+
     switch (currentPage) {
       case 'COCKPIT':
         return (

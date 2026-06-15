@@ -33,6 +33,7 @@ import { cn } from '../lib/utils';
 import { SITES } from '../demoData';
 import { SiteCode } from '../types';
 import { User } from 'firebase/auth';
+import { useInventory } from '../context/InventoryContext';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 export type Page = 
@@ -72,50 +73,80 @@ interface SidebarProps {
 }
 
 export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, currentSite, setSite, user, isAdmin, notifications = [], isOpen, onClose, onSignOut, isDarkMode = false, onToggleDarkMode }: SidebarProps) {
+  const { currentUser } = useInventory();
   const criticalCount = notifications.filter(n => n.type === 'CRITICAL').length;
   const warningCount = notifications.filter(n => n.type === 'WARNING').length;
 
-  // Safe access control RBAC function
-  const isAllowed = React.useCallback((routeId: string) => {
-    const adminOnlyRoutes = [
-      'FINANCE'
-    ];
-    if (adminOnlyRoutes.includes(routeId)) {
-      return isAdmin;
-    }
-    return true;
-  }, [isAdmin]);
-
   // Memoized menuItems with precise dependencies
   const menuItems = React.useMemo(() => {
-    const rawItems = [
-      // 🟦 1. COCKPIT OPERATIONNEL
-      { id: 'SEP_OPERATIONAL', label: '1. Cockpit Magasinier', isSeparator: true },
-      { id: 'COCKPIT', label: 'Pupitre de Contrôle', icon: LayoutDashboard, activeColor: 'bg-indigo-50 text-indigo-700 font-black border border-indigo-100' },
+    const itemTemplates = [
+      { id: 'COCKPIT', label: 'Mon Magasin', icon: LayoutDashboard, activeColor: 'bg-indigo-50 text-indigo-700 font-black border border-indigo-100', section: 'MON_MAGASIN' },
+      
+      { id: 'BON_ENTREE', label: 'Bons d’Entrée', icon: ArrowDownLeft, activeColor: 'text-emerald-755 bg-emerald-500/10 border border-emerald-500/20 font-black', section: 'BONS_MOUVEMENT' },
+      { id: 'BON_SORTIE', label: 'Bons de Sortie', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black', section: 'BONS_MOUVEMENT' },
+      { id: 'TRANSFERS', label: 'Transferts Inter-Sites', icon: Truck, activeColor: 'text-blue-755 bg-blue-500/10 border border-blue-500/20', section: 'BONS_MOUVEMENT' },
+      { id: 'RETURNS', label: 'Retours Chantiers', icon: RotateCcw, activeColor: 'text-teal-755 bg-teal-500/10 border border-teal-500/20', section: 'BONS_MOUVEMENT' },
 
-      // 🟨 2. BONS DE MOUVEMENTS (SÉPARÉS)
-      { id: 'SEP_LOGISTICS', label: '2. Bons de Mouvement', isSeparator: true },
-      { id: 'BON_ENTREE', label: 'Bons d’Entrée', icon: ArrowDownLeft, activeColor: 'text-emerald-755 bg-emerald-500/10 border border-emerald-500/20 font-black' },
-      { id: 'BON_SORTIE', label: 'Bons de Sortie', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black' },
-      { id: 'TRANSFERS', label: 'Transferts Inter-Sites', icon: Truck, activeColor: 'text-blue-755 bg-blue-500/10 border border-blue-500/20' },
-      { id: 'RETURNS', label: 'Retours Chantiers', icon: RotateCcw, activeColor: 'text-teal-755 bg-teal-500/10 border border-teal-500/20' },
+      { id: 'STOCK_ENGINS', label: 'État Général des Stocks', icon: Package, section: 'STOCKS_INVENTAIRE' },
+      { id: 'INVENTAIRE', label: 'Inventaire Physique', icon: ClipboardCheck, section: 'STOCKS_INVENTAIRE' },
+      { id: 'RESTOCK_MGMT', label: 'Alertes & Commandes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0, section: 'STOCKS_INVENTAIRE' },
 
-      // 🟩 3. STOCKS & ARTICLES
-      { id: 'SEP_STOCKS', label: '3. Niveaux de Stocks', isSeparator: true },
-      { id: 'STOCK_ENGINS', label: 'État Général des Stocks', icon: Package },
-      { id: 'RESTOCK_MGMT', label: 'Alertes & Commandes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0 },
+      { id: 'TRACEABILITY', label: 'Grand Registre des Bons', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white font-black', section: 'REGISTRES' },
+      { id: 'GESTION_ARTICLES', label: 'Catalogue des Articles', icon: Settings2, section: 'REGISTRES' },
 
-      // 🟣 4. CENTRE D’INTELLIGENCE & HISTORIQUE
-      { id: 'SEP_GOVERNANCE', label: '4. Registres & Contrôle', isSeparator: true },
-      { id: 'TRACEABILITY', label: 'Grand Registre des Bons', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white font-black' },
-      { id: 'REPORTS', label: 'Rapports d’Activité', icon: FileText, activeColor: 'bg-slate-900 text-white font-black' },
-      { id: 'FINANCE', label: 'Valeur du Stock Mère', icon: Landmark, activeColor: 'bg-amber-500/5 text-amber-700 shadow-sm border border-amber-500/10 font-bold' },
-      { id: 'GESTION_ARTICLES', label: 'Catalogue des Articles', icon: Settings2 },
-      { id: 'USER_MGMT', label: 'Paramètres système', icon: Users }
+      { id: 'REPORTS', label: 'Rapports d’Activité', icon: FileText, activeColor: 'bg-slate-900 text-white font-black', section: 'ADMINISTRATION' },
+      { id: 'USER_MGMT', label: 'Paramètres système', icon: Users, section: 'ADMINISTRATION' },
+
+      { id: 'FINANCE', label: 'Valeur du Stock Mère', icon: Landmark, activeColor: 'bg-amber-500/5 text-amber-700 shadow-sm border border-amber-500/10 font-bold', section: 'DIRECTION' }
     ];
 
-    return rawItems.filter(item => isAllowed(item.id));
-  }, [isAdmin, isAllowed, criticalCount, warningCount]);
+    const sectionHeaders: Record<string, { label: string; id: string; isSeparator: boolean }> = {
+      MON_MAGASIN: { id: 'SEP_MON_MAGASIN', label: '1. Mon Magasin', isSeparator: true },
+      BONS_MOUVEMENT: { id: 'SEP_BONS_MOUVEMENT', label: '2. Bons de Mouvement', isSeparator: true },
+      STOCKS_INVENTAIRE: { id: 'SEP_STOCKS_INVENTAIRE', label: '3. Stocks & Inventaire', isSeparator: true },
+      REGISTRES: { id: 'SEP_REGISTRES', label: '4. Registres', isSeparator: true },
+      ADMINISTRATION: { id: 'SEP_ADMINISTRATION', label: '5. Administration', isSeparator: true },
+      DIRECTION: { id: 'SEP_DIRECTION', label: '6. Direction', isSeparator: true }
+    };
+
+    const userRole = currentUser?.role || 'LECTURE_SEULE';
+    const allowedPageIds = new Set<string>();
+
+    if (userRole === 'SUPER_ADMIN') {
+      itemTemplates.forEach(item => allowedPageIds.add(item.id));
+    } else if (userRole === 'ADMIN') {
+      itemTemplates.forEach(item => {
+        if (item.id !== 'FINANCE') allowedPageIds.add(item.id);
+      });
+    } else if (userRole === 'MAGASINIER') {
+      const allowed = ['COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES'];
+      allowed.forEach(id => allowedPageIds.add(id));
+    } else {
+      // LECTURE_SEULE
+      const allowed = ['COCKPIT', 'STOCK_ENGINS', 'TRACEABILITY', 'GESTION_ARTICLES'];
+      allowed.forEach(id => allowedPageIds.add(id));
+    }
+
+    const filteredItems = itemTemplates.filter(item => allowedPageIds.has(item.id));
+    const finalMenuItems: any[] = [];
+    const sectionsWithItems = new Set<string>();
+    filteredItems.forEach(item => sectionsWithItems.add(item.section));
+
+    const sectionOrder = ['MON_MAGASIN', 'BONS_MOUVEMENT', 'STOCKS_INVENTAIRE', 'REGISTRES', 'ADMINISTRATION', 'DIRECTION'];
+
+    sectionOrder.forEach(secKey => {
+      if (sectionsWithItems.has(secKey)) {
+        finalMenuItems.push(sectionHeaders[secKey]);
+        filteredItems.forEach(item => {
+          if (item.section === secKey) {
+            finalMenuItems.push(item);
+          }
+        });
+      }
+    });
+
+    return finalMenuItems;
+  }, [currentUser?.role, criticalCount, warningCount]);
 
   // Memoized navigation handler
   const handlePageSelect = React.useCallback((pageId: Page) => {
@@ -189,10 +220,10 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       <nav className="flex-1 px-3 pb-8 flex flex-col gap-0.5 relative z-10">
         {menuItems.map((item) => {
           if (item.isSeparator) {
-            const isOperational = item.id === 'SEP_OPERATIONAL';
+            const isOperational = item.id === 'SEP_OPERATIONAL' || item.id === 'SEP_MON_MAGASIN';
             const isIntelligence = item.id === 'SEP_INTELLIGENCE';
-            const isLogistics = item.id === 'SEP_LOGISTICS';
-            const isGovernance = item.id === 'SEP_GOVERNANCE';
+            const isLogistics = item.id === 'SEP_LOGISTICS' || item.id === 'SEP_BONS_MOUVEMENT' || item.id === 'SEP_STOCKS_INVENTAIRE';
+            const isGovernance = item.id === 'SEP_GOVERNANCE' || item.id === 'SEP_REGISTRES' || item.id === 'SEP_ADMINISTRATION' || item.id === 'SEP_DIRECTION';
             
             return (
               <div 

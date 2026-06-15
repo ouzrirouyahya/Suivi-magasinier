@@ -13,15 +13,13 @@
     font-size: 13px;
   }
   body {
-    @apply bg-[#FBFBFD] text-slate-900 antialiased font-sans selection:bg-sky-100 selection:text-sky-900;
+    @apply bg-white text-slate-900 antialiased font-sans selection:bg-sky-100 selection:text-sky-900;
   }
 }
 
 @layer components {
   .mission-control-bg {
-    background: 
-      radial-gradient(circle at 0px 0px, rgba(56, 189, 248, 0.03) 0%, transparent 50%),
-      radial-gradient(circle at 100% 100%, rgba(127, 29, 29, 0.02) 0%, transparent 50%);
+    background: white;
   }
 
   .grid-pattern {
@@ -76,7 +74,18 @@
   }
   
   .glass {
-    @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-xl rounded-2xl;
+    @apply bg-white border border-slate-200;
+    backdrop-filter: none !important;
+  }
+
+  /* Fond blanc pour tous les conteneurs de page */
+  .page-container {
+    @apply bg-white min-h-screen;
+  }
+
+  /* Cartes standard — à utiliser partout */
+  .card-clean {
+    @apply bg-white border border-slate-200 rounded-2xl shadow-sm;
   }
 
   .btn {

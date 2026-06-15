@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, Download, Calendar, ArrowDownLeft, ArrowUpRight, Clock, HardDrive, User, Printer, Eye, X, BookOpen, LayoutGrid } from 'lucide-react';
+import { Search, Download, Calendar, ArrowDownLeft, ArrowUpRight, Clock, HardDrive, User, Printer, Eye, X, BookOpen, LayoutGrid, RotateCcw } from 'lucide-react';
 import { Mouvement, Article, SiteCode } from '../types';
 import { cn, formatDate, formatCurrency } from '../lib/utils';
 
@@ -11,7 +11,7 @@ interface MouvementHistoryProps {
 
 export const MouvementHistory = React.memo(function MouvementHistory({ site, mouvements, articles }: MouvementHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'TRANSFERT_IN' | 'TRANSFERT_OUT'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'RETOUR' | 'TRANSFERT_IN' | 'TRANSFERT_OUT'>('ALL');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   const [selectedMouvement, setSelectedMouvement] = useState<Mouvement | null>(null);
@@ -113,6 +113,31 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
     URL.revokeObjectURL(url);
   };
 
+  const MOUVEMENT_TITLES: Record<string, string> = {
+    ENTREE: "Bon de Réception — Entrée Stock",
+    SORTIE: "Bon de Sortie Stock",
+    RETOUR: "Bon de Retour Chantier",
+    TRANSFERT_OUT: "Bon de Transfert Inter-Sites — Expédition",
+    TRANSFERT_IN: "Bon de Transfert Inter-Sites — Réception",
+  };
+
+  const getSignatureLabels = (type: string) => {
+    switch (type) {
+      case 'ENTREE':
+        return ["Magasinier Réceptionnaire", "Fournisseur", "Responsable Site"];
+      case 'SORTIE':
+        return ["Magasinier", "Bénéficiaire", "Chef de Service"];
+      case 'RETOUR':
+        return ["Magasinier", "Retourneur", "Responsable Site"];
+      case 'TRANSFERT_OUT':
+        return ["Magasinier Expéditeur", "Transporteur", "Responsable Site"];
+      case 'TRANSFERT_IN':
+        return ["Magasinier Réceptionnaire", "Livreur", "Responsable Site"];
+      default:
+        return ["Magasinier", "Bénéficiaire", "Direction Site"];
+    }
+  };
+
   return (
     <div className="space-y-10 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
@@ -149,18 +174,21 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
         <div className="space-y-3">
           <label className="text-xs font-black text-slate-400 uppercase tracking-[0.25em] ml-1">Type de Flux</label>
           <div className="flex bg-slate-100 p-2 rounded-2xl border-2 border-slate-50 overflow-x-auto no-scrollbar">
-            {(['ALL', 'ENTREE', 'SORTIE', 'TRANSFERT_IN', 'TRANSFERT_OUT'] as const).map(type => (
+            {(['ALL', 'ENTREE', 'SORTIE', 'RETOUR', 'TRANSFERT_IN', 'TRANSFERT_OUT'] as const).map(type => (
               <button
                 key={type}
                 onClick={() => setTypeFilter(type)}
                 className={cn(
                   "flex-1 min-w-[70px] py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all",
-                  typeFilter === type ? "bg-white text-sky-600 shadow-lg shadow-sky-500/10" : "text-slate-400 hover:text-slate-600"
+                  typeFilter === type 
+                    ? (type === 'RETOUR' ? "bg-teal-600 text-white shadow-lg shadow-teal-500/10 animate-pulse duration-1000" : "bg-white text-sky-600 shadow-lg shadow-sky-500/10")
+                    : (type === 'RETOUR' ? "text-slate-400 hover:text-teal-600" : "text-slate-400 hover:text-slate-650")
                 )}
               >
                 {type === 'ALL' ? 'Tous' : 
                  type === 'ENTREE' ? 'Entrées' : 
                  type === 'SORTIE' ? 'Sorties' :
+                 type === 'RETOUR' ? 'Retours' :
                  type === 'TRANSFERT_IN' ? 'Recu' : 'Exped.'}
               </button>
             ))}
@@ -218,13 +246,17 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                   <td className="px-8 py-10">
                     <div className="flex items-center gap-4">
                        <div className={cn(
-                        "w-14 h-14 rounded-2xl flex items-center justify-center shadow-lg",
-                        m.type === 'ENTREE' ? "bg-emerald-500 text-white" : "bg-rose-800 text-white"
+                        "w-14 h-14 rounded-2xl flex items-center justify-center",
+                        m.type === 'RETOUR' 
+                          ? "bg-teal-50 text-teal-700 border border-teal-100" 
+                          : (m.type === 'ENTREE' || m.type === 'TRANSFERT_IN' ? "bg-emerald-500 text-white shadow-lg" : "bg-rose-800 text-white shadow-lg")
                       )}>
-                        {m.type === 'ENTREE' ? <ArrowDownLeft className="w-7 h-7" /> : <ArrowUpRight className="w-7 h-7" />}
+                        {m.type === 'RETOUR' ? <RotateCcw className="w-7 h-7 text-teal-700" /> : (m.type === 'ENTREE' || m.type === 'TRANSFERT_IN' ? <ArrowDownLeft className="w-7 h-7" /> : <ArrowUpRight className="w-7 h-7" />)}
                       </div>
                       <div className="flex flex-col">
-                        <p className="font-black text-slate-900 text-base tracking-widest uppercase">{m.type}</p>
+                        <p className="font-black text-slate-900 text-base tracking-widest uppercase">
+                          {m.type === 'RETOUR' ? "Retour Chantier" : m.type === 'TRANSFERT_IN' ? "Transfert Recu" : m.type === 'TRANSFERT_OUT' ? "Transfert Exp." : m.type}
+                        </p>
                         <p className="text-[10px] font-black text-slate-300 uppercase tracking-[0.2em] mt-0.5">{m.status || 'VALIDE'}</p>
                       </div>
                     </div>
@@ -247,7 +279,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                     <div className="flex flex-wrap gap-2 max-w-sm">
                       {m.items.slice(0, 3).map((item) => (
                         <span key={item.articleId} className="px-4 py-1.5 bg-slate-50 border border-slate-100 rounded-xl text-xs font-black text-slate-500 uppercase tracking-tight">
-                          {articles.find(a => a.id === item.articleId)?.designation || 'Art.'} <span className="text-sky-500 ml-1">x{item.quantity}</span>
+                          {articles.find(a => a.id === item.articleId)?.designation || 'Art.'} <span className={cn("ml-1 font-black", (m.type === 'ENTREE' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR') ? "text-emerald-500" : "text-rose-500")}>{(m.type === 'ENTREE' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR') ? '+' : '-'}{item.quantity}</span>
                         </span>
                       ))}
                       {m.items.length > 3 && (
@@ -300,14 +332,15 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                 <div>
                   <h1 className="text-2xl font-black tracking-tighter mb-2 uppercase">HYDROMINES SUIVI MAGASINIER</h1>
                   <p className="text-lg font-bold text-slate-500 uppercase tracking-[0.3em]">Official Logistics Document</p>
-                  <div className="mt-6 flex items-center gap-6">
+                  <div className="mt-6 flex flex-col sm:flex-row sm:items-center gap-4">
                     <div className="px-4 py-2 bg-slate-900 text-white rounded-xl text-base font-black uppercase tracking-widest">{selectedMouvement.site}</div>
-                    <div className="text-base font-bold text-slate-400 uppercase tracking-widest">Document ID: {selectedMouvement.id}</div>
+                    <div className="text-base font-bold text-slate-450 uppercase tracking-widest">Document ID: {selectedMouvement.id}</div>
+                    <div className="text-base font-bold text-sky-600 uppercase tracking-widest sm:ml-4">Type : {MOUVEMENT_TITLES[selectedMouvement.type] || "Bon de Mouvement"}</div>
                   </div>
                 </div>
                 <div className="text-right">
                   <h2 className="text-4xl font-black uppercase tracking-tighter mb-3">
-                    {selectedMouvement.type === 'ENTREE' ? "Bon d'Entrée Stock" : "Bon de Sortie Stock"}
+                    {MOUVEMENT_TITLES[selectedMouvement.type] || "Bon de Mouvement"}
                   </h2>
                   <p className="text-slate-500 font-mono text-xl">{formatDate(selectedMouvement.date)}</p>
                   <p className="text-sky-600 font-black text-lg uppercase mt-3">Réf: {selectedMouvement.reference || 'N/A'}</p>
@@ -377,9 +410,9 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
               </table>
 
               <div className="grid grid-cols-3 gap-12 mt-24 text-center">
-                <div className="border-t-2 border-slate-200 pt-6"><p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-20">Magasinier</p></div>
-                <div className="border-t-2 border-slate-200 pt-6"><p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-20">Bénéficiaire</p></div>
-                <div className="border-t-2 border-slate-200 pt-6"><p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-20">Direction Site</p></div>
+                <div className="border-t-2 border-slate-200 pt-6"><p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-20">{getSignatureLabels(selectedMouvement.type)[0]}</p></div>
+                <div className="border-t-2 border-slate-200 pt-6"><p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-20">{getSignatureLabels(selectedMouvement.type)[1]}</p></div>
+                <div className="border-t-2 border-slate-200 pt-6"><p className="text-sm font-black uppercase tracking-widest text-slate-400 mb-20">{getSignatureLabels(selectedMouvement.type)[2]}</p></div>
               </div>
 
               <div className="mt-16 pt-8 border-t border-slate-100 flex justify-between no-print">

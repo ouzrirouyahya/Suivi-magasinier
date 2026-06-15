@@ -222,6 +222,8 @@ export interface Inventaire {
   date: string;
   type: 'TOURNANT' | 'ANNUEL';
   status: 'OUVERT' | 'VALIDE';
+  compteur?: string;
+  validePar?: string;
   items: {
     articleId: string;
     theoricQuantity: number;
