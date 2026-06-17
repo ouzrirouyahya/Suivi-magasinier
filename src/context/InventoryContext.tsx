@@ -904,6 +904,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         const userData = serializeFirestoreData({ id: snap.id, ...snap.data() }) as UserAccount;
         if (auth.currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
           userData.role = 'SUPER_ADMIN';
+          userData.active = true;
         }
         if (userData.assignedSite && !hasSetInitialSite.current) {
           setCurrentSite(userData.assignedSite);
@@ -912,25 +913,40 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         setCurrentUser(userData);
         setIsLoaded(true);
       } else {
-        let role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' = 'MAGASINIER';
-        if (auth.currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') role = 'SUPER_ADMIN';
-
-        const newUser: UserAccount = {
-          id: uid,
-          email: auth.currentUser?.email || '',
-          name: auth.currentUser?.displayName || 'Utilisateur',
-          role: role,
-          active: true,
-          createdAt: new Date().toISOString()
-        };
+        // Le compte n'existe pas encore en base — ne PAS le créer ici 
+        // automatiquement avec active: true. La création se fait désormais 
+        // exclusivement via l'écran de demande d'accès dans LoginPage.tsx 
+        // (Partie 2), avec active: false et status: 'PENDING'.
+        // On définit un currentUser temporaire minimal pour qu'App.tsx 
+        // puisse détecter ce cas et afficher l'écran d'attente (Partie 4).
         
-        setCurrentUser(newUser);
-        setDoc(doc(db, 'accounts', uid), cleanObject(newUser))
-          .then(() => setIsLoaded(true))
-          .catch(err => {
-            handleFirestoreError(err, OperationType.WRITE, `accounts/${uid}`);
-            setIsLoaded(true); 
-          });
+        if (auth.currentUser?.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
+          // Exception : le compte super-admin racine garde son comportement 
+          // actuel (toujours actif, jamais bloqué)
+          const newUser: UserAccount = {
+            id: uid,
+            email: auth.currentUser?.email || '',
+            name: auth.currentUser?.displayName || 'Utilisateur',
+            role: 'SUPER_ADMIN',
+            active: true,
+            status: 'APPROVED',
+            createdAt: new Date().toISOString()
+          };
+          setCurrentUser(newUser);
+          setDoc(doc(db, 'accounts', uid), cleanObject(newUser))
+            .then(() => setIsLoaded(true))
+            .catch(err => {
+              handleFirestoreError(err, OperationType.WRITE, `accounts/${uid}`);
+              setIsLoaded(true);
+            });
+        } else {
+          // Compte pas encore créé du tout : LoginPage.tsx s'occupe de la 
+          // création via l'écran de demande. En attendant, on ne définit 
+          // pas currentUser (reste null), ce qui affichera naturellement 
+          // l'écran de connexion/attente.
+          setCurrentUser(null);
+          setIsLoaded(true);
+        }
       }
     }, () => setIsLoaded(true));
 

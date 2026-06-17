@@ -1,13 +1,21 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider } from '../lib/firebase';
+import { auth, googleProvider, db } from '../lib/firebase';
+import { getDoc, setDoc, doc } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { Package, Shield, ArrowRight } from 'lucide-react';
+import { SITES } from '../demoData';
+import { SiteCode, UserAccount } from '../types';
 import loginImage from '../assets/images/hydromines_login_banner_clean.png';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 const LoginPage: React.FC = () => {
   const [authError, setAuthError] = React.useState<string | null>(null);
+  const [showRoleSelection, setShowRoleSelection] = React.useState(false);
+  const [pendingUser, setPendingUser] = React.useState<any>(null);
+  const [selectedRequestedRole, setSelectedRequestedRole] = React.useState<'ADMIN' | 'MAGASINIER' | ''>('');
+  const [requestedSite, setRequestedSite] = React.useState<SiteCode | ''>('');
 
   const handleLogin = async () => {
     try {
@@ -16,7 +24,14 @@ const LoginPage: React.FC = () => {
       googleProvider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, googleProvider);
       console.log("[Google Auth] Connexion réussie ! Utilisateur Authentifié :", result.user.email);
-      toast.success(`Bienvenue, ${result.user.displayName || result.user.email || 'Opérateur'}`);
+      
+      const accountSnap = await getDoc(doc(db, 'accounts', result.user.uid));
+      if (!accountSnap.exists()) {
+        setPendingUser(result.user);
+        setShowRoleSelection(true);
+      } else {
+        toast.success(`Bienvenue, ${result.user.displayName || result.user.email || 'Opérateur'}`);
+      }
     } catch (error: any) {
       console.error("[Google Auth] Erreur complète de connexion :", error);
       let message = `La connexion a échoué (${error.code || error.message || 'Erreur inconnue'}). Veuillez réessayer.`;
@@ -34,6 +49,29 @@ const LoginPage: React.FC = () => {
       
       setAuthError(error.code || 'unknown');
       toast.error(message, { duration: 8000 });
+    }
+  };
+
+  const handleSubmitRequest = async () => {
+    if (!pendingUser || !selectedRequestedRole) return;
+    const newUser: Partial<UserAccount> = {
+      id: pendingUser.uid,
+      email: pendingUser.email || '',
+      name: pendingUser.displayName || 'Utilisateur',
+      role: 'LECTURE_SEULE',
+      requestedRole: selectedRequestedRole as any,
+      assignedSite: selectedRequestedRole === 'MAGASINIER' ? requestedSite || undefined : undefined,
+      active: false,
+      status: 'PENDING',
+      createdAt: new Date().toISOString()
+    };
+    try {
+      await setDoc(doc(db, 'accounts', pendingUser.uid), newUser);
+      toast.success("Votre demande a été envoyée. Un administrateur va l'examiner.");
+      setShowRoleSelection(false);
+    } catch (err: any) {
+      console.error("[LoginPage] Erreur lors de la création de la demande :", err);
+      toast.error(`Erreur : ${err.message || err}`);
     }
   };
 
@@ -138,92 +176,199 @@ const LoginPage: React.FC = () => {
               />
             </div>
 
-            {/* Header of the section */}
-            <div className="relative mb-4 flex items-center justify-center">
-              {/* Crisp white aura backdrop glow for perfect legibility and glow look */}
-              <div className="absolute inset-0 bg-gradient-to-r from-sky-50/20 via-white to-sky-50/20 blur-md rounded-full pointer-events-none" />
-              
-              <motion.h1 
-                animate={{ 
-                  backgroundPosition: ["0% 50%", "200% 50%"],
-                  textShadow: [
-                    "0 0 12px rgba(255, 255, 255, 1), 0 0 2px rgba(255, 255, 255, 0.8)",
-                    "0 0 24px rgba(255, 255, 255, 1), 0 0 6px rgba(255, 255, 255, 0.95)",
-                    "0 0 12px rgba(255, 255, 255, 1), 0 0 2px rgba(255, 255, 255, 0.8)"
-                  ]
-                }}
-                transition={{ 
-                  backgroundPosition: { repeat: Infinity, duration: 4.5, ease: "linear" },
-                  textShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }
-                }}
-                style={{
-                  backgroundImage: "linear-gradient(120deg, #090d16 0%, #1e293b 38%, #ffffff 50%, #1e293b 62%, #090d16 100%)",
-                  backgroundSize: "200% auto",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent"
-                }}
-                className="text-2xl md:text-3xl font-black tracking-widest uppercase font-sans select-none relative z-10 py-1"
-              >
-                Espace Magasinière
-              </motion.h1>
-            </div>
-            <p className="text-xs md:text-sm text-slate-500 mb-8 leading-relaxed px-4 font-semibold">
-              Supervision des stocks, audit logistique, et conformité opérationnelle Hydromines.
-            </p>
-
-            {/* Main CTA */}
-            <div className="space-y-3.5">
-              <button 
-                onClick={handleLogin}
-                className="w-full py-4 bg-white hover:bg-slate-50/50 text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-slate-150 transition-all hover:-translate-y-0.5 active:scale-95 group relative overflow-hidden"
-              >
-                 <svg className="w-5 h-5 transition-transform duration-500 group-hover:rotate-[360deg]" viewBox="0 0 24 24">
-                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
-                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                 </svg>
-                 Connexion Google Auth
-              </button>
-
-            </div>
-
-            {authError && (
-              <div className="mt-4 bg-rose-50/90 border border-rose-200 p-4 rounded-2xl text-left space-y-2 text-xs leading-normal">
-                <div className="flex items-center gap-2 text-rose-700 font-extrabold uppercase tracking-wider text-[10px]">
-                  <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                  Guide de Résolution de Connexion
+            {!showRoleSelection ? (
+              <>
+                {/* Header of the section */}
+                <div className="relative mb-4 flex items-center justify-center">
+                  {/* Crisp white aura backdrop glow for perfect legibility and glow look */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-sky-50/20 via-white to-sky-50/20 blur-md rounded-full pointer-events-none" />
+                  
+                  <motion.h1 
+                    animate={{ 
+                      backgroundPosition: ["0% 50%", "200% 50%"],
+                      textShadow: [
+                        "0 0 12px rgba(255, 255, 255, 1), 0 0 2px rgba(255, 255, 255, 0.8)",
+                        "0 0 24px rgba(255, 255, 255, 1), 0 0 6px rgba(255, 255, 255, 0.95)",
+                        "0 0 12px rgba(255, 255, 255, 1), 0 0 2px rgba(255, 255, 255, 0.8)"
+                      ]
+                    }}
+                    transition={{ 
+                      backgroundPosition: { repeat: Infinity, duration: 4.5, ease: "linear" },
+                      textShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }
+                    }}
+                    style={{
+                      backgroundImage: "linear-gradient(120deg, #090d16 0%, #1e293b 38%, #ffffff 50%, #1e293b 62%, #090d16 100%)",
+                      backgroundSize: "200% auto",
+                      WebkitBackgroundClip: "text",
+                      WebkitTextFillColor: "transparent"
+                    }}
+                    className="text-2xl md:text-3xl font-black tracking-widest uppercase font-sans select-none relative z-10 py-1"
+                  >
+                    Espace Magasinière
+                  </motion.h1>
                 </div>
-                <p className="text-slate-600 font-bold text-[9px] tracking-wide uppercase">
-                  L'environnement de prévisualisation (iframe) AI Studio bloque les pop-ups Google de manière restrictive.
+                <p className="text-xs md:text-sm text-slate-500 mb-8 leading-relaxed px-4 font-semibold">
+                  Supervision des stocks, audit logistique, et conformité opérationnelle Hydromines.
                 </p>
-                <div className="space-y-1.5 bg-white/80 p-2.5 rounded-xl border border-slate-100 font-medium text-[10px] text-slate-500 uppercase tracking-tight">
-                  <p>1. <strong className="text-sky-600">Recommandé</strong> : Ouvrez l'application dans un nouvel onglet en cliquant sur l'icône de flèche externe tout en haut à droite pour autoriser le dialogue Google de façon sécurisée.</p>
-                  <p>2. <strong className="text-slate-600">Alternative</strong> : Enregistrez le domaine ou autorisez les cookies tiers du service.</p>
+
+                {/* Main CTA */}
+                <div className="space-y-3.5">
+                  <button 
+                    onClick={handleLogin}
+                    className="w-full py-4 bg-white hover:bg-slate-50/50 text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-slate-150 transition-all hover:-translate-y-0.5 active:scale-95 group relative overflow-hidden"
+                  >
+                     <svg className="w-5 h-5 transition-transform duration-500 group-hover:rotate-[360deg]" viewBox="0 0 24 24">
+                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+                     </svg>
+                     Connexion Google Auth
+                  </button>
+
                 </div>
+
+                {authError && (
+                  <div className="mt-4 bg-rose-50/90 border border-rose-200 p-4 rounded-2xl text-left space-y-2 text-xs leading-normal">
+                    <div className="flex items-center gap-2 text-rose-700 font-extrabold uppercase tracking-wider text-[10px]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
+                      Guide de Résolution de Connexion
+                    </div>
+                    <p className="text-slate-600 font-bold text-[9px] tracking-wide uppercase">
+                      L'environnement de prévisualisation (iframe) AI Studio bloque les pop-ups Google de manière restrictive.
+                    </p>
+                    <div className="space-y-1.5 bg-white/80 p-2.5 rounded-xl border border-slate-100 font-medium text-[10px] text-slate-500 uppercase tracking-tight">
+                      <p>1. <strong className="text-sky-600">Recommandé</strong> : Ouvrez l'application dans un nouvel onglet en cliquant sur l'icône de flèche externe tout en haut à droite pour autoriser le dialogue Google de façon sécurisée.</p>
+                      <p>2. <strong className="text-slate-600">Alternative</strong> : Enregistrez le domaine ou autorisez les cookies tiers du service.</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Security certification & trust anchors */}
+                <div className="mt-8 space-y-4">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full text-[9px] font-black uppercase tracking-widest">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                    Sécurité Cloud Certifiée
+                  </div>
+                  
+                  <div className="space-y-1.5">
+                    <p className="text-[10px] text-slate-500 leading-relaxed font-bold max-w-[280px] mx-auto italic">
+                      Chiffrement de bout en bout opéré via le protocole sécurisé <span className="text-[#4FC3F7] font-extrabold">Google OAuth 2.0</span>.
+                    </p>
+                    <div className="flex items-center justify-center gap-2">
+                      <div className="h-[1px] w-4 bg-slate-100" />
+                      <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider">
+                        NORME ISO 27001 & SOC 2 COMPLIANT
+                      </p>
+                      <div className="h-[1px] w-4 bg-slate-100" />
+                    </div>
+                  </div>
+                </div>
+              </>
+            ) : (
+              <div className="text-left py-2 px-1">
+                <div className="space-y-1.5 mb-6 text-center">
+                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
+                    Bienvenue, {pendingUser?.displayName || "Opérateur Core"} !
+                  </h2>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Pour finaliser votre demande d'accès, veuillez préciser votre rôle :
+                  </p>
+                </div>
+
+                <div className="space-y-3 mb-5">
+                  {/* Option 1: Magasinier */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRequestedRole('MAGASINIER');
+                    }}
+                    className={`w-full p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 outline-none ${
+                      selectedRequestedRole === 'MAGASINIER'
+                        ? 'border-sky-500 bg-sky-50/30 ring-1 ring-sky-500'
+                        : 'border-slate-200 bg-white hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${
+                      selectedRequestedRole === 'MAGASINIER' ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-500'
+                    }`}>
+                      <Package className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-black text-xs text-slate-900 uppercase tracking-wider">
+                        Magasinier terrain
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                        Gestion du stock réel d'un chantier déterminé.
+                      </p>
+                    </div>
+                  </button>
+
+                  {/* Option 2: Admin */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRequestedRole('ADMIN');
+                      setRequestedSite('');
+                    }}
+                    className={`w-full p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 outline-none ${
+                      selectedRequestedRole === 'ADMIN'
+                        ? 'border-sky-500 bg-sky-50/30 ring-1 ring-sky-500'
+                        : 'border-slate-200 bg-white hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${
+                      selectedRequestedRole === 'ADMIN' ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-500'
+                    }`}>
+                      <Shield className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-black text-xs text-slate-900 uppercase tracking-wider">
+                        Administration
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                        Supervision logistique multi-chantiers globale.
+                      </p>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Conditional Site Select */}
+                {selectedRequestedRole === 'MAGASINIER' && (
+                  <div className="space-y-1.5 mb-6 animate-fade-in">
+                    <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest pl-1">
+                      Chantier souhaité
+                    </label>
+                    <select
+                      value={requestedSite}
+                      onChange={(e) => setRequestedSite(e.target.value as SiteCode)}
+                      className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                    >
+                      <option value="">-- Choisir un chantier actif --</option>
+                      {SITES.map((site) => (
+                        <option key={site.code} value={site.code}>
+                          {site.label} ({site.code})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
+
+                {/* CTA Send */}
+                <button
+                  type="button"
+                  disabled={
+                    !selectedRequestedRole ||
+                    (selectedRequestedRole === 'MAGASINIER' && !requestedSite)
+                  }
+                  onClick={handleSubmitRequest}
+                  className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:-translate-y-0.5 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+                >
+                  Envoyer ma demande
+                  <ArrowRight className="w-4 h-4" />
+                </button>
               </div>
             )}
-
-            {/* Security certification & trust anchors */}
-            <div className="mt-8 space-y-4">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full text-[9px] font-black uppercase tracking-widest">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Sécurité Cloud Certifiée
-              </div>
-              
-              <div className="space-y-1.5">
-                <p className="text-[10px] text-slate-500 leading-relaxed font-bold max-w-[280px] mx-auto italic">
-                  Chiffrement de bout en bout opéré via le protocole sécurisé <span className="text-[#4FC3F7] font-extrabold">Google OAuth 2.0</span>.
-                </p>
-                <div className="flex items-center justify-center gap-2">
-                  <div className="h-[1px] w-4 bg-slate-100" />
-                  <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider">
-                    NORME ISO 27001 & SOC 2 COMPLIANT
-                  </p>
-                  <div className="h-[1px] w-4 bg-slate-100" />
-                </div>
-              </div>
-            </div>
           </motion.div>
 
           {/* List of active extraction sites */}

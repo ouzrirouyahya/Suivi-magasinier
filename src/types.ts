@@ -26,10 +26,12 @@ export interface UserAccount {
   id: string;
   email: string;
   name: string;
-  role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER';
+  role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'LECTURE_SEULE';
   active: boolean;
   createdAt: FirestoreDate;
   assignedSite?: SiteCode;
+  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  requestedRole?: 'ADMIN' | 'MAGASINIER';
 }
 
 export interface Article {

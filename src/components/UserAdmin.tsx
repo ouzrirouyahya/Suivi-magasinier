@@ -4,7 +4,7 @@ import { UserAccount, EnginMaster, AgentMaster, PerfoMaster, SiteCode } from '..
 import { cn, generateId } from '../lib/utils';
 import { SITES, SERVICES } from '../demoData';
 import { db } from '../lib/firebase';
-import { collection, onSnapshot, query } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { useInventory } from '../context/InventoryContext';
 
@@ -322,10 +322,47 @@ export const UserAdmin = React.memo(function UserAdmin({
     }
   };
 
-  const filteredUsers = accounts.filter(u => 
-    u.name.toLowerCase().includes(search.toLowerCase()) || 
-    u.email.toLowerCase().includes(search.toLowerCase())
-  );
+  const handleApproveUser = async (user: UserAccount) => {
+    try {
+      const userRef = doc(db, 'accounts', user.id);
+      await updateDoc(userRef, {
+        status: 'APPROVED',
+        active: true,
+        role: user.requestedRole || 'MAGASINIER',
+        assignedSite: user.assignedSite || null
+      });
+      toast.success(`Accès approuvé pour ${user.name}`);
+    } catch (err: any) {
+      console.error("[UserAdmin] Erreur lors de l'approbation :", err);
+      toast.error(`Erreur lors de l'approbation : ${err.message || err}`);
+    }
+  };
+
+  const handleRejectUser = async (user: UserAccount) => {
+    try {
+      const userRef = doc(db, 'accounts', user.id);
+      await updateDoc(userRef, {
+        status: 'REJECTED',
+        active: false,
+        role: 'LECTURE_SEULE',
+        assignedSite: null
+      });
+      toast.success(`Accès refusé pour ${user.name}`);
+    } catch (err: any) {
+      console.error("[UserAdmin] Erreur lors du rejet :", err);
+      toast.error(`Erreur lors du rejet : ${err.message || err}`);
+    }
+  };
+
+  const pendingUsers = accounts.filter(u => u.status === 'PENDING' && (
+    (u.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (u.email || '').toLowerCase().includes(search.toLowerCase())
+  ));
+
+  const activeMembers = accounts.filter(u => u.status !== 'PENDING' && (
+    (u.name || '').toLowerCase().includes(search.toLowerCase()) || 
+    (u.email || '').toLowerCase().includes(search.toLowerCase())
+  ));
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
@@ -362,101 +399,201 @@ export const UserAdmin = React.memo(function UserAdmin({
 
       <div className="card glass p-4">
         {activeTab === 'USERS' && (
-          <div className="space-y-4">
+          <div className="space-y-6">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input 
                 type="text" 
-                placeholder="Rechercher un membre..."
+                placeholder="Rechercher par nom ou email..."
                 className="input-field pl-10 h-9"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredUsers.map((user) => {
-                const isPrimaryAdmin = user.email.toLowerCase() === 'ouzrirouyahya@gmail.com';
-                return (
-                  <div key={user.id} className={cn(
-                    "card p-3 border border-slate-100 transition-all shadow-sm",
-                    user.active ? "border-emerald-100 bg-white" : "border-rose-100 bg-rose-50/20 grayscale"
-                  )}>
-                    <div className="flex justify-between items-start mb-3">
-                      <div className={cn("w-8 h-8 rounded-lg flex items-center justify-center font-black text-white text-[10px]", user.active ? "bg-sky-500" : "bg-slate-300 text-slate-500")}>
-                        {user.name && user.name.trim() ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
-                      </div>
-                      {isPrimaryAdmin ? (
-                        <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 font-black cursor-default border border-emerald-200">
-                          Toujours Actif
-                        </span>
-                      ) : (
-                        <button 
-                          onClick={() => onToggleStatus(user.id)} 
-                          className={cn("px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest cursor-pointer", user.active ? "bg-rose-50 text-rose-600 hover:bg-rose-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100")}
-                        >
-                          {user.active ? 'Désactiver' : 'Activer'}
-                        </button>
-                      )}
-                    </div>
-                    <div>
-                      <h3 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
-                        {user.name || 'Utilisateur anonyme'}
-                        {isPrimaryAdmin && <span className="text-[7px] font-black uppercase bg-amber-500/20 text-amber-800 px-1 py-0.5 rounded-md">PROTÉGÉ</span>}
-                      </h3>
-                      <p className="text-[10px] text-slate-400 font-medium font-mono">{user.email}</p>
-                      
-                      <div className="mt-3 pt-2 border-t border-slate-50 flex items-center justify-between gap-2">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block whitespace-nowrap">Rôle / Permission</label>
-                        {isPrimaryAdmin ? (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-100 font-extrabold">
-                            {user.role}
-                          </span>
-                        ) : (
-                          <select
-                            value={user.role}
-                            onChange={(e) => {
-                              const roleVal = e.target.value as 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER';
-                              setUserRole(user.id, roleVal)
-                                .then(() => toast.success(`Rôle mis à jour`))
-                                .catch((err: any) => toast.error(`Erreur: ${err.message || err}`));
-                            }}
-                            className="text-[9px] font-black uppercase tracking-widest text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
-                          >
-                            <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                            <option value="ADMIN">ADMIN</option>
-                            <option value="MAGASINIER">MAGASINIER</option>
-                          </select>
-                        )}
+
+            {/* SECTION 1 - Demandes d'accès à valider */}
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <Clock className="w-4 h-4 text-amber-500" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">
+                  Demandes d'accès à valider ({pendingUsers.length})
+                </h3>
+              </div>
+              
+              {pendingUsers.length === 0 ? (
+                <p className="text-xs text-slate-400 italic py-2 pl-1 font-medium">Aucune demande en attente de validation.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {pendingUsers.map((user) => (
+                    <div key={user.id} className="card p-4 border border-amber-100 bg-amber-50/10 shadow-sm rounded-2xl flex flex-col justify-between gap-4 animate-in fade-in duration-300">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-800 flex items-center justify-center font-black text-xs">
+                            {user.name && user.name.trim() ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+                          </div>
+                          <div>
+                            <h4 className="text-xs font-black text-slate-900 leading-tight">{user.name}</h4>
+                            <p className="text-[10px] text-slate-400 font-mono font-bold leading-tight">{user.email}</p>
+                          </div>
+                        </div>
+
+                        <div className="bg-white/80 p-3 rounded-xl border border-amber-200/40 text-xs font-bold text-slate-600 space-y-1.5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.01)] font-sans">
+                          <p className="flex justify-between">
+                            <span className="text-slate-400 text-[10px] uppercase font-black tracking-widest">Rôle requis :</span>
+                            <span className="text-slate-800 font-black">{user.requestedRole === 'ADMIN' ? 'ADMINISTRATEUR' : 'MAGASINIER'}</span>
+                          </p>
+                          {user.requestedRole === 'MAGASINIER' && (
+                            <p className="flex justify-between">
+                              <span className="text-slate-400 text-[10px] uppercase font-black tracking-widest">Chantier :</span>
+                              <span className="text-slate-800 font-black">{user.assignedSite || 'Non défini'}</span>
+                            </p>
+                          )}
+                        </div>
                       </div>
 
-                      <div className="mt-2 pt-2 border-t border-slate-50 flex items-center justify-between gap-2">
-                        <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block whitespace-nowrap">Site Assigné</label>
-                        {isPrimaryAdmin ? (
-                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
-                            Tous les sites
-                          </span>
-                        ) : (
-                          <select
-                            value={user.assignedSite || ''}
-                            onChange={(e) => {
-                              const siteVal = e.target.value as SiteCode | '';
-                              setUserAssignedSite(user.id, siteVal)
-                                .then(() => toast.success(`Site assigné mis à jour`))
-                                .catch((err: any) => toast.error(`Erreur: ${err.message || err}`));
-                            }}
-                            className="text-[9px] font-black uppercase tracking-widest text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer animate-in fade-in duration-300"
-                          >
-                            <option value="">Tous les sites</option>
-                            {SITES.map(s => (
-                              <option key={s.code} value={s.code}>{s.label}</option>
-                            ))}
-                          </select>
-                        )}
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100/60">
+                        <button
+                          onClick={() => handleRejectUser(user)}
+                          className="flex-1 py-2 bg-rose-50 hover:bg-rose-100/85 text-rose-700 hover:text-rose-800 rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all outline-none cursor-pointer"
+                        >
+                          <XCircle className="w-4 h-4" />
+                          Rejeter
+                        </button>
+                        <button
+                          onClick={() => handleApproveUser(user)}
+                          className="flex-1 py-2 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[10px] uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-sm hover:-translate-y-0.5 transition-all outline-none cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-4 h-4" />
+                          Approuver
+                        </button>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* SECTION 2 - Membres actifs */}
+            <div className="space-y-3 pt-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <CheckCircle2 className="w-4 h-4 text-emerald-500" />
+                <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">
+                  Membres actifs et configurés ({activeMembers.length})
+                </h3>
+              </div>
+
+              {activeMembers.length === 0 ? (
+                <p className="text-xs text-slate-400 italic py-2 pl-1 font-medium">Aucun membre actif trouvé.</p>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {activeMembers.map((user) => {
+                    const isPrimaryAdmin = user.email.toLowerCase() === 'ouzrirouyahya@gmail.com';
+                    return (
+                      <div key={user.id} className={cn(
+                        "card p-4 border border-slate-100 transition-all shadow-sm rounded-2xl flex flex-col justify-between",
+                        user.active ? "border-emerald-100 bg-white" : "border-rose-100 bg-rose-50/20 grayscale"
+                      )}>
+                        <div>
+                          <div className="flex justify-between items-start mb-3">
+                            <div className={cn("w-9 h-9 rounded-xl flex items-center justify-center font-black text-white text-[10px]", user.active ? "bg-sky-500" : "bg-slate-300 text-slate-500")}>
+                              {user.name && user.name.trim() ? user.name.split(' ').map(n => n[0]).join('') : 'U'}
+                            </div>
+                            {isPrimaryAdmin ? (
+                              <span className="px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest bg-emerald-50 text-emerald-600 border border-emerald-200">
+                                Toujours Actif
+                              </span>
+                            ) : (
+                              <button 
+                                onClick={() => onToggleStatus(user.id)} 
+                                className={cn("px-2.5 py-1 rounded-full text-[8px] font-black uppercase tracking-widest cursor-pointer transition-colors", user.active ? "bg-rose-50 text-rose-600 hover:bg-rose-100" : "bg-emerald-50 text-emerald-600 hover:bg-emerald-100")}
+                              >
+                                {user.active ? 'Désactiver' : 'Activer'}
+                              </button>
+                            )}
+                          </div>
+                          
+                          <div className="space-y-1">
+                            <h3 className="text-xs font-black text-slate-900 flex items-center gap-1.5">
+                              {user.name || 'Utilisateur anonyme'}
+                              {isPrimaryAdmin && <span className="text-[7px] font-black uppercase bg-amber-500/20 text-amber-800 px-1 py-0.5 rounded-md">PROTÉGÉ</span>}
+                            </h3>
+                            <p className="text-[10px] text-slate-400 font-mono font-bold">{user.email}</p>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 mt-4 pt-3 border-t border-slate-100/60 font-bold">
+                          {/* Role Selection */}
+                          <div className="flex items-center justify-between gap-2">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block whitespace-nowrap">Rôle / Permission</label>
+                            {isPrimaryAdmin ? (
+                              <span className="text-[9px] font-black uppercase tracking-widest text-sky-600 bg-sky-50 px-2 py-0.5 rounded border border-sky-100 font-extrabold font-sans">
+                                {user.role}
+                              </span>
+                            ) : (
+                              <select
+                                value={user.role}
+                                onChange={(e) => {
+                                  const roleVal = e.target.value as 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'LECTURE_SEULE';
+                                  setUserRole(user.id, roleVal)
+                                    .then(() => toast.success(`Rôle mis à jour`))
+                                    .catch((err: any) => toast.error(`Erreur: ${err.message || err}`));
+                                }}
+                                className="text-[9px] font-black uppercase tracking-widest text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
+                              >
+                                <option value="SUPER_ADMIN">SUPER_ADMIN</option>
+                                <option value="ADMIN">ADMIN</option>
+                                <option value="MAGASINIER">MAGASINIER</option>
+                                <option value="LECTURE_SEULE">LECTURE_SEULE</option>
+                              </select>
+                            )}
+                          </div>
+
+                          {/* Site selection */}
+                          <div className="flex items-center justify-between gap-2">
+                            <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block whitespace-nowrap">Site Assigné</label>
+                            {isPrimaryAdmin ? (
+                              <span className="text-[9px] font-black uppercase tracking-widest text-slate-500 bg-slate-50 px-2 py-0.5 rounded border border-sky-100 font-sans">
+                                Tous les sites
+                              </span>
+                            ) : (
+                              <select
+                                value={user.assignedSite || ''}
+                                onChange={(e) => {
+                                  const siteVal = e.target.value as SiteCode | '';
+                                  setUserAssignedSite(user.id, siteVal)
+                                    .then(() => toast.success(`Site assigné mis à jour`))
+                                    .catch((err: any) => toast.error(`Erreur: ${err.message || err}`));
+                                }}
+                                className="text-[9px] font-black uppercase tracking-widest text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer transition-all"
+                              >
+                                <option value="">Tous les sites</option>
+                                {SITES.map(s => (
+                                  <option key={s.code} value={s.code}>{s.label}</option>
+                                ))}
+                              </select>
+                            )}
+                          </div>
+                          
+                          {/* status indicator for approved/rejected or none */}
+                          {user.status && !isPrimaryAdmin && (
+                            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-50/65">
+                              <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block whitespace-nowrap">Statut Profil</label>
+                              <span className={cn(
+                                "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full font-sans",
+                                user.status === 'APPROVED' ? "bg-emerald-50 text-emerald-700 border border-emerald-200" :
+                                user.status === 'REJECTED' ? "bg-rose-50 text-rose-700 border border-rose-250" :
+                                "bg-slate-50 text-slate-500 border border-slate-200"
+                              )}>
+                                {user.status}
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           </div>
         )}
