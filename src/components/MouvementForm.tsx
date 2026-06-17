@@ -23,39 +23,6 @@ import { Article, Mouvement, MouvementItem, SiteCode, EnginMaster, PerfoMaster, 
 import { cn, formatCurrency, generateId } from '../lib/utils';
 import { SITES } from '../demoData';
 
-const QUICK_ITEMS = [
-  {
-    category: 'EPI / SÉCURITÉ',
-    items: [
-      { reference: 'EPI-GAN-01', designation: 'GANTS DE PROTECTION KEVLAR SRE REFORCÉ', price: 65, unit: 'PAIRE', suggestedType: 'EPI' },
-      { reference: 'EPI-BOT-02', designation: 'BOTTES DE SÉCURITÉ SOUBLES S5 SRE MINE', price: 210, unit: 'PAIRE', suggestedType: 'EPI' },
-      { reference: 'EPI-CAS-03', designation: 'CASQUE DE SÉCURITÉ MINE AVEC CLIP LAMPE LED', price: 145, unit: 'PIECE', suggestedType: 'EPI' },
-      { reference: 'EPI-MAS-04', designation: 'DEMI-MASQUE RESPIRATOIRE DOUBLE CARTOUCHE FFP3', price: 380, unit: 'PIECE', suggestedType: 'EPI' },
-      { reference: 'EPI-GILET-01', designation: 'GILET HAUTE VISIBILITÉ SRE AVEC BANDES RÉFLÉCHISSANTES', price: 95, unit: 'PIECE', suggestedType: 'EPI' }
-    ]
-  },
-  {
-    category: 'PIÈCES PERFORATEURS',
-    items: [
-      { reference: 'MB-T23-991A', designation: 'TIRANTS DE PERCUSSION COMPLET T23 MONTABERT', price: 1250, unit: 'PIECE', suggestedType: 'PERFORATEURS' },
-      { reference: 'MB-HC50-BUSH-BE', designation: 'DOUILLE DE GUIDAGE EMMANCHEMENT CANNELÉ BRONZE', price: 950, unit: 'PIECE', suggestedType: 'PERFORATEURS' },
-      { reference: 'MB-HC50-KM500', designation: 'PISTON DE PERCUSSION TREMPÉ HC50 MONTABERT', price: 8900, unit: 'PIECE', suggestedType: 'PERFORATEURS' },
-      { reference: 'EP-ST2G-CRD-H', designation: 'PLAQUE D\'USURE COMPOSITE CARTER PRINCIPAL SRE', price: 450, unit: 'PIECE', suggestedType: 'PERFORATEURS' },
-      { reference: 'MB-ACC-T38', designation: 'ROTULE D\'ACCOUPLEMENT ET DE ROTATION T38', price: 1750, unit: 'PIECE', suggestedType: 'PERFORATEURS' }
-    ]
-  },
-  {
-    category: 'MACHINES & PIÈCES ENGINS',
-    items: [
-      { reference: 'DEUTZ-FIL-GO', designation: 'FILTRE PRINCIPAL DOUBLE DE CARBURANT DEUTZ', price: 280, unit: 'PIECE', suggestedType: 'ENGINS' },
-      { reference: 'DEUTZ-FIL-HUILE', designation: 'FILTRE À HUILE LUBRIFIANTE MOTEUR DEUTZ D914', price: 195, unit: 'PIECE', suggestedType: 'ENGINS' },
-      { reference: 'FLEX-HP-500', designation: 'FLEXIBLE HYDRAULIQUE BLINDÉ HP 1/2 L=1200MM', price: 480, unit: 'PIECE', suggestedType: 'ENGINS' },
-      { reference: 'ALT-DEUTZ-24V', designation: 'ALTERNATEUR SCELLÉ ÉTANCHE POUSSIÈRE 24V', price: 1850, unit: 'PIECE', suggestedType: 'ENGINS' },
-      { reference: 'DEM-DEUTZ-24V', designation: 'DÉMARREUR ÉLECTRIQUE 24V DEUTZ SOUFFLET', price: 2900, unit: 'PIECE', suggestedType: 'ENGINS' }
-    ]
-  }
-];
-
 interface MouvementFormProps {
   type: 'ENTREE' | 'SORTIE';
   site: SiteCode;
@@ -97,6 +64,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [showResults, setShowResults] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [localCreatedArticles, setLocalCreatedArticles] = useState<Article[]>([]);
+
+  // Ergonomic UX Keyboard States
+  const [focusedIndex, setFocusedIndex] = useState<number>(0);
+  const [lastAddedLineId, setLastAddedLineId] = useState<string | null>(null);
+  const [globalBeneficiaryId, setGlobalBeneficiaryId] = useState<string>('');
 
   const prefix = type === 'ENTREE' ? 'BE' : 'BS';
   const autoId = useMemo(() => {
@@ -142,6 +114,65 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     return matches.slice(0, 15);
   }, [type, search, catalog, categoryFilter, articles, site]);
 
+  // Unified Search Result List for Smooth Arrow Navigation
+  const dropdownItems = useMemo(() => {
+    const list: Array<{ type: 'article' | 'catalog'; payload: any }> = [];
+    sortedArticles.forEach(a => list.push({ type: 'article', payload: a }));
+    filteredCatalogItems.forEach(c => list.push({ type: 'catalog', payload: c }));
+    return list;
+  }, [sortedArticles, filteredCatalogItems]);
+
+  // Keyboard navigation effects
+  useEffect(() => {
+    setFocusedIndex(0);
+  }, [search]);
+
+  // Focus Search field when page loads or site changes
+  useEffect(() => {
+    if (site !== 'ALL') {
+      const searchInput = document.getElementById('main-search-input');
+      if (searchInput) {
+        searchInput.focus();
+      }
+    }
+  }, [site]);
+
+  // Focus newly added item's quantity input
+  useEffect(() => {
+    if (lastAddedLineId) {
+      const timer = setTimeout(() => {
+        const element = document.getElementById(`qty-${lastAddedLineId}`);
+        if (element) {
+          (element as HTMLInputElement).focus();
+          (element as HTMLInputElement).select();
+        }
+      }, 50);
+      return () => clearTimeout(timer);
+    }
+  }, [lastAddedLineId]);
+
+  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      setFocusedIndex(prev => (dropdownItems.length ? (prev + 1) % dropdownItems.length : 0));
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      setFocusedIndex(prev => (dropdownItems.length ? (prev - 1 + dropdownItems.length) % dropdownItems.length : 0));
+    } else if (e.key === 'Enter') {
+      e.preventDefault();
+      if (dropdownItems.length > 0 && focusedIndex >= 0 && focusedIndex < dropdownItems.length) {
+        const selected = dropdownItems[focusedIndex];
+        if (selected.type === 'article') {
+          addItem(selected.payload);
+        } else if (selected.type === 'catalog') {
+          addCatalogItem(selected.payload);
+        }
+      }
+    } else if (e.key === 'Escape') {
+      setShowResults(false);
+    }
+  };
+
   const addCatalogItem = async (catalogItem: CatalogItem) => {
     if (site === 'ALL') return;
     const cleanRef = (catalogItem.reference || '').trim().toUpperCase().replace(/\s+/g, '_');
@@ -172,10 +203,27 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
         await onArticleCreate(newArticle);
         setLocalCreatedArticles(prev => [...prev, newArticle]);
         const newLineId = generateId();
-        setItems(prev => [...prev, { lineId: newLineId, articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
+        const resolvedGlobalAgent = agents.find(a => a.id === globalBeneficiaryId);
+        const defaultBeneficiaryProps = resolvedGlobalAgent ? {
+          beneficiaryId: resolvedGlobalAgent.id,
+          beneficiaryName: `${resolvedGlobalAgent.lastname} ${resolvedGlobalAgent.firstname}`,
+          beneficiaryService: resolvedGlobalAgent.service
+        } : {
+          beneficiaryId: '',
+          beneficiaryName: '',
+          beneficiaryService: ''
+        };
+        setItems(prev => [...prev, { 
+          lineId: newLineId, 
+          articleId: deterministicId, 
+          quantity: 1, 
+          price: newArticle.price ?? 0,
+          ...defaultBeneficiaryProps 
+        }]);
         setValidationError(null);
         setSearch('');
         setShowResults(false);
+        setLastAddedLineId(newLineId);
         toast.success(`Importation effectuée : "${newArticle.designation}" ajoutée au stock du site.`);
       } catch (err: any) {
         toast.error(`Erreur d'importation : ${err.message || err}`);
@@ -192,105 +240,28 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       return;
     }
     const newLineId = generateId();
+    const resolvedGlobalAgent = agents.find(a => a.id === globalBeneficiaryId);
+    const defaultBeneficiaryProps = resolvedGlobalAgent ? {
+      beneficiaryId: resolvedGlobalAgent.id,
+      beneficiaryName: `${resolvedGlobalAgent.lastname} ${resolvedGlobalAgent.firstname}`,
+      beneficiaryService: resolvedGlobalAgent.service
+    } : {
+      beneficiaryId: '',
+      beneficiaryName: '',
+      beneficiaryService: ''
+    };
     setItems(prev => [...prev, { 
       lineId: newLineId, 
       articleId: article.id, 
       quantity: 1, 
       price: article.price ?? 0,
-      beneficiaryId: '',
-      beneficiaryName: '',
-      beneficiaryService: ''
+      ...defaultBeneficiaryProps
     }]);
     setValidationError(null);
     setSearch('');
     setShowResults(false);
+    setLastAddedLineId(newLineId);
     toast.success(`Ajouté au bon : "${article.designation}"`);
-  };
-
-  const handleQuickAdd = async (quickItem: { reference: string; designation: string; price: number; unit: string; suggestedType: string }) => {
-    if (site === 'ALL') {
-      toast.error("Veuillez sélectionner un chantier d'abord.");
-      return;
-    }
-    const existingArticle = articles.find(
-      a => a.site === site && a.ref.trim().toUpperCase() === quickItem.reference.trim().toUpperCase()
-    );
-
-    if (existingArticle) {
-      addItem(existingArticle);
-      return;
-    }
-
-    const catalogItem = (catalog || []).find(
-      c => (c.reference || '').trim().toUpperCase() === quickItem.reference.trim().toUpperCase()
-    );
-
-    if (catalogItem) {
-      const cleanRef = (catalogItem.reference || '').trim().toUpperCase().replace(/\s+/g, '_');
-      const deterministicId = `${site}_${cleanRef}`;
-      
-      const newArticle: Article = {
-        id: deterministicId,
-        site: site,
-        ref: catalogItem.reference,
-        designation: catalogItem.designation,
-        type: catalogItem.suggestedType || 'CONSOMMABLES',
-        category: catalogItem.functionalCategory || 'AUTRES',
-        unit: catalogItem.unit || 'PIECE',
-        quantity: 0,
-        minStock: catalogItem.minStock || 2,
-        price: catalogItem.price || quickItem.price || 0,
-        location: 'A affecter',
-        active: true,
-        notes: `Importé via raccourci tactile de saisie rapide`
-      };
-
-      if (onArticleCreate) {
-        try {
-          await onArticleCreate(newArticle);
-          setLocalCreatedArticles(prev => [...prev, newArticle]);
-          const newLineId = generateId();
-          setItems(prev => [...prev, { lineId: newLineId, articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
-          setValidationError(null);
-          toast.success(`Nouveau stock initialisé : "${newArticle.designation}"`);
-        } catch (err: any) {
-          toast.error(`Erreur d'importation : ${err.message || err}`);
-        }
-      }
-      return;
-    }
-
-    const cleanRef = quickItem.reference.trim().toUpperCase().replace(/\s+/g, '_');
-    const deterministicId = `${site}_${cleanRef}`;
-
-    const newArticle: Article = {
-      id: deterministicId,
-      site: site,
-      ref: quickItem.reference,
-      designation: quickItem.designation,
-      type: quickItem.suggestedType as any,
-      category: 'AUTRES',
-      unit: quickItem.unit || 'PIECE',
-      quantity: 0,
-      minStock: 2,
-      price: quickItem.price,
-      location: 'A affecter',
-      active: true,
-      notes: `Instancié via raccourci de saisie rapide depuis le bon de réception`
-    };
-
-    if (onArticleCreate) {
-      try {
-        await onArticleCreate(newArticle);
-        setLocalCreatedArticles(prev => [...prev, newArticle]);
-        const newLineId = generateId();
-        setItems(prev => [...prev, { lineId: newLineId, articleId: deterministicId, quantity: 1, price: newArticle.price ?? 0 }]);
-        setValidationError(null);
-        toast.success(`Nouveau stock créé : "${newArticle.designation}"`);
-      } catch (err: any) {
-        toast.error(`Erreur création : ${err.message || err}`);
-      }
-    }
   };
 
   const removeItem = (lineId: string) => setItems(items.filter(i => i.lineId !== lineId));
@@ -592,6 +563,73 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             </div>
           )}
 
+          {type === 'SORTIE' && !isMachineRelated && (
+            <div className="md:col-span-2 p-6 bg-slate-50 border border-slate-100 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
+              <div className="space-y-2 md:col-span-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-8 h-8 rounded-lg bg-sky-500/10 text-sky-600 flex items-center justify-center">
+                    <User className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black uppercase text-slate-800 tracking-tight leading-none">Bénéficiaire Principal (Global)</h3>
+                    <p className="text-[10px] text-slate-400 font-extrabold uppercase tracking-wider mt-1 opacity-75">
+                      Qui reçoit ces pièces ? Saisissez-le ici pour l'appliquer automatiquement au bon de sortie.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-sky-600 uppercase tracking-widest ml-1">Agent Destinataire <span className="text-rose-500">*</span></label>
+                <div className="relative border-none">
+                  <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-sky-500" />
+                  <select 
+                    className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full border border-slate-200 rounded-xl outline-none transition-all focus:border-sky-550 focus:ring-4 focus:ring-sky-500/5 cursor-pointer" 
+                    value={globalBeneficiaryId} 
+                    onChange={(e) => {
+                      const selectedId = e.target.value;
+                      setGlobalBeneficiaryId(selectedId);
+                      const selectedAgent = agents.find(a => a.id === selectedId);
+                      if (selectedAgent) {
+                        setItems(prev => prev.map(item => ({
+                          ...item,
+                          beneficiaryId: selectedAgent.id,
+                          beneficiaryName: `${selectedAgent.lastname} ${selectedAgent.firstname}`,
+                          beneficiaryService: selectedAgent.service
+                        })));
+                        setService(selectedAgent.service);
+                        toast.success(`Bénéficiaire global défini : ${selectedAgent.lastname.toUpperCase()} ${selectedAgent.firstname.toUpperCase()} (${selectedAgent.service})`);
+                      } else {
+                        setService('');
+                      }
+                    }} 
+                    required={items.length > 0}
+                  >
+                    <option value="">SÉLECTIONNER LE DESTINATAIRE PRINCIPAL...</option>
+                    {agents.filter(a => a.site === site).map(a => (
+                      <option key={a.id} value={a.id}>
+                        {a.matricule} - {a.lastname.toUpperCase()} {a.firstname.toUpperCase()} ({a.service.toUpperCase()})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <label className="text-[10px] font-black text-sky-400 uppercase tracking-widest ml-1">Service / Département d'Affectation</label>
+                <input 
+                  type="text"
+                  placeholder="Service (Automatique)..."
+                  value={service}
+                  onChange={(e) => setService(e.target.value.toUpperCase())}
+                  className="input-field h-12 text-sm font-black px-4 bg-slate-100 border border-slate-200 uppercase w-full rounded-xl cursor-not-allowed text-slate-400 font-mono"
+                  readOnly
+                  disabled
+                />
+              </div>
+            </div>
+          )}
+
           {type === 'ENTREE' && (
             <div className="md:col-span-2 p-6 bg-emerald-500/10 backdrop-blur-md border border-emerald-500/20 rounded-3xl grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Provenance Switcher */}
@@ -712,71 +750,13 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
         </div>
 
         <div className="card glass p-4 space-y-4 shadow-xl border-slate-100 rounded-2xl">
-          {type === 'ENTREE' && (
-            <div className="bg-slate-50/50 backdrop-blur-md border border-slate-100/60 p-5 rounded-2xl space-y-4">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-600 flex items-center justify-center">
-                    <Zap className="w-4 h-4 fill-amber-500" />
-                  </div>
-                  <div>
-                    <h3 className="text-sm font-black uppercase text-slate-800 tracking-tight leading-none">Saisie Tactile Rapide</h3>
-                    <p className="text-[10px] text-slate-400 uppercase font-black tracking-wider mt-1 opacity-70">Ajoutez d'un clic les familles de pièces fréquentes</p>
-                  </div>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                {QUICK_ITEMS.map((cat, idx) => (
-                  <div key={idx} className="space-y-2">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-200 pb-1">{cat.category}</h4>
-                    <div className="flex flex-col gap-1.5 max-h-56 overflow-y-auto">
-                      {cat.items.map((item, iIdx) => {
-                        const isChosen = items.some(iter => {
-                          const art = articles.find(a => a.id === iter.articleId);
-                          return art && art.ref.trim().toUpperCase() === item.reference.toUpperCase();
-                        });
-                        return (
-                          <button
-                            key={iIdx}
-                            type="button"
-                            onClick={() => handleQuickAdd(item)}
-                            className={cn(
-                              "w-full text-left p-2.5 rounded-xl border text-xs transition-all flex items-center justify-between gap-2 group/btn",
-                              isChosen 
-                                ? "bg-emerald-50 border-emerald-200 text-emerald-950 shadow-sm"
-                                : "bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:shadow-sm"
-                            )}
-                          >
-                            <div className="truncate flex-1">
-                              <p className="font-extrabold truncate uppercase tracking-tight group-hover/btn:text-slate-900">{item.designation}</p>
-                              <p className="text-[9px] font-mono text-slate-400 tracking-wider mt-0.5">{item.reference}</p>
-                            </div>
-                            <div className="flex items-center gap-1.5 flex-shrink-0">
-                              <span className={cn(
-                                "text-[9px] font-black px-1.5 py-0.5 rounded uppercase tracking-wider",
-                                isChosen ? "bg-emerald-200 text-emerald-800" : "bg-slate-100 text-slate-500"
-                              )}>
-                                {item.price} Dh
-                              </span>
-                              {isChosen && <Check className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0" />}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="relative group">
             <div className="absolute inset-0 bg-sky-500/5 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 relative z-10" />
             <input 
+              id="main-search-input"
               type="text" 
-              placeholder={site === 'ALL' ? "Sélectionnez un chantier dans le menu..." : "RECHERCHER UN ARTICLE..."} 
+              placeholder={site === 'ALL' ? "Sélectionnez un chantier dans le menu..." : "RECHERCHER UN ARTICLE (Saisissez désignation, référence...)"} 
               disabled={site === 'ALL'}
               className={cn(
                 "input-field h-14 pl-14 text-lg font-black tracking-tight bg-white border border-slate-100 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/5 rounded-2xl relative z-10 transition-all uppercase",
@@ -785,50 +765,88 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               value={search}
               onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
               onFocus={() => setShowResults(true)}
+              onKeyDown={handleSearchKeyDown}
             />
             {showResults && search && (
               <div ref={dropdownRef} className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[60] max-h-80 overflow-y-auto p-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
+                
+                {/* Keyboard Navigation Assist Helper */}
+                <div className="flex items-center justify-between px-2 pb-2 mb-1 border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
+                  <span>Résultats correspondants</span>
+                  <span className="bg-slate-100 px-2 py-0.5 rounded text-slate-500 font-mono">
+                    [↓ / ↑] Naviguer  •  [Entrée] Choisir
+                  </span>
+                </div>
+
                 {sortedArticles.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest px-2 mb-2">Articles enregistrés à ce site</p>
-                    {sortedArticles.map(article => (
-                      <button key={article.id} type="button" onClick={() => addItem(article)} className="w-full text-left p-4 hover:bg-sky-50 rounded-xl border border-transparent hover:border-sky-100 transition-all group/item flex items-center justify-between">
-                        <div>
-                          <p className="font-black text-base text-slate-900 group-hover/item:text-sky-900 transition-colors uppercase tracking-tight">{article.designation}</p>
-                          <p className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest mt-0.5">{article.ref}</p>
-                        </div>
-                        <span className={cn(
-                          "text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest",
-                          article.quantity > 0 ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100 flex-shrink-0"
-                        )}>
-                          STK: {article.quantity}
-                        </span>
-                      </button>
-                    ))}
+                    {sortedArticles.map((article, idx) => {
+                      const absoluteIndex = idx;
+                      const isFocused = absoluteIndex === focusedIndex;
+                      return (
+                        <button 
+                          key={article.id} 
+                          type="button" 
+                          onClick={() => addItem(article)} 
+                          className={cn(
+                            "w-full text-left p-4 rounded-xl border transition-all group/item flex items-center justify-between",
+                            isFocused 
+                              ? "bg-sky-50/70 border-sky-300 shadow-sm"
+                              : "border-transparent hover:bg-sky-50/40"
+                          )}
+                        >
+                          <div>
+                            <p className="font-black text-base text-slate-900 group-hover/item:text-sky-900 transition-colors uppercase tracking-tight">{article.designation}</p>
+                            <p className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest mt-0.5">{article.ref}</p>
+                          </div>
+                          <span className={cn(
+                            "text-xs font-black px-3 py-1 rounded-full uppercase tracking-widest flex-shrink-0",
+                            article.quantity > 0 ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : "bg-rose-50 text-rose-600 border border-rose-100"
+                          )}>
+                            STK: {article.quantity}
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
                 
                 {filteredCatalogItems.length > 0 && (
                   <div className="space-y-1 pt-2 border-t border-slate-100 mt-2">
                     <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 mb-2">Catalogue Général (Prêt pour Importation)</p>
-                    {filteredCatalogItems.map(item => (
-                      <button key={item.id} type="button" onClick={() => addCatalogItem(item)} className="w-full text-left p-4 hover:bg-indigo-50/50 rounded-xl border border-dashed border-indigo-200 hover:border-indigo-300 transition-all group/item flex items-center justify-between">
-                        <div>
-                          <p className="font-black text-base text-slate-900 group-hover/item:text-indigo-950 transition-colors uppercase tracking-tight">
-                            {item.designation}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">{item.reference}</span>
-                            <span className="text-[8px] font-black bg-indigo-50 text-indigo-600 border border-indigo-100 px-1.5 py-0.25 rounded uppercase tracking-wider">
-                              Non instancié ici
-                            </span>
+                    {filteredCatalogItems.map((item, idx) => {
+                      const absoluteIndex = sortedArticles.length + idx;
+                      const isFocused = absoluteIndex === focusedIndex;
+                      return (
+                        <button 
+                          key={item.id} 
+                          type="button" 
+                          onClick={() => addCatalogItem(item)} 
+                          className={cn(
+                            "w-full text-left p-4 rounded-xl border transition-all group/item flex items-center justify-between",
+                            isFocused 
+                              ? "bg-indigo-50 border-indigo-300 shadow-sm"
+                              : "border-dashed border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50/50"
+                          )}
+                        >
+                          <div>
+                            <p className="font-black text-base text-slate-900 group-hover/item:text-indigo-950 transition-colors uppercase tracking-tight">
+                              {item.designation}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">{item.reference}</span>
+                              <span className="text-[8px] font-black bg-indigo-50 text-indigo-600 border border-indigo-100 px-1.5 py-0.25 rounded uppercase tracking-wider">
+                                Non instancié ici
+                              </span>
+                            </div>
                           </div>
-                        </div>
-                        <span className="text-[10px] font-black text-indigo-600 bg-white border border-indigo-200 px-3 py-1.5 rounded-lg group-hover/item:bg-indigo-600 group-hover/item:text-white transition-all uppercase flex-shrink-0">
-                          + Importer
-                        </span>
-                      </button>
-                    ))}
+                          <span className="text-[10px] font-black text-indigo-600 bg-white border border-indigo-200 px-3 py-1.5 rounded-lg group-hover/item:bg-indigo-600 group-hover/item:text-white transition-all uppercase flex-shrink-0">
+                            + Importer
+                          </span>
+                        </button>
+                      );
+                    })}
                   </div>
                 )}
 
@@ -867,41 +885,62 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                       </td>
                       {type === 'SORTIE' && !isMachineRelated && (
                         <td className="py-6 px-4">
-                          <select 
-                            className="w-full h-12 text-xs font-black px-3 rounded-xl border-2 border-slate-100 bg-white shadow-sm focus:border-sky-500 outline-none"
-                            value={item.beneficiaryId || ''}
-                            onChange={(e) => {
-                              const selectedAgentId = e.target.value;
-                              const selectedAgent = agents.find(a => a.id === selectedAgentId);
-                              if (selectedAgent) {
-                                updateItem(item.lineId, {
-                                  beneficiaryId: selectedAgent.id,
-                                  beneficiaryName: `${selectedAgent.lastname} ${selectedAgent.firstname}`,
-                                  beneficiaryService: selectedAgent.service
-                                });
-                              } else {
-                                updateItem(item.lineId, {
-                                  beneficiaryId: '',
-                                  beneficiaryName: '',
-                                  beneficiaryService: ''
-                                });
-                              }
-                            }}
-                          >
-                            <option value="">SÉLECTIONNER UN TRAVAILLEUR...</option>
-                            {agents.filter(a => a.site === site).map(a => (
-                              <option key={a.id} value={a.id}>
-                                {a.lastname} {a.firstname} ({a.fonction || 'MINEUR'} - {a.service})
-                              </option>
-                            ))}
-                          </select>
+                          <div className="relative">
+                            <select 
+                              className="w-full h-12 text-xs font-black px-3 rounded-xl border-2 border-slate-100 bg-white shadow-sm focus:border-sky-500 outline-none"
+                              value={item.beneficiaryId || ''}
+                              onChange={(e) => {
+                                const selectedAgentId = e.target.value;
+                                const selectedAgent = agents.find(a => a.id === selectedAgentId);
+                                if (selectedAgent) {
+                                  updateItem(item.lineId, {
+                                    beneficiaryId: selectedAgent.id,
+                                    beneficiaryName: `${selectedAgent.lastname} ${selectedAgent.firstname}`,
+                                    beneficiaryService: selectedAgent.service
+                                  });
+                                } else {
+                                  updateItem(item.lineId, {
+                                    beneficiaryId: '',
+                                    beneficiaryName: '',
+                                    beneficiaryService: ''
+                                  });
+                                }
+                              }}
+                            >
+                              <option value="">SÉLECTIONNER UN TRAVAILLEUR...</option>
+                              {agents.filter(a => a.site === site).map(a => (
+                                 <option key={a.id} value={a.id}>
+                                   {a.lastname} {a.firstname} ({a.fonction || 'MINEUR'} - {a.service})
+                                 </option>
+                              ))}
+                            </select>
+                            {item.beneficiaryId && globalBeneficiaryId && item.beneficiaryId !== globalBeneficiaryId && (
+                              <span className="text-[9px] font-black text-amber-600 uppercase bg-amber-50 px-2 py-0.5 rounded border border-amber-200/50 mt-1.5 inline-block">
+                                ⚠ Bénéficiaire Spécifique (dérogatoire)
+                              </span>
+                            )}
+                          </div>
                         </td>
                       )}
-                      <td className="py-6 px-4 text-right font-black text-sm text-slate-800 font-mono">
-                        {formatCurrency(item.price)}
+                      <td className="py-6 px-4 text-right">
+                        {type === 'ENTREE' ? (
+                          <input 
+                            type="number" 
+                            min="0"
+                            step="any"
+                            className="w-28 h-12 text-right p-3 rounded-xl border-2 border-slate-100 font-black text-sm bg-white focus:border-sky-500 outline-none font-mono" 
+                            value={item.price} 
+                            onChange={(e) => updateItem(item.lineId, { price: Number(e.target.value) })} 
+                          />
+                        ) : (
+                          <span className="font-black text-sm text-slate-800 font-mono">
+                            {formatCurrency(item.price)}
+                          </span>
+                        )}
                       </td>
                       <td className="py-6 px-4">
                         <input 
+                          id={`qty-${item.lineId}`}
                           type="number" 
                           min="1" 
                           className="w-full h-12 text-center p-4 rounded-xl border-2 border-slate-100 font-black text-lg bg-white focus:border-sky-500 outline-none" 

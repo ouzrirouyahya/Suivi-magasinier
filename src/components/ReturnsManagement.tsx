@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   RotateCcw, 
   Search, 
@@ -8,7 +8,14 @@ import {
   CheckCircle, 
   XCircle, 
   History,
-  AlertCircle
+  AlertCircle,
+  TrendingDown,
+  Wrench,
+  Ban,
+  ArrowRight,
+  Filter,
+  Check,
+  ChevronDown
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { Mouvement, Article } from '../types';
@@ -16,179 +23,580 @@ import { cn, formatDate, generateId, formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
 
 export function ReturnsManagement() {
-  const { mouvements, articles, addMouvement } = useInventory();
-  const [searchTerm, setSearchTerm] = useState('');
+  const { mouvements, articles, addMouvement, agents, currentSite } = useInventory();
+  
+  // Articles search states for predictive auto-complete bar
+  const [articleSearchQuery, setArticleSearchQuery] = useState('');
+  const [showArticleDropdown, setShowArticleDropdown] = useState(false);
   const [selectedArticleId, setSelectedArticleId] = useState('');
-  const [returnQty, setReturnQty] = useState(1);
+  
+  // Agent search & selection states
+  const [agentSearchQuery, setAgentSearchQuery] = useState('');
+  const [showAgentDropdown, setShowAgentDropdown] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState('');
+
+  // Saisie Quantité + Motif + État
+  const [returnQty, setReturnQty] = useState<number | ''>(1);
   const [reason, setReason] = useState('');
   const [condition, setCondition] = useState<'NEUF' | 'BON' | 'MAUVAIS' | 'HORS_SERVICE'>('BON');
 
-  const recentReturns = mouvements.filter(m => m.type === 'RETOUR').slice(0, 10);
+  // Search in History & Filter State
+  const [historySearchQuery, setHistorySearchQuery] = useState('');
+  const [conditionFilter, setConditionFilter] = useState<'ALL' | 'NEUF' | 'BON' | 'MAUVAIS' | 'HORS_SERVICE'>('ALL');
 
+  // Resolved article and agent objects
+  const selectedArticle = useMemo(() => {
+    return articles.find(a => a.id === selectedArticleId);
+  }, [articles, selectedArticleId]);
+
+  const selectedAgent = useMemo(() => {
+    return agents.find(a => a.id === selectedAgentId);
+  }, [agents, selectedAgentId]);
+
+  // Filtering matching articles for layout search
+  const matchingArticles = useMemo(() => {
+    if (!articleSearchQuery.trim()) return [];
+    const query = articleSearchQuery.toLowerCase();
+    return articles.filter(a => 
+      (currentSite === 'ALL' ? true : a.site === currentSite) && a.active &&
+      (a.designation.toLowerCase().includes(query) || a.ref.toLowerCase().includes(query))
+    ).slice(0, 5); // Limit to top 5 hits
+  }, [articles, articleSearchQuery, currentSite]);
+
+  // Filtering matching agents for selection search
+  const matchingAgents = useMemo(() => {
+    if (!agentSearchQuery.trim()) return [];
+    const query = agentSearchQuery.toLowerCase();
+    return agents.filter(a => 
+      (currentSite === 'ALL' ? true : a.site === currentSite) &&
+      (`${a.lastname} ${a.firstname}`.toLowerCase().includes(query) || (a.service?.toLowerCase() || '').includes(query))
+    ).slice(0, 5);
+  }, [agents, agentSearchQuery, currentSite]);
+
+  // Handle return transaction
   const handleReturn = async () => {
-    if (!selectedArticleId || returnQty <= 0 || !reason) {
-      toast.error("Données de retour incomplètes");
+    if (!selectedArticleId) {
+      toast.error("Veuillez sélectionner un article de rechange.");
       return;
     }
 
-    const article = articles.find(a => a.id === selectedArticleId);
-    if (!article) return;
+    const qty = Number(returnQty);
+    if (isNaN(qty) || qty <= 0) {
+      toast.error("Veuillez renseigner une quantité valide supérieure à 0.");
+      return;
+    }
+
+    if (!reason.trim()) {
+      toast.error("Veuillez renseigner la justification opérationnelle du retour.");
+      return;
+    }
+
+    const articleObj = articles.find(a => a.id === selectedArticleId);
+    if (!articleObj) {
+      toast.error("Impossible de retrouver l'article.");
+      return;
+    }
+
+    // Build notes block to include supervisor agent tracking clearly
+    const emitterString = selectedAgent 
+      ? `Émetteur: ${selectedAgent.lastname} ${selectedAgent.firstname} (Service: ${selectedAgent.service || 'MINES'})` 
+      : 'Émetteur: Agent Mineur non spécifié';
+    const finalNotes = `État: ${condition} - ${emitterString} - Motif: ${reason}`;
 
     const newMouvement: Mouvement = {
       id: generateId(),
-      site: article.site,
+      site: articleObj.site,
       date: new Date().toISOString(),
       type: 'RETOUR',
       reference: `RET-${Date.now().toString().slice(-6)}`,
-      items: [{ articleId: selectedArticleId, quantity: returnQty, price: article.price || 0 }],
-      notes: `Condition: ${condition} - Raison: ${reason}`,
-      status: 'COMPLETE'
+      items: [{ articleId: selectedArticleId, quantity: qty, price: articleObj.price || 0 }],
+      notes: finalNotes,
+      status: 'COMPLETE',
+      beneficiaire: selectedAgent ? `${selectedAgent.lastname} ${selectedAgent.firstname}` : undefined
     };
 
     try {
       await addMouvement(newMouvement);
-      toast.success("Retour enregistré et stock mis à jour");
+      toast.success("Retour réintégré avec succès. Les stocks physiques ont été mis à jour.");
       resetForm();
     } catch (err) {
-      toast.error("Erreur lors du retour");
+      toast.error("Erreur technique lors de la validation du retour.");
+      console.error(err);
     }
   };
 
   const resetForm = () => {
     setSelectedArticleId('');
+    setSelectedAgentId('');
+    setArticleSearchQuery('');
+    setAgentSearchQuery('');
     setReturnQty(1);
     setReason('');
+    setCondition('BON');
   };
 
+  // Filter history of returns
+  const filteredMouvements = useMemo(() => {
+    return mouvements.filter(m => {
+      if (m.type !== 'RETOUR') return false;
+      if (currentSite !== 'ALL' && m.site !== currentSite) return false;
+
+      // Extract details from notes and metadata for state matching
+      const notesLower = m.notes?.toLowerCase() || '';
+
+      // Match condition filter
+      if (conditionFilter !== 'ALL') {
+        const condTypeStr = `état: ${conditionFilter}`.toLowerCase();
+        const fallbackCondStr = `condition: ${conditionFilter}`.toLowerCase();
+        if (!notesLower.includes(condTypeStr) && !notesLower.includes(fallbackCondStr)) {
+          return false;
+        }
+      }
+
+      // Match search query
+      if (historySearchQuery.trim()) {
+        const word = historySearchQuery.toLowerCase();
+        const firstItem = m.items[0];
+        const article = articles.find(a => a.id === firstItem?.articleId);
+        
+        const matchRef = article?.ref.toLowerCase().includes(word) || false;
+        const matchDes = article?.designation.toLowerCase().includes(word) || false;
+        const matchNotes = notesLower.includes(word);
+        const matchId = m.reference?.toLowerCase().includes(word) || false;
+
+        if (!matchRef && !matchDes && !matchNotes && !matchId) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [mouvements, articles, currentSite, conditionFilter, historySearchQuery]);
+
+  // Quick Stats
+  const returnStats = useMemo(() => {
+    const siteReturns = mouvements.filter(m => m.type === 'RETOUR' && (currentSite === 'ALL' ? true : m.site === currentSite));
+    return {
+      total: siteReturns.length,
+      neuf: siteReturns.filter(m => (m.notes || '').toLowerCase().includes('neuf')).length,
+      bon: siteReturns.filter(m => (m.notes || '').toLowerCase().includes('bon')).length,
+      repair: siteReturns.filter(m => (m.notes || '').toLowerCase().includes('mauvais')).length,
+      scrap: siteReturns.filter(m => (m.notes || '').toLowerCase().includes('hors_service')).length
+    };
+  }, [mouvements, currentSite]);
+
+  // Visually routing direction helper block based on the active condition state.
+  const visualRouterObj = useMemo(() => {
+    switch (condition) {
+      case 'NEUF':
+        return {
+          title: "Réintégration Stock (Direct)",
+          desc: "L'article est neuf dans son emballage d'origine. Il retourne directement dans les casiers principaux de stockage et redevient immédiatement disponible à la commande.",
+          color: "border-emerald-500 bg-emerald-50/20 text-emerald-800",
+          icon: <CheckCircle className="w-5 h-5 text-emerald-600" />,
+          target: "Rayonnages Principaux / Stock Actif"
+        };
+      case 'BON':
+        return {
+          title: "Réintégration Stock (Re-certification)",
+          desc: "L'article est en bon état général après test visuel par le magasinier. Il retourne dans le stock usuel après réinscription directe.",
+          color: "border-sky-500 bg-sky-50/20 text-sky-800",
+          icon: <CheckCircle className="w-5 h-5 text-sky-600" />,
+          target: "Rayonnages Principaux / Pièces Certifiées"
+        };
+      case 'MAUVAIS':
+        return {
+          title: "Aiguillage Atelier & Maintenance",
+          desc: "L'article est endommagé mais réparable. Il sera mis de côté dans la zone latérale d'entretien de l'atelier pour réparation ou reconfiguration ultérieure.",
+          color: "border-amber-500 bg-amber-50/20 text-amber-800",
+          icon: <Wrench className="w-5 h-5 text-amber-600 animate-bounce" />,
+          target: "Zone Atelier de Transit (Usinage / Ajustage)"
+        };
+      case 'HORS_SERVICE':
+        return {
+          title: "Transfert Quarantaine & Rebut",
+          desc: "L'article est irrécupérable / dangereux à l'usage (usure critique). Il est placé en zone d'exclusion dérogatoire de rebut en attente d'incinération ou d'évacuation physique du site.",
+          color: "border-rose-500 bg-rose-50/20 text-rose-800",
+          icon: <Ban className="w-5 h-5 text-rose-600" />,
+          target: "Benne à Rebuts & Quarantaine Administrative"
+        };
+    }
+  }, [condition]);
+
   return (
-    <div className="space-y-6">
-      <header>
-        <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
-          <div className="p-2 bg-emerald-100 rounded-xl">
-            <RotateCcw className="w-6 h-6 text-emerald-600" />
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {/* Page Header */}
+      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
+            <div className="p-2.5 bg-sky-100 rounded-xl">
+              <RotateCcw className="w-6 h-6 text-sky-600" />
+            </div>
+            Retours Chantiers & Ateliers
+          </h2>
+          <p className="text-slate-500 font-bold text-xs mt-1 uppercase tracking-wider">
+            Réintégration de matériel, gestion d'atelier de maintenance et suivi de rebuts d'actifs.
+          </p>
+        </div>
+        
+        {/* Quick count visualizers */}
+        <div className="flex gap-2.5">
+          <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl text-center">
+            <span className="block text-[8px] font-black text-slate-400 uppercase">Activité sur site</span>
+            <span className="text-xs font-black text-slate-800">{returnStats.total} Retours</span>
           </div>
-          Gestion des Retours
-        </h2>
-        <p className="text-slate-500 font-medium text-sm mt-1">
-          Réintégration de matériel non utilisé ou gestion des rebuts.
-        </p>
+          <div className="bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl text-center">
+            <span className="block text-[8px] font-black text-emerald-600 uppercase">Bons / Neufs</span>
+            <span className="text-xs font-black text-emerald-800">{(returnStats.neuf + returnStats.bon)} articles</span>
+          </div>
+          <div className="bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-xl text-center">
+            <span className="block text-[8px] font-black text-rose-600 uppercase">Perte (Rebut)</span>
+            <span className="text-xs font-black text-rose-800">{returnStats.scrap} rebutés</span>
+          </div>
+        </div>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Return Form */}
-        <div className="lg:col-span-1 space-y-6">
-          <div className="card p-6 bg-white border-slate-100 shadow-sm border-t-4 border-t-emerald-500">
-            <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-6 flex items-center gap-2">
-              Enregistrer un Retour
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Return creation workflow column */}
+        <div className="lg:col-span-1 space-y-4">
+          <div className="card p-5 bg-white border border-slate-100 shadow-sm border-t-4 border-t-sky-500 rounded-2xl">
+            <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4 flex items-center gap-2">
+              <RotateCcw className="w-4 h-4 text-sky-500" />
+              Saisie de Réintégration
             </h3>
             
             <div className="space-y-4">
-              <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Article</label>
-                <select 
-                  value={selectedArticleId}
-                  onChange={(e) => setSelectedArticleId(e.target.value)}
-                  className="w-full h-11 bg-slate-50 border border-slate-100 rounded-xl px-4 font-bold text-sm"
-                >
-                  <option value="">Sélectionner un article...</option>
-                  {articles.map(a => <option key={a.id} value={a.id}>{a.ref} - {a.designation}</option>)}
-                </select>
+              {/* Predictive Search Field for Articles */}
+              <div className="relative">
+                <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Recherche Article (Ref, Nom...)</label>
+                {selectedArticle ? (
+                  <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl relative flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{selectedArticle.designation}</p>
+                      <p className="text-[10px] font-mono font-bold text-slate-400 mt-0.5">REF: {selectedArticle.ref} — Casier: {selectedArticle.localisation || 'A1'}</p>
+                      <span className="text-[9px] font-black text-sky-600 bg-sky-100/40 px-1.5 py-0.5 mt-1 rounded uppercase tracking-wider inline-block">
+                        Stock actuel: {selectedArticle.quantity} {selectedArticle.unit || 'U'}
+                      </span>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedArticleId('');
+                        setArticleSearchQuery('');
+                      }}
+                      className="text-[10px] font-black uppercase text-rose-500 hover:bg-rose-50 px-2 py-1.5 rounded-lg border border-rose-150"
+                    >
+                      Changer
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Rechercher par référence ou désignation..."
+                        className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 text-xs font-black outline-none placeholder:font-bold focus:border-sky-500 bg-white"
+                        value={articleSearchQuery}
+                        onChange={(e) => {
+                          setArticleSearchQuery(e.target.value);
+                          setShowArticleDropdown(true);
+                        }}
+                        onFocus={() => setShowArticleDropdown(true)}
+                      />
+                    </div>
+                    {/* Predictive hits popup panel */}
+                    {showArticleDropdown && articleSearchQuery && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100 overflow-hidden">
+                        {matchingArticles.length > 0 ? matchingArticles.map(a => (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedArticleId(a.id);
+                              setShowArticleDropdown(false);
+                            }}
+                            className="w-full p-2.5 text-left text-xs text-slate-900 font-bold hover:bg-slate-50 transition-colors flex justify-between items-center"
+                          >
+                            <div>
+                              <p className="font-extrabold uppercase text-[11px] text-slate-800">{a.designation}</p>
+                              <span className="text-[9px] font-mono text-slate-400 uppercase">REF: {a.ref} — SITE: {a.site}</span>
+                            </div>
+                            <span className="bg-slate-100 px-2 py-1 rounded text-[9px] font-black text-slate-500">
+                              QS: {a.quantity}
+                            </span>
+                          </button>
+                        )) : (
+                          <p className="p-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Aucun produit trouvé</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              {/* Emergent select supervisor agent emitter */}
+              <div className="relative">
+                <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">
+                  Mineur / Agent Émetteur principal
+                </label>
+                {selectedAgent ? (
+                  <div className="p-3 bg-slate-50 border border-slate-250/55 rounded-xl relative flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-slate-440" />
+                      <div>
+                        <p className="text-xs font-black text-slate-800 uppercase">{selectedAgent.lastname} {selectedAgent.firstname}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">{selectedAgent.service || 'Mines'} — {selectedAgent.fonction || 'Opérateur'}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => {
+                        setSelectedAgentId('');
+                        setAgentSearchQuery('');
+                      }}
+                      className="text-[10px] font-black uppercase text-indigo-500 hover:bg-indigo-50 px-2 py-1.5 rounded-lg border border-indigo-150"
+                    >
+                      Changer
+                    </button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="relative">
+                      <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                      <input 
+                        type="text" 
+                        placeholder="Rechercher le travailleur émetteur..."
+                        className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 text-xs font-black outline-none placeholder:font-bold focus:border-sky-500 bg-white"
+                        value={agentSearchQuery}
+                        onChange={(e) => {
+                          setAgentSearchQuery(e.target.value);
+                          setShowAgentDropdown(true);
+                        }}
+                        onFocus={() => setShowAgentDropdown(true)}
+                      />
+                    </div>
+                    {/* Predictive worker popunder */}
+                    {showAgentDropdown && agentSearchQuery && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-xl shadow-lg divide-y divide-slate-100 overflow-hidden">
+                        {matchingAgents.length > 0 ? matchingAgents.map(a => (
+                          <button
+                            key={a.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedAgentId(a.id);
+                              setShowAgentDropdown(false);
+                            }}
+                            className="w-full p-2.5 text-left text-xs hover:bg-slate-50 transition-colors flex justify-between items-center"
+                          >
+                            <div>
+                              <p className="font-extrabold text-slate-850 uppercase">{a.lastname} {a.firstname}</p>
+                              <span className="text-[9px] font-bold text-slate-450 uppercase">{a.fonction || 'Opérateur'} — {a.service}</span>
+                            </div>
+                            <span className="text-[10px] font-black text-sky-600 bg-sky-50 px-2 py-0.5 rounded">
+                              {a.site}
+                            </span>
+                          </button>
+                        )) : (
+                          <p className="p-3 text-[10px] font-black uppercase text-slate-400 tracking-wider text-center">Aucun travailleur répertorié</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Quantité & État inputs */}
+              <div className="grid grid-cols-2 gap-3.5">
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Quantité</label>
+                  <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Quantité</label>
                   <input 
                     type="number"
-                    value={returnQty}
-                    onChange={(e) => setReturnQty(parseInt(e.target.value))}
-                    className="w-full h-11 bg-slate-50 border border-slate-100 rounded-xl px-4 font-bold text-sm"
+                    min="1"
+                    value={returnQty === '' ? '' : returnQty}
+                    onChange={(e) => setReturnQty(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
+                    className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 font-black text-xs outline-none focus:border-sky-500 bg-white"
                   />
                 </div>
                 <div>
-                  <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">État</label>
+                  <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">État constaté</label>
                   <select 
                     value={condition}
                     onChange={(e) => setCondition(e.target.value as any)}
-                    className="w-full h-11 bg-slate-50 border border-slate-100 rounded-xl px-4 font-bold text-sm"
+                    className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-3 font-black text-xs outline-none focus:border-sky-500 bg-white"
                   >
-                    <option value="NEUF">Neuf</option>
-                    <option value="BON">Bon</option>
-                    <option value="MAUVAIS">Mauvais</option>
-                    <option value="HORS_SERVICE">H.S</option>
+                    <option value="NEUF">NEUF</option>
+                    <option value="BON">BON (UTILISÉ)</option>
+                    <option value="MAUVAIS">MAUVAIS (A ATELIER)</option>
+                    <option value="HORS_SERVICE">HORS SERVICE (REBUT)</option>
                   </select>
                 </div>
               </div>
 
+              {/* Interactive Visual Routing panel */}
+              <div className={cn("p-3.5 border rounded-xl space-y-2 transition-all duration-300", visualRouterObj.color)}>
+                <div className="flex items-center gap-2 font-black text-xs uppercase">
+                  {visualRouterObj.icon}
+                  <span>{visualRouterObj.title}</span>
+                </div>
+                <p className="text-[10px] leading-relaxed font-bold opacity-90">{visualRouterObj.desc}</p>
+                <div className="border-t border-dashed border-slate-200/50 pt-2 flex items-center justify-between text-[9px] font-black uppercase">
+                  <span>Destination Target:</span>
+                  <span className="bg-white/80 px-2 py-0.5 rounded font-mono border border-slate-200/50">{visualRouterObj.target}</span>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Justification</label>
+                <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Justification Opérationnelle</label>
                 <textarea 
                    rows={3}
                    value={reason}
                    onChange={(e) => setReason(e.target.value)}
-                   className="w-full bg-slate-50 border border-slate-100 rounded-xl p-4 font-bold text-sm"
-                   placeholder="Ex: Surplus de chantier / Erreur de commande..."
+                   className="w-full bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs font-black outline-none focus:border-sky-500 bg-white placeholder:font-bold"
+                   placeholder="Renseignez le motif du retour (ex: surplus de tir, erreur de dotation, casse prématurée)..."
                 />
               </div>
 
               <button 
                 onClick={handleReturn}
-                className="w-full btn bg-emerald-600 text-white h-12 rounded-xl font-black uppercase tracking-widest text-xs shadow-lg shadow-emerald-100 mt-4"
+                className="w-full btn bg-slate-900 border border-slate-900 text-white h-11 rounded-xl font-black uppercase tracking-widest text-xs shadow-md shadow-slate-200/50 hover:bg-sky-600 hover:border-sky-600 transition-all flex items-center justify-center gap-2"
               >
-                Valider Réintégration
+                <Check className="w-4 h-4" />
+                Valider la Réintégration
               </button>
             </div>
           </div>
-
-          <div className="card p-5 bg-blue-50/50 border-blue-100 flex gap-3">
-             <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
-             <p className="text-[10px] font-bold text-blue-700 uppercase leading-relaxed">
-               Les retours augmentent directement le stock physique sur le site concerné. Les pièces marquées H.S sont automatiquement mises en quarantaine.
-             </p>
-          </div>
         </div>
 
-        {/* Returns History */}
+        {/* History Column */}
         <div className="lg:col-span-2 space-y-4">
-           <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest mb-2 flex items-center gap-2">
-            <History className="w-4 h-4" /> Historique des Retours
-          </h3>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <h3 className="text-sm font-black uppercase text-slate-400 tracking-widest flex items-center gap-2">
+              <History className="w-4 h-4 text-sky-500" /> Historique de Traçabilité des Retours
+            </h3>
+            
+            {/* Quick search inside list */}
+            <div className="relative min-w-[200px]">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
+              <input
+                type="text"
+                placeholder="Rechercher code, pièce..."
+                className="bg-white border border-slate-200 h-8 rounded-lg pl-8 pr-2.5 text-[10px] font-black outline-none placeholder:font-medium text-slate-800 focus:border-sky-500"
+                value={historySearchQuery}
+                onChange={(e) => setHistorySearchQuery(e.target.value)}
+              />
+            </div>
+          </div>
+
+          {/* Quick Filters Pill Toolbar */}
+          <div className="flex flex-wrap gap-1.5 p-1.5 bg-slate-100 rounded-xl border border-slate-200/50 w-fit">
+            <button
+              onClick={() => setConditionFilter('ALL')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                conditionFilter === 'ALL' ? "bg-white text-slate-950 shadow-sm" : "text-slate-500 hover:bg-slate-50"
+              )}
+            >
+              Tous
+            </button>
+            <button
+              onClick={() => setConditionFilter('NEUF')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                conditionFilter === 'NEUF' ? "bg-white text-emerald-700 shadow-sm" : "text-slate-500 hover:bg-slate-50"
+              )}
+            >
+              Neufs
+            </button>
+            <button
+              onClick={() => setConditionFilter('BON')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                conditionFilter === 'BON' ? "bg-white text-sky-700 shadow-sm" : "text-slate-500 hover:bg-slate-50"
+              )}
+            >
+              Bons
+            </button>
+            <button
+              onClick={() => setConditionFilter('MAUVAIS')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                conditionFilter === 'MAUVAIS' ? "bg-white text-amber-700 shadow-sm" : "text-slate-500 hover:bg-slate-50"
+              )}
+            >
+              À Atelier
+            </button>
+            <button
+              onClick={() => setConditionFilter('HORS_SERVICE')}
+              className={cn(
+                "px-2.5 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all",
+                conditionFilter === 'HORS_SERVICE' ? "bg-white text-rose-700 shadow-sm" : "text-slate-500 hover:bg-slate-50"
+              )}
+            >
+              Exclus (HS)
+            </button>
+          </div>
+
           <div className="bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
               <table className="w-full border-collapse">
                 <thead>
-                  <tr className="bg-slate-50/50 border-b border-slate-100">
-                    <th className="text-[10px] font-black text-slate-400 uppercase p-4 text-left">Date</th>
-                    <th className="text-[10px] font-black text-slate-400 uppercase p-4 text-left">Article</th>
-                    <th className="text-[10px] font-black text-slate-400 uppercase p-4 text-center">Qté</th>
-                    <th className="text-[10px] font-black text-slate-400 uppercase p-4 text-left">Notes</th>
-                    <th className="text-[10px] font-black text-slate-400 uppercase p-4 text-right">Valeur</th>
+                  <tr className="bg-slate-50/50 border-b border-slate-200/70 text-left">
+                    <th className="text-[9px] font-black text-slate-400 uppercase p-3.5 tracking-wider w-24">Bordereau (RET)</th>
+                    <th className="text-[9px] font-black text-slate-400 uppercase p-3.5 tracking-wider w-28">Date Réception</th>
+                    <th className="text-[9px] font-black text-slate-400 uppercase p-3.5 tracking-wider">Article de Rechange</th>
+                    <th className="text-[9px] font-black text-slate-400 text-center uppercase p-3.5 tracking-wider w-16">Quantité</th>
+                    <th className="text-[9px] font-black text-slate-400 uppercase p-3.5 tracking-wider">Logs & Justification</th>
+                    <th className="text-[9px] font-black text-slate-400 uppercase p-3.5 tracking-wider text-right w-24">Valeur Actifs</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-slate-50">
-                   {recentReturns.length > 0 ? recentReturns.map(m => {
+                <tbody className="divide-y divide-slate-100/90">
+                   {filteredMouvements.length > 0 ? filteredMouvements.map(m => {
                       const item = m.items[0];
-                      const article = articles.find(a => a.id === item?.articleId);
+                      const article = articles.find(a => a.id === item?.articleId) || articles.find(a => a.ref === item?.articleId);
+                      
+                      // Highlight condition badges
+                      const notesLower = (m.notes || '').toLowerCase();
+                      let statusBadge = <span className="bg-slate-100 text-slate-700 border border-slate-200/60 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">BON</span>;
+                      
+                      if (notesLower.includes('neuf')) {
+                        statusBadge = <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/40 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">NEUF</span>;
+                      } else if (notesLower.includes('mauvais')) {
+                        statusBadge = <span className="bg-amber-50 text-amber-700 border border-amber-200/40 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">MAUVAIS</span>;
+                      } else if (notesLower.includes('hors_service') || notesLower.includes('h.s')) {
+                        statusBadge = <span className="bg-rose-50 text-rose-700 border border-rose-200/40 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">H.S.</span>;
+                      }
+
                       return (
-                        <tr key={m.id} className="hover:bg-slate-50 transition-colors group">
-                           <td className="p-4 text-[10px] font-bold text-slate-500">{formatDate(m.date)}</td>
-                           <td className="p-4">
-                              <div className="text-xs font-black text-slate-900 line-clamp-1">{article?.designation || 'Article Inconnu'}</div>
-                              <div className="text-[10px] font-bold text-slate-400">{article?.ref}</div>
+                        <tr key={m.id} className="hover:bg-slate-50/50 transition-colors group">
+                           <td className="p-3.5 font-mono text-[10px] font-black text-slate-900 uppercase">
+                             {m.reference || `RET-${m.id.slice(-6)}`}
                            </td>
-                           <td className="p-4 text-center">
-                              <span className="bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full text-[10px] font-black">+{item?.quantity}</span>
+                           <td className="p-3.5 text-[10px] font-bold text-slate-450 uppercase">
+                             {formatDate(m.date)}
                            </td>
-                           <td className="p-4 text-[10px] font-medium text-slate-500 italic max-w-xs truncate">{m.notes}</td>
-                           <td className="p-4 text-right text-xs font-black text-slate-900">
-                              {formatCurrency(item?.quantity * (item?.price || 0))}
+                           <td className="p-3.5">
+                              <div className="font-bold text-slate-800 text-xs line-clamp-1">{article?.designation || 'Pièce Reçue'}</div>
+                              <div className="text-[9px] font-bold font-mono text-slate-400 uppercase tracking-tighter">REF: {article?.ref || item?.articleId}</div>
+                           </td>
+                           <td className="p-3.5 text-center">
+                              <span className="bg-emerald-50 text-emerald-700 border border-emerald-100 px-2 py-0.5 rounded text-[10px] font-black font-mono">
+                                +{item?.quantity}
+                              </span>
+                           </td>
+                           <td className="p-3.5 text-[10px] font-semibold text-slate-500 max-w-xs">
+                              <div className="flex items-center gap-1 flex-wrap">
+                                {statusBadge}
+                                <span className="italic line-clamp-2 leading-relaxed">{m.notes?.replace(/Condition:\s*[A-Z_]+\s*-\s*/i, '')}</span>
+                              </div>
+                           </td>
+                           <td className="p-3.5 text-right text-xs font-black text-slate-900 font-mono">
+                              {formatCurrency(item?.quantity * (item?.price || article?.price || 0))}
                            </td>
                         </tr>
                       );
                    }) : (
                       <tr>
-                        <td colSpan={5} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest italic">
-                           Aucun retour enregistré.
+                        <td colSpan={6} className="p-12 text-center text-slate-400 font-bold uppercase tracking-widest italic text-[11px]">
+                           Aucun retour correspondant aux filtres actifs de traçabilité.
                         </td>
                       </tr>
                    )}

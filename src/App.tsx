@@ -517,6 +517,7 @@ export default function App() {
               currentSite={currentSite}
               articles={articles}
               transferts={transferts}
+              currentUser={currentUser}
               onAddTransfert={async (t) => {
                 try {
                   await toast.promise(addTransfert(t), {
