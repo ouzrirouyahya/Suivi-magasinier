@@ -640,9 +640,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     setAvgTxDuration(prev => Math.round(0.15 * duration + 0.85 * prev));
   };
 
-  const isNetworkError = (msgMsg: string): boolean => {
+  const isNetworkError = (msgMsg: string, errorCode?: string): boolean => {
     const msg = msgMsg.toLowerCase();
-    return msg.includes('network') || msg.includes('offline') || msg.includes('failed-precondition') || msg.includes('unavailable') || msg.includes('timeout') || msg.includes('internet');
+    
+    // Codes Firestore qui indiquent une VRAIE coupure réseau
+    const networkCodes = ['unavailable', 'deadline-exceeded'];
+    if (errorCode && networkCodes.includes(errorCode)) {
+      return true;
+    }
+    
+    // Vérification textuelle stricte (mots-clés réseau uniquement,
+    // SANS 'failed-precondition' qui est une erreur de règles/logique)
+    const networkKeywords = [
+      'network error', 'net::err', 'offline', 'no internet', 
+      'connexion internet', 'délai d\'attente dépassé', 'fetch failed'
+    ];
+    return networkKeywords.some(kw => msg.includes(kw));
   };
 
   // Automatic FSM Queue background retry processor & startup Self-Healing (Rule 4)
@@ -1299,6 +1312,15 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     const movementId = mouvement.id || generateSecureUUID();
     registerPendingOp(movementId);
     try {
+      console.log('[DIAGNOSTIC MOUVEMENT]', {
+        currentUserEmail: currentUser?.email,
+        currentUserRole: currentUser?.role,
+        currentUserAssignedSite: currentUser?.assignedSite,
+        currentUserActive: currentUser?.active,
+        mouvementSite: mouvement.site,
+        mouvementType: mouvement.type,
+        mouvementItems: mouvement.items,
+      });
       await runTransaction(db, async (transaction) => {
         // Idemptotency check
         const movementRef = doc(db, 'mouvements', movementId);
@@ -1467,14 +1489,18 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (err: any) {
+        console.error('[DIAGNOSTIC ERREUR MOUVEMENT]', {
+          errorCode: err.code,
+          errorMessage: err.message,
+          errorFull: err,
+        });
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
+        const errCode = err.code || '';
         
-        if (isNetworkError(errMsg)) {
+        if (isNetworkError(errMsg, errCode)) {
           addTechLog('WARN', `Panne réseau détectée. Mouvement mis en file de reprise : ${errMsg}`, duration);
           
-
-
           // Enqueue directly using SRE system-hardened RetryQueueFSM with immutable intentId
           RetryQueueFSM.enqueue('MOUVEMENT', mouvement, intentId);
           refreshFSMStates();
@@ -1483,7 +1509,16 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         } else {
           addTechLog('ERROR', `Échec critique mouvement de stock : ${errMsg}`, duration);
           setTxStats(s => ({ ...s, failed: s.failed + 1 }));
-          throw err;
+          
+          let userMessage = errMsg;
+          if (errCode === 'permission-denied') {
+            userMessage = "Accès refusé : vous n'avez pas les droits pour effectuer cette opération sur ce chantier. Contactez un administrateur.";
+          } else if (errMsg.includes('STOCK_INSUFFISANT')) {
+            userMessage = "Stock insuffisant pour cette opération.";
+          } else if (errMsg.includes('ARTICLE_INTROUVABLE')) {
+            userMessage = "Article introuvable. Il a peut-être été supprimé ou n'existe pas sur ce chantier.";
+          }
+          throw new Error(userMessage);
         }
       } finally {
         activeTxCount.current -= 1;
@@ -1631,8 +1666,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
+        const errCode = err.code || '';
         
-        if (isNetworkError(errMsg)) {
+        if (isNetworkError(errMsg, errCode)) {
           addTechLog('WARN', `Réseau indisponible. Log de maintenance mis en file de reprise : ${errMsg}`, duration);
           
           RetryQueueFSM.enqueue('MAINTENANCE', log, intentId);
@@ -1642,7 +1678,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         } else {
           addTechLog('ERROR', `Échec du log de maintenance : ${errMsg}`, duration);
           setTxStats(s => ({ ...s, failed: s.failed + 1 }));
-          throw err;
+          
+          let userMessage = errMsg;
+          if (errCode === 'permission-denied') {
+            userMessage = "Accès refusé : vous n'avez pas les droits pour effectuer cette opération sur ce chantier. Contactez un administrateur.";
+          }
+          throw new Error(userMessage);
         }
       } finally {
         activeTxCount.current -= 1;
@@ -1797,8 +1838,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
+        const errCode = err.code || '';
         
-        if (isNetworkError(errMsg)) {
+        if (isNetworkError(errMsg, errCode)) {
           addTechLog('WARN', `Réseau déconnecté. Transfert d'envoi mis en file d'attente : ${errMsg}`, duration);
           
           RetryQueueFSM.enqueue('TRANSFERT', t, intentId, t.sourceSite);
@@ -1808,7 +1850,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         } else {
           addTechLog('ERROR', `Échec du transfert d'envoi : ${errMsg}`, duration);
           setTxStats(s => ({ ...s, failed: s.failed + 1 }));
-          throw err;
+          
+          let userMessage = errMsg;
+          if (errCode === 'permission-denied') {
+            userMessage = "Accès refusé : vous n'avez pas les droits pour effectuer cette opération sur ce chantier. Contactez un administrateur.";
+          }
+          throw new Error(userMessage);
         }
       } finally {
         activeTxCount.current -= 1;
@@ -1926,8 +1973,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
+        const errCode = err.code || '';
         
-        if (isNetworkError(errMsg)) {
+        if (isNetworkError(errMsg, errCode)) {
           addTechLog('WARN', `Réseau défectueux. Approbation mise en file d'attente : ${errMsg}`, duration);
           RetryQueueFSM.enqueue('APPROVE_TRANSFERT', { id, approuvePar }, intentId, sourceT?.sourceSite);
           refreshFSMStates();
@@ -1935,7 +1983,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         } else {
           addTechLog('ERROR', `Échec approbation transfert : ${errMsg}`, duration);
           setTxStats(s => ({ ...s, failed: s.failed + 1 }));
-          throw err;
+          
+          let userMessage = errMsg;
+          if (errCode === 'permission-denied') {
+            userMessage = "Accès refusé : vous n'avez pas les droits de versement/validation pour ce chantier. Contactez un administrateur.";
+          }
+          throw new Error(userMessage);
         }
       } finally {
         activeTxCount.current -= 1;
@@ -2225,8 +2278,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
+        const errCode = err.code || '';
         
-        if (isNetworkError(errMsg)) {
+        if (isNetworkError(errMsg, errCode)) {
           addTechLog('WARN', `Réseau déconnecté. Réception de transfert mise en file de reprise : ${errMsg}`, duration);
           
           RetryQueueFSM.enqueue('COMPLETE_TRANSFERT', { id, recepteur, receivedItems, disputeReason }, intentId, sourceT?.targetSite);
@@ -2236,7 +2290,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         } else {
           addTechLog('ERROR', `Échec de la réception de transfert : ${errMsg}`, duration);
           setTxStats(s => ({ ...s, failed: s.failed + 1 }));
-          throw err;
+          
+          let userMessage = errMsg;
+          if (errCode === 'permission-denied') {
+            userMessage = "Accès refusé : vous n'avez pas les droits pour réceptionner sur ce chantier. Contactez un administrateur.";
+          }
+          throw new Error(userMessage);
         }
       } finally {
         activeTxCount.current -= 1;
@@ -2295,8 +2354,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
+        const errCode = err.code || '';
 
-        if (isNetworkError(errMsg)) {
+        if (isNetworkError(errMsg, errCode)) {
           addTechLog('WARN', `Réseau absent. Clôture de transfert mise en attente de synchro.`);
           RetryQueueFSM.enqueue('CLOSE_TRANSFERT', { id, motifCloture }, intentId, sourceT?.targetSite);
           refreshFSMStates();
@@ -2304,7 +2364,12 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         } else {
           addTechLog('ERROR', `Échec clôture transfert : ${errMsg}`);
           setTxStats(s => ({ ...s, failed: s.failed + 1 }));
-          throw err;
+          
+          let userMessage = errMsg;
+          if (errCode === 'permission-denied') {
+            userMessage = "Accès refusé : vous n'avez pas les droits de clôture administrative. Contactez un administrateur.";
+          }
+          throw new Error(userMessage);
         }
       } finally {
         activeTxCount.current -= 1;
