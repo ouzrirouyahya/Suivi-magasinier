@@ -46,6 +46,8 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   const [isCarnetsOpen, setIsCarnetsOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'RUPTURE' | 'CRITIQUE' | 'OPTIMAL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('');
+  const [stockAvailabilityTab, setStockAvailabilityTab] = useState<'AVAILABLE' | 'OUT_OF_STOCK'>('AVAILABLE');
+  const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
   
   useEffect(() => {
     setSearch(initialSearch);
@@ -94,6 +96,32 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
       }, 0);
   }, [mouvements, site, selectedStockType, articles]);
 
+  const availableCount = useMemo(() => {
+    return articles.filter(a => {
+      const matchesSite = site === 'ALL' ? true : a.site === site;
+      const matchesType = selectedStockType === 'ALL' || a.type === selectedStockType;
+      const matchesSearch = matchArticleSearch(a, search);
+      const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
+      const matchesLocation = !locationFilter || (a.location || '').toLowerCase().includes(locationFilter.toLowerCase());
+      const matchesActive = a.active !== false;
+
+      return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesLocation && a.quantity > 0;
+    }).length;
+  }, [articles, site, selectedStockType, search, categoryFilter, locationFilter]);
+
+  const outOfStockCount = useMemo(() => {
+    return articles.filter(a => {
+      const matchesSite = site === 'ALL' ? true : a.site === site;
+      const matchesType = selectedStockType === 'ALL' || a.type === selectedStockType;
+      const matchesSearch = matchArticleSearch(a, search);
+      const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
+      const matchesLocation = !locationFilter || (a.location || '').toLowerCase().includes(locationFilter.toLowerCase());
+      const matchesActive = a.active !== false;
+
+      return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesLocation && a.quantity === 0;
+    }).length;
+  }, [articles, site, selectedStockType, search, categoryFilter, locationFilter]);
+
   const filteredArticles = useMemo(() => {
     return articles.filter(a => {
       const matchesSite = site === 'ALL' ? true : a.site === site;
@@ -102,6 +130,11 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
       const matchesSearch = matchArticleSearch(a, search);
       const matchesCategory = categoryFilter === 'ALL' || a.category === categoryFilter;
       
+      // Availability filter
+      const isAvailable = a.quantity > 0;
+      if (stockAvailabilityTab === 'AVAILABLE' && !isAvailable) return false;
+      if (stockAvailabilityTab === 'OUT_OF_STOCK' && isAvailable) return false;
+
       const status = a.quantity === 0 ? 'RUPTURE' : (a.quantity <= a.minStock ? 'CRITIQUE' : 'OPTIMAL');
       const matchesStatus = statusFilter === 'ALL' || status === statusFilter;
       const matchesLocation = !locationFilter || (a.location || '').toLowerCase().includes(locationFilter.toLowerCase());
@@ -110,7 +143,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
 
       return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation;
     });
-  }, [articles, site, selectedStockType, search, categoryFilter, statusFilter, locationFilter]);
+  }, [articles, site, selectedStockType, search, categoryFilter, statusFilter, locationFilter, stockAvailabilityTab]);
 
   const sortedAndFilteredArticles = useMemo(() => {
     const list = [...filteredArticles];
@@ -232,17 +265,25 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
         </div>
       </header>
 
-      {/* Segmented Selectors for unified stock type switching (replaces 4 screen navigation) */}
-      <div className="p-1.5 bg-slate-100 rounded-2xl border border-slate-200/40 flex flex-wrap gap-1.5 items-center w-full max-w-fit no-print">
+      {/* Premium Selector Cards (replaces small segmented keys) */}
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 no-print">
         {[
-          { value: 'ALL', label: 'Tous les Stocks', icon: Package },
-          { value: 'ENGINS', label: 'Pièces Engins', icon: Wrench },
-          { value: 'PERFORATEURS', label: 'Pièces Perforateurs', icon: Drill },
-          { value: 'CONSOMMABLES', label: 'Consommables & Taillants', icon: Droplets },
-          { value: 'EPI', label: 'EPI', icon: Shield },
+          { value: 'ALL', label: 'Tout le Stock', icon: Package, desc: 'Centralisation globale' },
+          { value: 'ENGINS', label: 'Pièces Engins', icon: Wrench, desc: 'Maintenance engins miniers' },
+          { value: 'PERFORATEURS', label: 'Pièces Perforateurs', icon: Drill, desc: 'Matériel forage & abrasion' },
+          { value: 'CONSOMMABLES', label: 'Consommables & Taillants', icon: Droplets, desc: 'Fluides et taillants forage' },
+          { value: 'EPI', label: 'Équipements EPI', icon: Shield, desc: 'Sécurité terrain & protection' },
         ].map((tab) => {
           const Icon = tab.icon;
           const isActive = selectedStockType === tab.value;
+          
+          // Count active items dynamically for this specific stock category
+          const quantityOfUniqueArticles = articles.filter(a => {
+            const matchesSite = site === 'ALL' ? true : a.site === site;
+            const matchesType = tab.value === 'ALL' ? true : a.type === tab.value;
+            return a.active !== false && matchesSite && matchesType;
+          }).length;
+
           return (
             <button
               key={tab.value}
@@ -251,14 +292,47 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                 setCategoryFilter('ALL');
               }}
               className={cn(
-                "flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer border",
+                "group relative select-none flex flex-col items-start p-5 rounded-2xl transition-all duration-300 transform border text-left cursor-pointer w-full",
                 isActive 
-                  ? "bg-white text-slate-900 border-slate-200 shadow-sm font-black" 
-                  : "bg-transparent text-slate-500 border-transparent hover:text-slate-700"
+                  ? "bg-white border-sky-500 shadow-[0_12px_24px_rgba(14,165,233,0.08)] scale-[1.02] ring-2 ring-sky-500/10" 
+                  : "bg-slate-100/95 hover:bg-slate-200/80 border-slate-200 hover:border-slate-300 hover:scale-[1.01] shadow-[0_2px_4px_rgba(0,0,0,0.01)] text-slate-700"
               )}
             >
-              <Icon className={cn("w-4 h-4", isActive ? "text-sky-600" : "text-slate-400")} />
-              {tab.label}
+              {/* Luminous indicator corner glow & top brand line */}
+              {isActive && (
+                <>
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-500 via-sky-400 to-rose-600 rounded-t-2xl" />
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-sky-400/10 to-rose-600/10 rounded-tr-2xl rounded-bl-[100px] blur-xs pointer-events-none" />
+                </>
+              )}
+              
+              <div className="flex items-center justify-between w-full mb-4">
+                <div className={cn(
+                  "p-3 rounded-xl transition-all",
+                  isActive 
+                    ? "bg-sky-500 text-white shadow-md shadow-sky-500/15" 
+                    : "bg-slate-200/90 text-slate-600 group-hover:bg-slate-300 group-hover:text-slate-800"
+                )}>
+                  <Icon className="w-5 h-5" />
+                </div>
+                
+                <span className={cn(
+                  "text-[10px] font-black uppercase font-mono tracking-wider px-2 py-0.5 rounded-lg",
+                  isActive ? "bg-sky-100 text-sky-800" : "bg-slate-200 text-slate-600 font-bold"
+                )}>
+                  {quantityOfUniqueArticles} Réf
+                </span>
+              </div>
+              
+              <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 leading-none mb-1">
+                {tab.label}
+              </h4>
+              <p className={cn(
+                "text-[10px] font-semibold leading-snug uppercase tracking-tight line-clamp-1",
+                isActive ? "text-slate-600" : "text-slate-500"
+              )}>
+                {tab.desc}
+              </p>
             </button>
           );
         })}
@@ -336,47 +410,117 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
               onChange={(e) => setStatusFilter(e.target.value as any)}
             >
               <option value="ALL">États</option>
-              <option value="OPTIMAL">Stock Optimal</option>
-              <option value="CRITIQUE">Seuil Critique</option>
-              <option value="RUPTURE">Rupture</option>
+              {stockAvailabilityTab === 'AVAILABLE' && (
+                <>
+                  <option value="OPTIMAL">Stock Optimal</option>
+                  <option value="CRITIQUE">Seuil Critique</option>
+                </>
+              )}
+              {stockAvailabilityTab === 'OUT_OF_STOCK' && (
+                <option value="RUPTURE">Rupture</option>
+              )}
             </select>
           </div>
         </div>
       </div>
 
-      {/* Category filter pills - handled separately (filter buttons only) */}
-      {categories.length > 0 && (
-        <div className="flex flex-wrap items-center gap-1.5 p-1 bg-slate-50/85 border border-slate-100 rounded-xl px-4 py-2">
-          <span className="text-xs font-black text-slate-400 uppercase tracking-wider mr-2 flex items-center gap-1.5">
-            <Filter className="w-3.5 h-3.5 text-slate-400" /> Filtrer par Sous-Catégorie :
-          </span>
+      {/* Availability Switcher and Sub-category Filter compact panel */}
+      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 p-1.5 rounded-2xl bg-white border border-slate-100/90 shadow-[0_3px_12px_rgba(0,0,0,0.01)] no-print">
+        {/* Availability Tabs */}
+        <div className="flex gap-2 p-1.5 bg-slate-50/70 rounded-xl border border-slate-150/40 w-fit">
           <button
-            onClick={() => setCategoryFilter('ALL')}
+            onClick={() => {
+              setStockAvailabilityTab('AVAILABLE');
+              setStatusFilter('ALL');
+            }}
             className={cn(
-              "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border cursor-pointer",
-              categoryFilter === 'ALL'
-                ? "bg-sky-600 text-white border-sky-600 shadow-sm"
-                : "bg-white text-slate-400 hover:text-slate-650 hover:bg-slate-50 border-slate-200"
+              "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border",
+              stockAvailabilityTab === 'AVAILABLE'
+                ? "bg-white text-slate-900 border-slate-200 shadow-sm"
+                : "bg-transparent text-slate-500 border-transparent hover:text-slate-800"
             )}
           >
-            Tous
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_#10b981]" />
+            <span>Stock Disponible</span>
+            <span className="bg-emerald-50 text-emerald-700 font-mono text-[10px] px-1.5 py-0.5 rounded font-black ml-1">
+              {availableCount}
+            </span>
           </button>
-          {categories.map(cat => (
-            <button
-              key={cat}
-              onClick={() => setCategoryFilter(cat)}
-              className={cn(
-                "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg transition-all border cursor-pointer",
-                categoryFilter === cat
-                  ? "bg-sky-600 text-white border-sky-600 shadow-sm"
-                  : "bg-white text-slate-400 hover:text-slate-650 hover:bg-slate-50 border-slate-200"
-              )}
-            >
-              {cat}
-            </button>
-          ))}
+          
+          <button
+            onClick={() => {
+              setStockAvailabilityTab('OUT_OF_STOCK');
+              setStatusFilter('ALL');
+            }}
+            className={cn(
+              "px-4 py-2 rounded-lg text-xs font-black uppercase tracking-wider transition-all cursor-pointer flex items-center gap-2 border",
+              stockAvailabilityTab === 'OUT_OF_STOCK'
+                ? "bg-white text-rose-600 border-slate-200 shadow-sm"
+                : "bg-transparent text-slate-500 border-transparent hover:text-rose-600"
+            )}
+          >
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shadow-[0_0_8px_#f43f5e] animate-pulse" />
+            <span>Ruptures de Stock</span>
+            <span className="bg-rose-50 text-rose-700 font-mono text-[10px] px-1.5 py-0.5 rounded font-black ml-1">
+              {outOfStockCount}
+            </span>
+          </button>
         </div>
-      )}
+
+        {/* Compact Dropdown Category Filter */}
+        {categories.length > 0 && (
+          <div className="relative inline-block text-left" id="subcategory-filter-dropdown">
+            <button
+              onClick={() => setShowCategoryDropdown(!showCategoryDropdown)}
+              className="flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-150 rounded-xl text-xs font-black uppercase tracking-wider hover:bg-slate-100 transition-all cursor-pointer shadow-sm text-slate-700 h-10"
+            >
+              <Filter className="w-3.5 h-3.5 text-sky-600" />
+              <span>Sous-catégorie : {categoryFilter === 'ALL' ? 'Toutes' : categoryFilter}</span>
+              <ChevronDown className={cn("w-4 h-4 text-slate-400 transition-transform", showCategoryDropdown && "transform rotate-180")} />
+            </button>
+            
+            {showCategoryDropdown && (
+              <>
+                <div 
+                  className="fixed inset-0 z-30" 
+                  onClick={() => setShowCategoryDropdown(false)}
+                />
+                <div className="absolute right-0 mt-1.5 w-64 bg-white border border-slate-200 rounded-xl shadow-xl z-40 max-h-80 overflow-y-auto overflow-x-hidden p-1.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                  <button
+                    onClick={() => {
+                      setCategoryFilter('ALL');
+                      setShowCategoryDropdown(false);
+                    }}
+                    className={cn(
+                      "w-full text-left px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-between transition-colors",
+                      categoryFilter === 'ALL' ? "bg-sky-50 text-sky-600 font-extrabold" : "text-slate-650 hover:bg-slate-50"
+                    )}
+                  >
+                    <span>Tous</span>
+                    {categoryFilter === 'ALL' && <span className="w-1.5 h-1.5 bg-sky-600 rounded-full" />}
+                  </button>
+                  {categories.map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => {
+                        setCategoryFilter(cat);
+                        setShowCategoryDropdown(false);
+                      }}
+                      className={cn(
+                        "w-full text-left px-3.5 py-2 rounded-lg text-xs font-black uppercase tracking-wider flex items-center justify-between transition-colors mt-0.5",
+                        categoryFilter === cat ? "bg-sky-50 text-sky-600 font-extrabold" : "text-slate-650 hover:bg-slate-50"
+                      )}
+                    >
+                      <span className="truncate">{cat}</span>
+                      {categoryFilter === cat && <span className="w-1.5 h-1.5 bg-sky-600 rounded-full" />}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </div>
 
       <AnimatePresence mode="wait">
         {viewMode === 'GRID' ? (

@@ -15,7 +15,8 @@ import {
   Truck,
   Drill,
   Droplets,
-  Eye
+  Eye,
+  Shield
 } from 'lucide-react';
 import { Article, SiteCode, Inventaire } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
@@ -169,6 +170,19 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     toast.success('Inventaire sauvegardé en brouillon.');
   };
 
+  const handleSetAllConform = () => {
+    if (!activeSession) return;
+    if (confirm("Voulez-vous prérégler tous les comptages de cette session comme conformes au stock théorique ?")) {
+      const conformItems = activeSession.items.map(item => ({
+        ...item,
+        countedQuantity: item.theoricQuantity,
+        difference: 0
+      }));
+      setActiveSession({ ...activeSession, items: conformItems });
+      toast.success("Tous les articles ont été réglés comme conformes.");
+    }
+  };
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-24 mission-control-bg p-12 flex-1">
       <header className="flex items-center justify-between mb-10">
@@ -195,6 +209,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                 { id: 'ENGINS', label: 'Engins', icon: Truck },
                 { id: 'PERFORATEURS', label: 'Perforateurs', icon: Drill },
                 { id: 'CONSOMMABLES', label: 'Conso', icon: Droplets },
+                { id: 'EPI', label: 'EPI', icon: Shield },
               ].map(t => (
                 <button
                   key={t.id}
@@ -238,19 +253,20 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 relative z-10" />
               <input 
                 type="text" 
-                placeholder="RECHERCHER OU SCANNER UNE RÉFÉRENCE..."
+                placeholder="RECHERCHER UN ARTICLE PAR RÉFÉRENCE OU DÉSIGNATION..."
                 className="input-field h-10 pl-11 text-xs bg-white relative z-10 border-slate-200 focus:border-sky-500 font-black tracking-tight rounded-xl"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
-            <div className="flex gap-2 shrink-0">
-               <button onClick={handleSaveDraft} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm" title="Enregistrer le brouillon de comptage">Saisie Comptage (Suspendre)</button>
+            <div className="flex flex-wrap gap-2 shrink-0">
+               <button onClick={handleSetAllConform} className="btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 border px-5 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm" title="Prérégler tous les stocks comptés comme conformes au stock théorique">Tout Conforme ✓</button>
+               <button onClick={handleSaveDraft} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm" title="Enregistrer le brouillon de comptage">Suspendre (Brouillon)</button>
                {isAdmin ? (
-                 <button onClick={handleValidate} className="btn btn-primary px-8 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase shadow-xl shadow-sky-500/20">Valider & Ajuster le Stock [Admin]</button>
+                 <button onClick={handleValidate} className="btn btn-primary px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase shadow-xl shadow-sky-500/20">Valider & Ajuster [Admin]</button>
                ) : (
-                 <button disabled className="btn bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 px-8 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase" title="La validation finale et l'ajustement de stocks sont réservés aux administrateurs">Validation Réservée Admin</button>
+                 <button disabled className="btn bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase" title="La validation finale et l'ajustement de stocks sont réservés aux administrateurs">Validation Réservée Admin</button>
                )}
             </div>
           </div>
@@ -311,15 +327,27 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                                  </div>
                               </td>
                               <td className="px-4 py-4 text-center">
-                                 <input 
-                                    type="number"
-                                    className={cn(
-                                      "w-20 h-10 rounded-lg font-black text-sm text-center outline-none transition-all shadow-sm",
-                                      hasError ? "bg-white text-rose-600 ring-2 ring-rose-500" : "bg-white border border-slate-200 text-slate-900 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500"
-                                    )}
-                                    value={isNaN(sessionItem.countedQuantity) ? '' : sessionItem.countedQuantity}
-                                    onChange={(e) => updateCount(article.id, Number(e.target.value))}
-                                 />
+                                 <div className="flex items-center justify-center gap-2">
+                                   <input 
+                                      type="number"
+                                      className={cn(
+                                        "w-20 h-10 rounded-lg font-black text-sm text-center outline-none transition-all shadow-sm",
+                                        hasError ? "bg-white text-rose-600 ring-2 ring-rose-500" : "bg-white border border-slate-200 text-slate-900 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500"
+                                      )}
+                                      value={isNaN(sessionItem.countedQuantity) ? '' : sessionItem.countedQuantity}
+                                      onChange={(e) => updateCount(article.id, Number(e.target.value))}
+                                   />
+                                   {sessionItem.countedQuantity !== sessionItem.theoricQuantity && (
+                                     <button
+                                       type="button"
+                                       onClick={() => updateCount(article.id, sessionItem.theoricQuantity)}
+                                       className="p-1 px-1.5 text-[10px] font-black text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-lg transition-all"
+                                       title="Régler comme conforme au stock théorique"
+                                     >
+                                       Conforme
+                                     </button>
+                                   )}
+                                 </div>
                               </td>
                               <td className="px-4 py-4 text-center">
                                  <div className="flex flex-col items-center gap-1">

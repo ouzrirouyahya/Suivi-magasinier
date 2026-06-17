@@ -1,5 +1,5 @@
 import React from 'react';
-import { ShoppingCart, Plus, ClipboardList, Send, CheckCircle2, Package, Search, Filter, Trash2, Printer, History } from 'lucide-react';
+import { ShoppingCart, Plus, ClipboardList, Send, CheckCircle2, Package, Search, Filter, Trash2, Printer, History, ChevronDown, ChevronUp } from 'lucide-react';
 import { SiteCode, Article, PurchaseRequest } from '../types';
 import { cn } from '../lib/utils';
 
@@ -15,12 +15,15 @@ export function RestockModule({ site, articles, purchaseRequests, onCreatePR, on
   const [view, setView] = React.useState<'ALERTS' | 'HISTORY' | 'CREATE'>('ALERTS');
   const [search, setSearch] = React.useState('');
   const [selectedItems, setSelectedItems] = React.useState<Record<string, number>>({});
+  const [isExpanded, setIsExpanded] = React.useState(false);
 
   const lowStockArticles = articles.filter(a => 
     (site === 'ALL' ? true : a.site === site) && 
     a.quantity <= a.minStock && 
     (a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase()))
   );
+
+  const displayedArticles = isExpanded ? lowStockArticles : lowStockArticles.slice(0, 5);
 
   const siteRequests = purchaseRequests
     .filter(pr => site === 'ALL' ? true : pr.site === site)
@@ -139,7 +142,7 @@ export function RestockModule({ site, articles, purchaseRequests, onCreatePR, on
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100">
-                {lowStockArticles.map(article => {
+                {displayedArticles.map(article => {
                   const isSelected = !!selectedItems[article.id];
                   return (
                     <tr key={article.id} className={cn("group hover:bg-slate-50/50 transition-all", isSelected && "bg-sky-50/30")}>
@@ -190,6 +193,18 @@ export function RestockModule({ site, articles, purchaseRequests, onCreatePR, on
                 })}
               </tbody>
             </table>
+
+            {lowStockArticles.length > 5 && (
+              <div className="flex justify-center p-6 border-t border-slate-100 bg-slate-50/30">
+                <button
+                  onClick={() => setIsExpanded(!isExpanded)}
+                  className="flex items-center gap-2 px-6 py-3 bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-sm"
+                >
+                  <span>{isExpanded ? "Afficher moins" : `Afficher toute la liste (${lowStockArticles.length - 5} de plus)`}</span>
+                  {isExpanded ? <ChevronUp className="w-4 h-4 text-sky-600" /> : <ChevronDown className="w-4 h-4 text-sky-600" />}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
