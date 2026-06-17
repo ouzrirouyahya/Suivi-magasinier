@@ -42,7 +42,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   const [search, setSearch] = useState(initialSearch);
   const [selectedStockType, setSelectedStockType] = useState<ArticleType | 'ALL'>(type);
   const [categoryFilter, setCategoryFilter] = useState('ALL');
-  const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('TABLE');
+  const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('GRID');
   const [isCarnetsOpen, setIsCarnetsOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'RUPTURE' | 'CRITIQUE' | 'OPTIMAL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('');
@@ -54,6 +54,11 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   useEffect(() => {
     setSelectedStockType(type);
   }, [type]);
+
+  const isSiteEmpty = useMemo(() => {
+    if (site === 'ALL') return false;
+    return !articles.some(a => a.site === site);
+  }, [articles, site]);
 
   const entriesLast24h = useMemo(() => {
     const now = Date.now();
@@ -196,20 +201,32 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                 <Package className="w-4 h-4 text-sky-600" /> catalogue
              </button>
           )}
-          <div className="flex items-center gap-1 bg-slate-100 p-1 rounded-xl border border-slate-200/50 shadow-inner">
-            <button 
-              onClick={() => setViewMode('TABLE')}
-              className={cn("p-1.5 rounded-lg transition-all cursor-pointer", viewMode === 'TABLE' ? "bg-white shadow-md text-sky-600 font-bold" : "text-slate-400 hover:text-slate-600")}
-              title="Vue Tableau de terrain dense"
-            >
-              <List className="w-4 h-4" />
-            </button>
+          <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200/50 shadow-inner select-none">
             <button 
               onClick={() => setViewMode('GRID')}
-              className={cn("p-1.5 rounded-lg transition-all cursor-pointer", viewMode === 'GRID' ? "bg-white shadow-md text-sky-600 font-bold" : "text-slate-400 hover:text-slate-600")}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer", 
+                viewMode === 'GRID' 
+                  ? "bg-white shadow-sm border border-slate-200/40 text-sky-600" 
+                  : "text-slate-400 hover:text-slate-750"
+              )}
               title="Vue Grille de cartes"
             >
-              <LayoutGrid className="w-4 h-4" />
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Vue Cartes</span>
+            </button>
+            <button 
+              onClick={() => setViewMode('TABLE')}
+              className={cn(
+                "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer", 
+                viewMode === 'TABLE' 
+                  ? "bg-white shadow-sm border border-slate-200/40 text-sky-600" 
+                  : "text-slate-400 hover:text-slate-750"
+              )}
+              title="Vue Tableau de terrain dense"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>Vue Tableau</span>
             </button>
           </div>
         </div>
@@ -575,8 +592,31 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
         )}
       </AnimatePresence>
 
-      {sortedAndFilteredArticles.length === 0 && (
-        <div className="card glass p-8 text-center flex flex-col items-center justify-center border-dashed border border-slate-200">
+      {isSiteEmpty ? (
+        <div className="card bg-white p-12 text-center flex flex-col items-center justify-center border-2 border-dashed border-slate-200/80 rounded-[2.5rem] max-w-2xl mx-auto shadow-sm my-8 animate-in fade-in duration-300">
+          <div className="w-16 h-16 bg-sky-50 rounded-2xl flex items-center justify-center mb-4 border border-sky-100/30">
+            <Package className="w-8 h-8 text-sky-500" />
+          </div>
+          <h3 className="text-xl font-black text-slate-900 uppercase tracking-tight">Fiches Articles Vides pour ce Chantier</h3>
+          <p className="text-slate-500 font-medium text-sm max-w-md leading-relaxed mt-2">
+            Il n'y a actuellement aucun article instancié pour le chantier <span className="font-extrabold text-slate-800">{site}</span>. Le registre central de l'entreprise contient tout le catalogue technique prêt à être déployé sur votre site.
+          </p>
+          <div className="h-px bg-slate-100 w-full my-6" />
+          <div className="flex flex-col sm:flex-row items-center gap-4">
+            <button
+              onClick={onManageCatalog}
+              className="btn bg-sky-600 hover:bg-sky-700 text-white font-black uppercase text-xs tracking-wider px-6 h-12 rounded-xl shadow-lg shadow-sky-600/10 flex items-center gap-2 cursor-pointer border-none"
+            >
+              <Wrench className="w-4 h-4" /> Initialiser les fiches de stock
+            </button>
+            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">ou</p>
+            <span className="text-xs font-bold text-slate-500">
+              Saisissez directement un <b>Bon d'Entrée</b> pour importer un article du catalogue à la volée.
+            </span>
+          </div>
+        </div>
+      ) : sortedAndFilteredArticles.length === 0 && (
+        <div className="card glass p-8 text-center flex flex-col items-center justify-center border-dashed border border-slate-200 animate-in fade-in duration-200">
           <div className="w-12 h-12 bg-slate-50 rounded-xl flex items-center justify-center mb-3">
             <Package className="w-6 h-6 text-slate-250" />
           </div>

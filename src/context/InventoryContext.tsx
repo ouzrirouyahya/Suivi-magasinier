@@ -452,14 +452,21 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
 
-  const isViewer = false;
+  const isViewer = React.useMemo(() => {
+    return !currentUser || currentUser.role === 'LECTURE_SEULE';
+  }, [currentUser]);
+
+  const isViewerRef = React.useRef(isViewer);
+  React.useEffect(() => {
+    isViewerRef.current = isViewer;
+  }, [isViewer]);
 
   const checkWritePermission = () => {
-    // Permanent removal of viewer mode
+    // Write permissions are checked in firestore rules or simulated
   };
 
   const isSimulationMode = () => {
-    return false;
+    return isViewerRef.current;
   };
 
   const checkMaintenanceLock = () => {

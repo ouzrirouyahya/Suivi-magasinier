@@ -221,30 +221,35 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
         ))}
       </div>
 
-      {/* PARTIE 4 — GRANDES CARTES D'ACTION : DESIGN PREMIUM BLANC */}
+      {/* PARTIE 4 — GRANDES CARTES D'ACTION : DESIGN PREMIUM BLANC (CONCEPT 3) */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* 1. RÉCEPTION (ENTRÉES) */}
         <button 
           onClick={() => onAction('BON_ENTREE')}
-          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pl-10 shadow-sm transition-all duration-200 overflow-hidden hover:border-sky-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.12)] hover:-translate-y-0.5 active:scale-[0.99]"
+          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pr-[28%] shadow-sm transition-all duration-350 overflow-hidden hover:border-sky-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.08)] hover:-translate-y-0.5 active:scale-[0.99]"
         >
-          {/* Double Ligne Verticale Hydromines: BLEU CIEL (première) & ROUGE FONCÉ (deuxième) */}
-          <div className="absolute left-0 top-0 bottom-0 flex w-3 shadow-[2px_0_8px_rgba(14,165,233,0.15)]">
-            <div className="w-1.5 h-full bg-gradient-to-b from-sky-400 to-sky-500" />
-            <div className="w-1.5 h-full bg-gradient-to-b from-[#991b1b] to-red-800" />
+          {/* Concept 3 refine: Zone Branding 25% with horizontal fade to white (no border) on the RIGHT */}
+          <div className="absolute right-0 top-0 bottom-0 w-[25%] bg-gradient-to-l from-sky-500/[0.06] to-transparent flex flex-col justify-center items-center">
+            {/* Liseré micro-précis double couleur Hydromines */}
+            <div className="absolute right-0 top-0 bottom-0 w-[3px] flex flex-col">
+              <div className="h-1/2 bg-sky-500" />
+              <div className="h-1/2 bg-red-700" />
+            </div>
+
+            {/* Icone magnifiée */}
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-slate-200/80 text-sky-600 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_4px_12px_rgba(14,165,233,0.18)]">
+              <ArrowDownLeft className="w-5.5 h-5.5 stroke-[1.8]" />
+            </div>
           </div>
 
           <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 border border-slate-200 text-sky-600 transition-all duration-200 group-hover:bg-sky-500 group-hover:text-white group-hover:border-transparent">
-              <ArrowDownLeft className="w-6 h-6 stroke-[1.5]" />
-            </div>
-            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg uppercase tracking-wider">
+            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100/80 px-2 py-1 rounded-lg uppercase tracking-wider">
               ENREGISTRER ENTRÉE
             </span>
           </div>
           <div className="mt-5">
             <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight group-hover:text-sky-950 transition-colors">Réception (Entrées)</h4>
-            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60">Enregistrer une nouvelle livraison de pièces ou d'équipements de forge.</p>
+            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60 font-sans">Enregistrer une nouvelle livraison de pièces ou d'équipements de forge.</p>
             
             {/* Embedded Live HUD */}
             <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -265,25 +270,30 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
         {/* 2. SORTIE DE PIÈCES */}
         <button 
           onClick={() => onAction('BON_SORTIE')}
-          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pl-10 shadow-sm transition-all duration-200 overflow-hidden hover:border-rose-300 hover:shadow-[0_8px_24px_rgba(244,63,94,0.12)] hover:-translate-y-0.5 active:scale-[0.99]"
+          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pr-[28%] shadow-sm transition-all duration-350 overflow-hidden hover:border-rose-300 hover:shadow-[0_8px_24px_rgba(244,63,94,0.08)] hover:-translate-y-0.5 active:scale-[0.99]"
         >
-          {/* Double Ligne Verticale Hydromines: ROUGE FONCÉ (première) & BLEU CIEL (deuxième) */}
-          <div className="absolute left-0 top-0 bottom-0 flex w-3 shadow-[2px_0_8px_rgba(244,63,94,0.12)]">
-            <div className="w-1.5 h-full bg-gradient-to-b from-[#991b1b] to-red-800" />
-            <div className="w-1.5 h-full bg-gradient-to-b from-sky-400 to-sky-500" />
+          {/* Concept 3 refine: Zone Branding 25% with horizontal fade to white (no border) on the RIGHT */}
+          <div className="absolute right-0 top-0 bottom-0 w-[25%] bg-gradient-to-l from-red-700/[0.06] to-transparent flex flex-col justify-center items-center">
+            {/* Liseré micro-précis double couleur Hydromines */}
+            <div className="absolute right-0 top-0 bottom-0 w-[3px] flex flex-col">
+              <div className="h-1/2 bg-red-700" />
+              <div className="h-1/2 bg-sky-500" />
+            </div>
+
+            {/* Icone magnifiée */}
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-slate-200/80 text-rose-600 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.18)]">
+              <ArrowUpRight className="w-5.5 h-5.5 stroke-[1.8]" />
+            </div>
           </div>
 
           <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 border border-slate-200 text-rose-600 transition-all duration-200 group-hover:bg-rose-500 group-hover:text-white group-hover:border-transparent">
-              <ArrowUpRight className="w-6 h-6 stroke-[1.5]" />
-            </div>
-            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg uppercase tracking-wider">
+            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100/80 px-2 py-1 rounded-lg uppercase tracking-wider">
               IMPUTATION SORTIE
             </span>
           </div>
           <div className="mt-5">
             <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight group-hover:text-rose-950 transition-colors">Sortie de Pièces</h4>
-            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60">Déstocker pour un engin minier, perforateur Montabert ou atelier local.</p>
+            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60 font-sans">Déstocker pour un engin minier, perforateur Montabert ou atelier local.</p>
             
             {/* Embedded Live HUD */}
             <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
@@ -304,32 +314,37 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
         {/* 3. TRANSFERTS & RETOURS */}
         <button 
           onClick={() => onAction('TRANSFERS_RETURNS')}
-          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pl-10 shadow-sm transition-all duration-200 overflow-hidden hover:border-indigo-300 hover:shadow-[0_8px_24px_rgba(99,102,241,0.12)] hover:-translate-y-0.5 active:scale-[0.99]"
+          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pr-[28%] shadow-sm transition-all duration-350 overflow-hidden hover:border-indigo-300 hover:shadow-[0_8px_24px_rgba(99,102,241,0.08)] hover:-translate-y-0.5 active:scale-[0.99]"
         >
-          {/* Double Ligne Verticale Hydromines: BLEU CIEL (première) & ROUGE FONCÉ (deuxième) */}
-          <div className="absolute left-0 top-0 bottom-0 flex w-3 shadow-[2px_0_8px_rgba(99,102,241,0.12)]">
-            <div className="w-1.5 h-full bg-gradient-to-b from-sky-400 to-sky-500" />
-            <div className="w-1.5 h-full bg-gradient-to-b from-[#991b1b] to-red-800" />
+          {/* Concept 3 refine: Zone Branding 25% with horizontal fade to white (no border) on the RIGHT */}
+          <div className="absolute right-0 top-0 bottom-0 w-[25%] bg-gradient-to-l from-indigo-500/[0.06] to-transparent flex flex-col justify-center items-center">
+            {/* Liseré micro-précis double couleur Hydromines */}
+            <div className="absolute right-0 top-0 bottom-0 w-[3px] flex flex-col">
+              <div className="h-1/2 bg-sky-500" />
+              <div className="h-1/2 bg-red-700" />
+            </div>
+
+            {/* Icone magnifiée */}
+            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-slate-200/80 text-indigo-600 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_4px_12px_rgba(99,102,241,0.18)]">
+              <Truck className="w-5.5 h-5.5" />
+            </div>
           </div>
 
           <div className="flex items-start justify-between">
-            <div className="w-12 h-12 rounded-2xl flex items-center justify-center bg-slate-50 border border-slate-200 text-indigo-600 transition-all duration-200 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-transparent">
-              <Truck className="w-5.5 h-5.5" />
-            </div>
-            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100 px-2 py-1 rounded-lg uppercase tracking-wider">
+            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100/80 px-2 py-1 rounded-lg uppercase tracking-wider">
               TRANSFERT INTER-SITES
             </span>
           </div>
           <div className="mt-5">
             <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight group-hover:text-indigo-950 transition-colors">Transferts & Retours</h4>
-            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60">Transférer entre magasins de surface et magasins de fond (-350m) et retours usine.</p>
+            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60 font-sans">Transférer entre magasins de surface et magasins de fond (-350m) et retours usine.</p>
             
             {/* Embedded Live HUD */}
             <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
               <span className="text-[11px] text-slate-400 font-medium">
                 Aujourd'hui
               </span>
-              <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100">
+              <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-150">
                 {(() => {
                   const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'TRANSFERT_OUT' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR'));
                   const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
