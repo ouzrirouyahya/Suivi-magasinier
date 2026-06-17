@@ -87,65 +87,85 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     };
   }, [articles, mouvements, site]);
 
+  // KPIs reordered by business importance:
+  // 1. Critical shortages (Ruptures critiques)
+  // 2. Incoming logs (Entrées du jour / Dernières entrées)
+  // 3. Outgoing logs (Sorties du jour / Dernières sorties)
+  // 4. Stock valuation (Valeur du stock)
   const stats = [
     { 
-      label: 'Valeur Immobilisée', 
-      value: formatCurrency(stockValue), 
-      sub: `${totalArticles} références actives`, 
-      icon: DollarSign, 
-      color: 'text-sky-600', 
-      bg: 'bg-sky-50',
-      alert: false 
+      id: 'ruptures',
+      label: 'Ruptures Critiques', 
+      value: `${lowStockCount} Réf`, 
+      sub: lowStockCount > 0 ? `${lowStockCount} alertes approvisionnement` : 'Aucun produit en alerte', 
+      icon: AlertCircle, 
+      color: lowStockCount > 0 ? 'text-[#b91c1c]' : 'text-slate-400', 
+      bg: lowStockCount > 0 ? 'bg-red-50' : 'bg-slate-50',
+      accentBg: lowStockCount > 0 ? 'bg-[#b91c1c]' : 'bg-slate-300',
+      dotColor: lowStockCount > 0 ? 'bg-[#b91c1c] animate-pulse' : 'bg-emerald-500',
+      action: 'ALERTES_STOCK', 
+      alert: lowStockCount > 0 
     },
     { 
-      label: 'Dernière Entrée', 
+      id: 'entrées',
+      label: 'Entrées (Dernier Flux)', 
       value: lastEntreeText, 
       sub: lastEntreeSub, 
       icon: ArrowDownLeft, 
-      color: 'text-emerald-600', 
-      bg: 'bg-emerald-50',
+      color: 'text-[#0284c7]', 
+      bg: 'bg-sky-50',
+      accentBg: 'bg-[#0284c7]',
+      dotColor: 'bg-[#0284c7]',
+      action: null,
       alert: false 
     },
     { 
-      label: 'Dernière Sortie', 
+      id: 'sorties',
+      label: 'Sorties (Dernier Flux)', 
       value: lastSortieText, 
       sub: lastSortieSub, 
       icon: ArrowUpRight, 
-      color: 'text-rose-600', 
-      bg: 'bg-rose-50',
+      color: 'text-slate-600', 
+      bg: 'bg-slate-50/85',
+      accentBg: 'bg-slate-500',
+      dotColor: 'bg-slate-400',
+      action: null,
       alert: false 
     },
     { 
-      label: 'Ruptures Stock Critique', 
-      value: `${lowStockCount} Réf`, 
-      sub: `En alerte approvisionnement`, 
-      icon: AlertCircle, 
-      color: lowStockCount > 0 ? 'text-amber-600' : 'text-slate-500', 
-      bg: lowStockCount > 0 ? 'bg-amber-50' : 'bg-slate-50',
-      action: 'ALERTES_STOCK', 
-      alert: lowStockCount > 0 
+      id: 'valeur',
+      label: 'Valeur Totale Stock', 
+      value: formatCurrency(stockValue), 
+      sub: `${totalArticles} références actives`, 
+      icon: DollarSign, 
+      color: 'text-slate-700', 
+      bg: 'bg-slate-50/50',
+      accentBg: 'bg-slate-700',
+      dotColor: 'bg-slate-600',
+      action: null,
+      alert: false 
     }
   ];
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700 pb-12 select-none">
-      {/* PARTIE 2 — HEADER "MON MAGASIN" : ÉPURÉ ET ÉLÉGANT */}
-      <header className="bg-white border border-slate-200 rounded-2xl px-8 py-6 shadow-sm mb-2">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500 pb-12 select-none bg-white min-h-screen">
+      {/* HEADER "MON MAGASIN" : ÉPOURE, SOBRE ET PROFESSIONNEL */}
+      <header className="bg-white border border-slate-200 rounded-[14px] px-6 py-5 shadow-sm">
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           
           {/* Gauche : titre + site */}
-          <div className="flex items-center gap-4">
-            {/* Barre verticale double couleur Hydromines */}
+          <div className="flex items-center gap-3">
+            {/* Barre verticale double couleur Hydromines (Bleu log / Rouge sécurité) */}
             <div className="flex h-10 w-1.5 rounded-full overflow-hidden shrink-0">
-              <div className="w-full h-1/2 bg-sky-500" />
-              <div className="w-full h-1/2 bg-red-700" />
+              <div className="w-full h-1/2 bg-[#0284c7]" />
+              <div className="w-full h-1/2 bg-[#b91c1c]" />
             </div>
             <div>
-              <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight leading-none">
+              <h2 className="text-xl font-black text-slate-900 uppercase tracking-tight leading-none">
                 Mon Magasin
               </h2>
-              <p className="text-sm text-slate-500 font-medium mt-1">
-                Site : <span className="font-black text-slate-800">
+              <p className="text-xs text-slate-500 font-medium mt-1.5">
+                Chantier actif : <span className="font-bold text-slate-800">
                   {site === 'ALL' ? 'Tous les sites' : site}
                 </span>
               </p>
@@ -153,13 +173,13 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
           </div>
 
           {/* Droite : badge HYDROMINES + horloge */}
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl">
-              <span className="w-1.5 h-1.5 bg-emerald-500 rounded-full animate-pulse" />
-              <span className="text-[10px] font-black tracking-wider uppercase text-sky-600">HYDRO</span>
-              <span className="text-[10px] font-black tracking-wider uppercase text-red-700 -ml-1">MINES</span>
+          <div className="flex items-center gap-2.5">
+            <div className="flex items-center gap-1.5 px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg">
+              <span className="w-1.5 h-1.5 bg-[#0284c7] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#0284c7]">HYDRO</span>
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b91c1c] -ml-1">MINES</span>
             </div>
-            <div className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] font-mono font-bold text-slate-600">
+            <div className="px-3 py-1 bg-slate-50 border border-slate-200 rounded-lg text-[10px] font-mono font-semibold text-slate-600">
               {currentTime.toLocaleString('fr-FR', {
                 day: '2-digit', month: '2-digit', year: 'numeric',
                 hour: '2-digit', minute: '2-digit', second: '2-digit'
@@ -169,234 +189,242 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
         </div>
       </header>
 
-      {/* PARTIE 3 — MINI-CARTES KPI : PROPRES ET LISIBLES */}
+      {/* COMPOSANT KPI : STYLE IBM MAXIMO + SAP FIORI (12px rounded, sobre, bandeau indicateur discret) */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {stats.map((stat) => (
           <div
             key={stat.label}
             onClick={() => stat.action === 'ALERTES_STOCK' ? onAction('RESTOCK_MGMT') : undefined}
             className={cn(
-              "bg-white border rounded-2xl p-5 flex flex-col gap-3 relative overflow-hidden",
-              "transition-all duration-200",
+              "bg-white border rounded-[12px] p-4.5 flex flex-col justify-between gap-3.5 relative transition-all duration-200 shadow-sm overflow-hidden hover:-translate-y-0.5 hover:shadow-md",
               stat.alert 
-                ? "border-amber-300 shadow-[0_0_0_1px_#fcd34d,0_4px_12px_rgba(251,191,36,0.15)] cursor-pointer hover:shadow-[0_0_0_1px_#f59e0b,0_6px_16px_rgba(251,191,36,0.2)]"
+                ? "border-[#b91c1c] ring-1 ring-[#b91c1c]/10 cursor-pointer hover:bg-red-50/10"
                 : stat.action 
-                  ? "border-slate-200 shadow-sm cursor-pointer hover:border-slate-300 hover:shadow-md"
-                  : "border-slate-200 shadow-sm"
+                  ? "border-slate-200 cursor-pointer hover:border-[#0284c7]/40"
+                  : "border-slate-200"
             )}
           >
-            {/* Barre de criticité en haut si alerte */}
-            {stat.alert && (
-              <div className="absolute top-0 left-0 right-0 h-0.5 bg-amber-400 rounded-t-2xl" />
-            )}
-            
+            {/* Petit bandeau supérieur discret d'accentuation couleur */}
+            <div className={cn("absolute top-0 left-0 right-0 h-[3px]", stat.accentBg)} />
+
             {/* Ligne icône + label */}
-            <div className="flex items-center justify-between">
-              <p className="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+            <div className="flex items-center justify-between pt-1">
+              <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest leading-none">
                 {stat.label}
               </p>
               <div className={cn(
-                "w-8 h-8 rounded-xl flex items-center justify-center",
+                "w-7 h-7 rounded-lg flex items-center justify-center transition-transform duration-200 group-hover:scale-105",
                 stat.bg
               )}>
-                <stat.icon className={cn("w-4 h-4", stat.color)} />
+                <stat.icon className={cn("w-3.5 h-3.5", stat.color)} />
               </div>
             </div>
 
             {/* Valeur principale */}
-            <p className={cn(
-              "font-black leading-none text-slate-900",
-              stat.value.length > 18 
-                ? "text-sm font-bold text-slate-700" 
-                : "text-2xl"
-            )}>
-              {stat.value}
-            </p>
+            <div>
+              <p className={cn(
+                "font-black leading-none text-slate-905 tracking-tight",
+                stat.value.length > 18 
+                  ? "text-sm font-bold text-slate-700" 
+                  : "text-2xl"
+              )}>
+                {stat.value}
+              </p>
+            </div>
 
-            {/* Sous-texte */}
-            <p className="text-[11px] text-slate-400 font-medium border-t border-slate-100 pt-2 leading-snug">
-              {stat.sub}
-            </p>
+            {/* Sous-texte et puce de statut */}
+            <div className="flex items-center justify-between border-t border-slate-100 pt-2 leading-none">
+              <p className="text-[10px] text-slate-400 font-medium leading-tight">
+                {stat.sub}
+              </p>
+              <span className={cn("w-1.5 h-1.5 rounded-full", stat.dotColor)} />
+            </div>
           </div>
         ))}
       </div>
 
-      {/* PARTIE 4 — GRANDES CARTES D'ACTION : DESIGN PREMIUM BLANC (CONCEPT 3) */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {/* 1. RÉCEPTION (ENTRÉES) */}
+      {/* ACTIONS DOMINANTES DE LA PAGE : RÉCEPTION & SORTIE (14px rounded, dominant) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        {/* 1. GRANDE CARTE ACTION : RÉCEPTION / SAISIR UNE ENTRÉE */}
         <button 
           onClick={() => onAction('BON_ENTREE')}
-          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pr-[28%] shadow-sm transition-all duration-350 overflow-hidden hover:border-sky-300 hover:shadow-[0_8px_24px_rgba(14,165,233,0.08)] hover:-translate-y-0.5 active:scale-[0.99]"
+          className="group relative text-left bg-gradient-to-br from-sky-500/[0.04] via-transparent to-slate-100/[0.02] border border-slate-200 rounded-[14px] p-6 shadow-[inset_0_1px_3px_rgba(255,255,255,0.9),0_2px_8px_rgba(0,0,0,0.01)] hover:border-[#0284c7]/30 hover:shadow-[0_12px_28px_rgba(2,132,199,0.05),inset_0_0_12px_rgba(255,255,255,1)] hover:bg-[#0284c7]/[0.02] active:scale-[0.995] transition-all duration-200 flex flex-col justify-between h-44 cursor-pointer overflow-hidden"
         >
-          {/* Concept 3 refine: Zone Branding 25% with horizontal fade to white (no border) on the RIGHT */}
-          <div className="absolute right-0 top-0 bottom-0 w-[25%] bg-gradient-to-l from-sky-500/[0.06] to-transparent flex flex-col justify-center items-center">
-            {/* Liseré micro-précis double couleur Hydromines */}
-            <div className="absolute right-0 top-0 bottom-0 w-[3px] flex flex-col">
-              <div className="h-1/2 bg-sky-500" />
-              <div className="h-1/2 bg-red-700" />
+          {/* Ligne d'ancrage avec code couleur d'action */}
+          <div className="absolute top-0 left-0 bottom-0 w-[4px] bg-[#0284c7]" />
+          
+          <div className="pl-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold text-[#0284c7] bg-sky-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                Flux logistique entrant
+              </span>
             </div>
-
-            {/* Icone magnifiée */}
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-slate-200/80 text-sky-600 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-sky-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_4px_12px_rgba(14,165,233,0.18)]">
-              <ArrowDownLeft className="w-5.5 h-5.5 stroke-[1.8]" />
-            </div>
+            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mt-3.5">
+              SAISIR UNE ENTRÉE
+            </h3>
+            <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed max-w-lg">
+              Enregistrer les réceptions de nouvelles marchandises et inscrire instantanément les pièces détachées ou consommables arrivant au stock logistique.
+            </p>
           </div>
 
-          <div className="flex items-start justify-between">
-            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100/80 px-2 py-1 rounded-lg uppercase tracking-wider">
-              ENREGISTRER ENTRÉE
-            </span>
-          </div>
-          <div className="mt-5">
-            <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight group-hover:text-sky-950 transition-colors">Réception (Entrées)</h4>
-            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60 font-sans">Enregistrer une nouvelle livraison de pièces ou d'équipements de forge.</p>
-            
-            {/* Embedded Live HUD */}
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-medium">
-                Aujourd'hui
-              </span>
-              <span className="text-[11px] font-black text-sky-600 bg-sky-50 px-2.5 py-1 rounded-lg border border-sky-100">
-                {(() => {
-                  const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'ENTREE'));
-                  const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
-                  return `${count} ENTRÉE${count > 1 ? 'S' : ''}`;
-                })()}
-              </span>
+          <div className="pl-2 border-t border-slate-100/60 pt-3 flex items-center justify-between w-full">
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 bg-[#0284c7] rounded-full shrink-0" />
+              Aujourd'hui : {(() => {
+                const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'ENTREE'));
+                const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                return `${count} réception${count > 1 ? 's' : ''}`;
+              })()}
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-white border border-slate-205 flex items-center justify-center text-[#0284c7] shadow-sm group-hover:bg-[#0284c7] group-hover:text-white group-hover:border-transparent transition-colors">
+              <ArrowDownLeft className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
         </button>
 
-        {/* 2. SORTIE DE PIÈCES */}
+        {/* 2. GRANDE CARTE ACTION : SORTIE DE PIÈCES / SAISIR UNE SORTIE */}
         <button 
           onClick={() => onAction('BON_SORTIE')}
-          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pr-[28%] shadow-sm transition-all duration-350 overflow-hidden hover:border-rose-300 hover:shadow-[0_8px_24px_rgba(244,63,94,0.08)] hover:-translate-y-0.5 active:scale-[0.99]"
+          className="group relative text-left bg-gradient-to-br from-red-500/[0.03] via-transparent to-slate-100/[0.02] border border-slate-200 rounded-[14px] p-6 shadow-[inset_0_1px_3px_rgba(255,255,255,0.9),0_2px_8px_rgba(0,0,0,0.01)] hover:border-[#b91c1c]/30 hover:shadow-[0_12px_28px_rgba(185,28,28,0.05),inset_0_0_12px_rgba(255,255,255,1)] hover:bg-[#b91c1c]/[0.02] active:scale-[0.995] transition-all duration-200 flex flex-col justify-between h-44 cursor-pointer overflow-hidden"
         >
-          {/* Concept 3 refine: Zone Branding 25% with horizontal fade to white (no border) on the RIGHT */}
-          <div className="absolute right-0 top-0 bottom-0 w-[25%] bg-gradient-to-l from-red-700/[0.06] to-transparent flex flex-col justify-center items-center">
-            {/* Liseré micro-précis double couleur Hydromines */}
-            <div className="absolute right-0 top-0 bottom-0 w-[3px] flex flex-col">
-              <div className="h-1/2 bg-red-700" />
-              <div className="h-1/2 bg-sky-500" />
+          {/* Ligne d'ancrage avec code couleur d'action */}
+          <div className="absolute top-0 left-0 bottom-0 w-[4px] bg-[#b91c1c]" />
+          
+          <div className="pl-2">
+            <div className="flex items-center gap-2">
+              <span className="text-[9px] font-bold text-[#b91c1c] bg-red-50 px-2.5 py-0.5 rounded-full uppercase tracking-wider">
+                Flux logistique sortant
+              </span>
             </div>
-
-            {/* Icone magnifiée */}
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-slate-200/80 text-rose-600 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-rose-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_4px_12px_rgba(244,63,94,0.18)]">
-              <ArrowUpRight className="w-5.5 h-5.5 stroke-[1.8]" />
-            </div>
+            <h3 className="text-lg font-black text-slate-900 uppercase tracking-tight mt-3.5">
+              SAISIR UNE SORTIE
+            </h3>
+            <p className="text-xs text-slate-500 font-medium mt-1 leading-relaxed max-w-lg">
+              Déstocker du matériel critique d'extraction et des consommables pour affectation immédiate sur engins de mines ou distribution aux équipes de chantier.
+            </p>
           </div>
 
-          <div className="flex items-start justify-between">
-            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100/80 px-2 py-1 rounded-lg uppercase tracking-wider">
-              IMPUTATION SORTIE
-            </span>
-          </div>
-          <div className="mt-5">
-            <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight group-hover:text-rose-950 transition-colors">Sortie de Pièces</h4>
-            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60 font-sans">Déstocker pour un engin minier, perforateur Montabert ou atelier local.</p>
-            
-            {/* Embedded Live HUD */}
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-medium">
-                Aujourd'hui
-              </span>
-              <span className="text-[11px] font-black text-rose-600 bg-rose-50 px-2.5 py-1 rounded-lg border border-rose-100">
-                {(() => {
-                  const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && m.type === 'SORTIE');
-                  const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
-                  return `${count} SORTIE${count > 1 ? 'S' : ''}`;
-                })()}
-              </span>
+          <div className="pl-2 border-t border-slate-100/60 pt-3 flex items-center justify-between w-full">
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-400 font-bold uppercase tracking-wider">
+              <span className="w-1.5 h-1.5 bg-[#b91c1c] rounded-full shrink-0" />
+              Aujourd'hui : {(() => {
+                const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && m.type === 'SORTIE');
+                const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                return `${count} bon${count > 1 ? 's' : ''} de sortie`;
+              })()}
+            </div>
+            <div className="w-8 h-8 rounded-lg bg-white border border-slate-205 flex items-center justify-center text-[#b91c1c] shadow-sm group-hover:bg-[#b91c1c] group-hover:text-white group-hover:border-transparent transition-colors">
+              <ArrowUpRight className="w-4 h-4 stroke-[2.5]" />
             </div>
           </div>
         </button>
 
-        {/* 3. TRANSFERTS & RETOURS */}
-        <button 
-          onClick={() => onAction('TRANSFERS_RETURNS')}
-          className="group relative text-left bg-white border border-slate-200 rounded-2xl p-6 pr-[28%] shadow-sm transition-all duration-350 overflow-hidden hover:border-indigo-300 hover:shadow-[0_8px_24px_rgba(99,102,241,0.08)] hover:-translate-y-0.5 active:scale-[0.99]"
-        >
-          {/* Concept 3 refine: Zone Branding 25% with horizontal fade to white (no border) on the RIGHT */}
-          <div className="absolute right-0 top-0 bottom-0 w-[25%] bg-gradient-to-l from-indigo-500/[0.06] to-transparent flex flex-col justify-center items-center">
-            {/* Liseré micro-précis double couleur Hydromines */}
-            <div className="absolute right-0 top-0 bottom-0 w-[3px] flex flex-col">
-              <div className="h-1/2 bg-sky-500" />
-              <div className="h-1/2 bg-red-700" />
-            </div>
-
-            {/* Icone magnifiée */}
-            <div className="w-10 h-10 rounded-xl flex items-center justify-center bg-white border border-slate-200/80 text-indigo-600 shadow-sm transition-all duration-300 group-hover:scale-110 group-hover:bg-indigo-500 group-hover:text-white group-hover:border-transparent group-hover:shadow-[0_4px_12px_rgba(99,102,241,0.18)]">
-              <Truck className="w-5.5 h-5.5" />
-            </div>
-          </div>
-
-          <div className="flex items-start justify-between">
-            <span className="text-[10px] font-black text-slate-400 bg-slate-50 border border-slate-100/80 px-2 py-1 rounded-lg uppercase tracking-wider">
-              TRANSFERT INTER-SITES
-            </span>
-          </div>
-          <div className="mt-5">
-            <h4 className="text-lg font-black text-slate-900 uppercase tracking-tight group-hover:text-indigo-950 transition-colors">Transferts & Retours</h4>
-            <p className="text-xs text-slate-400 font-medium mt-1 leading-snug pb-3 border-b border-slate-100/60 font-sans">Transférer entre magasins de surface et magasins de fond (-350m) et retours usine.</p>
-            
-            {/* Embedded Live HUD */}
-            <div className="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-              <span className="text-[11px] text-slate-400 font-medium">
-                Aujourd'hui
-              </span>
-              <span className="text-[11px] font-black text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-150">
-                {(() => {
-                  const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'TRANSFERT_OUT' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR'));
-                  const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
-                  return `${count} TRANSFERT${count > 1 ? 'S' : ''}`;
-                })()}
-              </span>
-            </div>
-          </div>
-        </button>
       </div>
 
-      {/* PARTIE 5 — BLOC "ACCÈS RAPIDE AUX STOCKS" : GRILLE PROPRE */}
-      <div className="bg-white border border-slate-200 rounded-2xl p-6 pl-10 shadow-sm relative overflow-hidden">
-        {/* Double Ligne Verticale Hydromines: BLEU CIEL & ROUGE FONCÉ */}
-        <div className="absolute left-0 top-0 bottom-0 flex w-3 shadow-[1px_0_10px_rgba(56,189,248,0.15)]">
-          <div className="w-1.5 h-full bg-gradient-to-b from-[#38bdf8] to-sky-500" />
-          <div className="w-1.5 h-full bg-gradient-to-b from-[#991b1b] to-red-800" />
+      {/* SECONDE LIGNE : TRANSFERTS SECONDAIRES & ACCÈS RAPIDE AUX STOCKS (Épuré Slate) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        
+        {/* CARTE : TRANSFERTS INTER-SITES & RETOURS (14px rounded) */}
+        <button 
+          onClick={() => onAction('TRANSFERS_RETURNS')}
+          className="group relative text-left bg-white border border-slate-200 rounded-[14px] p-5 shadow-sm hover:border-slate-350 hover:shadow-md active:scale-[0.995] transition-all duration-200 flex flex-col justify-between h-[166px] cursor-pointer overflow-hidden animate-fade-in"
+        >
+          <div>
+            <span className="text-[9px] font-bold text-slate-500 bg-slate-50 border border-slate-150 px-2 py-0.5 rounded uppercase tracking-wider">
+              Transit Inter-sites / retours
+            </span>
+            <h4 className="text-base font-bold text-slate-900 uppercase tracking-tight mt-3 group-hover:text-slate-955">
+              Transferts & Retours
+            </h4>
+            <p className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
+              Expédier ou réceptionner du matériel en transit entre les chantiers de l'exploitation Hydromines ou gérer un retour fournisseur.
+            </p>
+          </div>
+
+          <div className="border-t border-slate-100 pt-3 flex items-center justify-between w-full">
+            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider whitespace-nowrap">
+              Flux ce jour : {(() => {
+                const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'TRANSFERT_OUT' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR'));
+                const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                return count;
+              })()}
+            </span>
+            <div className="w-7 h-7 rounded-lg bg-slate-50 border border-slate-200 flex items-center justify-center text-slate-500 group-hover:bg-slate-800 group-hover:text-white transition-colors">
+              <Truck className="w-3.5 h-3.5" />
+            </div>
+          </div>
+        </button>
+
+        {/* ACCÈS RAPIDE AUX STOCKS (2/3 de largeur, avec survol élastique et couleurs Hydromines) */}
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-[14px] p-5 shadow-sm flex flex-col justify-between h-[166px]">
+          <div>
+            <h4 className="text-[10px] font-bold text-slate-450 uppercase tracking-widest leading-none">
+              Accès rapide aux catégories de Stocks
+            </h4>
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5 mt-3">
+            {[
+              { 
+                label: 'Perforateurs', 
+                desc: 'COP & Montabert', 
+                icon: Activity, 
+                page: 'STOCK_PERFORATEURS', 
+                dotClass: 'bg-[#0284c7]', 
+                hoverClass: 'hover:border-[#0284c7]/40 hover:shadow-[0_6px_16px_rgba(2,132,199,0.08)] hover:-translate-y-0.5 group-hover:bg-sky-50 group-hover:text-[#0284c7] group-hover:border-sky-100' 
+              },
+              { 
+                label: 'Consommables', 
+                desc: 'Fluides & Piles', 
+                icon: Flame, 
+                page: 'STOCK_CONSOMMABLES', 
+                dotClass: 'bg-[#b91c1c]', 
+                hoverClass: 'hover:border-[#b91c1c]/45 hover:shadow-[0_6px_16px_rgba(185,28,28,0.08)] hover:-translate-y-0.5 group-hover:bg-red-50 group-hover:text-[#b91c1c] group-hover:border-red-100' 
+              },
+              { 
+                label: 'Equipements EPI', 
+                desc: 'Sûreté fond', 
+                icon: ShieldIcon, 
+                page: 'STOCK_EPI', 
+                dotClass: 'bg-[#0284c7]', 
+                hoverClass: 'hover:border-[#0284c7]/40 hover:shadow-[0_6px_16px_rgba(2,132,199,0.08)] hover:-translate-y-0.5 group-hover:bg-sky-50 group-hover:text-[#0284c7] group-hover:border-sky-100' 
+              },
+              { 
+                label: 'Ravitaillement', 
+                desc: 'Chantiers alerts', 
+                icon: AlertCircle, 
+                page: 'RESTOCK_MGMT', 
+                dotClass: 'bg-[#b91c1c]', 
+                hoverClass: 'hover:border-[#b91c1c]/45 hover:shadow-[0_6px_16px_rgba(185,28,28,0.08)] hover:-translate-y-0.5 group-hover:bg-red-50 group-hover:text-[#b91c1c] group-hover:border-red-100' 
+              },
+            ].map(sec => (
+              <button
+                key={sec.label}
+                onClick={() => onAction(sec.page)}
+                className={cn(
+                  "flex flex-col items-center justify-center p-2.5 rounded-lg border border-slate-150 bg-white cursor-pointer hover:border-slate-350 transition-all duration-200 text-center group hover:scale-[1.04] active:scale-[0.97]",
+                  sec.hoverClass.split(' ')[0] // Custom target border color config onHover
+                )}
+              >
+                <div className={cn(
+                  "p-1.5 bg-slate-50 border border-slate-150 rounded-lg text-slate-650 transition-all flex items-center justify-center mb-1 group-hover:scale-105",
+                  sec.hoverClass.split(' ').slice(2).join(' ')
+                )}>
+                  <sec.icon className="w-3.5 h-3.5 stroke-[2]" />
+                </div>
+                <span className="text-[11px] font-bold text-slate-800 tracking-tight transition-colors group-hover:text-slate-950 whitespace-nowrap overflow-hidden text-ellipsis w-full flex items-center justify-center gap-1">
+                  <span className={cn("w-1 h-1 rounded-full shrink-0", sec.dotClass)} />
+                  {sec.label}
+                </span>
+                <span className="text-[8px] text-slate-400 font-bold uppercase tracking-wider block scale-[0.95] whitespace-nowrap overflow-hidden text-ellipsis w-full mt-0.5">
+                  {sec.desc}
+                </span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-4.5">Accès rapide aux stocks</h4>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
-          {[
-            { label: 'Perforateurs', desc: 'Marteaux COP/MB', icon: Activity, page: 'STOCK_PERFORATEURS', color: 'text-rose-600', bg: 'bg-rose-50 border border-rose-100', hoverBorder: 'hover:border-rose-300 hover:shadow-rose-500/5' },
-            { label: 'Consommables', desc: 'Fluides & Silice', icon: Flame, page: 'STOCK_CONSOMMABLES', color: 'text-orange-600', bg: 'bg-orange-50 border border-orange-100', hoverBorder: 'hover:border-orange-300 hover:shadow-orange-500/5' },
-            { label: 'Equipements EPI', desc: 'Sûreté -350m', icon: ShieldIcon, page: 'STOCK_EPI', color: 'text-emerald-600', bg: 'bg-emerald-50 border border-emerald-100', hoverBorder: 'hover:border-emerald-300 hover:shadow-emerald-500/5' },
-            { label: 'Ravitaillement', desc: 'Stock & Plannings', icon: AlertCircle, page: 'RESTOCK_MGMT', color: 'text-indigo-600', bg: 'bg-indigo-50 border border-indigo-100', hoverBorder: 'hover:border-indigo-300 hover:shadow-indigo-500/5' },
-          ].map(sec => (
-            <button
-              key={sec.label}
-              onClick={() => {
-                onAction(sec.page);
-              }}
-              className={cn(
-                "flex flex-col items-center justify-center p-4 rounded-xl",
-                "border border-slate-200 bg-white transition-all duration-200",
-                "hover:-translate-y-0.5 hover:shadow-md cursor-pointer",
-                "text-center group",
-                sec.hoverBorder
-              )}
-            >
-              <div className={cn(
-                "p-2.5 rounded-xl mb-2.5 transition-all duration-200",
-                "group-hover:scale-110",
-                sec.bg, sec.color
-              )}>
-                <sec.icon className="w-5.5 h-5.5 stroke-[1.8]" />
-              </div>
-              <span className="text-xs font-bold text-slate-800 tracking-tight group-hover:text-slate-950 transition-colors">{sec.label}</span>
-              <span className="text-[9px] text-slate-400 mt-1 font-extrabold uppercase tracking-widest leading-none block scale-[0.95]">{sec.desc}</span>
-            </button>
-          ))}
-        </div>
       </div>
     </div>
   );
