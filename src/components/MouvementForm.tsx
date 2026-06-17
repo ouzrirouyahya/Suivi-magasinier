@@ -16,12 +16,12 @@ import {
   ShoppingBag,
   Store,
   Check,
-  Award
+  Award,
+  MapPin
 } from 'lucide-react';
 import { Article, Mouvement, MouvementItem, SiteCode, EnginMaster, PerfoMaster, AgentMaster, CatalogItem } from '../types';
 import { cn, formatCurrency, generateId } from '../lib/utils';
 import { SITES } from '../demoData';
-import { useInventory } from '../context/InventoryContext';
 
 const QUICK_ITEMS = [
   {
@@ -70,13 +70,6 @@ interface MouvementFormProps {
 }
 
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
-  const { currentUser } = useInventory();
-  const [selectedSite, setSelectedSite] = useState<SiteCode | ''>(() => {
-    if (currentUser?.role === 'MAGASINIER' && currentUser.assignedSite) {
-      return currentUser.assignedSite;
-    }
-    return site !== 'ALL' ? site : '';
-  });
   const [date, setDate] = useState(() => new Date().toISOString());
   const [reference, setReference] = useState('');
   const [entityName, setEntityName] = useState(''); 
@@ -107,26 +100,20 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const prefix = type === 'ENTREE' ? 'BE' : 'BS';
   const autoId = useMemo(() => {
-    return `${prefix}/${selectedSite || '—'}/${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
-  }, [type, selectedSite]);
+    return `${prefix}/${site === 'ALL' ? '—' : site}/${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+  }, [type, site]);
 
-  const siteEngins = selectedSite ? engins.filter(e => e.site === selectedSite) : [];
-  const sitePerfos = selectedSite ? perfos.filter(p => p.site === selectedSite) : [];
+  const siteEngins = site !== 'ALL' ? engins.filter(e => e.site === site) : [];
+  const sitePerfos = site !== 'ALL' ? perfos.filter(p => p.site === site) : [];
 
   const filteredArticles = useMemo(() => {
-    if (!selectedSite) return [];
-    
-    // Double sécurité : un magasinier ne peut jamais rechercher hors de son site assigné
-    const allowedSite = currentUser?.role === 'MAGASINIER' 
-      ? currentUser.assignedSite 
-      : selectedSite;
-      
+    if (!site || site === 'ALL') return [];
     return articles.filter(a => {
       const matchesSearch = !search || a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase());
-      const matchesSite = a.site === allowedSite;
+      const matchesSite = a.site === site;
       return matchesSearch && matchesSite && a.active;
     });
-  }, [articles, search, selectedSite, currentUser]);
+  }, [articles, search, site]);
 
   const sortedArticles = useMemo(() => {
     let sorted = [...filteredArticles];
@@ -137,14 +124,14 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   }, [filteredArticles, categoryFilter]);
 
   const filteredCatalogItems = useMemo(() => {
-    if (type !== 'ENTREE' || !search || !selectedSite) return [];
+    if (type !== 'ENTREE' || !search || site === 'ALL') return [];
     if (search.length < 2) return [];
 
     const normSearch = search.toLowerCase();
     const matches = (catalog || []).filter(c => {
       const matchesSearch = (c.designation || '').toLowerCase().includes(normSearch) || 
                             (c.reference || '').toLowerCase().includes(normSearch);
-      const existsLocally = articles.some(a => a.site === selectedSite && a.ref.trim().toUpperCase() === (c.reference || '').trim().toUpperCase());
+      const existsLocally = articles.some(a => a.site === site && a.ref.trim().toUpperCase() === (c.reference || '').trim().toUpperCase());
       return matchesSearch && !existsLocally;
     });
 
@@ -153,16 +140,16 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
 
     return matches.slice(0, 15);
-  }, [type, search, catalog, categoryFilter, articles, selectedSite]);
+  }, [type, search, catalog, categoryFilter, articles, site]);
 
   const addCatalogItem = async (catalogItem: CatalogItem) => {
-    if (!selectedSite) return;
+    if (site === 'ALL') return;
     const cleanRef = (catalogItem.reference || '').trim().toUpperCase().replace(/\s+/g, '_');
-    const deterministicId = `${selectedSite}_${cleanRef}`;
+    const deterministicId = `${site}_${cleanRef}`;
 
     const newArticle: Article = {
       id: deterministicId,
-      site: selectedSite,
+      site: site,
       ref: catalogItem.reference,
       designation: catalogItem.designation,
       type: catalogItem.suggestedType || 'CONSOMMABLES',
@@ -221,12 +208,12 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   };
 
   const handleQuickAdd = async (quickItem: { reference: string; designation: string; price: number; unit: string; suggestedType: string }) => {
-    if (!selectedSite) {
+    if (site === 'ALL') {
       toast.error("Veuillez sélectionner un chantier d'abord.");
       return;
     }
     const existingArticle = articles.find(
-      a => a.site === selectedSite && a.ref.trim().toUpperCase() === quickItem.reference.trim().toUpperCase()
+      a => a.site === site && a.ref.trim().toUpperCase() === quickItem.reference.trim().toUpperCase()
     );
 
     if (existingArticle) {
@@ -240,11 +227,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
     if (catalogItem) {
       const cleanRef = (catalogItem.reference || '').trim().toUpperCase().replace(/\s+/g, '_');
-      const deterministicId = `${selectedSite}_${cleanRef}`;
+      const deterministicId = `${site}_${cleanRef}`;
       
       const newArticle: Article = {
         id: deterministicId,
-        site: selectedSite,
+        site: site,
         ref: catalogItem.reference,
         designation: catalogItem.designation,
         type: catalogItem.suggestedType || 'CONSOMMABLES',
@@ -274,11 +261,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
 
     const cleanRef = quickItem.reference.trim().toUpperCase().replace(/\s+/g, '_');
-    const deterministicId = `${selectedSite}_${cleanRef}`;
+    const deterministicId = `${site}_${cleanRef}`;
 
     const newArticle: Article = {
       id: deterministicId,
-      site: selectedSite,
+      site: site,
       ref: quickItem.reference,
       designation: quickItem.designation,
       type: quickItem.suggestedType as any,
@@ -348,7 +335,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     e.preventDefault();
     setFormSubmitted(true);
 
-    if (!selectedSite) {
+    if (site === 'ALL') {
       setValidationError("Veuillez sélectionner un chantier avant de valider.");
       return;
     }
@@ -358,12 +345,12 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     // NOUVELLE VÉRIFICATION : tous les articles doivent appartenir au chantier sélectionné
     const mismatchedItem = items.find(item => {
       const art = articles.find(a => a.id === item.articleId) || localCreatedArticles.find(a => a.id === item.articleId);
-      return art && art.site !== selectedSite;
+      return art && art.site !== site;
     });
     if (mismatchedItem) {
       const art = articles.find(a => a.id === mismatchedItem.articleId) || localCreatedArticles.find(a => a.id === mismatchedItem.articleId);
       setValidationError(
-        `Incohérence détectée : l'article "${art?.designation}" appartient au chantier ${art?.site}, mais vous avez sélectionné le chantier ${selectedSite}. Retirez cette ligne ou changez de chantier.`
+        `Incohérence détectée : l'article "${art?.designation}" appartient au chantier ${art?.site}, mais vous avez sélectionné le chantier ${site}. Retirez cette ligne ou changez de chantier.`
       );
       return;
     }
@@ -410,7 +397,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
     const mouvement: Mouvement = {
       id: generateId(),
-      site: selectedSite,
+      site: site,
       date,
       type,
       reference,
@@ -459,21 +446,25 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
           </div>
           <div>
             <h2 className="text-4xl font-black uppercase text-slate-950 tracking-tighter leading-tight">{type === 'ENTREE' ? "Bon de Réception" : "Bon de Sortie"}</h2>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-1 opacity-70">MAGASIN: {selectedSite || '—'}</p>
+            <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-1 opacity-70">MAGASIN: {site === 'ALL' ? '—' : site}</p>
           </div>
         </div>
       </header>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {selectedSite === '' && (
-          <div className="flex items-center gap-3 px-6 py-4 bg-amber-50 border-2 border-amber-300 rounded-2xl mb-4 animate-in fade-in duration-300 relative z-20">
-            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 select-none animate-pulse" />
+        {site === 'ALL' && (
+          <div className="flex items-center gap-3 px-6 py-5 bg-amber-50 
+                          border-2 border-amber-300 rounded-2xl mb-4">
+            <AlertCircle className="w-6 h-6 text-amber-600 shrink-0" />
             <div>
-              <p className="font-extrabold text-amber-800 text-sm uppercase">
-                Sélectionnez un chantier pour commencer
+              <p className="font-black text-amber-800 text-sm">
+                Aucun chantier sélectionné
               </p>
-              <p className="text-xs text-amber-700 mt-0.5 font-semibold">
-                Vous supervisez plusieurs chantiers — choisissez celui concerné par ce bon avant de rechercher ou d'ajouter des articles.
+              <p className="text-xs text-amber-700 mt-1">
+                Choisissez un chantier précis dans le sélecteur du menu 
+                latéral (en haut à gauche) avant de créer un bon de 
+                mouvement. Un mouvement de stock doit toujours être 
+                rattaché à un site unique.
               </p>
             </div>
           </div>
@@ -482,32 +473,15 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
         <div className="card glass p-4 grid grid-cols-1 md:grid-cols-2 gap-4 shadow-xl border-slate-100">
           {/* Dynamic Date and Reference Controller */}
           <div className="md:col-span-2 p-4 bg-slate-50 border border-slate-100 rounded-xl grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 select-none">
-            {currentUser?.role === 'MAGASINIER' ? (
-              <div className="space-y-1 lg:col-span-1">
-                <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">Chantier de Rattachement</label>
-                <div className="px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-xs font-black text-slate-700 h-10 flex items-center shadow-inner">
-                  Chantier : {selectedSite || 'SMI'}
-                </div>
+            <div className="space-y-1 lg:col-span-1">
+              <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">Chantier Concerne</label>
+              <div className="px-4 py-2.5 bg-slate-50 border border-slate-200 
+                              rounded-xl text-sm font-bold text-slate-700 
+                              flex items-center gap-2 h-10">
+                <MapPin className="w-4 h-4 text-slate-400" />
+                Chantier : {site === 'ALL' ? 'Aucun (sélectionnez en haut)' : site}
               </div>
-            ) : (
-              site === 'ALL' && (
-                <div className="space-y-1 lg:col-span-1">
-                  <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">Site de Réalisation</label>
-                  <select 
-                    value={selectedSite} 
-                    onChange={(e) => setSelectedSite(e.target.value as SiteCode)} 
-                    className={cn(
-                      "input-field h-10 px-3 text-xs bg-white font-sans font-extrabold border border-slate-205 rounded-lg w-full transition-all focus:outline-none focus:ring-2 focus:ring-sky-500 cursor-pointer",
-                      selectedSite === '' && "border-amber-400 ring-2 ring-amber-200 animate-pulse bg-amber-50"
-                    )}
-                    required
-                  >
-                    <option value="">Sélectionner un chantier...</option>
-                    {SITES.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
-                  </select>
-                </div>
-              )
-            )}
+            </div>
             <div className={cn("space-y-1", site === 'ALL' ? "lg:col-span-1" : "")}>
               <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 block">Date & Heure du Document</label>
               <input
@@ -581,7 +555,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   ) : (
                     <select className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full" value={mecanicien} onChange={(e) => setMecanicien(e.target.value)} required>
                       <option value="">SÉLECTIONNER UN AGENT...</option>
-                      {agents.filter(a => a.site === selectedSite).map(a => (
+                      {agents.filter(a => a.site === site).map(a => (
                         <option key={a.id} value={a.id}>
                           {a.matricule} - {a.lastname.toUpperCase()} {a.firstname.toUpperCase()} ({a.service.toUpperCase()})
                         </option>
@@ -704,7 +678,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                       required
                     >
                       <option value="">SÉLECTIONNER L'ACHETEUR...</option>
-                      {agents.filter(a => a.site === selectedSite).map(a => (
+                      {agents.filter(a => a.site === site).map(a => (
                         <option key={a.id} value={`${a.firstname} ${a.lastname}`}>{a.lastname} {a.firstname} ({a.service})</option>
                       ))}
                       <option value="AUTRE_PERSONNE">AUTRE (Taper manuellement...)</option>
@@ -802,11 +776,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 relative z-10" />
             <input 
               type="text" 
-              placeholder={selectedSite === '' ? "Veuillez d'abord sélectionner un chantier ci-dessus..." : "RECHERCHER UN ARTICLE..."} 
-              disabled={selectedSite === ''}
+              placeholder={site === 'ALL' ? "Sélectionnez un chantier dans le menu..." : "RECHERCHER UN ARTICLE..."} 
+              disabled={site === 'ALL'}
               className={cn(
                 "input-field h-14 pl-14 text-lg font-black tracking-tight bg-white border border-slate-100 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/5 rounded-2xl relative z-10 transition-all uppercase",
-                selectedSite === '' && "opacity-50 cursor-not-allowed bg-slate-50"
+                site === 'ALL' && "opacity-50 cursor-not-allowed bg-slate-50"
               )}
               value={search}
               onChange={(e) => { setSearch(e.target.value); setShowResults(true); }}
@@ -915,7 +889,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                             }}
                           >
                             <option value="">SÉLECTIONNER UN TRAVAILLEUR...</option>
-                            {agents.filter(a => a.site === selectedSite).map(a => (
+                            {agents.filter(a => a.site === site).map(a => (
                               <option key={a.id} value={a.id}>
                                 {a.lastname} {a.firstname} ({a.fonction || 'MINEUR'} - {a.service})
                               </option>
@@ -960,15 +934,15 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             <div className="flex gap-4 w-full sm:w-auto">
               <button 
                 type="submit" 
-                disabled={items.length === 0 || selectedSite === ''} 
+                disabled={items.length === 0 || site === 'ALL'} 
                 className={cn(
                   "flex-1 sm:flex-none px-12 h-16 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl transition-all cursor-pointer",
-                  (items.length === 0 || selectedSite === '')
+                  (items.length === 0 || site === 'ALL')
                     ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-50 border-none"
                     : "bg-slate-950 text-white hover:bg-sky-600 border-none"
                 )}
               >
-                {selectedSite === '' ? 'Sélectionnez un chantier' : 'Valider & Générer Bon'}
+                {site === 'ALL' ? 'Sélectionnez un chantier dans le menu' : 'Valider & Générer Bon'}
               </button>
             </div>
           </div>
