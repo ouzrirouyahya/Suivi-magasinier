@@ -26,39 +26,42 @@ export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogV
   });
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+      {/* Sub-Header Section */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print border-b border-slate-100 pb-4">
         <div>
-          <h2 className="text-5xl font-black text-slate-950 flex items-center gap-4 tracking-tighter uppercase leading-none">
-            <ShieldCheck className="w-16 h-16 text-sky-500" /> Audit Log
-          </h2>
-          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-4 opacity-70">Traçabilité totale des opérations critiques en temps réel</p>
+          <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 animate-pulse" />
+            Journal d'Audit Système
+          </h3>
+          <p className="text-[10px] text-slate-450 font-bold uppercase tracking-wider mt-1">
+            Traçabilité totale des opérations critiques en temps réel
+          </p>
         </div>
-
-        <div className="flex items-center gap-4">
-          <div className="bg-white/80 backdrop-blur-md px-6 py-3 rounded-2xl border border-slate-100 shadow-xl flex items-center gap-3">
-            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-            <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Surveillance Active</p>
+        <div className="flex items-center gap-4 shrink-0">
+          <div className="bg-white px-3 py-1.5 rounded-xl border border-slate-200 shadow-sm flex items-center gap-2">
+            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <p className="text-[9px] font-black text-slate-450 uppercase tracking-widest">Surveillance Active</p>
           </div>
         </div>
-      </header>
+      </div>
 
-      <div className="card glass p-6">
-        <div className="flex flex-col md:flex-row gap-4 mb-8">
+      <div className="card-clean p-5">
+        <div className="flex flex-col md:flex-row gap-4 mb-6">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
             <input 
               type="text" 
               placeholder="Rechercher par utilisateur, action ou détails..."
-              className="input-field pl-12"
+              className="w-full bg-slate-50 h-10 pl-10 pr-4 rounded-xl text-xs outline-none border border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all font-semibold placeholder:text-slate-400"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
           <div className="w-full md:w-64 relative">
-            <Filter className="absolute left-4 top-1/2 -translate-y-1/2 w-4.5 h-4.5 text-slate-400" />
+            <Filter className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
             <select
-              className="input-field pl-12 appearance-none"
+              className="w-full bg-slate-50 h-10 pl-10 pr-8 rounded-xl text-xs outline-none border border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all font-semibold appearance-none"
               value={filterSite}
               onChange={(e) => setFilterSite(e.target.value as any)}
             >
@@ -69,6 +72,9 @@ export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogV
               <option value="BOU-AZZER">BOU-AZZER</option>
               <option value="OUANSIMI">OUANSIMI</option>
             </select>
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+              ▼
+            </div>
           </div>
         </div>
 
@@ -76,23 +82,23 @@ export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogV
           <table className="data-table">
             <thead>
               <tr>
-                <th>Horodatage</th>
-                <th>Opérateur</th>
-                <th>Site</th>
-                <th>Action</th>
-                <th>Détails de l'Opération</th>
-                <th className="text-right">Impact Fin.</th>
+                <th className="px-4 py-3">Horodatage</th>
+                <th className="px-4 py-3">Opérateur</th>
+                <th className="px-4 py-3">Site</th>
+                <th className="px-4 py-3">Action</th>
+                <th className="px-4 py-3">Détails de l'Opération</th>
+                <th className="px-4 py-3 text-right">Impact Fin.</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-white transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center gap-2">
+                <tr key={log.id} className="hover:bg-slate-50/30 transition-colors">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-slate-300" />
-                      <span className="text-xs font-black text-slate-500">
+                      <span className="text-[11px] font-bold text-slate-600">
                         {!log.timestamp || new Date(log.timestamp).getFullYear() <= 1970 ? (
-                          <span className="text-amber-500 animate-pulse uppercase tracking-wider text-[10px]">À l'instant</span>
+                          <span className="text-amber-500 animate-pulse uppercase tracking-wider text-[9px]">À l'instant</span>
                         ) : (
                           new Date(log.timestamp).toLocaleString('fr-FR', {
                             day: '2-digit',
@@ -104,20 +110,20 @@ export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogV
                       </span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
                       <User className="w-3.5 h-3.5 text-sky-400" />
-                      <span className="text-xs font-bold text-slate-700">{log.userEmail.split('@')[0]}</span>
+                      <span className="text-[11px] font-bold text-slate-705">{log.userEmail.split('@')[0]}</span>
                     </div>
                   </td>
-                  <td className="px-6 py-4">
-                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] font-black rounded uppercase">
+                  <td className="px-4 py-3">
+                    <span className="px-2 py-0.5 bg-slate-100 text-slate-600 text-[9px] font-black rounded uppercase">
                       {log.site}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
+                  <td className="px-4 py-3">
                     <span className={cn(
-                      "text-[10px] font-black px-2 py-1 rounded-lg uppercase tracking-tight",
+                      "text-[9px] font-black px-2 py-1 rounded-lg uppercase tracking-tight",
                       log.action.includes('SORTIE') || log.action.includes('TRANSFERT_OUT') ? "bg-rose-50 text-rose-700" :
                       log.action.includes('ENTREE') || log.action.includes('TRANSFERT_IN') ? "bg-emerald-50 text-emerald-700" :
                       "bg-sky-50 text-sky-700"
@@ -125,12 +131,12 @@ export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogV
                       {log.action}
                     </span>
                   </td>
-                  <td className="px-6 py-4">
-                    <p className="text-xs font-medium text-slate-600 max-w-md truncate">{log.details}</p>
+                  <td className="px-4 py-3">
+                    <p className="text-[11px] font-medium text-slate-500 max-w-md truncate">{log.details}</p>
                   </td>
-                  <td className="px-6 py-4 text-right">
+                  <td className="px-4 py-3 text-right">
                     {log.amount ? (
-                      <span className="text-xs font-black text-slate-900">{formatCurrency(log.amount)}</span>
+                      <span className="text-[11px] font-black text-slate-900">{formatCurrency(log.amount)}</span>
                     ) : (
                       <span className="text-slate-300">—</span>
                     )}

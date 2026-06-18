@@ -43,6 +43,9 @@ import { SiteCode } from '../types';
 import { SITES } from '../demoData';
 import { formatCurrency, cn } from '../lib/utils';
 import type { Article, Mouvement } from '../types';
+import hydrominesLogo from '../assets/images/hydromines_logo.png';
+import html2canvas from 'html2canvas';
+import { jsPDF } from 'jspdf';
 
 export function ReportPage() {
   const { articles, mouvements, transferts, currentUser } = useInventory();
@@ -51,11 +54,276 @@ export function ReportPage() {
   const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'SITES' | 'CRITICAL' | 'CONSOLIDATION'>('OVERVIEW');
   const [siteSearch, setSiteSearch] = useState('');
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' }>({ key: 'value', direction: 'desc' });
+  const [dateStart, setDateStart] = useState<string>('');
+  const [dateEnd, setDateEnd] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [selectedSite, setSelectedSite] = useState<SiteCode | 'ALL'>('ALL');
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
+
+  const generatePDF = async () => {
+    if (!printRef.current) return;
+    setIsGeneratingPDF(true);
+    
+    // Give React a frame to set state and render the print elements before capturing
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    // High fidelity converter to translate OKLCH & OKLAB to standard HSL/RGB (parsed correctly by html2canvas)
+    const replaceUnsupportedColors = (cssText: string): string => {
+      if (!cssText) return '';
+      try {
+        return cssText.replace(/(oklch|oklab)\([^)]*\)/gi, (match) => {
+          try {
+            const isOklch = match.toLowerCase().startsWith('oklch');
+            const numbers = match.match(/[0-9.]+/g);
+            if (numbers && numbers.length >= 3) {
+              const lightness = parseFloat(numbers[0]);
+              const l = match.includes('%') ? lightness : lightness * 100;
+              
+              let hue = 0;
+              if (isOklch) {
+                hue = parseFloat(numbers[2]);
+              } else {
+                // oklab(L a b)
+                // Basic approximation of hue from a and b parameters
+                const a = parseFloat(numbers[1]);
+                const b = parseFloat(numbers[2]);
+                hue = (Math.atan2(b, a) * 180) / Math.PI;
+                if (hue < 0) hue += 360;
+              }
+              
+              const chroma = parseFloat(numbers[1]);
+              if (chroma < 0.01) {
+                // Gray scale
+                return `hsl(0, 0%, ${l.toFixed(1)}%)`;
+              }
+              
+              return `hsl(${hue.toFixed(1)}, 75%, ${l.toFixed(1)}%)`;
+            }
+            return 'rgb(148, 163, 184)'; // Slate-400 fallback
+          } catch (e) {
+            return 'rgb(148, 163, 184)';
+          }
+        });
+      } catch (e) {
+        return cssText;
+      }
+    };
+
+    const originalGetComputedStyle = window.getComputedStyle;
+    const originalStyleshots: { element: HTMLStyleElement; originalText: string }[] = [];
+    const linkBkup: { link: HTMLLinkElement; tempStyle: HTMLStyleElement }[] = [];
+    const originalInlineStyles: { element: HTMLElement; originalStyle: string }[] = [];
+
+    try {
+      // 1. Intercept window.getComputedStyle with an extremely robust, illegal-invocation safe Proxy
+      window.getComputedStyle = function (elt: Element, pseudoElt?: string | null) {
+        const style = originalGetComputedStyle.call(window, elt, pseudoElt);
+        return new Proxy(style, {
+          get(target, prop, receiver) {
+            if (prop === 'getPropertyValue') {
+              return function (this: any, propertyName: string) {
+                const val = target.getPropertyValue(propertyName);
+                if (val && (val.toLowerCase().includes('oklch') || val.toLowerCase().includes('oklab'))) {
+                  return replaceUnsupportedColors(val);
+                }
+                return val;
+              }.bind(target);
+            }
+            
+            const value = Reflect.get(target, prop, target);
+            if (typeof value === 'function') {
+              return value.bind(target);
+            }
+            if (typeof value === 'string' && (value.toLowerCase().includes('oklch') || value.toLowerCase().includes('oklab'))) {
+              return replaceUnsupportedColors(value);
+            }
+            return value;
+          }
+        }) as any;
+      };
+
+      // 2. Process inline HTML style attributes
+      const element = printRef.current;
+      const elementsWithInlineStyles = element.querySelectorAll('[style]');
+      elementsWithInlineStyles.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const oStyle = htmlEl.getAttribute('style');
+        if (oStyle && (oStyle.toLowerCase().includes('oklch') || oStyle.toLowerCase().includes('oklab'))) {
+          originalInlineStyles.push({ element: htmlEl, originalStyle: oStyle });
+          htmlEl.setAttribute('style', replaceUnsupportedColors(oStyle));
+        }
+      });
+
+      // 3. Process inline style elements
+      const styleElements = Array.from(document.querySelectorAll('style'));
+      for (const styleEl of styleElements) {
+        if (styleEl.textContent && (styleEl.textContent.toLowerCase().includes('oklch') || styleEl.textContent.toLowerCase().includes('oklab'))) {
+          originalStyleshots.push({
+            element: styleEl,
+            originalText: styleEl.textContent
+          });
+          styleEl.textContent = replaceUnsupportedColors(styleEl.textContent);
+        }
+      }
+
+      // 4. Process same-origin/internal linked stylesheets (Vite bundles/CSS)
+      const linkElements = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+      for (const linkEl of linkElements) {
+        if (linkEl.href) {
+          const isSameOrigin = (() => {
+            try {
+              const url = new URL(linkEl.href, window.location.origin);
+              return url.origin === window.location.origin;
+            } catch (e) {
+              return false;
+            }
+          })();
+
+          if (isSameOrigin) {
+            try {
+              const response = await fetch(linkEl.href);
+              if (response.ok) {
+                const rawCss = await response.text();
+                if (rawCss.toLowerCase().includes('oklch') || rawCss.toLowerCase().includes('oklab')) {
+                  const sanitizedCss = replaceUnsupportedColors(rawCss);
+                  const tempStyle = document.createElement('style');
+                  tempStyle.className = 'temp-pdf-style';
+                  tempStyle.textContent = sanitizedCss;
+                  document.head.appendChild(tempStyle);
+                  
+                  // Disable the stylesheet temporarily
+                  linkEl.disabled = true;
+                  linkBkup.push({ link: linkEl, tempStyle });
+                }
+              }
+            } catch (fetchErr) {
+              console.warn('Could not fetch same-origin CSS stylesheet for conversion:', fetchErr);
+            }
+          }
+        }
+      }
+
+      // Small tick for DOM redraw in browser
+      await new Promise((resolve) => setTimeout(resolve, 150));
+
+      const canvas = await html2canvas(element, {
+        scale: 2, // 2x density for superb readability in printed tables
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        logging: false,
+        windowWidth: 1200, // Forces clean, uniform desktop layout rendering
+      } as any);
+
+      const imgData = canvas.toDataURL('image/jpeg', 0.95);
+      const pdf = new jsPDF({
+        orientation: 'p',
+        unit: 'mm',
+        format: 'a4',
+      });
+
+      const imgWidth = 210; 
+      const pageHeight = 297; 
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      // Render cover or page 1
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+
+      // Handle multi-paging dynamically
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= pageHeight;
+      }
+
+      const fileDate = selectedMonth ? `_${selectedMonth}` : `_de_synthese`;
+      pdf.save(`Rapport_Hydromines${fileDate}.pdf`);
+    } catch (error) {
+      console.error('Failed to compile high-fidelity Hydromines PDF:', error);
+    } finally {
+      // Restore getComputedStyle
+      window.getComputedStyle = originalGetComputedStyle;
+
+      // Restore inline styles
+      for (const inline of originalInlineStyles) {
+        inline.element.setAttribute('style', inline.originalStyle);
+      }
+
+      // Restore style elements and stylesheets
+      for (const styleShot of originalStyleshots) {
+        styleShot.element.textContent = styleShot.originalText;
+      }
+      for (const bk of linkBkup) {
+        bk.link.disabled = false;
+        if (bk.tempStyle.parentNode) {
+          bk.tempStyle.parentNode.removeChild(bk.tempStyle);
+        }
+      }
+      setIsGeneratingPDF(false);
+    }
+  };
 
   const analytics = useMemo(() => {
-    // Filter data by month with strict type checking
-    const filteredMouvements = mouvements.filter(m => m && m.date && typeof m.date === 'string' && m.date.startsWith(selectedMonth));
-    const filteredTransferts = transferts.filter(t => t && t.date && typeof t.date === 'string' && t.date.startsWith(selectedMonth));
+    // Filter data by month, custom dates, site, and keyword with type checking
+    const filteredMouvements = mouvements.filter(m => {
+      if (!m || !m.date || typeof m.date !== 'string') return false;
+      
+      // Date constraint
+      let matchesDate = true;
+      if (dateStart || dateEnd) {
+        const mTime = new Date(m.date).getTime();
+        const validTime = isNaN(mTime) ? 0 : mTime;
+        if (dateStart && validTime < new Date(dateStart).getTime()) matchesDate = false;
+        if (dateEnd && validTime > new Date(dateEnd).getTime()) matchesDate = false;
+      } else if (selectedMonth) {
+        matchesDate = m.date.startsWith(selectedMonth);
+      }
+      
+      // Site constraint
+      const matchesSite = selectedSite === 'ALL' ? true : m.site === selectedSite;
+      
+      // Keyword filter
+      let matchesSearch = true;
+      if (searchTerm) {
+        const s = searchTerm.toLowerCase();
+        const matchesItems = m.items?.some(it => {
+          const art = articles.find(a => a.id === it.articleId);
+          return art && (
+            (art.designation?.toLowerCase().includes(s)) || 
+            (art.ref?.toLowerCase().includes(s))
+          );
+        });
+        matchesSearch = (m.id && m.id.toLowerCase().includes(s)) ||
+                        (m.reference && m.reference.toLowerCase().includes(s)) ||
+                        (m.vendeur && m.vendeur.toLowerCase().includes(s)) ||
+                        (m.demandeur && m.demandeur.toLowerCase().includes(s)) ||
+                        (m.beneficiaire && m.beneficiaire.toLowerCase().includes(s)) ||
+                        matchesItems;
+      }
+      
+      return matchesDate && matchesSite && matchesSearch;
+    });
+
+    const filteredTransferts = transferts.filter(t => {
+      if (!t || !t.date || typeof t.date !== 'string') return false;
+      
+      let matchesDate = true;
+      if (dateStart || dateEnd) {
+        const tTime = new Date(t.date).getTime();
+        const validTime = isNaN(tTime) ? 0 : tTime;
+        if (dateStart && validTime < new Date(dateStart).getTime()) matchesDate = false;
+        if (dateEnd && validTime > new Date(dateEnd).getTime()) matchesDate = false;
+      } else if (selectedMonth) {
+        matchesDate = t.date.startsWith(selectedMonth);
+      }
+      
+      const matchesSite = selectedSite === 'ALL' ? true : (t.fromSite === selectedSite || t.toSite === selectedSite);
+      return matchesDate && matchesSite;
+    });
     
     // Safety check for empty data - return clean initial state
     if (!articles.length && !filteredMouvements.length) return {
@@ -69,7 +337,14 @@ export function ReportPage() {
       dailyStats: { in: 0, out: 0 },
       inTransit: [],
       inTransitValue: 0,
-      lowStockItems: []
+      lowStockItems: [],
+      flowAnalysis: {
+        ENTREE: { count: 0, value: 0 },
+        SORTIE: { count: 0, value: 0 },
+        RETOUR: { count: 0, value: 0 },
+        TRANSFERT: { count: 0, value: 0 }
+      },
+      largestTransactions: []
     };
 
     // Fast Lookup Map for Article Names
@@ -123,7 +398,7 @@ export function ReportPage() {
       value: isNaN(value) ? 0 : value 
     }));
 
-    // Consumption Trends (Filtered by Month)
+    // Consumption Trends (Filtered by constraints)
     const consumptionMap: Record<string, { ref: string, name: string, qty: number, value: number, unit: string, type: string }> = {};
     const filteredSorties = filteredMouvements.filter(m => m.type === 'SORTIE');
     
@@ -152,18 +427,35 @@ export function ReportPage() {
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
 
-    // Activity Trends Analysis
-    const isCurrentMonth = selectedMonth === new Date().toISOString().slice(0, 7);
-    const trendDays = isCurrentMonth ? 14 : 31;
-    const lastN = Array.from({ length: trendDays }).map((_, i) => {
-      const d = new Date(`${selectedMonth}-01`);
-      if (isCurrentMonth) {
-        d.setDate(new Date().getDate() - i);
-      } else {
-        d.setDate(31 - i);
-      }
+    // Activity Trends Analysis (Dynamic Date Window or Monthly fallback)
+    let rangeStart = new Date();
+    let rangeEnd = new Date();
+    if (dateStart) {
+      rangeStart = new Date(dateStart);
+    } else if (selectedMonth) {
+      rangeStart = new Date(`${selectedMonth}-01`);
+    } else {
+      rangeStart.setDate(rangeStart.getDate() - 30);
+    }
+
+    if (dateEnd) {
+      rangeEnd = new Date(dateEnd);
+    } else if (selectedMonth) {
+      rangeEnd = new Date(rangeStart);
+      rangeEnd.setMonth(rangeEnd.getMonth() + 1);
+      rangeEnd.setDate(0);
+    } else {
+      rangeEnd = new Date();
+    }
+
+    const diffTime = Math.abs(rangeEnd.getTime() - rangeStart.getTime());
+    const diffDays = Math.min(45, Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1);
+
+    const lastN = Array.from({ length: diffDays }).map((_, i) => {
+      const d = new Date(rangeEnd);
+      d.setDate(d.getDate() - i);
       
-      if (d.toISOString().slice(0, 7) !== selectedMonth) return null;
+      if (d < rangeStart) return null;
 
       const dateStr = d.toISOString().split('T')[0];
       const dayMovements = filteredMouvements.filter(m => m.date.startsWith(dateStr));
@@ -210,6 +502,40 @@ export function ReportPage() {
         return ratioA - ratioB;
       }).slice(0, 10);
 
+    // Flow Recap Analysis for Audit Page (Option C)
+    const flowAnalysis = {
+      ENTREE: { count: 0, value: 0 },
+      SORTIE: { count: 0, value: 0 },
+      RETOUR: { count: 0, value: 0 },
+      TRANSFERT: { count: 0, value: 0 }
+    };
+    
+    filteredMouvements.forEach(m => {
+      const val = m.items.reduce((sum, i) => sum + ((i.quantity || 0) * (i.price || 0)), 0);
+      if (m.type === 'ENTREE') {
+        flowAnalysis.ENTREE.count++;
+        flowAnalysis.ENTREE.value += val;
+      } else if (m.type === 'SORTIE') {
+        flowAnalysis.SORTIE.count++;
+        flowAnalysis.SORTIE.value += val;
+      } else if (m.type === 'RETOUR') {
+        flowAnalysis.RETOUR.count++;
+        flowAnalysis.RETOUR.value += val;
+      } else if (m.type === 'TRANSFERT_IN' || m.type === 'TRANSFERT_OUT') {
+        flowAnalysis.TRANSFERT.count++;
+        flowAnalysis.TRANSFERT.value += val;
+      }
+    });
+
+    // Top 5 largest transactions (Option C)
+    const largestTransactions = filteredMouvements
+      .map(m => {
+        const val = m.items.reduce((sum, i) => sum + ((i.quantity || 0) * (i.price || 0)), 0);
+        return { ...m, totalValue: val };
+      })
+      .sort((a, b) => b.totalValue - a.totalValue)
+      .slice(0, 5);
+
     return {
       totalArticles: articles.length,
       totalStockValue: isNaN(totalStockValue) ? 0 : totalStockValue,
@@ -224,9 +550,11 @@ export function ReportPage() {
       },
       inTransit,
       inTransitValue: isNaN(inTransitValue) ? 0 : inTransitValue,
-      lowStockItems: sortedLowStock
+      lowStockItems: sortedLowStock,
+      flowAnalysis,
+      largestTransactions
     };
-  }, [articles, mouvements, transferts, currentUser?.role, selectedMonth]);
+  }, [articles, mouvements, transferts, currentUser?.role, selectedMonth, dateStart, dateEnd, searchTerm, selectedSite]);
 
   const exportConsolidationData = () => {
     if (!analytics) return;
@@ -270,13 +598,13 @@ export function ReportPage() {
   const COLORS = ['#0ea5e9', '#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
   return (
-    <div className="space-y-4 pb-16 animate-in fade-in duration-700">
+    <div className="space-y-6 pb-16 animate-in fade-in duration-700">
       {/* IMPROVED HEADER */}
-      <div className="flex flex-col xl:flex-row items-center justify-between gap-4 no-print">
-        <div className="flex items-center gap-3">
-          <div className="relative w-12 h-12 bg-slate-950 rounded-xl flex items-center justify-center shadow-lg overflow-hidden group">
+      <div className="flex flex-col xl:flex-row items-center justify-between gap-4 no-print bg-white p-6 rounded-2xl border border-slate-200/50 shadow-sm">
+        <div className="flex items-center gap-4">
+          <div className="relative w-14 h-14 bg-slate-950 rounded-xl flex items-center justify-center shadow-lg overflow-hidden group">
             <div className="absolute inset-0 bg-slate-900/50 opacity-0 group-hover:opacity-100 transition-opacity" />
-            <TrendingUp className="w-6 h-6 text-white relative z-10" />
+            <TrendingUp className="w-7 h-7 text-white relative z-10 animate-pulse" />
           </div>
           <div>
             <div className="flex items-center gap-3 mb-2 leading-none">
@@ -289,42 +617,58 @@ export function ReportPage() {
                 <input 
                   type="month" 
                   value={selectedMonth}
-                  onChange={(e) => setSelectedMonth(e.target.value)}
-                  className="text-base bg-slate-100 px-3 py-1 hover:bg-white border-0 focus:ring-0 rounded-lg font-black text-slate-500 uppercase tracking-widest cursor-pointer transition-colors"
+                  onChange={(e) => {
+                    setSelectedMonth(e.target.value);
+                    setDateStart('');
+                    setDateEnd('');
+                  }}
+                  className="text-sm bg-slate-100 px-3 py-1 hover:bg-slate-200 border-0 focus:ring-0 rounded-lg font-black text-slate-600 uppercase tracking-widest cursor-pointer transition-colors"
                 />
               </div>
             </div>
-            <h1 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Rapports & Consolidation</h1>
-            <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">
+            <h1 className="text-4xl font-black text-slate-950 tracking-tighter uppercase leading-none">Rapports & Consolidation</h1>
+            <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.1em] mt-2 opacity-70">
               Console de Supervision et d'Analyse Globale
             </p>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm p-1 no-print">
+        <div className="flex flex-col sm:flex-row items-center gap-3 w-full xl:w-auto mt-4 xl:mt-0">
+          <div className="flex items-center bg-white border border-slate-200 rounded-xl shadow-sm p-1 no-print w-full sm:w-auto justify-center">
              <button 
               onClick={exportConsolidationData}
-              className="px-3 py-1.5 hover:bg-slate-50 text-slate-400 hover:text-sky-600 rounded-lg transition-all cursor-pointer flex items-center gap-2 text-xs font-black uppercase tracking-widest"
+              className="px-4 py-2 hover:bg-slate-50 text-slate-500 hover:text-sky-600 rounded-lg transition-all cursor-pointer flex items-center gap-2 text-xs font-black uppercase tracking-widest"
               title="Exporter Consolidation CSV"
             >
               <Download className="w-4 h-4" />
-              <span className="hidden sm:inline">CSV</span>
+              <span>CSV</span>
             </button>
             <div className="w-[1px] h-4 bg-slate-200 mx-1" />
             <button 
-              onClick={() => {
-                window.focus();
-                window.print();
-              }}
-              className="flex items-center gap-2 px-4 py-1.5 bg-slate-950 text-white rounded-lg shadow-sm hover:bg-slate-800 active:scale-95 transition-all font-black text-xs uppercase tracking-widest cursor-pointer z-30"
+              onClick={generatePDF}
+              disabled={isGeneratingPDF}
+              className={cn(
+                "flex items-center gap-2 px-5 py-2 rounded-lg shadow-sm active:scale-95 transition-all font-black text-xs uppercase tracking-widest cursor-pointer z-30",
+                isGeneratingPDF 
+                  ? "bg-slate-700 text-slate-300 pointer-events-none cursor-not-allowed" 
+                  : "bg-slate-950 text-white hover:bg-slate-800"
+              )}
             >
-              <Printer className="w-4 h-4 text-sky-400" /> 
-              <span>PDF</span>
+              {isGeneratingPDF ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <span>Génération...</span>
+                </>
+              ) : (
+                <>
+                  <Printer className="w-4 h-4 text-sky-400" /> 
+                  <span>PDF</span>
+                </>
+              )}
             </button>
           </div>
 
-          <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 shadow-inner z-30 no-print">
+          <div className="flex bg-slate-100 p-1 rounded-2xl border border-slate-200 shadow-inner z-30 no-print w-full sm:w-auto justify-center">
             {[
               { id: 'OVERVIEW', label: 'Global', icon: LayoutGrid },
               { id: 'SITES', label: 'Sites', icon: MapPin },
@@ -343,26 +687,100 @@ export function ReportPage() {
                     : "text-slate-400 hover:text-slate-600 hover:bg-slate-200/50"
                 )}
               >
-                <tab.icon className="w-4 h-4" />
-                <span className="hidden lg:inline">{tab.label}</span>
+                <tab.icon className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">{tab.label}</span>
               </button>
             ))}
           </div>
         </div>
       </div>
 
+      {/* FILTER BAR SECTION - Option A */}
+      <div className="p-5 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 no-print shadow-sm border-slate-200/50 bg-white rounded-2xl border">
+        {/* Search Filter */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+            <Search className="w-3 h-3 text-slate-400" /> Recherche par mot-clé
+          </label>
+          <input 
+            type="text" 
+            placeholder="Référence, désignation, tiers..."
+            className="w-full bg-slate-50 h-10 px-4 rounded-xl text-xs outline-none border border-slate-200 focus:border-slate-950 focus:bg-white font-bold transition-all"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+
+        {/* Site Filter */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+            <MapPin className="w-3 h-3 text-slate-400" /> Filtrer par site
+          </label>
+          <select 
+            className="w-full bg-slate-50 h-10 px-4 rounded-xl text-xs outline-none border border-slate-200 focus:border-slate-950 focus:bg-white font-bold transition-all uppercase"
+            value={selectedSite}
+            onChange={(e) => setSelectedSite(e.target.value as any)}
+          >
+            <option value="ALL">Tous les Sites</option>
+            {SITES.map(s => (
+              <option key={s.code} value={s.code}>{s.label}</option>
+            ))}
+          </select>
+        </div>
+
+        {/* Date Start */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+            <Calendar className="w-3 h-3 text-slate-400" /> Période de début
+          </label>
+          <input 
+            type="date" 
+            className="w-full bg-slate-50 h-10 px-4 rounded-xl text-xs outline-none border border-slate-200 focus:border-slate-950 focus:bg-white font-bold transition-all"
+            value={dateStart}
+            onChange={(e) => {
+              setDateStart(e.target.value);
+              if (e.target.value) setSelectedMonth('');
+            }}
+          />
+        </div>
+
+        {/* Date End */}
+        <div className="space-y-2">
+          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-1.5">
+            <Calendar className="w-3 h-3 text-slate-400" /> Période de fin
+          </label>
+          <input 
+            type="date" 
+            className="w-full bg-slate-50 h-10 px-4 rounded-xl text-xs outline-none border border-slate-200 focus:border-slate-950 focus:bg-white font-bold transition-all"
+            value={dateEnd}
+            onChange={(e) => {
+              setDateEnd(e.target.value);
+              if (e.target.value) setSelectedMonth('');
+            }}
+          />
+        </div>
+      </div>
+
       <div ref={printRef} className="space-y-12 print:p-8 print:bg-white print:text-black">
         
-        {/* PRINT HEADER */}
-        <div className="hidden print:flex items-center justify-between mb-12 pb-6 border-b-4 border-slate-950">
-          <div className="flex flex-col">
-            <span className="text-4xl font-black tracking-tighter leading-none mb-1">
-              <span className="text-sky-500">HYDRO</span><span className="text-rose-900">MINES</span>
-            </span>
-            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Gestion de Stock Groupe</span>
+        {/* PRINT HEADER - Option B */}
+        <div className={cn(
+          "items-center justify-between mb-12 pb-6 border-b-4 border-slate-950",
+          isGeneratingPDF ? "flex bg-white" : "hidden print:flex"
+        )}>
+          <div className="flex items-center gap-6">
+            <img src={hydrominesLogo} alt="Logo" className="h-28 w-auto object-contain" />
+            <div className="flex flex-col">
+              <span className="text-4xl font-black tracking-tighter leading-none mb-1">
+                <span className="text-[#38bdf8]">HYDRO</span><span className="text-[#991b1b]">MINES</span>
+              </span>
+              <span className="text-[10px] font-black uppercase tracking-[0.3em] text-slate-500">Gestion de Stock Groupe</span>
+            </div>
           </div>
           <div className="text-right">
-            <h2 className="text-sm font-black uppercase tracking-tight text-slate-900">Rapport de Synthèse {new Date(`${selectedMonth}-01`).toLocaleDateString('fr-MA', { month: 'long', year: 'numeric' })}</h2>
+            <h2 className="text-sm font-black uppercase tracking-tight text-slate-900">
+              Rapport de Synthèse {selectedMonth ? new Date(`${selectedMonth}-01`).toLocaleDateString('fr-MA', { month: 'long', year: 'numeric' }) : `du ${dateStart || 'origine'} au ${dateEnd || 'ce jour'}`}
+            </h2>
             <p className="text-[10px] font-bold text-slate-500 mt-1 uppercase">Date d'édition : {new Date().toLocaleDateString('fr-MA', { day: 'numeric', month: 'long', year: 'numeric' })}</p>
           </div>
         </div>
@@ -729,6 +1147,102 @@ export function ReportPage() {
                 </div>
               </div>
             </div>
+
+            {/* VOLUMES & CORRELATION OF FLOWS - OPTION C */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 no-print">
+              <div className="bg-emerald-50/50 p-6 rounded-2xl border border-emerald-100/50">
+                <span className="text-[10px] font-black text-emerald-600 uppercase tracking-widest block mb-2">Entrées de Marchandises</span>
+                <p className="text-3xl font-black text-slate-900">{analytics.flowAnalysis.ENTREE.count}</p>
+                <p className="text-xs font-bold text-slate-500 mt-1 uppercase">Flux généré : <span className="font-black text-emerald-600">{formatCurrency(analytics.flowAnalysis.ENTREE.value)}</span></p>
+              </div>
+
+              <div className="bg-rose-50/50 p-6 rounded-2xl border border-rose-100/50">
+                <span className="text-[10px] font-black text-rose-600 uppercase tracking-widest block mb-2">Sorties de Magasin</span>
+                <p className="text-3xl font-black text-slate-900">{analytics.flowAnalysis.SORTIE.count}</p>
+                <p className="text-xs font-bold text-slate-500 mt-1 uppercase">Flux expédié : <span className="font-black text-rose-600">{formatCurrency(analytics.flowAnalysis.SORTIE.value)}</span></p>
+              </div>
+
+              <div className="bg-sky-50/50 p-6 rounded-2xl border border-sky-100/50">
+                <span className="text-[10px] font-black text-sky-600 uppercase tracking-widest block mb-2">Transferts Inter-Sites</span>
+                <p className="text-3xl font-black text-slate-900">{analytics.flowAnalysis.TRANSFERT.count}</p>
+                <p className="text-xs font-bold text-slate-500 mt-1 uppercase">Transit géré : <span className="font-black text-sky-600">{formatCurrency(analytics.flowAnalysis.TRANSFERT.value)}</span></p>
+              </div>
+
+              <div className="bg-amber-50/50 p-6 rounded-2xl border border-amber-100/50">
+                <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest block mb-2">Retours Réceptionnés</span>
+                <p className="text-3xl font-black text-slate-900">{analytics.flowAnalysis.RETOUR.count}</p>
+                <p className="text-xs font-bold text-slate-500 mt-1 uppercase">Saisie atelier : <span className="font-black text-amber-600">{formatCurrency(analytics.flowAnalysis.RETOUR.value)}</span></p>
+              </div>
+            </div>
+
+            {/* LARGEST TRANSACTIONS JOURNAL - OPTION C */}
+            <div className="bg-white rounded-3xl border border-slate-200/50 shadow-sm p-6 no-print">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h4 className="text-lg font-black text-slate-950 uppercase tracking-tight">Registre des Transactions Majeures</h4>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">
+                    Top 5 transactions de plus forte valeur sur la période sélectionnée
+                  </p>
+                </div>
+                <span className="px-3 py-1.5 bg-slate-900 text-white text-[9px] font-black tracking-widest rounded-lg uppercase">
+                  Audit Ledger
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-slate-100 text-slate-400 font-black uppercase text-[10px]">
+                      <th className="py-3 px-4">Référence / Date</th>
+                      <th className="py-3 px-4">Flux</th>
+                      <th className="py-3 px-4">Site</th>
+                      <th className="py-3 px-4">Acteurs (Tiers)</th>
+                      <th className="py-3 px-4 text-right">Montant Global</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {analytics.largestTransactions.map(m => (
+                      <tr key={m.id} className="hover:bg-slate-50/40 transition-colors">
+                        <td className="py-4 px-4">
+                          <div className="font-black text-slate-900">{m.reference || m.id}</div>
+                          <div className="text-[10px] text-slate-400 font-bold">{new Date(m.date).toLocaleDateString('fr-MA', { day: 'numeric', month: 'short', year: 'numeric' })}</div>
+                        </td>
+                        <td className="py-4 px-4">
+                          <span className={cn(
+                            "px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider inline-block",
+                            m.type === 'ENTREE' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
+                            m.type === 'SORTIE' ? "bg-rose-50 text-rose-600 border border-rose-100" :
+                            m.type === 'RETOUR' ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                            "bg-sky-50 text-sky-600 border border-sky-100"
+                          )}>
+                            {m.type}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-black text-slate-500 uppercase">{m.site}</td>
+                        <td className="py-4 px-4">
+                          <div className="text-slate-600 font-bold">
+                            {m.vendeur && `Fournisseur: ${m.vendeur}`}
+                            {m.demandeur && `Demandeur: ${m.demandeur}`}
+                            {m.beneficiaire && ` • Bénéficiaire: ${m.beneficiaire}`}
+                            {!m.vendeur && !m.demandeur && !m.beneficiaire && "N/A"}
+                          </div>
+                        </td>
+                        <td className="py-4 px-4 text-right font-black text-slate-900 text-sm">
+                          {formatCurrency(m.totalValue)}
+                        </td>
+                      </tr>
+                    ))}
+                    {analytics.largestTransactions.length === 0 && (
+                      <tr>
+                        <td colSpan={5} className="py-12 text-center text-slate-400 font-bold italic">
+                          Aucune transaction enregistrée de la période
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           </div>
         )}
 
@@ -859,7 +1373,10 @@ export function ReportPage() {
                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-10 flex items-center gap-4">
                  <Package className="w-7 h-7 text-sky-500" /> Articles à Forte Consommation (Top 10)
                </h3>
-               <div className="table-container rounded-3xl border border-slate-100 h-[650px] overflow-y-auto">
+               <div className={cn(
+                 "table-container rounded-3xl border border-slate-100",
+                 isGeneratingPDF ? "h-auto overflow-visible" : "h-[650px] overflow-y-auto"
+               )}>
                  <table className="data-table">
                    <thead className="sticky top-0 bg-white z-10">
                      <tr>
@@ -890,7 +1407,10 @@ export function ReportPage() {
                <h3 className="text-2xl font-black text-slate-900 uppercase tracking-tighter mb-10 flex items-center gap-4">
                  <AlertCircle className="w-7 h-7 text-rose-500" /> Priorités Ravitaillement (Stock Critiques)
                </h3>
-               <div className="space-y-5 max-h-[650px] overflow-y-auto pr-2 custom-scrollbar no-print-scroll">
+               <div className={cn(
+                 "space-y-5 pr-2 custom-scrollbar no-print-scroll",
+                 isGeneratingPDF ? "max-h-none overflow-visible" : "max-h-[650px] overflow-y-auto"
+               )}>
                  {analytics.lowStockItems.length > 0 ? analytics.lowStockItems.map((item) => (
                    <div key={item.id} className="flex items-center justify-between p-6 bg-rose-50/20 rounded-2xl border border-rose-100 group hover:border-rose-300 transition-all">
                      <div className="flex items-center gap-5">
@@ -922,7 +1442,7 @@ export function ReportPage() {
             <p className="text-[11px] font-black text-slate-400 uppercase tracking-[0.4em] mb-4">Certificat d'Authenticité Stock</p>
             <div className="flex items-center gap-2 mb-4">
               <span className="text-lg font-black tracking-tighter uppercase">
-                <span className="text-sky-500">HYDRO</span><span className="text-rose-900">MINES</span>
+                <span className="text-[#38bdf8]">HYDRO</span><span className="text-[#991b1b]">MINES</span>
               </span>
             </div>
             <p className="text-[10px] font-bold text-slate-400 italic leading-relaxed">

@@ -174,6 +174,7 @@ export interface Mouvement {
   notes?: string;
   motif?: string; // Justification for the exit
   interventionType?: string;
+  createdBy?: string; // Operator who created the movement
 }
 
 export interface EnginMaster {
