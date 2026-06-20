@@ -860,4 +860,20 @@ html.dark ::-webkit-scrollbar-thumb:hover {
   background: #334e7c !important;
 }
 
+@keyframes goldWhiteGlow {
+  0% { background-position: 200% 50%; }
+  100% { background-position: -200% 50%; }
+}
+
+.luminous-gold-white-text {
+  background: linear-gradient(to left, #b8860b 0%, #e5c158 25%, #475569 50%, #ffd700 75%, #b8860b 100%);
+  background-size: 300% auto;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: goldWhiteGlow 8s linear infinite;
+  font-weight: 950;
+  display: inline-block;
+}
+
+
 

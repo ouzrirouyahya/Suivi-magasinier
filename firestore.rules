@@ -212,12 +212,33 @@ service cloud.firestore {
         && data.generatedAt is string && data.generatedAt.size() > 0 && data.generatedAt.size() <= 128;
     }
 
+    function isValidHydrominesCatalog(data) {
+      return data.keys().hasAll(['id', 'reference', 'designation', 'suggestedType', 'functionalCategory', 'unit', 'sourceCatalog', 'equipmentFamily', 'status', 'createdAt', 'updatedAt'])
+        && data.keys().size() <= 15
+        && data.id is string && data.id.size() > 0 && data.id.size() <= 128
+        && data.reference is string && data.reference.size() > 0 && data.reference.size() <= 128
+        && data.designation is string && data.designation.size() > 0 && data.designation.size() <= 512
+        && data.suggestedType is string && data.suggestedType.size() > 0
+        && data.functionalCategory is string && data.functionalCategory.size() > 0
+        && data.unit is string && data.unit.size() > 0
+        && data.sourceCatalog is string && data.sourceCatalog.size() > 0
+        && data.equipmentFamily is string && data.equipmentFamily in ['ST2G', 'ST2D', 'T23', 'EPI', 'CONSOMMABLES', 'AUTRE']
+        && data.status is string && data.status in ['ACTIF', 'INACTIF']
+        && data.createdAt is string
+        && data.updatedAt is string
+        && (!data.keys().contains('isHydrominesCritical') || data.isHydrominesCritical is bool);
+    }
+
     // --- Match Rules Blocks ---
 
     // Master Catalog Rules
     match /catalog/{id} {
       allow read: if true;
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+    }
+    match /hydromines_catalog/{id} {
+      allow read: if true;
+      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidHydrominesCatalog(incoming());
     }
     match /metadata/{id} {
       allow read: if true;

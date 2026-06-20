@@ -75,9 +75,33 @@
         "status": { "type": "string" }
       },
       "required": ["id", "articleIds", "site", "requestedBy", "requestedAt", "status"]
+    },
+    "HydrominesCatalogItem": {
+      "title": "Hydromines Catalog Item",
+      "description": "Un article dans le catalogue opérationnel centralisé Hydromines",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "reference": { "type": "string" },
+        "designation": { "type": "string" },
+        "suggestedType": { "type": "string" },
+        "functionalCategory": { "type": "string" },
+        "unit": { "type": "string" },
+        "sourceCatalog": { "type": "string" },
+        "equipmentFamily": { "type": "string" },
+        "status": { "type": "string" },
+        "isHydrominesCritical": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "reference", "designation", "suggestedType", "functionalCategory", "unit", "sourceCatalog", "equipmentFamily", "status", "createdAt", "updatedAt"]
     }
   },
   "firestore": {
+    "/hydromines_catalog/{itemId}": {
+      "schema": "HydrominesCatalogItem",
+      "description": "Catalogue de pièces opérationnel et unifié d'Hydromines"
+    },
     "/deletionRequests/{id}": {
       "schema": "DeletionRequest",
       "description": "Demandes de suppression d'articles soumises à la validation administrative"

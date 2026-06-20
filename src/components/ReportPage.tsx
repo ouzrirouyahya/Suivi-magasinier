@@ -626,7 +626,9 @@ export function ReportPage() {
                 />
               </div>
             </div>
-            <h1 className="text-4xl font-black text-slate-950 tracking-tighter uppercase leading-none">Rapports & Consolidation</h1>
+            <h1 className="text-4xl font-black tracking-tighter uppercase leading-none">
+              <span className="luminous-gold-white-text">Rapports & Consolidation</span>
+            </h1>
             <p className="text-xs text-slate-400 font-bold uppercase tracking-[0.1em] mt-2 opacity-70">
               Console de Supervision et d'Analyse Globale
             </p>

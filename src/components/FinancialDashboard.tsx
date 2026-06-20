@@ -68,11 +68,11 @@ export function FinancialDashboard() {
     <div className="space-y-6">
        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
+          <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
             <div className="p-2 bg-emerald-100 rounded-xl">
               <Landmark className="w-6 h-6 text-emerald-600" />
             </div>
-            Performance Financière
+            <span className="luminous-gold-white-text">Performance Financière</span>
           </h2>
           <p className="text-slate-500 font-medium text-sm mt-1">
             Rapport détaillé de la valorisation des stocks et flux monétaires.

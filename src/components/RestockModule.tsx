@@ -57,7 +57,9 @@ export function RestockModule({ site, articles, purchaseRequests, onCreatePR, on
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
       <header className="flex flex-col md:flex-row items-center justify-between gap-6 pb-6 border-b border-slate-100">
         <div>
-          <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Réapprovisionnement</h2>
+          <h2 className="text-5xl font-black tracking-tighter uppercase leading-none">
+            <span className="luminous-gold-white-text">Réapprovisionnement</span>
+          </h2>
           <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">Gestion des demandes d'achat et ruptures stock</p>
         </div>
         

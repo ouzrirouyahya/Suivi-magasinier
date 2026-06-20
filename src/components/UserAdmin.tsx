@@ -368,8 +368,9 @@ export const UserAdmin = React.memo(function UserAdmin({
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
       <header className="flex flex-col md:flex-row md:items-center justify-between gap-3">
         <div>
-          <h2 className="text-5xl font-black text-slate-950 flex items-center gap-4 tracking-tighter uppercase leading-none">
-            <Users className="w-16 h-16 text-sky-500" /> Paramètres système
+          <h2 className="text-5xl font-black flex items-center gap-4 tracking-tighter uppercase leading-none">
+            <Users className="w-16 h-16 text-sky-500" />
+            <span className="luminous-gold-white-text">Paramètres système</span>
           </h2>
           <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-4 opacity-70">Contrôle des accès et bases de données maîtres</p>
         </div>

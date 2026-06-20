@@ -225,36 +225,66 @@ export function ReturnsManagement() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
-      {/* Page Header */}
-      <header className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
-            <div className="p-2.5 bg-sky-100 rounded-xl">
-              <RotateCcw className="w-6 h-6 text-sky-600" />
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone de flux avec un rond luxueux */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <RotateCcw className="w-10 h-10 stroke-[2.2]" />
             </div>
-            Retours Chantiers & Ateliers
-          </h2>
-          <p className="text-slate-500 font-bold text-xs mt-1 uppercase tracking-wider">
-            Réintégration de matériel, gestion d'atelier de maintenance et suivi de rebuts d'actifs.
-          </p>
+          </div>
+
+          {/* Section centrale : Titre géant et sous-titre de flux */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-800">
+                Filière de ré-intégration &amp; maintenance
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                Retours Chantiers &amp; Ateliers
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Réintégration de matériel, gestion d'atelier de maintenance et suivi de rebuts d'actifs
+            </p>
+          </div>
+
+          {/* Section droite : Informations / Activité */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">CHANTIER ACTUEL</span>
+            </div>
+            <div className="px-3.5 py-1.5 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-lg text-xs font-black text-[#ffd700] shadow-md uppercase tracking-widest select-none">
+              {currentSite === 'ALL' ? 'TOUS LES SITES' : currentSite}
+            </div>
+
+            <div className="flex gap-2 mt-1">
+              <div className="bg-slate-50 border border-slate-150 px-2 py-1 rounded-md text-center max-w-[75px] min-w-[55px]">
+                <span className="block text-[7px] font-black text-slate-400 uppercase leading-none mb-0.5">Total</span>
+                <span className="text-[10px] font-black text-slate-800">{returnStats.total}</span>
+              </div>
+              <div className="bg-emerald-50 border border-emerald-100 px-2 py-1 rounded-md text-center max-w-[75px] min-w-[55px]">
+                <span className="block text-[7px] font-black text-emerald-600 uppercase leading-none mb-0.5">Bons</span>
+                <span className="text-[10px] font-black text-emerald-800">{(returnStats.neuf + returnStats.bon)}</span>
+              </div>
+              <div className="bg-rose-50 border border-rose-100 px-2 py-1 rounded-md text-center max-w-[75px] min-w-[55px]">
+                <span className="block text-[7px] font-black text-rose-600 uppercase leading-none mb-0.5">Rebut</span>
+                <span className="text-[10px] font-black text-[#881337]">{returnStats.scrap}</span>
+              </div>
+            </div>
+          </div>
+
         </div>
-        
-        {/* Quick count visualizers */}
-        <div className="flex gap-2.5">
-          <div className="bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl text-center">
-            <span className="block text-[8px] font-black text-slate-400 uppercase">Activité sur site</span>
-            <span className="text-xs font-black text-slate-800">{returnStats.total} Retours</span>
-          </div>
-          <div className="bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl text-center">
-            <span className="block text-[8px] font-black text-emerald-600 uppercase">Bons / Neufs</span>
-            <span className="text-xs font-black text-emerald-800">{(returnStats.neuf + returnStats.bon)} articles</span>
-          </div>
-          <div className="bg-rose-50 border border-rose-100 px-3 py-1.5 rounded-xl text-center">
-            <span className="block text-[8px] font-black text-rose-600 uppercase">Perte (Rebut)</span>
-            <span className="text-xs font-black text-rose-800">{returnStats.scrap} rebutés</span>
-          </div>
-        </div>
-      </header>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Return creation workflow column */}

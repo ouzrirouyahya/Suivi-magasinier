@@ -51,12 +51,23 @@ export interface Article {
   minStock: number;
   location: string; // Emplacement (ex: Rayon A-12)
   supplier?: string; // Fournisseur habituel
-  price?: number;
+  price?: number; // PMP (Prix Moyen Pondéré)
+  lastPurchasePrice?: number; // Dernier prix d'achat réel du Bon d'Entrée
+  priceHistory?: PriceHistoryEntry[]; // Traçabilité complète des variations de prix
   active: boolean;
   lastInventoryDate?: string;
   notes?: string;
   compatibility?: string;
   criticality?: 'CRITIQUE' | 'HAUTE' | 'MOYENNE' | 'BASSE';
+}
+
+export interface PriceHistoryEntry {
+  date: string;
+  price: number;
+  type: 'PMP' | 'ACHAT';
+  quantityAttached?: number;
+  mouvementId?: string;
+  userEmail?: string;
 }
 
 export interface CatalogItem {
@@ -149,6 +160,9 @@ export interface MouvementItem {
   beneficiaryId?: string; // ID of worker receiving the item
   beneficiaryName?: string; // Name of worker receiving the item
   beneficiaryService?: string; // Service of worker receiving the item
+  quantityReceived?: number; // Saisie à la réception (Phase 7)
+  quantityDamaged?: number; // Saisie à la réception (Phase 7)
+  comment?: string; // Commentaire par article (Phase 7)
 }
 
 export interface Mouvement {
@@ -204,6 +218,23 @@ export interface AgentMaster {
   fonction?: string; // Ex: MINEUR, CHEF D'EQUIPE, MECANICIEN, COMMIS
 }
 
+export type TransfertStatus = 
+  | 'BROUILLON' 
+  | 'DEMANDE' 
+  | 'APPROUVE' 
+  | 'EXPEDIE' 
+  | 'RECEPTIONNE' 
+  | 'ACCEPTE' 
+  | 'LITIGE'
+  | 'PENDING_APPROVAL' | 'IN_TRANSIT' | 'RECEIVED' | 'DISPUTED' | 'CLOSED' | 'EN_TRANSIT' | 'RECU'; // Compatibilité descendante
+
+export interface TransfertHistoryEntry {
+  status: TransfertStatus;
+  date: string;
+  userEmail: string;
+  comment?: string;
+}
+
 export interface Transfert {
   id: string;
   sourceSite: SiteCode;
@@ -212,11 +243,17 @@ export interface Transfert {
   dateReception?: FirestoreDate;
   reference: string;
   items: MouvementItem[];
-  status: 'PENDING_APPROVAL' | 'IN_TRANSIT' | 'RECEIVED' | 'DISPUTED' | 'CLOSED' | 'EN_TRANSIT' | 'RECU' | 'LITIGE';
+  status: TransfertStatus;
   expediteur: string;
   recepteur?: string;
   disputeReason?: string;
   receivedItems?: MouvementItem[];
+  // Nouveaux champs Phase 7
+  creatorEmail?: string;
+  approverEmail?: string;
+  shipperEmail?: string;
+  receiverEmail?: string;
+  history?: TransfertHistoryEntry[];
 }
 
 export interface Inventaire {
@@ -314,5 +351,21 @@ export interface DeletionRequest {
   requestedAt: string;
   status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
 }
+
+export interface HydrominesCatalogItem {
+  id: string;
+  reference: string;
+  designation: string;
+  suggestedType: string;
+  functionalCategory: string;
+  unit: string;
+  sourceCatalog: string; // e.g. "ST2G", "ST2D", "T23", etc.
+  equipmentFamily: 'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE';
+  status: 'ACTIF' | 'INACTIF';
+  isHydrominesCritical?: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
 
 

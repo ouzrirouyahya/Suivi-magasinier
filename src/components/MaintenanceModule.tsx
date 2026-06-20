@@ -309,8 +309,8 @@ export function MaintenanceModule() {
               <Cpu className="w-3.5 h-3.5 animate-pulse" /> SRE MECHANIC ENGINE
             </span>
           </div>
-          <h2 className="text-3xl font-black text-slate-100 uppercase tracking-tighter flex items-center gap-3 mt-1.5">
-            MÉCANICIEN IA HYDRO
+          <h2 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-3 mt-1.5">
+            <span className="luminous-gold-white-text">MÉCANICIEN IA HYDRO</span>
           </h2>
           <p className="text-slate-400 font-medium text-xs mt-1 max-w-xl leading-relaxed">
             Assistant IA expert de décision, d'optimisation de carburant HydroFuel et de diagnostics mécaniques prescriptifs sur la flotte de roulage et perforateurs.

@@ -4,8 +4,8 @@
  */
 
 const DB_NAME = 'hydromines_secure_warehouse_v9';
-const DB_VERSION = 3;
-const STORES = ['articles', 'catalog', 'mouvements', 'maintenanceLogs', 'transferts', 'agents', 'engins', 'perfos'];
+const DB_VERSION = 4;
+const STORES = ['articles', 'catalog', 'mouvements', 'maintenanceLogs', 'transferts', 'agents', 'engins', 'perfos', 'hydromines_catalog'];
 
 class IndexedDBStorageClass {
   private db: IDBDatabase | null = null;

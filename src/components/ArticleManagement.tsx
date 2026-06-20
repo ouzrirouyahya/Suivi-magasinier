@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw, Filter, TrendingDown, TrendingUp, CheckCircle2, Activity, ShieldAlert, Download, FileSpreadsheet, Clock, Eye } from 'lucide-react';
-import { Article, StockType, SiteCode, CatalogItem } from '../types';
+import { Article, StockType, SiteCode, CatalogItem, HydrominesCatalogItem } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { MASTER_CATALOG } from '../catalogData';
 import Papa from 'papaparse';
@@ -68,7 +68,9 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     rejectDeletionRequest,
     deleteArticles,
     importAllCatalogToArticles,
-    importSpecificCatalogItems
+    importSpecificCatalogItems,
+    hydrominesCatalog = [],
+    saveHydrominesCatalogItem
   } = useInventory();
 
   const [isBulkImporting, setIsBulkImporting] = useState(false);
@@ -828,6 +830,55 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     setIsModalOpen(true);
   };
 
+  const handleAddToHydrominesCatalog = async (item: CatalogItem) => {
+    const refClean = item.reference?.trim().toLowerCase();
+    const alreadyExists = hydrominesCatalog.some(
+      hm => hm.reference?.trim().toLowerCase() === refClean
+    );
+
+    if (alreadyExists) {
+      toast.warning(`La référence ${item.reference} existe déjà dans le Catalogue Hydromines ⭐`);
+      return;
+    }
+
+    let family: 'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' = 'AUTRE';
+    if (activeCatalogFilter === 'ST2G') family = 'ST2G';
+    else if (activeCatalogFilter === 'ST2D') family = 'ST2D';
+    else if (activeCatalogFilter === 'MONTALBERT') family = 'T23';
+    else if (item.suggestedType === 'EPI') family = 'EPI';
+    else if (item.suggestedType === 'CONSOMMABLES') family = 'CONSOMMABLES';
+
+    const newItem: HydrominesCatalogItem = {
+      id: 'hm_' + generateId(),
+      reference: item.reference,
+      designation: item.designation,
+      suggestedType: item.suggestedType || 'CONSOMMABLES',
+      functionalCategory: item.functionalCategory || 'Général',
+      unit: item.unit || 'Standard',
+      sourceCatalog: activeCatalogFilter === 'MONTALBERT' ? 'T23' : activeCatalogFilter,
+      equipmentFamily: family,
+      status: 'ACTIF',
+      isHydrominesCritical: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+
+    try {
+      if (typeof saveHydrominesCatalogItem === 'function') {
+        await toast.promise(saveHydrominesCatalogItem(newItem), {
+          loading: "Ajout de la pièce au Catalogue Hydromines...",
+          success: "Pièce ajoutée avec succès au Catalogue Hydromines ⭐",
+          error: "Erreur lors de l'ajout au Catalogue Hydromines"
+        });
+      } else {
+        toast.error("Le service d'enregistrement du Catalogue Hydromines n'est pas disponible.");
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error(`Erreur : ${e.message || e}`);
+    }
+  };
+
   const handleSave = (e: React.FormEvent) => {
     e.preventDefault();
     if (editingArticle) {
@@ -852,7 +903,9 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
 
       <header className="flex flex-col md:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-100">
         <div>
-          <h2 className="text-3xl font-black text-slate-950 tracking-tight uppercase leading-none">Articles &amp; Références Stock</h2>
+          <h2 className="text-3xl font-black tracking-tight uppercase leading-none">
+            <span className="luminous-gold-white-text">Articles &amp; Références Stock</span>
+          </h2>
           <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1 opacity-70">Gestion du référentiel et des pièces de rechange configurées sur le site : {site}</p>
         </div>
         {!isReadOnly && (
@@ -1512,26 +1565,49 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                               )}
                             </td>
                             <td className="px-6 py-3 text-center">
-                              {isLocal ? (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setIsCatalogOpen(false);
-                                    setSearchTerm(item.reference);
-                                  }}
-                                  className="text-[10px] font-black uppercase bg-sky-50 text-sky-700 border border-sky-100 px-2.5 py-1.5 rounded-xl hover:bg-sky-100 active:scale-95 transition-all cursor-pointer"
-                                >
-                                  Voir / Modifier
-                                </button>
-                              ) : (
-                                <button
-                                  type="button"
-                                  onClick={() => handleImportFromCatalog(item)}
-                                  className="text-[10px] font-black uppercase bg-indigo-600 text-white px-3 py-1.5 rounded-xl hover:bg-indigo-700 active:scale-95 transition-all shadow-sm cursor-pointer"
-                                >
-                                  ➕ Activer
-                                </button>
-                              )}
+                              {(() => {
+                                const inHM = (hydrominesCatalog || []).some(
+                                  hm => hm.reference?.trim().toLowerCase() === item.reference?.trim().toLowerCase()
+                                );
+                                return (
+                                  <div className="flex flex-col gap-1.5 items-stretch justify-center max-w-[150px] mx-auto">
+                                    {isLocal ? (
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setIsCatalogOpen(false);
+                                          setSearchTerm(item.reference);
+                                        }}
+                                        className="text-[9px] font-black uppercase bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg hover:bg-sky-100 active:scale-95 transition-all cursor-pointer text-center"
+                                      >
+                                        Voir / Modifier
+                                      </button>
+                                    ) : (
+                                      <button
+                                        type="button"
+                                        onClick={() => handleImportFromCatalog(item)}
+                                        className="text-[9px] font-black uppercase bg-indigo-600 text-white px-2 py-1 rounded-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-sm cursor-pointer text-center"
+                                      >
+                                        ➕ Activer
+                                      </button>
+                                    )}
+                                    
+                                    <button
+                                      type="button"
+                                      disabled={inHM}
+                                      onClick={() => handleAddToHydrominesCatalog(item)}
+                                      className={cn(
+                                        "text-[9.5px] font-black uppercase px-2 py-1.5 rounded-lg transition-colors border shadow-xs cursor-pointer text-center leading-none",
+                                        inHM 
+                                          ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" 
+                                          : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 active:scale-95"
+                                      )}
+                                    >
+                                      {inHM ? "⭐ Déjà HM" : "⭐ Ajouter HM"}
+                                    </button>
+                                  </div>
+                                );
+                              })()}
                             </td>
                           </tr>
                         );

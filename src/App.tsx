@@ -12,7 +12,7 @@ import { MouvementForm } from './components/MouvementForm';
 // Lazy loaded components
 const StockTable = lazy(() => import('./components/StockTable').then(m => ({ default: m.StockTable })));
 const ArticleManagement = lazy(() => import('./components/ArticleManagement').then(m => ({ default: m.ArticleManagement })));
-const EpiTracking = lazy(() => import('./components/EpiTracking').then(m => ({ default: m.EpiTracking })));
+const HydrominesCatalog = lazy(() => import('./components/HydrominesCatalog').then(m => ({ default: m.HydrominesCatalog })));
 const TransfertPage = lazy(() => import('./components/TransfertPage').then(m => ({ default: m.TransfertPage })));
 const InventairePage = lazy(() => import('./components/InventairePage').then(m => ({ default: m.InventairePage })));
 const StockAlertView = lazy(() => import('./components/StockAlertView').then(m => ({ default: m.StockAlertView })));
@@ -24,6 +24,7 @@ const MaintenanceModule = lazy(() => import('./components/MaintenanceModule').th
 const ReturnsManagement = lazy(() => import('./components/ReturnsManagement').then(m => ({ default: m.ReturnsManagement })));
 const FinancialDashboard = lazy(() => import('./components/FinancialDashboard').then(m => ({ default: m.FinancialDashboard })));
 const UserAdmin = lazy(() => import('./components/UserAdmin').then(m => ({ default: m.UserAdmin })));
+const EquipmentAnalysis = lazy(() => import('./components/EquipmentAnalysis').then(m => ({ default: m.EquipmentAnalysis })));
 
 // Shared Components
 import LoginPage from './components/LoginPage';
@@ -124,6 +125,7 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [aiTab, setAiTab] = useState<'DASHBOARD' | 'ANOMALIES' | 'PREDICTIONS' | 'FINANCIAL' | 'COMPLIANCE' | 'PROCUREMENT' | 'MECHANIC' | 'VISION' | 'FRAUD' | 'REPORT_CENTER'>('DASHBOARD');
   const [radarTab, setRadarTab] = useState<'ASSISTANT' | 'VISION' | 'AUDIT' | 'WORKFLOWS' | 'FORENSIC' | 'CHECKLIST'>('ASSISTANT');
+  const [analyseSubTab, setAnalyseSubTab] = useState<'REPORTS' | 'CONSUMMATION'>('REPORTS');
 
   const currentPage = currentPageRaw;
   const setCurrentPage = (page: any) => {
@@ -131,6 +133,12 @@ export default function App() {
     let targetPage = page;
     if (page === 'ALERTES_STOCK') {
       targetPage = 'RESTOCK_MGMT';
+    } else if (page === 'REPORTS') {
+      targetPage = 'ANALYSE_EQUIPEMENTS';
+      setAnalyseSubTab('REPORTS');
+    } else if (page === 'ANALYSE_EQUIPEMENTS') {
+      targetPage = 'ANALYSE_EQUIPEMENTS';
+      setAnalyseSubTab('CONSUMMATION');
     } else if (page === 'MAGASINIER_IA') {
       targetPage = 'HYDROMINES_RADAR';
       setRadarTab('ASSISTANT');
@@ -324,8 +332,8 @@ export default function App() {
       'COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 
       'RETURNS', 'STOCK_ENGINS', 'STOCK_PERFORATEURS', 'STOCK_CONSOMMABLES',
       'STOCK_EPI', 'SEARCH_RESULTS', 'INVENTAIRE',
-      'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES',
-      'ALERTES_STOCK'
+      'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES',
+      'ALERTES_STOCK', 'ANALYSE_EQUIPEMENTS'
     ];
     
     if (SUPER_ADMIN_ONLY.includes(page)) {
@@ -339,7 +347,7 @@ export default function App() {
     }
     // LECTURE_SEULE : accès limité
     return ['COCKPIT', 'STOCK_ENGINS', 'STOCK_PERFORATEURS', 'STOCK_CONSOMMABLES', 
-            'STOCK_EPI', 'SEARCH_RESULTS', 'TRACEABILITY', 'GESTION_ARTICLES'].includes(page);
+            'STOCK_EPI', 'SEARCH_RESULTS', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'].includes(page);
   };
 
   const renderPage = () => {
@@ -477,8 +485,10 @@ export default function App() {
           />
         );
 
-      case 'REPORTS':
-        return <ReportPage />;
+      case 'CATALOGUE_HYDROMINES':
+        return (
+          <HydrominesCatalog />
+        );
         
       case 'RESTOCK_MGMT':
         return (
@@ -601,6 +611,36 @@ export default function App() {
             />
           </motion.div>
         );
+
+      case 'ANALYSE_EQUIPEMENTS':
+        return (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-6">
+            <div className="flex bg-slate-100 p-1.5 rounded-2xl max-w-sm border border-slate-200 shadow-inner">
+              <button 
+                onClick={() => setAnalyseSubTab('REPORTS')}
+                className={`flex-1 py-1.5 px-3 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-300 ${
+                  analyseSubTab === 'REPORTS' 
+                    ? 'bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-md' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                📊 Rapports Annuels
+              </button>
+              <button 
+                onClick={() => setAnalyseSubTab('CONSUMMATION')}
+                className={`flex-1 py-1.5 px-3 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-300 ${
+                  analyseSubTab === 'CONSUMMATION' 
+                    ? 'bg-gradient-to-r from-slate-900 to-indigo-950 text-white shadow-md' 
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                ⛏️ Consommations
+              </button>
+            </div>
+            
+            {analyseSubTab === 'REPORTS' ? <ReportPage /> : <EquipmentAnalysis />}
+          </motion.div>
+        );
         
       default:
         return <Dashboard site={currentSite} articles={articles} mouvements={mouvements} onAction={setCurrentPage} isAdmin={isAdmin} />;
@@ -632,7 +672,7 @@ export default function App() {
         onToggleDarkMode={handleToggleDarkMode}
       />
       
-      <main className={`flex-grow transition-all duration-350 relative z-10 min-h-screen ${
+      <main className={`flex-grow bg-white transition-all duration-350 relative z-10 min-h-screen ${
         isMobile ? 'pb-24' : 'pb-8'
       } ${
         density === 'compact' ? 'p-2.5 sm:p-4 md:p-5' : 

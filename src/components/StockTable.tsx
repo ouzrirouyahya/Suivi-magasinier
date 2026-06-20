@@ -180,90 +180,79 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   };
 
   return (
-    <div className="space-y-4 animate-in fade-in slide-in-from-bottom-8 duration-700">
-      <header className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
-        <div>
-          <div className="flex items-center gap-3 animate-in fade-in duration-300">
-            <h2 className="text-[2.75rem] font-black text-slate-950 tracking-tighter uppercase flex items-center gap-3 leading-none">
-              <span className="w-2.5 h-10 bg-sky-600 rounded-full"></span>
-              {selectedStockType === 'ALL' ? 'État Général des Stocks' : `Stock Pièces ${selectedStockType.toLowerCase().replace('_', ' ')}`}
-            </h2>
-            {onManageCatalog && (
-              <button 
-                onClick={onManageCatalog}
-                className="p-1.5 text-slate-400 hover:text-sky-600 transition-colors cursor-pointer"
-                title="Gérer le catalogue"
-              >
-                <PlusIcon className="w-8 h-8" />
-              </button>
-            )}
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone de stock unifié */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white relative">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <Package className="w-10 h-10 stroke-[2.2]" />
+            </div>
           </div>
-          <div className="flex items-center gap-3 mt-3.5">
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.1em] opacity-80">
-              Site de surveillance : <span className="text-sky-600 font-extrabold">{site === 'ALL' ? 'Tous les sites (Global)' : site}</span>
-            </p>
-            <span className="text-slate-300">|</span>
-            <p className="text-sm text-sky-600 font-black uppercase tracking-wider">
-              {sortedAndFilteredArticles.length} Références listées
-            </p>
-          </div>
-        </div>
 
-        <div className="flex flex-wrap items-center gap-3 no-print">
-          <button 
-            id="btn-open-carnets"
-            onClick={() => setIsCarnetsOpen(true)}
-            className="btn bg-slate-900 text-white font-black uppercase tracking-wider text-xs px-5 h-11 rounded-xl hover:bg-slate-800 transition-all flex items-center gap-2 cursor-pointer shadow-sm shadow-slate-900/10"
-          >
-            📋 CARNETS DE BORD
-          </button>
-          <button 
-            onClick={() => {
-              exportToCSV(sortedAndFilteredArticles, `STOCKS_${site}_${selectedStockType}`);
-              toast.success("Inventaire exporté en CSV");
-            }}
-            className="btn bg-white border border-slate-200 shadow-sm text-slate-755 text-xs font-black uppercase tracking-wider px-4 h-11 rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 cursor-pointer"
-          >
-            <FileDown className="w-4 h-4 text-emerald-600" /> Export CSV
-          </button>
-          {onManageCatalog && (
-             <button 
-                onClick={onManageCatalog}
-                className="btn bg-white border border-slate-200 shadow-sm text-slate-755 text-xs font-black uppercase tracking-wider px-4 h-11 rounded-xl hover:bg-slate-50 transition-all flex items-center gap-2 cursor-pointer"
-             >
-                <Package className="w-4 h-4 text-sky-600" /> catalogue
-             </button>
-          )}
-          <div className="flex items-center gap-1 bg-slate-100 p-1.5 rounded-xl border border-slate-200/50 shadow-inner select-none">
-            <button 
-              onClick={() => setViewMode('GRID')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer", 
-                viewMode === 'GRID' 
-                  ? "bg-white shadow-sm border border-slate-200/40 text-sky-600" 
-                  : "text-slate-400 hover:text-slate-750"
-              )}
-              title="Vue Grille de cartes"
-            >
-              <LayoutGrid className="w-3.5 h-3.5" />
-              <span>Vue Cartes</span>
-            </button>
-            <button 
-              onClick={() => setViewMode('TABLE')}
-              className={cn(
-                "px-3 py-1.5 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all flex items-center gap-1.5 cursor-pointer", 
-                viewMode === 'TABLE' 
-                  ? "bg-white shadow-sm border border-slate-200/40 text-sky-600" 
-                  : "text-slate-400 hover:text-slate-750"
-              )}
-              title="Vue Tableau de terrain dense"
-            >
-              <List className="w-3.5 h-3.5" />
-              <span>Vue Tableau</span>
-            </button>
+          {/* Section centrale : Titre et Description */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-800">
+                Inventaire Permanent &amp; valorisation
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                {selectedStockType === 'ALL' ? 'État Général des Stocks' : 'Stock Pièces En Service'}
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Surveillance d'autorité de la valorisation et des volumes logistiques physiques
+            </p>
           </div>
+
+          {/* Section droite : Magasin & Actions */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">SMI MAGASIN</span>
+            </div>
+            <div className="px-3.5 py-1.5 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-lg text-xs font-black text-[#ffd700] shadow-md uppercase tracking-widest select-none leading-none">
+              {site === 'ALL' ? 'TOUS LES SITES' : site}
+            </div>
+
+            <div className="flex flex-wrap gap-2 justify-center lg:justify-end mt-2.5">
+              <button 
+                id="btn-open-carnets"
+                onClick={() => setIsCarnetsOpen(true)}
+                className="bg-slate-950 hover:bg-slate-900 text-white font-black text-[10px] tracking-wider uppercase px-3 h-8 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer shadow-sm"
+              >
+                📋 CARNETS
+              </button>
+              <button 
+                onClick={() => {
+                  exportToCSV(sortedAndFilteredArticles, `STOCKS_${site}_${selectedStockType}`);
+                  toast.success("Inventaire exporté en CSV");
+                }}
+                className="bg-white hover:bg-slate-50 border border-slate-200 shadow-sm text-slate-800 text-[10px] font-black uppercase tracking-wider px-3 h-8 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+              >
+                <FileDown className="w-3.5 h-3.5 text-emerald-600" /> EXPORT
+              </button>
+              {onManageCatalog && (
+                <button 
+                  onClick={onManageCatalog}
+                  className="bg-white hover:bg-slate-50 border border-slate-200 shadow-sm text-slate-800 text-[10px] font-black uppercase tracking-wider px-3 h-8 rounded-lg transition-all flex items-center gap-1.5 cursor-pointer"
+                >
+                  <Package className="w-3.5 h-3.5 text-sky-600" /> CATALOGUE
+                </button>
+              )}
+            </div>
+          </div>
+
         </div>
-      </header>
+      </div>
 
       {/* Premium Selector Cards (replaces small segmented keys) */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 no-print">
@@ -294,42 +283,47 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
               className={cn(
                 "group relative select-none flex flex-col items-start p-5 rounded-2xl transition-all duration-300 transform border text-left cursor-pointer w-full",
                 isActive 
-                  ? "bg-white border-sky-500 shadow-[0_12px_24px_rgba(14,165,233,0.08)] scale-[1.02] ring-2 ring-sky-500/10" 
-                  : "bg-slate-100/95 hover:bg-slate-200/80 border-slate-200 hover:border-slate-300 hover:scale-[1.01] shadow-[0_2px_4px_rgba(0,0,0,0.01)] text-slate-700"
+                  ? "bg-gradient-to-br from-[#121c26] via-[#091118] to-[#04080c] border-2 border-[#b8860b] shadow-[0_16px_36px_rgba(184,134,11,0.15)] scale-[1.02] ring-2 ring-amber-500/10 text-white" 
+                  : "bg-white hover:bg-slate-50/50 border-slate-200/50 hover:border-slate-300 hover:scale-[1.01] shadow-[0_2px_8px_rgba(0,0,0,0.015)] text-slate-750"
               )}
             >
               {/* Luminous indicator corner glow & top brand line */}
               {isActive && (
                 <>
-                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-sky-500 via-sky-400 to-rose-600 rounded-t-2xl" />
-                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-sky-400/10 to-rose-600/10 rounded-tr-2xl rounded-bl-[100px] blur-xs pointer-events-none" />
+                  <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-[#b8860b] via-[#ffd700] to-[#b8860b] rounded-t-2xl" />
+                  <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-amber-500/10 to-[#ffd700]/5 rounded-tr-2xl rounded-bl-[100px] blur-xs pointer-events-none" />
                 </>
               )}
               
               <div className="flex items-center justify-between w-full mb-4">
                 <div className={cn(
-                  "p-3 rounded-xl transition-all",
+                  "p-3 rounded-xl transition-all border",
                   isActive 
-                    ? "bg-sky-500 text-white shadow-md shadow-sky-500/15" 
-                    : "bg-slate-200/90 text-slate-600 group-hover:bg-slate-300 group-hover:text-slate-800"
+                    ? "bg-[#b8860b]/20 text-[#ffd700] border-[#b8860b]/40 shadow-inner" 
+                    : "bg-slate-50 text-slate-600 border-slate-100 group-hover:bg-slate-100 group-hover:text-slate-800"
                 )}>
                   <Icon className="w-5 h-5" />
                 </div>
                 
                 <span className={cn(
-                  "text-[10px] font-black uppercase font-mono tracking-wider px-2 py-0.5 rounded-lg",
-                  isActive ? "bg-sky-100 text-sky-800" : "bg-slate-200 text-slate-600 font-bold"
+                  "text-[10px] font-black uppercase font-mono tracking-wider px-2 py-0.5 rounded-lg border",
+                  isActive 
+                    ? "bg-amber-950/70 text-[#ffd700] border-amber-600/40" 
+                    : "bg-slate-50 text-slate-500 border-slate-150 font-bold"
                 )}>
                   {quantityOfUniqueArticles} Réf
                 </span>
               </div>
               
-              <h4 className="text-xs font-black uppercase tracking-wider text-slate-900 leading-none mb-1">
+              <h4 className={cn(
+                "text-xs font-black uppercase tracking-wider leading-none mb-1",
+                isActive ? "text-white" : "text-slate-900"
+              )}>
                 {tab.label}
               </h4>
               <p className={cn(
                 "text-[10px] font-semibold leading-snug uppercase tracking-tight line-clamp-1",
-                isActive ? "text-slate-600" : "text-slate-500"
+                isActive ? "text-[#ffd700]/80" : "text-slate-500"
               )}>
                 {tab.desc}
               </p>
@@ -338,78 +332,120 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
         })}
       </div>
 
-      {/* Dynamic KPIs for the current category */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 no-print">
+      {/* Dynamic KPIs for the current category - PERFECT REDESIGN MATCHING THE MAIN DASHBOARD */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 no-print">
         {[
           { 
             label: 'Total Références', 
             value: sortedAndFilteredArticles.length, 
             unit: 'Réf', 
-            color: 'text-sky-600', 
+            color: 'text-slate-900', 
             bg: 'bg-white',
+            accentBg: 'bg-sky-500',
+            dotColor: 'bg-sky-500',
+            borderClass: 'border-slate-200/70 hover:border-sky-500 hover:shadow-[0_8px_20px_rgba(14,165,233,0.08)] ring-1 ring-sky-100/30',
+            icon: Package,
             details: `${Array.from(new Set(sortedAndFilteredArticles.map(a => a.category))).length} Catégories`
           },
           { 
             label: 'Valeur Totale', 
             value: formatCurrency(sortedAndFilteredArticles.reduce((sum, a) => sum + (a.quantity * a.price), 0)).split(',')[0], 
             unit: 'MAD', 
-            color: 'text-emerald-600', 
+            color: 'text-slate-900', 
             bg: 'bg-white',
+            accentBg: 'bg-emerald-500',
+            dotColor: 'bg-emerald-500',
+            borderClass: 'border-slate-200/70 hover:border-emerald-500 hover:shadow-[0_8px_20px_rgba(16,185,129,0.08)] ring-1 ring-emerald-100/30',
+            icon: TrendingUp,
             details: 'Valeur HT Estimée'
           },
           { 
             label: 'Ruptures Stock', 
             value: sortedAndFilteredArticles.filter(a => a.quantity === 0).length, 
-            unit: 'Critique', 
+            unit: 'Réfs', 
             color: 'text-rose-600', 
-            bg: 'bg-rose-50/50',
+            bg: 'bg-white',
+            accentBg: 'bg-rose-500',
+            dotColor: 'bg-rose-500',
+            borderClass: 'border-rose-200/70 hover:border-rose-500 hover:shadow-[0_8px_20px_rgba(244,63,94,0.08)] ring-1 ring-rose-100/30',
+            icon: AlertTriangle,
             details: 'Besoin Réappro.'
           },
           { 
             label: 'Articles Entrés', 
             value: `${entriesLast24h}`, 
-            unit: 'qté H/24', 
-            color: 'text-amber-600', 
+            unit: 'Qté H/24', 
+            color: 'text-slate-900', 
             bg: 'bg-white',
+            accentBg: 'bg-amber-500',
+            dotColor: 'bg-amber-500',
+            borderClass: 'border-slate-200/70 hover:border-amber-500 hover:shadow-[0_8px_20px_rgba(245,158,11,0.08)] ring-1 ring-amber-100/30',
+            icon: Zap,
             details: 'Nombre d\'entrées (24h)'
           }
-        ].map((kpi) => (
-          <div key={kpi.label} className={cn(
-            "card p-6 relative overflow-hidden group shadow-[0_4px_20px_-4px_rgba(0,0,0,0.02)] transition-all hover:-translate-y-0.5 rounded-2xl border border-slate-100",
-            kpi.bg
-          )}>
-            <p className="text-xs font-black text-slate-400 uppercase mb-2 tracking-wider truncate">{kpi.label}</p>
-            <h4 className={cn("text-3xl font-black tracking-tight leading-none mb-3", kpi.color)}>
-              {kpi.value} <span className="text-xs text-slate-400 font-extrabold tracking-widest ml-1">{kpi.unit}</span>
-            </h4>
-            <div className="pt-3 border-t border-slate-50 flex items-center justify-between">
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{kpi.details}</span>
-              <TrendingUp className="w-3.5 h-3.5 text-slate-200" />
+        ].map((kpi) => {
+          const KpiIcon = kpi.icon;
+          return (
+            <div
+              key={kpi.label}
+              className={cn(
+                "rounded-[12px] p-4.5 flex flex-col justify-between gap-3.5 relative transition-all duration-300 shadow-sm overflow-hidden hover:-translate-y-0.5 hover:shadow-md border bg-white",
+                kpi.borderClass
+              )}
+            >
+              {/* Accent banner */}
+              <div className={cn("absolute top-0 left-0 right-0 h-[3px]", kpi.accentBg)} />
+
+              {/* Icon + Label */}
+              <div className="flex items-center justify-between pt-1">
+                <p className="text-[10px] font-bold uppercase tracking-widest leading-none text-slate-500">
+                  {kpi.label}
+                </p>
+                <div className="w-7 h-7 rounded-lg flex items-center justify-center bg-slate-50">
+                  <KpiIcon className="w-3.5 h-3.5 text-slate-600" />
+                </div>
+              </div>
+
+              {/* Main value */}
+              <div>
+                <p className={cn("font-black leading-none tracking-tight", kpi.color, "text-2xl")}>
+                  {kpi.value} <span className="text-[10px] text-slate-400 font-extrabold tracking-wider uppercase ml-1">{kpi.unit}</span>
+                </p>
+              </div>
+
+              {/* Bottom detail row */}
+              <div className="flex items-center justify-between border-t border-slate-100 pt-2 leading-none">
+                <p className="text-[9px] font-black uppercase tracking-wider text-slate-400">
+                  {kpi.details}
+                </p>
+                <span className={cn("w-1.5 h-1.5 rounded-full", kpi.dotColor)} />
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      <div className="card glass p-2 flex flex-col md:flex-row items-center gap-2 shadow-[0_4px_24px_-8px_rgba(0,0,0,0.04)] ring-1 ring-slate-900/5">
+      <div className="bg-white border border-slate-200/60 p-2.5 flex flex-col md:flex-row items-center gap-3 shadow-sm rounded-xl no-print">
         <div className="relative flex-1 w-full">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-350" />
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
           <input 
             type="text" 
             placeholder="Rechercher par désignation ou référence..."
-            className="input-field pl-12 h-12 text-base font-bold bg-white/40 border-slate-200/50 rounded-xl"
+            className="w-full pl-12 pr-4 h-11 text-sm font-bold bg-slate-50/50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#b8860b] focus:bg-white transition-all text-slate-800 placeholder-slate-400 uppercase"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <div className="w-full lg:w-auto flex flex-wrap items-center gap-1.5">
-          <div className="relative">
-            <AlertTriangle className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300" />
+        <div className="w-full md:w-auto flex flex-wrap items-center gap-2">
+          {/* Status Dropdown */}
+          <div className="relative w-full md:w-auto">
+            <AlertTriangle className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <select 
-              className="pl-9 pr-7 py-2.5 bg-white border border-slate-200 rounded-lg text-xs font-black uppercase tracking-widest outline-none focus:ring-1 focus:ring-sky-500 appearance-none min-w-[140px]"
+              className="w-full md:w-auto pl-9 pr-8 h-11 bg-white border border-slate-200 rounded-lg text-xs font-black uppercase tracking-widest outline-none focus:border-[#b8860b] focus:ring-1 focus:ring-amber-500/20 appearance-none min-w-[140px] text-slate-750 cursor-pointer"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as any)}
             >
-              <option value="ALL">États</option>
+              <option value="ALL">Tous les États</option>
               {stockAvailabilityTab === 'AVAILABLE' && (
                 <>
                   <option value="OPTIMAL">Stock Optimal</option>
@@ -420,6 +456,37 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                 <option value="RUPTURE">Rupture</option>
               )}
             </select>
+            <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+          </div>
+
+          {/* Integrated Layout Switcher for outstanding premium controls */}
+          <div className="flex items-center gap-1 bg-slate-100/85 p-1 rounded-lg border border-slate-200/50 select-none w-full md:w-auto">
+            <button 
+              onClick={() => setViewMode('GRID')}
+              className={cn(
+                "flex-1 md:flex-initial px-3 h-9 rounded-md text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer leading-none", 
+                viewMode === 'GRID' 
+                  ? "bg-white shadow-sm border border-slate-200/40 text-[#b8860b]" 
+                  : "text-slate-400 hover:text-slate-700"
+              )}
+              title="Vue Grille de cartes"
+            >
+              <LayoutGrid className="w-3.5 h-3.5" />
+              <span>Vue Cartes</span>
+            </button>
+            <button 
+              onClick={() => setViewMode('TABLE')}
+              className={cn(
+                "flex-1 md:flex-initial px-3 h-9 rounded-md text-[10px] font-black uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 cursor-pointer leading-none", 
+                viewMode === 'TABLE' 
+                  ? "bg-white shadow-sm border border-slate-200/40 text-[#b8860b]" 
+                  : "text-slate-400 hover:text-slate-700"
+              )}
+              title="Vue Tableau de terrain dense"
+            >
+              <List className="w-3.5 h-3.5" />
+              <span>Vue Tableau</span>
+            </button>
           </div>
         </div>
       </div>
@@ -545,61 +612,79 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                 >
                   <div 
                     onClick={() => onViewDetail?.(article)}
-                    className="relative card bg-white p-4 h-full flex flex-col border border-slate-100 hover:border-slate-300 hover:shadow-md transition-all duration-300 overflow-hidden cursor-pointer rounded-2xl"
+                    className="relative bg-white pt-5 p-4 h-full flex flex-col border border-slate-200/60 hover:border-slate-400 hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer rounded-[12px] group"
                   >
+                    {/* Discret Top Accent Ribbon matching current stock status */}
+                    <div className={cn(
+                      "absolute top-0 left-0 right-0 h-[3px] transition-all duration-200",
+                      article.quantity === 0 
+                        ? "bg-rose-500" 
+                        : article.quantity <= article.minStock 
+                          ? "bg-amber-500" 
+                          : "bg-emerald-550"
+                    )} />
+
                     <div className="flex justify-between items-start mb-3">
-                      <div className={cn("px-2 py-0.5 rounded text-[10px] font-black tracking-widest flex items-center gap-1 shadow-sm uppercase", status.class)}>
+                      <div className={cn(
+                        "px-2.5 py-0.5 rounded-md text-[9px] font-black tracking-widest flex items-center gap-1 uppercase select-none",
+                        article.quantity === 0 
+                          ? "bg-rose-50 text-[#9f1239] border border-rose-100"
+                          : article.quantity <= article.minStock
+                            ? "bg-amber-50 text-[#b8860b] border border-amber-100"
+                            : "bg-emerald-50/80 text-[#065f46] border border-emerald-100"
+                      )}>
                         <status.icon className="w-3 h-3" />
                         {status.label}
                       </div>
                       <div className="flex flex-col items-end">
                         {site === 'ALL' && (
-                          <span className="px-1.5 py-0.5 rounded-lg bg-slate-900 text-white font-mono font-black text-[9px] mb-1 uppercase tracking-wider">
+                          <span className="px-1.5 py-0.5 rounded bg-slate-900 text-white font-mono font-black text-[9px] mb-1 uppercase tracking-wider">
                             {article.site}
                           </span>
                         )}
-                        <span className="text-xs font-mono font-black text-slate-350 group-hover:text-sky-600 transition-colors uppercase tracking-tight">
+                        <span className="text-xs font-mono font-black text-slate-350 group-hover:text-[#b8860b] transition-colors uppercase tracking-tight">
                           #{article.ref}
                         </span>
                       </div>
                     </div>
 
-                    <h3 className="text-base font-extrabold text-slate-905 leading-snug mb-2 min-h-[2.5rem] line-clamp-2 uppercase">
+                    <h3 className="text-sm font-extrabold text-slate-900 leading-snug mb-2 min-h-[2.5rem] line-clamp-2 uppercase tracking-wide group-hover:text-[#b8860b] transition-colors">
                       {article.designation}
                     </h3>
 
                     {article.component && (
-                      <p className="text-[10px] font-black text-sky-600 bg-sky-50 px-2.5 py-1 rounded border border-sky-100 uppercase tracking-tighter mb-4 w-fit">
+                      <p className="text-[9px] font-black text-sky-700 bg-sky-50 px-2.5 py-0.5 rounded-md border border-sky-100 uppercase tracking-wide mb-4 w-fit select-none">
                         {article.component}
                       </p>
                     )}
 
                     <div className="space-y-2 mb-4 pt-3 border-t border-slate-50">
                        <div className="flex items-center gap-2 text-slate-400">
-                         <MapPin className="w-3.5 h-3.5" />
+                         <MapPin className="w-3.5 h-3.5 text-slate-450" />
                          <p className="text-xs font-bold text-slate-600">{article.location || '—'}</p>
                        </div>
                        <div className="flex items-center gap-2 text-slate-400">
-                         <TrendingUp className="w-3.5 h-3.5" />
-                         <p className="text-xs font-black text-emerald-600">{formatCurrency(totalValue)}</p>
+                         <TrendingUp className="w-3.5 h-3.5 text-slate-450" />
+                         <p className="text-xs font-black text-emerald-600 uppercase tracking-wider">{formatCurrency(totalValue)}</p>
                        </div>
                     </div>
 
-                    <div className="mt-auto pt-3 border-t border-slate-50">
+                    <div className="mt-auto pt-3 border-t border-slate-100">
                       <div className="flex items-end justify-between">
                          <div>
                             <p className={cn("text-2xl font-black tracking-tight leading-none", article.quantity <= article.minStock ? "text-rose-600" : "text-slate-900")}>
-                               {article.quantity}
+                               {article.quantity} <span className="text-[10px] font-bold text-slate-450">{article.unit}</span>
                             </p>
-                            <p className="text-[9px] font-black text-slate-400 uppercase mt-1">Stk requis: {article.minStock} {article.unit}</p>
+                            <p className="text-[9px] font-black text-slate-400 uppercase mt-1">Min requis: {article.minStock} {article.unit}</p>
                          </div>
-                         <div className="flex gap-1.5 focus-within:z-10">
+                         <div className="flex gap-1.5 focus-within:z-10 no-print">
                             <button 
                               onClick={(e) => {
                                 e.stopPropagation();
                                 onAction?.(article.id, 'IN');
                               }}
-                              className="w-8 h-8 rounded-lg bg-sky-50 text-sky-600 flex items-center justify-center hover:bg-sky-600 hover:text-white transition-all shadow-sm border border-sky-100/50 cursor-pointer"
+                              className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center hover:bg-[#b8860b] hover:text-white hover:border-[#b8860b] transition-all shadow-sm border border-slate-200 cursor-pointer"
+                              title="Corriger : Ajouter"
                             >
                               <PlusIcon className="w-4 h-4" />
                             </button>
@@ -608,7 +693,8 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                                 e.stopPropagation();
                                 onAction?.(article.id, 'OUT');
                               }}
-                              className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-rose-100/50 cursor-pointer"
+                              className="w-8 h-8 rounded-lg bg-slate-50 text-slate-700 flex items-center justify-center hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all shadow-sm border border-slate-200 cursor-pointer"
+                              title="Corriger : Retirer"
                             >
                               <ArrowUpRight className="w-4 h-4" />
                             </button>
@@ -626,22 +712,22 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
             initial={{ opacity: 0, scale: 0.99 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, x: -10 }}
-            className="border border-slate-150 rounded-2xl shadow-sm bg-white overflow-hidden"
+            className="border-2 border-amber-500/25 rounded-2xl shadow-sm bg-white overflow-hidden hover:border-amber-500/35 transition-colors duration-300"
           >
-            <table className="min-w-full divide-y divide-slate-150 bg-white">
-              <thead className="bg-slate-50/70">
+            <table className="min-w-full divide-y divide-amber-400/30 bg-white">
+              <thead className="bg-amber-50/20">
                 <tr>
                   <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-400">Article / Désignation</th>
                   <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-400 font-sans">Sous-Catégorie</th>
-                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-400">Emplacement</th>
+                  <th className="px-4 py-3 text-left text-xs font-black uppercase tracking-wider text-slate-400 font-sans">Emplacement</th>
                   <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-400">Seuil Min.</th>
                   <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-400">Stock Actuel</th>
-                  <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-400">Statut</th>
+                  <th className="px-4 py-3 text-center text-xs font-black uppercase tracking-wider text-slate-400 font-sans">Statut</th>
                   <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-400">Valeur HT</th>
-                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-400 no-print">Actions</th>
+                  <th className="px-4 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-400 no-print font-sans">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-100 bg-white">
+              <tbody className="divide-y divide-amber-100/50 bg-white">
                 {sortedAndFilteredArticles.map((article) => {
                   const status = getStockStatus(article);
                   const isZero = article.quantity === 0;
@@ -659,7 +745,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                     >
                       <td className="px-4 py-3.5">
                         <div className="flex flex-col">
-                          <span className="font-extrabold text-slate-900 text-sm uppercase leading-tight group-hover:text-sky-600 transition-colors">
+                          <span className="font-extrabold text-slate-900 text-sm uppercase leading-tight group-hover:text-[#b8860b] transition-colors">
                             {article.designation}
                           </span>
                           <div className="flex items-center gap-2 mt-1">
@@ -713,14 +799,14 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                         <div className="flex justify-end gap-1.5 opacity-60 group-hover:opacity-100 transition-all focus-within:opacity-100">
                           <button 
                             onClick={() => onAction?.(article.id, 'IN')} 
-                            className="w-8 h-8 flex items-center justify-center bg-sky-50 text-sky-600 rounded-lg hover:bg-sky-600 hover:text-white transition-all shadow-sm border border-sky-100/50 cursor-pointer"
+                            className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-700 rounded-lg hover:bg-[#b8860b] hover:text-white hover:border-[#b8860b] transition-all shadow-sm border border-slate-200 cursor-pointer"
                             title="Ajouter du Stock (Bon d'Entrée)"
                           >
                             <PlusIcon className="w-4 h-4" />
                           </button>
                           <button 
                             onClick={() => onAction?.(article.id, 'OUT')} 
-                            className="w-8 h-8 flex items-center justify-center bg-rose-50 text-rose-600 rounded-lg hover:bg-rose-600 hover:text-white transition-all shadow-sm border border-rose-100/50 cursor-pointer"
+                            className="w-8 h-8 flex items-center justify-center bg-slate-50 text-slate-700 rounded-lg hover:bg-rose-600 hover:text-white hover:border-rose-600 transition-all shadow-sm border border-slate-200 cursor-pointer"
                             title="Sortir du Stock (Bon de Sortie)"
                           >
                             <ArrowUpRight className="w-4 h-4" />

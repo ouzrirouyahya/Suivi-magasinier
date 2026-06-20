@@ -94,24 +94,24 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
   return (
     <div className="max-w-[1600px] mx-auto mb-3 no-print">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white/40 backdrop-blur-3xl p-1.5 rounded-xl border border-white shadow-xl shadow-slate-200/30">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 bg-white p-1.5 rounded-xl border border-slate-100/80 shadow-sm shadow-slate-100/40">
         <div className="flex items-center gap-2 flex-1">
           <button 
             onClick={onOpenMenu}
-            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-100 rounded-xl text-slate-500 hover:text-sky-600 transition-colors shadow-sm cursor-pointer"
+            className="w-10 h-10 flex items-center justify-center bg-white border border-slate-100/70 rounded-xl text-slate-500 hover:text-[#b8860b] transition-colors cursor-pointer"
           >
             <Menu className="w-5 h-5" />
           </button>
           
           <div className="relative flex-1 group">
           <div className="absolute left-4 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
-            <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-500 transition-colors" />
+            <Search className="w-3.5 h-3.5 text-slate-400 group-hover:text-[#b8860b] transition-colors" />
             <div className="h-3 w-[1px] bg-slate-200" />
           </div>
           <input 
             type="text" 
             placeholder="Recherche Rapide..."
-            className="w-full bg-white/80 h-10 pl-14 pr-8 rounded-xl text-sm font-bold outline-none border border-slate-100 focus:border-sky-200 transition-all focus:ring-4 focus:ring-sky-500/5 placeholder:text-slate-300"
+            className="w-full bg-white h-10 pl-14 pr-8 rounded-xl text-sm font-bold outline-none border border-slate-100 focus:border-amber-200/50 transition-all placeholder:text-slate-300"
             value={globalSearch}
             onChange={(e) => {
               setGlobalSearch(e.target.value);
@@ -127,14 +127,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
 
           {/* SEGMENTED LAYOUT DENSITY SWITCHER */}
-          <div className="hidden sm:flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200 font-mono text-[9px] font-black select-none pointer-events-auto shadow-inner gap-0.5" title="Densité d'affichage">
-            <SlidersHorizontal className="w-2.5 h-2.5 text-slate-400 mx-1.5" />
+          <div className="hidden sm:flex items-center bg-white p-0.5 rounded-lg border border-slate-100 font-mono text-[9px] font-black select-none pointer-events-auto gap-0.5" title="Densité d'affichage">
+            <SlidersHorizontal className="w-2.5 h-2.5 text-slate-450 mx-1.5" />
             <button
               onClick={() => onChangeDensity('compact')}
               className={`px-1.5 py-0.5 rounded text-[8px] transition-all duration-150 ${
                 density === 'compact' 
-                  ? 'bg-white text-sky-600 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-slate-200/30 font-black' 
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'bg-slate-900 text-white shadow-sm font-black' 
+                  : 'text-slate-400 hover:text-slate-650'
               }`}
               title="Compact (Option par défaut)"
             >
@@ -144,8 +144,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               onClick={() => onChangeDensity('standard')}
               className={`px-1.5 py-0.5 rounded text-[8px] transition-all duration-150 ${
                 density === 'standard' 
-                  ? 'bg-white text-slate-800 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-slate-200/30' 
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'bg-slate-950 text-white shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-650'
               }`}
               title="Standard"
             >
@@ -155,8 +155,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
               onClick={() => onChangeDensity('large')}
               className={`px-1.5 py-0.5 rounded text-[8px] transition-all duration-150 ${
                 density === 'large' 
-                  ? 'bg-white text-slate-800 shadow-[0_1px_2px_rgba(0,0,0,0.05)] border border-slate-200/30' 
-                  : 'text-slate-400 hover:text-slate-600'
+                  ? 'bg-slate-950 text-white shadow-sm' 
+                  : 'text-slate-400 hover:text-slate-650'
               }`}
               title="Large"
             >

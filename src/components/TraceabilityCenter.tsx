@@ -83,7 +83,9 @@ export const TraceabilityCenter = memo(({ site, logs, mouvements, articles }: Tr
             <ShieldCheck className="w-8 h-8" />
           </div>
           <div>
-            <h2 className="text-4xl font-black text-slate-950 tracking-tighter uppercase leading-none">Grand Registre</h2>
+            <h2 className="text-4xl font-black tracking-tighter uppercase leading-none">
+              <span className="luminous-gold-white-text">Grand Registre</span>
+            </h2>
             <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-2 opacity-70">
               Traçabilité et archivage des bons de mouvement — {site === 'ALL' ? 'Tous les sites (Global)' : site}
             </p>

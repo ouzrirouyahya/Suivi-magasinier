@@ -187,7 +187,9 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-24 mission-control-bg p-12 flex-1">
       <header className="flex items-center justify-between mb-10">
         <div>
-          <h2 className="text-5xl font-black text-slate-950 tracking-tighter uppercase leading-none">Contrôle Inventaire</h2>
+          <h2 className="text-5xl font-black tracking-tighter uppercase leading-none">
+            <span className="luminous-gold-white-text">Contrôle Inventaire</span>
+          </h2>
           <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">
             Audit du Stock Réel vs Système d'Information
           </p>

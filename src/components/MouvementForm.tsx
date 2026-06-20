@@ -4,6 +4,7 @@ import {
   Plus, 
   Trash2, 
   AlertCircle, 
+  AlertTriangle,
   User, 
   Truck, 
   Drill, 
@@ -17,11 +18,22 @@ import {
   Store,
   Check,
   Award,
-  MapPin
+  MapPin,
+  X,
+  FileText,
+  Filter,
+  Layers,
+  Sparkles,
+  RefreshCw,
+  Eye,
+  Info
 } from 'lucide-react';
-import { Article, Mouvement, MouvementItem, SiteCode, EnginMaster, PerfoMaster, AgentMaster, CatalogItem } from '../types';
+import { Article, Mouvement, MouvementItem, SiteCode, EnginMaster, PerfoMaster, AgentMaster, CatalogItem, HydrominesCatalogItem, StockType } from '../types';
 import { cn, formatCurrency, generateId } from '../lib/utils';
 import { SITES } from '../demoData';
+import { MASTER_CATALOG } from '../catalogData';
+import { useInventory } from '../context/InventoryContext';
+import { motion, AnimatePresence } from 'motion/react';
 
 interface MouvementFormProps {
   type: 'ENTREE' | 'SORTIE';
@@ -37,6 +49,37 @@ interface MouvementFormProps {
 }
 
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
+  const { hydrominesCatalog = [], saveHydrominesCatalogItem } = useInventory();
+
+  // Hydromines Catalog Selector States
+  const [isSelectorModalOpen, setIsSelectorModalOpen] = useState(false);
+  const [selectorTab, setSelectorTab] = useState<'hm_select' | 'hm_enrich_st2g' | 'hm_enrich_st2d' | 'hm_enrich_t23' | 'hm_enrich_manual'>('hm_select');
+  
+  // Selection States inside Active HM Catalog
+  const [hmSearchTerm, setHmSearchTerm] = useState('');
+  const [hmActiveFamily, setHmActiveFamily] = useState<string>('ALL');
+  const [hmActiveCategory, setHmActiveCategory] = useState<string>('ALL');
+  const [hmVisibleLimit, setHmVisibleLimit] = useState(30);
+  const [selectedHMItem, setSelectedHMItem] = useState<HydrominesCatalogItem | null>(null);
+
+  // Quick Addition & Enrichment States from Tech Catalogs
+  const [enrichCategory, setEnrichCategory] = useState<string>('ALL');
+  const [enrichSearch, setEnrichSearch] = useState('');
+  const [enrichLimit, setEnrichLimit] = useState(30);
+  const [selectedTechItem, setSelectedTechItem] = useState<CatalogItem | null>(null);
+  
+  const [enrichUnit, setEnrichUnit] = useState('Pcs');
+  const [enrichIsCritical, setEnrichIsCritical] = useState(false);
+
+  // Emergency Manual fallback states
+  const [manualRef, setManualRef] = useState('');
+  const [manualDes, setManualDes] = useState('');
+  const [manualUnit, setManualUnit] = useState('Pcs');
+  const [manualType, setManualType] = useState<StockType>('CONSOMMABLES');
+  const [manualCat, setManualCat] = useState('');
+  const [manualFamily, setManualFamily] = useState<'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE'>('CONSOMMABLES');
+  const [manualIsCritical, setManualIsCritical] = useState(false);
+
   const [date, setDate] = useState(() => new Date().toISOString());
   const [reference, setReference] = useState('');
   const [entityName, setEntityName] = useState(''); 
@@ -64,11 +107,143 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [showResults, setShowResults] = useState(false);
   const [validationError, setValidationError] = useState<string | null>(null);
   const [localCreatedArticles, setLocalCreatedArticles] = useState<Article[]>([]);
+  const [forceSubmitPrices, setForceSubmitPrices] = useState(false);
+  const [priceWarnings, setPriceWarnings] = useState<string[]>([]);
+
+  // Real-time recalculation of anomalous price entries
+  useEffect(() => {
+    if (type !== 'ENTREE') {
+      setPriceWarnings([]);
+      return;
+    }
+    const warnings: string[] = [];
+    items.forEach(item => {
+      const art = articles.find(a => a.id === item.articleId) || localCreatedArticles.find(a => a.id === item.articleId);
+      if (art) {
+        if (item.price === undefined || item.price === null || isNaN(item.price)) {
+          // ignore NaN during typing
+        } else if (item.price <= 0) {
+          warnings.push(`Prix nul de ${formatCurrency(0)} ou non spécifié pour "${art.designation}" (Réf: ${art.ref}).`);
+        } else if (art.price && art.price > 0) {
+          const ratio = item.price / art.price;
+          if (ratio > 5) {
+            warnings.push(`Prix anormalement élevé pour "${art.designation}" : ${formatCurrency(item.price)} est plus de 5 fois supérieur au prix courant enregistré (${formatCurrency(art.price)}).`);
+          } else if (ratio < 0.1) {
+            warnings.push(`Prix anormalement bas pour "${art.designation}" : ${formatCurrency(item.price)} est plus de 10 fois inférieur au prix courant enregistré (${formatCurrency(art.price)}).`);
+          }
+        }
+      }
+    });
+    setPriceWarnings(warnings);
+  }, [items, type, articles, localCreatedArticles]);
 
   // Ergonomic UX Keyboard States
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
   const [lastAddedLineId, setLastAddedLineId] = useState<string | null>(null);
   const [globalBeneficiaryId, setGlobalBeneficiaryId] = useState<string>('');
+
+  // 1. activeHMCatalogItems: pieces ayant le statut 'ACTIF' dans les collections
+  const activeHMCatalogItems = useMemo(() => {
+    return (hydrominesCatalog || []).filter(item => item.status === 'ACTIF');
+  }, [hydrominesCatalog]);
+
+  const hmFamiliesList = useMemo(() => {
+    const families = new Set<string>();
+    activeHMCatalogItems.forEach(item => {
+      if (item.equipmentFamily) families.add(item.equipmentFamily);
+    });
+    return Array.from(families).sort();
+  }, [activeHMCatalogItems]);
+
+  const hmCategoriesList = useMemo(() => {
+    const categories = new Set<string>();
+    activeHMCatalogItems.forEach(item => {
+      if (item.functionalCategory) categories.add(item.functionalCategory);
+    });
+    return Array.from(categories).sort();
+  }, [activeHMCatalogItems]);
+
+  // Order filtration: Choix du catalogue -> Choix de la catégorie -> Recherche texte
+  const filteredHMItems = useMemo(() => {
+    let items = activeHMCatalogItems;
+
+    if (hmActiveFamily !== 'ALL') {
+      items = items.filter(it => it.equipmentFamily === hmActiveFamily);
+    }
+
+    if (hmActiveCategory !== 'ALL') {
+      items = items.filter(it => it.functionalCategory === hmActiveCategory);
+    }
+
+    const query = hmSearchTerm.toLowerCase().trim();
+    if (query.length >= 2) {
+      items = items.filter(it => 
+        it.reference?.toLowerCase().includes(query) ||
+        it.designation?.toLowerCase().includes(query) ||
+        it.functionalCategory?.toLowerCase().includes(query)
+      );
+    }
+
+    return items;
+  }, [activeHMCatalogItems, hmActiveFamily, hmActiveCategory, hmSearchTerm]);
+
+  const visibleHMItems = useMemo(() => {
+    return filteredHMItems.slice(0, hmVisibleLimit);
+  }, [filteredHMItems, hmVisibleLimit]);
+
+  // Enrichment filters
+  const currentEnrichCatalog = useMemo(() => {
+    if (selectorTab === 'hm_enrich_st2g') return 'ST2G';
+    if (selectorTab === 'hm_enrich_st2d') return 'ST2D';
+    if (selectorTab === 'hm_enrich_t23') return 'T23';
+    return null;
+  }, [selectorTab]);
+
+  const enrichCategories = useMemo(() => {
+    if (!currentEnrichCatalog) return [];
+    const matched = MASTER_CATALOG.filter(it => {
+      const comp = (it.compatibility || '').toLowerCase();
+      if (currentEnrichCatalog === 'ST2G') return comp.includes('st2g');
+      if (currentEnrichCatalog === 'ST2D') return comp.includes('st2d');
+      if (currentEnrichCatalog === 'T23') return comp.includes('t23') || comp.includes('montabert');
+      return false;
+    });
+    const uniq = new Set<string>();
+    matched.forEach(it => {
+      if (it.functionalCategory) uniq.add(it.functionalCategory);
+    });
+    return Array.from(uniq).sort();
+  }, [currentEnrichCatalog]);
+
+  const enrichFilteredItems = useMemo(() => {
+    if (!currentEnrichCatalog) return [];
+    let items = MASTER_CATALOG.filter(it => {
+      const comp = (it.compatibility || '').toLowerCase();
+      if (currentEnrichCatalog === 'ST2G') return comp.includes('st2g');
+      if (currentEnrichCatalog === 'ST2D') return comp.includes('st2d');
+      if (currentEnrichCatalog === 'T23') return comp.includes('t23') || comp.includes('montabert');
+      return false;
+    });
+
+    if (enrichCategory !== 'ALL') {
+      items = items.filter(it => it.functionalCategory === enrichCategory);
+    }
+
+    const query = enrichSearch.toLowerCase().trim();
+    if (query.length >= 2) {
+      items = items.filter(it => 
+        it.reference?.toLowerCase().includes(query) ||
+        it.designation?.toLowerCase().includes(query) ||
+        it.functionalCategory?.toLowerCase().includes(query)
+      );
+    }
+
+    return items;
+  }, [currentEnrichCatalog, enrichCategory, enrichSearch]);
+
+  const visibleEnrichItems = useMemo(() => {
+    return enrichFilteredItems.slice(0, enrichLimit);
+  }, [enrichFilteredItems, enrichLimit]);
 
   const prefix = type === 'ENTREE' ? 'BE' : 'BS';
   const autoId = useMemo(() => {
@@ -231,6 +406,183 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
   };
 
+  const handleSelectAndInstantiateHMItem = async (item: HydrominesCatalogItem) => {
+    if (site === 'ALL') {
+      toast.error("Veuillez sélectionner un chantier avant d'ajouter une pièce.");
+      return;
+    }
+
+    const cleanRef = (item.reference || '').trim().toUpperCase().replace(/\s+/g, '_');
+    const deterministicId = `${site}_${cleanRef}`;
+
+    // CHECK FOR EXISTING LOCAL ARTICLE TO PREVENT DUPLICATES!
+    const existingLocalArticle = articles.find(
+      a => a.site === site && 
+      a.ref.trim().toUpperCase() === item.reference.trim().toUpperCase()
+    );
+
+    if (existingLocalArticle) {
+      // Already exists in local stock! Just select it
+      addItem(existingLocalArticle);
+      setIsSelectorModalOpen(false);
+      toast.success(`La pièce "${item.designation}" existe déjà dans le stock et a été ajoutée.`);
+      return;
+    }
+
+    // Create a new article following existing schema mapping exactly
+    const newArticle: Article = {
+      id: deterministicId,
+      site: site,
+      ref: item.reference.toUpperCase().trim(),
+      designation: item.designation.trim(),
+      type: (item.suggestedType as StockType) || 'CONSOMMABLES',
+      category: item.functionalCategory || 'AUTRES',
+      functionalCategory: item.functionalCategory || '',
+      unit: item.unit || 'PIECE',
+      quantity: 0,
+      minStock: 2,
+      price: 0,
+      location: 'A affecter',
+      active: true,
+      notes: `Créé automatiquement à partir du Catalogue Hydromines ⭐ (Origine: ${item.sourceCatalog || 'Inconnu'})`
+    };
+
+    if (onArticleCreate) {
+      try {
+        await onArticleCreate(newArticle);
+        setLocalCreatedArticles(prev => [...prev, newArticle]);
+        
+        // Add to items of the movement form
+        const newLineId = generateId();
+        const resolvedGlobalAgent = agents.find(a => a.id === globalBeneficiaryId);
+        const defaultBeneficiaryProps = resolvedGlobalAgent ? {
+          beneficiaryId: resolvedGlobalAgent.id,
+          beneficiaryName: `${resolvedGlobalAgent.lastname} ${resolvedGlobalAgent.firstname}`,
+          beneficiaryService: resolvedGlobalAgent.service
+        } : {
+          beneficiaryId: '',
+          beneficiaryName: '',
+          beneficiaryService: ''
+        };
+
+        setItems(prev => [...prev, { 
+          lineId: newLineId, 
+          articleId: deterministicId, 
+          quantity: 1, 
+          price: 0,
+          ...defaultBeneficiaryProps 
+        }]);
+
+        setValidationError(null);
+        setSearch('');
+        setShowResults(false);
+        setLastAddedLineId(newLineId);
+
+        setIsSelectorModalOpen(false);
+        toast.success(`Importation de "${newArticle.designation}" réussie dans le stock.`);
+      } catch (err: any) {
+        toast.error(`Erreur d'importation : ${err.message || err}`);
+      }
+    }
+  };
+
+  const handleAddAndInstantiateTechItem = async () => {
+    if (!selectedTechItem || !currentEnrichCatalog) return;
+
+    // Check if duplicate in HM Catalog
+    const cleanRef = selectedTechItem.reference.trim().toLowerCase();
+    const alreadyInHM = hydrominesCatalog.some(hm => hm.reference?.trim().toLowerCase() === cleanRef);
+
+    let hmItem: HydrominesCatalogItem;
+
+    if (alreadyInHM) {
+      // Find existing active
+      const existingHM = hydrominesCatalog.find(hm => hm.reference?.trim().toLowerCase() === cleanRef);
+      if (!existingHM) {
+        toast.error("Erreur de cohérence catalogue.");
+        return;
+      }
+      hmItem = existingHM;
+      toast.info(`La référence "${selectedTechItem.reference}" est déjà présente dans le Catalogue Hydromines.`);
+    } else {
+      let family: 'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' = 'AUTRE';
+      if (currentEnrichCatalog === 'ST2G') family = 'ST2G';
+      else if (currentEnrichCatalog === 'ST2D') family = 'ST2D';
+      else if (currentEnrichCatalog === 'T23') family = 'T23';
+
+      hmItem = {
+        id: 'hm_' + generateId(),
+        reference: selectedTechItem.reference.toUpperCase().trim(),
+        designation: selectedTechItem.designation.trim(),
+        suggestedType: selectedTechItem.suggestedType || 'CONSOMMABLES',
+        functionalCategory: selectedTechItem.functionalCategory || 'Général',
+        unit: enrichUnit || 'Pcs',
+        sourceCatalog: currentEnrichCatalog,
+        equipmentFamily: family,
+        status: 'ACTIF',
+        isHydrominesCritical: enrichIsCritical,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        await saveHydrominesCatalogItem(hmItem);
+        toast.success(`Enrichi : ${hmItem.reference} ajouté au Catalogue Hydromines ⭐`);
+      } catch (e: any) {
+        toast.error(`Erreur d'ajout au catalogue : ${e.message || e}`);
+        return;
+      }
+    }
+
+    // Now instantiate in site stock
+    await handleSelectAndInstantiateHMItem(hmItem);
+  };
+
+  const handleAddAndInstantiateManual = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualRef.trim() || !manualDes.trim()) {
+      toast.error("Veuillez renseigner les champs obligatoires (Référence et Désignation).");
+      return;
+    }
+
+    const cleanRef = manualRef.trim().toLowerCase();
+    const alreadyInHM = hydrominesCatalog.some(hm => hm.reference?.trim().toLowerCase() === cleanRef);
+
+    let hmItem: HydrominesCatalogItem;
+
+    if (alreadyInHM) {
+      const existingHM = hydrominesCatalog.find(hm => hm.reference?.trim().toLowerCase() === cleanRef);
+      if (!existingHM) return;
+      hmItem = existingHM;
+    } else {
+      hmItem = {
+        id: 'hm_' + generateId(),
+        reference: manualRef.toUpperCase().trim(),
+        designation: manualDes.trim(),
+        suggestedType: manualType,
+        functionalCategory: manualCat.trim() || 'Général',
+        unit: manualUnit.trim() || 'Pcs',
+        sourceCatalog: 'Saisie Manuelle',
+        equipmentFamily: manualFamily,
+        status: 'ACTIF',
+        isHydrominesCritical: manualIsCritical,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      };
+
+      try {
+        await saveHydrominesCatalogItem(hmItem);
+        toast.success(`Enrichi manuellement : ${hmItem.reference} créé dans le Catalogue Hydromines ⭐`);
+      } catch (e: any) {
+        toast.error(`Erreur d'ajout manuel au catalogue : ${e.message || e}`);
+        return;
+      }
+    }
+
+    // Now instantiate in site stock
+    await handleSelectAndInstantiateHMItem(hmItem);
+  };
+
   const isEpiOrOutils = categoryFilter === 'EPI' || categoryFilter === 'OUTILS_TRAVAUX';
   const isMachineRelated = categoryFilter === 'ENGINS' || categoryFilter === 'PERFORATEURS';
 
@@ -339,6 +691,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       return;
     }
 
+    if (type === 'ENTREE' && priceWarnings.length > 0 && !forceSubmitPrices) {
+      setValidationError("ATTENTION : Certains prix saisis sont jugés anormaux ou nuls par le système qualité. Veuillez confirmer l'exactitude des prix en cochant la case d'approbation et réessayez.");
+      return;
+    }
+
     const resolvedMecanicien = agents.find(a => a.id === mecanicien);
     const resolvedEngin = engins.find(e => e.id === targetEngin);
     const resolvedPerfo = perfos.find(p => p.id === targetPerfo);
@@ -409,18 +766,61 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   }, []);
 
   return (
-    <div className="space-y-4 max-w-4xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
-      <header className="flex items-center justify-between no-print gap-4 mb-6">
-        <div className="flex items-center gap-3">
-          <div className={cn("w-10 h-10 rounded-xl flex items-center justify-center shadow-lg", type === 'ENTREE' ? "bg-emerald-500 text-white" : "bg-rose-800 text-white")}>
-            {type === 'ENTREE' ? <ArrowDownLeft className="w-5 h-5" /> : <ArrowUpRight className="w-5 h-5" />}
+    <div className="space-y-6 max-w-5xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print mb-6">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone de flux avec un rond luxueux */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className={cn(
+              "w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative transition-all duration-300",
+              type === 'ENTREE' 
+                ? "bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]" 
+                : "bg-rose-950/25 border border-rose-550/30 text-rose-500"
+            )}>
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-20 bg-current scale-110" />
+              {type === 'ENTREE' ? (
+                <ArrowDownLeft className="w-10 h-10 stroke-[2.5]" />
+              ) : (
+                <ArrowUpRight className="w-10 h-10 stroke-[2.5]" />
+              )}
+            </div>
           </div>
-          <div>
-            <h2 className="text-4xl font-black uppercase text-slate-950 tracking-tighter leading-tight">{type === 'ENTREE' ? "Bon de Réception" : "Bon de Sortie"}</h2>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-1 opacity-70">MAGASIN: {site === 'ALL' ? '—' : site}</p>
+
+          {/* Section centrale : Titre géant et sous-titre de flux */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className={cn("w-2 h-2 rounded-full animate-pulse", type === 'ENTREE' ? "bg-[#b8860b]" : "bg-rose-500")} />
+              <span className={cn("text-[9px] font-black uppercase tracking-widest", type === 'ENTREE' ? "text-amber-800" : "text-rose-850")}>
+                {type === 'ENTREE' ? "Flux Logistique Entrant (Réception)" : "Flux Logistique Sortant (Consommation)"}
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                {type === 'ENTREE' ? "Bon de Réception" : "Bon de Sortie"}
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Enregistrement et traçabilité des pièces détachées d'engins souterrains
+            </p>
           </div>
+
+          {/* Section droite : Informations sur le site / magasin */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">MAGASIN</span>
+            </div>
+            <div className="px-3.5 py-2 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-lg text-xs font-black text-[#ffd700] shadow-md uppercase tracking-widest select-none">
+              {site === 'ALL' ? 'Chantier Non Sélectionné' : site}
+            </div>
+          </div>
+
         </div>
-      </header>
+      </div>
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {site === 'ALL' && (
@@ -480,18 +880,20 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             </div>
           </div>
 
-          <div className="md:col-span-2 p-4 bg-slate-950 rounded-2xl text-white shadow-2xl">
-            <label className="text-[10px] font-black text-sky-400 uppercase tracking-widest ml-1 opacity-70">Type de Matériel</label>
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-2 mt-2">
+          <div className="md:col-span-2 p-5 bg-gradient-to-br from-[#121c26] via-[#091118] to-[#04080c] border border-amber-500/20 rounded-2xl text-white shadow-2xl relative overflow-hidden">
+            {/* Ambient Background decoration */}
+            <div className="absolute right-0 top-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl pointer-events-none" />
+            <label className="text-[10px] font-black text-[#ffd700] uppercase tracking-widest ml-1 opacity-90 block mb-3">Filtre Rapide d'Equipement / Matériel</label>
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5">
               {[{ id: 'ENGINS', label: 'Engins', icon: Truck }, { id: 'PERFORATEURS', label: 'Perfos', icon: Drill }, { id: 'EPI', label: 'EPI', icon: User }, { id: 'OUTILS_TRAVAUX', label: 'Outils', icon: LayoutGrid }, { id: 'AUTRES', label: 'Autres', icon: Plus }].map(cat => (
                 <button
                   key={cat.id} type="button"
                   onClick={() => { setCategoryFilter(cat.id); setShowResults(false); }}
                   className={cn(
-                    "flex flex-col items-center gap-2 p-2 rounded-xl transition-all border-2", 
+                    "flex flex-col items-center gap-2 p-3.5 rounded-xl transition-all duration-200 border-2", 
                     categoryFilter === cat.id 
-                      ? "bg-sky-600 border-sky-400 shadow-lg shadow-sky-500/20 scale-105" 
-                      : "bg-slate-900 border-slate-800 opacity-50 hover:opacity-100"
+                      ? "bg-amber-950/40 text-[#ffd700] border-amber-550 shadow-[0_8px_20px_rgba(184,134,11,0.25)] scale-105 font-black" 
+                      : "bg-slate-900/40 border-slate-800 text-slate-400 opacity-60 hover:opacity-100 hover:border-slate-700 hover:text-slate-100"
                   )}
                 >
                   <cat.icon className="w-5 h-5" />
@@ -749,7 +1151,32 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
           </div>
         </div>
 
-        <div className="card glass p-4 space-y-4 shadow-xl border-slate-100 rounded-2xl">
+        <div className="card glass p-6 space-y-4 shadow-xl border-slate-100 rounded-2xl">
+          <div className="flex flex-col md:flex-row gap-3 items-stretch md:items-center justify-between pb-2 border-b border-slate-150">
+            <div>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                <Layers className="w-4 h-4 text-sky-500" />
+                Saisie & Recherche des pièces
+              </h3>
+              <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-0.5">
+                {type === 'ENTREE' ? "Recherchez l'article en stock local ou importez-le depuis le catalogue Hydromines" : "Recherchez la pièce à déstocker parmi le stock local disponible"}
+              </p>
+            </div>
+            {type === 'ENTREE' && site !== 'ALL' && (
+              <button
+                type="button"
+                onClick={() => {
+                  setHmSearchTerm(search);
+                  setIsSelectorModalOpen(true);
+                  setSelectorTab('hm_select');
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-sky-600 to-sky-700 hover:from-sky-700 hover:to-sky-800 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-sky-500/10 active:scale-95 cursor-pointer"
+              >
+                ⭐ Ouvrir le Sélecteur Hydromines
+              </button>
+            )}
+          </div>
+
           <div className="relative group">
             <div className="absolute inset-0 bg-sky-500/5 rounded-xl blur-xl opacity-0 group-focus-within:opacity-100 transition-opacity" />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-300 relative z-10" />
@@ -768,7 +1195,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               onKeyDown={handleSearchKeyDown}
             />
             {showResults && search && (
-              <div ref={dropdownRef} className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[60] max-h-80 overflow-y-auto p-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
+              <div ref={dropdownRef} className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[60] max-h-96 overflow-y-auto p-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
                 
                 {/* Keyboard Navigation Assist Helper */}
                 <div className="flex items-center justify-between px-2 pb-2 mb-1 border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
@@ -812,7 +1239,51 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   </div>
                 )}
                 
-                {filteredCatalogItems.length > 0 && (
+                {/* If type is ENTREE, we search local stock first. If not found or if the user wants to buy another SKU, display helpful panel */}
+                {type === 'ENTREE' && (
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2 mt-1">
+                    {sortedArticles.length === 0 && (
+                      <div className="bg-amber-50/60 border border-amber-100 p-6 rounded-2xl text-center space-y-4">
+                        <div className="flex flex-col items-center gap-2">
+                          <AlertCircle className="w-8 h-8 text-amber-500 animate-pulse" />
+                          <div>
+                            <p className="text-xs font-black text-amber-950 uppercase">Référence absente du stock physique.</p>
+                            <p className="text-[10px] text-amber-800 font-bold uppercase mt-0.5">Cet article n'a pas encore été approvisionné sur ce chantier.</p>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHmSearchTerm(search);
+                            setIsSelectorModalOpen(true);
+                            setSelectorTab('hm_select');
+                          }}
+                          className="mx-auto flex items-center gap-2 px-5 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-sky-600/10 active:scale-95 cursor-pointer font-black"
+                        >
+                          ⭐ Ajouter depuis le Catalogue Hydromines
+                        </button>
+                      </div>
+                    )}
+                    {sortedArticles.length > 0 && (
+                      <div className="flex justify-center pt-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setHmSearchTerm(search);
+                            setIsSelectorModalOpen(true);
+                            setSelectorTab('hm_select');
+                          }}
+                          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-sky-100 text-slate-705 hover:text-sky-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
+                        >
+                          ⭐ Vous ne trouvez pas la référence ? Rechercher dans le Catalogue Hydromines
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Keep general catalog list as a fallback underneath local articles */}
+                {type === 'ENTREE' && filteredCatalogItems.length > 0 && sortedArticles.length > 0 && (
                   <div className="space-y-1 pt-2 border-t border-slate-100 mt-2">
                     <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 mb-2">Catalogue Général (Prêt pour Importation)</p>
                     {filteredCatalogItems.map((item, idx) => {
@@ -850,7 +1321,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   </div>
                 )}
 
-                {sortedArticles.length === 0 && filteredCatalogItems.length === 0 && (
+                {sortedArticles.length === 0 && (type !== 'ENTREE' || !search) && (
                   <div className="p-6 text-center text-slate-400 font-bold uppercase text-xs tracking-wider">
                     Aucun article trouvé pour "{search}"
                   </div>
@@ -960,6 +1431,32 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             </table>
           </div>
 
+          {/* Bloc d'avertissement de Prix d'Achat Anomalies (Alerte ERP Qualité) */}
+          {type === 'ENTREE' && priceWarnings.length > 0 && (
+            <div className="my-6 p-4 bg-amber-50 rounded-2xl border border-amber-200 shadow-sm flex flex-col gap-3">
+              <div className="flex items-start gap-2.5">
+                <AlertTriangle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <h4 className="text-xs font-black text-amber-800 uppercase tracking-wider">Alerte Contrôle Financier Qualité — Prix Saisis Inhabituels</h4>
+                  <ul className="list-disc pl-4 mt-2 space-y-1.5">
+                    {priceWarnings.map((warning, idx) => (
+                      <li key={idx} className="text-xs text-amber-900 font-bold leading-relaxed">{warning}</li>
+                    ))}
+                  </ul>
+                </div>
+              </div>
+              <label className="flex items-center gap-3 mt-1.5 p-2.5 bg-white/60 hover:bg-white rounded-xl border border-amber-150 transition-all cursor-pointer select-none">
+                <input 
+                  type="checkbox" 
+                  className="w-4 h-4 text-amber-600 border-amber-300 focus:ring-amber-500 rounded cursor-pointer"
+                  checked={forceSubmitPrices} 
+                  onChange={(e) => setForceSubmitPrices(e.target.checked)} 
+                />
+                <span className="text-xs font-black text-amber-950 uppercase tracking-tight">Je confirme l'exactitude des prix exceptionnels ou nuls saisis (Forcer l'enregistrement au PMP)</span>
+              </label>
+            </div>
+          )}
+
           <div className="pt-8 border-t-2 border-slate-100 flex flex-col sm:flex-row items-center justify-between gap-8">
             <div className="flex items-center gap-6">
               <div className="w-16 h-16 rounded-3xl bg-emerald-50 flex items-center justify-center text-emerald-500 shadow-inner">
@@ -988,6 +1485,647 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
         </div>
         {validationError && <div className="p-3 bg-rose-50 text-rose-800 rounded-xl flex items-center gap-2 shadow-sm border border-rose-100"><AlertCircle className="w-5 h-5" /><p className="font-bold text-sm">{validationError}</p></div>}
       </form>
+
+      <AnimatePresence>
+        {isSelectorModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSelectorModalOpen(false)}
+              className="absolute inset-0 bg-slate-950/60 backdrop-blur-md"
+            />
+            <motion.div 
+              initial={{ scale: 0.95, y: 15, opacity: 0 }}
+              animate={{ scale: 1, y: 0, opacity: 1 }}
+              exit={{ scale: 0.95, y: 15, opacity: 0 }}
+              className="bg-white border border-slate-150 rounded-3xl shadow-3xl w-full max-w-6xl max-h-[90vh] flex flex-col overflow-hidden relative z-10"
+            >
+              {/* Header */}
+              <div className="p-6 bg-slate-50 border-b border-slate-150 flex items-center justify-between">
+                <div>
+                  <h2 className="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                    <Sparkles className="w-5 h-5 text-sky-500" />
+                    Sélecteur & Importateur Hydromines ⭐
+                  </h2>
+                  <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-0.5">
+                    Intégrez instantanément une pièce certifiée du catalogue dans le stock local du chantier "{(SITES as any)[site] || site}"
+                  </p>
+                </div>
+                <button 
+                  type="button" 
+                  onClick={() => setIsSelectorModalOpen(false)}
+                  className="w-10 h-10 rounded-xl bg-white border border-slate-200 hover:bg-slate-50 text-slate-500 flex items-center justify-center transition-all select-none cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Subheader / Mode switcher tabs */}
+              <div className="bg-slate-100/50 p-2 border-b border-slate-150 flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectorTab('hm_select');
+                    setSelectedTechItem(null);
+                    setSelectedHMItem(null);
+                  }}
+                  className={cn(
+                    "px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all select-none cursor-pointer",
+                    selectorTab === 'hm_select'
+                      ? "bg-white text-slate-900 shadow-sm border border-slate-200"
+                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/55"
+                  )}
+                >
+                  📦 Stock Principal Hydromines ({activeHMCatalogItems.length})
+                </button>
+                <div className="h-5 w-px bg-slate-300 mx-1 hidden sm:block" />
+                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Enrichir le catalogue :</span>
+                
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectorTab('hm_enrich_st2g');
+                    setEnrichCategory('ALL');
+                    setEnrichSearch('');
+                    setEnrichLimit(30);
+                    setSelectedTechItem(null);
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 select-none cursor-pointer",
+                    selectorTab === 'hm_enrich_st2g'
+                      ? "bg-sky-600 text-white shadow-sm font-black"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  ⭐ Ajouter depuis ST2G
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectorTab('hm_enrich_st2d');
+                    setEnrichCategory('ALL');
+                    setEnrichSearch('');
+                    setEnrichLimit(30);
+                    setSelectedTechItem(null);
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 select-none cursor-pointer",
+                    selectorTab === 'hm_enrich_st2d'
+                      ? "bg-indigo-600 text-white shadow-sm font-black"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  ⭐ Ajouter depuis ST2D
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectorTab('hm_enrich_t23');
+                    setEnrichCategory('ALL');
+                    setEnrichSearch('');
+                    setEnrichLimit(30);
+                    setSelectedTechItem(null);
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 select-none cursor-pointer",
+                    selectorTab === 'hm_enrich_t23'
+                      ? "bg-violet-600 text-white shadow-sm font-black"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  ⭐ Ajouter depuis T23
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectorTab('hm_enrich_manual');
+                    setManualRef('');
+                    setManualDes('');
+                  }}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 select-none cursor-pointer",
+                    selectorTab === 'hm_enrich_manual'
+                      ? "bg-amber-600 text-white shadow-sm font-black"
+                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
+                  )}
+                >
+                  ✏️ Saisie manuelle de secours
+                </button>
+              </div>
+
+              {/* MODES CONTENT */}
+              <div className="flex-1 overflow-hidden flex flex-col md:flex-row min-h-0">
+                
+                {/* LEFT COLUMN: FILTERS & RESULT LISTING */}
+                {selectorTab === 'hm_select' && (
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col min-h-0 border-r border-slate-150">
+                    {/* Search & Filters Controls */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-left">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Filtrer par Catalogue / Modèle</label>
+                        <select
+                          className="input-field h-11 text-xs font-bold px-3 rounded-xl border border-slate-200 w-full"
+                          value={hmActiveFamily}
+                          onChange={(e) => { setHmActiveFamily(e.target.value); setHmVisibleLimit(30); }}
+                        >
+                          <option value="ALL">TOUS LES CATALOGUES ({activeHMCatalogItems.length})</option>
+                          {hmFamiliesList.map(fam => (
+                            <option key={fam} value={fam}>{fam.toUpperCase()}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Filtrer par Catégorie</label>
+                        <select
+                          className="input-field h-11 text-xs font-bold px-3 rounded-xl border border-slate-200 w-full"
+                          value={hmActiveCategory}
+                          onChange={(e) => { setHmActiveCategory(e.target.value); setHmVisibleLimit(30); }}
+                        >
+                          <option value="ALL">TOUTES LES CATÉGORIES</option>
+                          {hmCategoriesList.map(cat => (
+                            <option key={cat} value={cat}>{cat.toUpperCase()}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Recherche textuelle</label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input 
+                            type="text"
+                            placeholder="Min. 2 caractères..."
+                            value={hmSearchTerm}
+                            onChange={(e) => { setHmSearchTerm(e.target.value); setHmVisibleLimit(30); }}
+                            className="input-field h-11 text-xs pl-9 pr-3 rounded-xl border border-slate-200 w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Listing matching items */}
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                      {visibleHMItems.length === 0 ? (
+                        <div className="py-12 text-center text-slate-400 font-bold uppercase text-xs">
+                          Aucune pièce active trouvée dans le Catalogue Hydromines.
+                          {hmSearchTerm.trim().length >= 1 && (
+                            <p className="text-[10px] text-slate-400 lowercase mt-1 font-normal">
+                              Essayez d'enrichir le catalogue via les boutons rapides ci-dessus !
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-[10px] text-slate-400 font-extrabold uppercase px-1 pb-1 text-left">
+                            {filteredHMItems.length} références disponibles correspondantes :
+                          </div>
+                          {visibleHMItems.map(item => {
+                            const alreadyInLocal = articles.some(
+                              a => a.site === site && 
+                              a.ref.trim().toUpperCase() === item.reference.trim().toUpperCase()
+                            );
+                            const isSelected = selectedHMItem?.id === item.id;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setSelectedHMItem(item)}
+                                className={cn(
+                                  "w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between",
+                                  isSelected
+                                    ? "bg-sky-50 border-sky-400 shadow-sm"
+                                    : "border-slate-100 hover:bg-slate-50/70"
+                                  )}
+                              >
+                                <div>
+                                  <p className="font-extrabold text-sm text-slate-900 uppercase leading-snug">{item.designation}</p>
+                                  <div className="flex flex-wrap items-center gap-2 mt-1">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 uppercase">{item.reference}</span>
+                                    <span className="text-[8px] font-black bg-slate-100 text-slate-600 px-1.5 py-0.25 rounded uppercase tracking-wider">
+                                      {item.equipmentFamily || item.sourceCatalog}
+                                    </span>
+                                    <span className="text-[8px] font-bold text-slate-400">
+                                      {item.functionalCategory}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {alreadyInLocal && (
+                                    <span className="text-[9px] font-black bg-emerald-50 text-emerald-600 border border-emerald-100 px-2 py-1 rounded-full uppercase tracking-wider scale-90">
+                                      Déjà en Stock
+                                    </span>
+                                  )}
+                                  <span className="text-xs font-black text-sky-600 hover:underline">
+                                    Choisir →
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+
+                          {filteredHMItems.length > hmVisibleLimit && (
+                            <button
+                              type="button"
+                              onClick={() => setHmVisibleLimit(prev => prev + 30)}
+                              className="w-full py-3 border border-dashed border-slate-200 hover:border-sky-300 text-slate-500 hover:text-sky-600 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                              📥 Charger plus de références (+30)
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* LEFT COLUMN: ENRICH FROM SOURCED CATALOGUES */}
+                {['hm_enrich_st2g', 'hm_enrich_st2d', 'hm_enrich_t23'].includes(selectorTab) && (
+                  <div className="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col min-h-0 border-r border-slate-150">
+                    <div className="bg-gradient-to-r from-sky-50 to-indigo-50 p-4 rounded-2xl border border-sky-100 flex items-center gap-3 text-left">
+                      <Sparkles className="w-5 h-5 text-sky-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-black text-sky-950 uppercase">Enrichissement depuis {currentEnrichCatalog}</p>
+                        <p className="text-[10px] text-sky-700 font-bold uppercase tracking-wider">Recherchez une référence officielle de constructeur technique et importez-la</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Filtrer par Catégorie Technique</label>
+                        <select
+                          className="input-field h-11 text-xs font-bold px-3 rounded-xl border border-slate-200 w-full"
+                          value={enrichCategory}
+                          onChange={(e) => { setEnrichCategory(e.target.value); setEnrichLimit(30); }}
+                        >
+                          <option value="ALL">TOUTES LES CATÉGORIES ({enrichCategories.length})</option>
+                          {enrichCategories.map(cat => (
+                            <option key={cat} value={cat}>{cat.toUpperCase()}</option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Recherche de pièces constructeurs</label>
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                          <input 
+                            type="text"
+                            placeholder="Saisissez référence, désignation..."
+                            value={enrichSearch}
+                            onChange={(e) => { setEnrichSearch(e.target.value); setEnrichLimit(30); }}
+                            className="input-field h-11 text-xs pl-9 pr-3 rounded-xl border border-slate-200 w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                      {visibleEnrichItems.length === 0 ? (
+                        <div className="py-12 text-center text-slate-400 font-bold uppercase text-xs">
+                          Saisissez au moins 2 caractères pour rechercher dans {currentEnrichCatalog}.
+                        </div>
+                      ) : (
+                        <>
+                          <div className="text-[10px] text-slate-400 font-extrabold uppercase px-1 pb-1 text-left">
+                            {enrichFilteredItems.length} références techniques trouvées :
+                          </div>
+                          {visibleEnrichItems.map(item => {
+                            const alreadyInHM = hydrominesCatalog.some(hm => hm.reference?.trim().toLowerCase() === item.reference.trim().toLowerCase());
+                            const isSelected = selectedTechItem?.reference === item.reference;
+                            return (
+                              <button
+                                key={item.id}
+                                type="button"
+                                onClick={() => setSelectedTechItem(item)}
+                                className={cn(
+                                  "w-full text-left p-4 rounded-xl border transition-all flex items-center justify-between",
+                                  isSelected
+                                    ? "bg-indigo-50/70 border-indigo-400 shadow-sm"
+                                    : "border-slate-200 hover:bg-slate-50/70"
+                                )}
+                              >
+                                <div>
+                                  <p className="font-extrabold text-sm text-slate-950 uppercase leading-snug">{item.designation}</p>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <span className="text-[9px] font-mono font-bold text-slate-400 uppercase">{item.reference}</span>
+                                    <span className="text-[8px] font-bold text-slate-400 bg-slate-100 px-1.5 py-0.25 rounded uppercase">
+                                      {item.functionalCategory}
+                                    </span>
+                                  </div>
+                                </div>
+                                
+                                <div className="flex items-center gap-2 shrink-0">
+                                  {alreadyInHM && (
+                                    <span className="text-[9px] font-black bg-indigo-50/70 text-indigo-700 px-2 py-1 rounded-full uppercase tracking-wider">
+                                      Déjà catalogue HM
+                                    </span>
+                                  )}
+                                  <span className="text-xs font-black text-indigo-600 hover:underline">
+                                    Sélectionner
+                                  </span>
+                                </div>
+                              </button>
+                            );
+                          })}
+
+                          {enrichFilteredItems.length > enrichLimit && (
+                            <button
+                              type="button"
+                              onClick={() => setEnrichLimit(prev => prev + 30)}
+                              className="w-full py-3 border border-dashed border-slate-200 hover:border-indigo-300 text-slate-500 hover:text-indigo-600 rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer"
+                            >
+                              📥 Charger plus de références constructeur (+30)
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* LEFT COLUMN: MANUAL ENRICHMENT FORM */}
+                {selectorTab === 'hm_enrich_manual' && (
+                  <form onSubmit={handleAddAndInstantiateManual} className="flex-1 overflow-y-auto p-6 space-y-4 border-r border-slate-150 text-left">
+                    <div className="bg-amber-50 border border-amber-200 p-4 rounded-2xl flex items-center gap-3">
+                      <AlertCircle className="w-5 h-5 text-amber-600 shrink-0" />
+                      <div>
+                        <p className="text-xs font-black text-amber-950 uppercase">Saisie Manuelle De Secours</p>
+                        <p className="text-[10px] text-amber-800 font-bold uppercase tracking-wider">Utilisez ceci uniquement en cas de pièce introuvable dans tous les catalogues de référence</p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Référence unique *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="Ex : REF-MTR-99..."
+                          value={manualRef}
+                          onChange={(e) => setManualRef(e.target.value)}
+                          className="input-field h-11 text-xs px-3 rounded-xl border border-slate-200 w-full uppercase"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Désignation complète *</label>
+                        <input 
+                          type="text"
+                          required
+                          placeholder="Ex : CAPTEUR DE TEMPERATURE DEUTZ..."
+                          value={manualDes}
+                          onChange={(e) => setManualDes(e.target.value)}
+                          className="input-field h-11 text-xs px-3 rounded-xl border border-slate-200 w-full uppercase"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Catégorie fonctionnelle</label>
+                        <input 
+                          type="text"
+                          placeholder="Ex : Electricité / Moteur..."
+                          value={manualCat}
+                          onChange={(e) => setManualCat(e.target.value)}
+                          className="input-field h-11 text-xs px-3 rounded-xl border border-slate-200 w-full uppercase"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Famille matériels</label>
+                        <select
+                          className="input-field h-11 text-xs font-bold px-3 rounded-xl border border-slate-200 w-full"
+                          value={manualFamily}
+                          onChange={(e) => setManualFamily(e.target.value as any)}
+                        >
+                          <option value="ST2G">ST2G (Epiroc Scooptram)</option>
+                          <option value="ST2D">ST2D (Epiroc Scooptram)</option>
+                          <option value="T23">T23 (Foreuse)</option>
+                          <option value="CONSOMMABLES">CONSOMMABLES</option>
+                          <option value="EPI">EPI</option>
+                          <option value="AUTRE">AUTRE / GÉNÉRAL</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Unité de mesure</label>
+                        <input 
+                          type="text"
+                          placeholder="Ex : Pcs, Litre, Mètre..."
+                          value={manualUnit}
+                          onChange={(e) => setManualUnit(e.target.value)}
+                          className="input-field h-11 text-xs px-3 rounded-xl border border-slate-200 w-full"
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Type d'article (Stock)</label>
+                        <select
+                          className="input-field h-11 text-xs font-bold px-3 rounded-xl border border-slate-200 w-full"
+                          value={manualType}
+                          onChange={(e) => setManualType(e.target.value as StockType)}
+                        >
+                          <option value="CONSOMMABLES">CONSOMMABLES</option>
+                          <option value="EPI">EPI</option>
+                          <option value="OUTILS_TRAVAUX">OUTILLAGE</option>
+                          <option value="ENGINS">ENGINS / RECHANGE LOURD</option>
+                          <option value="PERFORATEURS">PERFORATEURS</option>
+                          <option value="AUTRES">AUTRE</option>
+                        </select>
+                      </div>
+
+                      <div className="space-y-2 sm:col-span-2 pt-2 flex items-center gap-2">
+                        <input 
+                          type="checkbox"
+                          id="manualIsCriticalCheck"
+                          checked={manualIsCritical}
+                          onChange={(e) => setManualIsCritical(e.target.checked)}
+                          className="w-4 h-4 text-sky-650 rounded bg-white border border-slate-300"
+                        />
+                        <label htmlFor="manualIsCriticalCheck" className="text-xs font-black text-rose-600 uppercase tracking-wider select-none cursor-pointer">
+                          ⚠️ Marquer cette pièce comme CRITIQUE pour l'exploitation
+                        </label>
+                      </div>
+                    </div>
+
+                    <div className="pt-4 flex justify-end">
+                      <button
+                        type="submit"
+                        className="px-6 py-3 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all cursor-pointer shadow-md shadow-amber-600/10"
+                      >
+                        ⭐ Enregistrer et Importer dans le Stock
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+
+                {/* RIGHT COLUMN: INFORMATION PANEL FOR SELECTED PIECES */}
+                <div className="w-full md:w-80 bg-slate-50 p-6 flex flex-col justify-between min-h-0 border-t md:border-t-0 md:border-l border-slate-150">
+                  
+                  {/* INFO PANEL TITLE & METADATA */}
+                  <div className="space-y-6 overflow-y-auto">
+                    <div className="pb-4 border-b border-slate-200 text-left">
+                      <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Informations techniques</h4>
+                      <p className="text-xs font-bold text-slate-700 mt-0.5">Détail technique de la référence avant validation</p>
+                    </div>
+
+                    {selectorTab === 'hm_select' && selectedHMItem ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm text-left">
+                          <span className="text-[8px] font-black bg-sky-50 text-sky-700 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                            Certifié Catalogue
+                          </span>
+                          <div className="text-xl font-black text-slate-900 uppercase tracking-tight leading-tight mt-2 pb-2">
+                            {selectedHMItem.designation}
+                          </div>
+                          <div className="space-y-1 leading-relaxed text-xs">
+                            <p className="text-[10px] uppercase font-black text-slate-400">Référence</p>
+                            <p className="font-mono text-xs font-black text-slate-800 bg-slate-50 p-2 rounded-lg border border-slate-100 uppercase select-all">{selectedHMItem.reference}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-left">
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Catalogue source</span>
+                            <span className="font-black text-slate-800 uppercase feedback-value">{selectedHMItem.sourceCatalog || 'Général'}</span>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Comp./Famille</span>
+                            <span className="font-black text-slate-850 uppercase">{selectedHMItem.equipmentFamily || 'Consommable'}</span>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs col-span-2">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Catégorie fonctionnelle</span>
+                            <span className="font-black text-slate-800 uppercase">{selectedHMItem.functionalCategory || 'Général'}</span>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Unité de mesure</span>
+                            <span className="font-black text-slate-800">{selectedHMItem.unit || 'PIECE'}</span>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Criticité</span>
+                            <span className={cn(
+                              "font-black uppercase text-[10px]",
+                              selectedHMItem.isHydrominesCritical ? "text-rose-600 animate-pulse font-extrabold" : "text-slate-500 font-extrabold"
+                            )}>
+                              {selectedHMItem.isHydrominesCritical ? "🚨 CRITIQUE" : "ORDINAIRE"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ) : ['hm_enrich_st2g', 'hm_enrich_st2d', 'hm_enrich_t23'].includes(selectorTab) && selectedTechItem ? (
+                      <div className="space-y-4">
+                        <div className="p-4 bg-white border border-slate-200 rounded-2xl shadow-sm text-left">
+                          <span className="text-[8px] font-black bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded-full uppercase tracking-widest">
+                            Pièce officielle constructeur
+                          </span>
+                          <div className="text-xl font-black text-slate-900 uppercase tracking-tight leading-tight mt-2 pb-2">
+                            {selectedTechItem.designation}
+                          </div>
+                          <div className="space-y-1 leading-relaxed text-xs">
+                            <p className="text-[10px] uppercase font-black text-slate-400">Référence OEM</p>
+                            <p className="font-mono text-xs font-black text-slate-800 bg-slate-50 p-2 rounded-lg border border-slate-100 uppercase select-all">{selectedTechItem.reference}</p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-3 text-left">
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Catalogue</span>
+                            <span className="font-black text-indigo-700 uppercase leading-none">{currentEnrichCatalog}</span>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Compatibilité</span>
+                            <span className="font-bold text-slate-650 uppercase text-[9px] leading-tight block">{selectedTechItem.compatibility || currentEnrichCatalog}</span>
+                          </div>
+                          <div className="p-3 bg-white border border-slate-200 rounded-xl text-xs col-span-2">
+                            <span className="text-[9px] font-bold text-slate-400 block uppercase">Sous-catégorie / Composant</span>
+                            <span className="font-black text-slate-800 uppercase text-[10px] leading-snug">
+                              {selectedTechItem.functionalCategory} - {selectedTechItem.subCategory || 'Consommable'}
+                            </span>
+                          </div>
+
+                          {/* Options to customise the item before adding to Hydromines Catalog */}
+                          <div className="p-3 bg-white border border-slate-200 col-span-2 rounded-xl text-xs space-y-3">
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider border-b pb-1.5">&#128295; Configurer la pièce pour le catalogue</p>
+                            
+                            <div className="space-y-1">
+                              <label className="text-[8px] font-black text-slate-500 uppercase block">Unité d'approvisionnement</label>
+                              <input 
+                                type="text"
+                                className="w-full h-8 px-2 text-xs border border-slate-200 rounded font-bold bg-white"
+                                value={enrichUnit}
+                                onChange={(e) => setEnrichUnit(e.target.value)}
+                                placeholder="Pcs, Litres, etc..."
+                              />
+                            </div>
+
+                            <div className="flex items-center gap-1.5 pt-1">
+                              <input 
+                                type="checkbox"
+                                id="enrichIsCriticalCheck"
+                                checked={enrichIsCritical}
+                                onChange={(e) => setEnrichIsCritical(e.target.checked)}
+                                className="w-3.5 h-3.5 text-indigo-600 rounded bg-white border border-slate-300"
+                              />
+                              <label htmlFor="enrichIsCriticalCheck" className="text-[9px] font-black text-rose-600 uppercase tracking-wide select-none cursor-pointer">
+                                CRITIQUE pour l'exploitation
+                              </label>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="py-24 text-center text-slate-400 space-y-2">
+                        <Info className="w-8 h-8 mx-auto text-slate-300" />
+                        <p className="text-xs font-bold uppercase">Aucune référence sélectionnée</p>
+                        <p className="text-[10px] font-normal leading-relaxed">Veuillez choisir un article dans la liste de gauche pour afficher ses détails techniques d'origine constructeur.</p>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* CONFIRM / SUBMIT BUTTON IN INFO PANEL */}
+                  <div className="pt-6 border-t border-slate-200 text-left">
+                    {selectorTab === 'hm_select' && selectedHMItem ? (
+                      <button
+                        type="button"
+                        onClick={() => handleSelectAndInstantiateHMItem(selectedHMItem)}
+                        className="w-full py-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-md shadow-sky-600/15"
+                      >
+                        ⭐ Importer & Sélectionner
+                      </button>
+                    ) : ['hm_enrich_st2g', 'hm_enrich_st2d', 'hm_enrich_t23'].includes(selectorTab) && selectedTechItem ? (
+                      <button
+                        type="button"
+                        onClick={handleAddAndInstantiateTechItem}
+                        className="w-full py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-pointer shadow-md shadow-indigo-600/15"
+                      >
+                        ⭐ Ajouter & Importer
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        disabled
+                        className="w-full py-4 bg-slate-200 text-slate-400 rounded-xl text-xs font-black uppercase tracking-widest transition-all cursor-not-allowed border-none"
+                      >
+                        Sélectionnez une pièce
+                      </button>
+                    )}
+                  </div>
+
+                </div>
+
+              </div>
+
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

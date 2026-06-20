@@ -30,9 +30,83 @@ import {
   MaintenanceLog,
   SiteCode,
   AppNotification,
-  DeletionRequest
+  DeletionRequest,
+  HydrominesCatalogItem,
+  PriceHistoryEntry,
+  TransfertStatus
 } from '../types';
 import { INITIAL_ARTICLES, INITIAL_MOUVEMENTS, INITIAL_ENGINS, INITIAL_PERFOS, INITIAL_AGENTS } from '../demoData';
+
+/**
+ * Calculates the new Weighted Average Cost Price (PMP) and tracks price history.
+ */
+export function calculatePriceUpdates(
+  article: Article,
+  inputQty: number,
+  inputUnitPrice: number,
+  mouvementId: string,
+  userEmail?: string,
+  dateString?: string
+): { price: number; lastPurchasePrice: number; priceHistory: PriceHistoryEntry[] } {
+  const currentQty = article.quantity || 0;
+  const currentPMP = article.price || 0;
+  const date = dateString || new Date().toISOString();
+
+  const safeInputPrice = Math.max(0, inputUnitPrice);
+  const safeInputQty = Math.max(0, inputQty);
+
+  let newPMP = currentPMP;
+
+  if (safeInputQty <= 0) {
+    return {
+      price: currentPMP,
+      lastPurchasePrice: safeInputPrice > 0 ? safeInputPrice : (article.lastPurchasePrice || currentPMP),
+      priceHistory: article.priceHistory || []
+    };
+  }
+
+  if (currentQty <= 0) {
+    // Handling stock at zero or negative stock (Exigences 1 & 2)
+    newPMP = safeInputPrice;
+  } else {
+    // Standard Weighted Average Cost Price formula (PMP)
+    const totalValue = (currentQty * currentPMP) + (safeInputQty * safeInputPrice);
+    const totalQty = currentQty + safeInputQty;
+    newPMP = totalQty > 0 ? totalValue / totalQty : safeInputPrice;
+  }
+
+  // Round PMP to 2 decimal places for financial precision
+  newPMP = Math.round(newPMP * 100) / 100;
+
+  const existingHistory = article.priceHistory || [];
+  
+  const purchaseEntry: PriceHistoryEntry = {
+    date,
+    price: safeInputPrice,
+    type: 'ACHAT',
+    quantityAttached: safeInputQty,
+    mouvementId,
+    userEmail
+  };
+
+  const pmpEntry: PriceHistoryEntry = {
+    date,
+    price: newPMP,
+    type: 'PMP',
+    quantityAttached: currentQty + safeInputQty,
+    mouvementId,
+    userEmail
+  };
+
+  // Combine and preserve the historical evolution of prices (up to 100 entries to avoid bloating the doc)
+  const updatedHistory = [...existingHistory, purchaseEntry, pmpEntry].slice(-100);
+
+  return {
+    price: newPMP,
+    lastPurchasePrice: safeInputPrice,
+    priceHistory: updatedHistory
+  };
+}
 import { MASTER_CATALOG, CATALOG_VERSION } from '../catalogData';
 import { generateId, handleFirestoreError, OperationType, cleanObject, serializeFirestoreData, generateSecureUUID } from '../lib/utils';
 import { RefreshCcw } from 'lucide-react';
@@ -261,6 +335,7 @@ type InventoryContextType = {
   perfos: PerfoMaster[];
   agents: AgentMaster[];
   catalog: CatalogItem[];
+  hydrominesCatalog: HydrominesCatalogItem[];
   accounts: UserAccount[];
   purchaseRequests: PurchaseRequest[];
   currentSite: SiteCode;
@@ -278,7 +353,12 @@ type InventoryContextType = {
   addMaintenanceLog: (log: MaintenanceLog) => Promise<void>;
   addTransfert: (t: Transfert) => Promise<void>;
   completeTransfert: (id: string, recepteur: string, receivedItems?: MouvementItem[], disputeReason?: string) => Promise<void>;
-  approveTransfert: (id: string, approuvePar: string) => Promise<void>;
+  approveTransfert: (id: string, approuvePar: string, comment?: string) => Promise<void>;
+  expedierTransfert: (id: string, expediePar: string, comment?: string) => Promise<void>;
+  receptionnerTransfert: (id: string, recepteur: string, receivedItems: MouvementItem[], disputeReason?: string, comment?: string) => Promise<void>;
+  accepterEtCloturerTransfert: (id: string, acceptePar: string, comment?: string) => Promise<void>;
+  deleteTransfert: (id: string) => Promise<void>;
+  getArticleTransitQty: (articleRef: string, siteCode: SiteCode) => number;
   closeTransfert: (id: string, motifCloture: string) => Promise<void>;
   saveInventaire: (i: Inventaire) => Promise<void>;
   saveArticle: (a: Article) => Promise<void>;
@@ -297,6 +377,7 @@ type InventoryContextType = {
   setAgent: (id: string, data: Partial<AgentMaster> | null) => Promise<void>;
   saveCatalogItem: (item: CatalogItem) => Promise<void>;
   deleteCatalogItem: (id: string) => Promise<void>;
+  saveHydrominesCatalogItem: (item: HydrominesCatalogItem) => Promise<void>;
   addPurchaseRequest: (pr: PurchaseRequest) => Promise<void>;
   updatePRStatus: (id: string, status: any) => Promise<void>;
   loadMoreMouvements?: (lastVisibleDoc: any) => Promise<any>;
@@ -375,6 +456,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const catalog = useArticlesStore(s => s.catalog);
   const setCatalog = useArticlesStore(s => s.setCatalog) as unknown as React.Dispatch<React.SetStateAction<CatalogItem[]>>;
+
+  const hydrominesCatalog = useArticlesStore(s => s.hydrominesCatalog);
+  const setHydrominesCatalog = useArticlesStore(s => s.setHydrominesCatalog) as unknown as React.Dispatch<React.SetStateAction<HydrominesCatalogItem[]>>;
 
   const deletionRequests = useArticlesStore(s => s.deletionRequests);
   const setDeletionRequests = useArticlesStore(s => s.setDeletionRequests) as unknown as React.Dispatch<React.SetStateAction<DeletionRequest[]>>;
@@ -702,7 +786,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     RetryQueueFSM.registerResolver('COMPLETE_TRANSFERT', async (payload, intentId) => {
       addTechLog('INFO', `Intention FSM COMPLETE_TRANSFERT démarrée : ${intentId}`);
-      await executeCompleteTransfertDirect(payload.id, payload.recepteur, payload.receivedItems, payload.disputeReason);
+      const tItems = payload.receivedItems || [];
+      const formattedItems = tItems.map((it: any) => ({
+        ...it,
+        quantityReceived: it.quantityReceived !== undefined ? it.quantityReceived : it.quantity,
+        quantityDamaged: it.quantityDamaged || 0
+      }));
+      await executeReceptionnerTransfertDirect(payload.id, payload.recepteur, formattedItems, payload.disputeReason, "Réception synchro FSM");
+      await executeAccepterEtCloturerTransfertDirect(payload.id, payload.recepteur, "Clôture synchro FSM");
       addNotification({
         siteId: currentUser?.site || 'SMI',
         type: 'INFO',
@@ -821,10 +912,11 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (articles.length > 0) IndexedDBStorage.saveCollection('articles', articles);
     if (catalog.length > 0) IndexedDBStorage.saveCollection('catalog', catalog);
+    if (hydrominesCatalog.length > 0) IndexedDBStorage.saveCollection('hydromines_catalog', hydrominesCatalog);
     if (mouvements.length > 0) IndexedDBStorage.saveCollection('mouvements', mouvements);
     if (maintenanceLogs.length > 0) IndexedDBStorage.saveCollection('maintenanceLogs', maintenanceLogs);
     if (transferts.length > 0) IndexedDBStorage.saveCollection('transferts', transferts);
-  }, [articles, catalog, mouvements, maintenanceLogs, transferts]);
+  }, [articles, catalog, hydrominesCatalog, mouvements, maintenanceLogs, transferts]);
 
   // Load cache if offline or slow
   useEffect(() => {
@@ -835,6 +927,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         const catalogCached = await IndexedDBStorage.getCollection<CatalogItem>('catalog');
         if (catalogCached.length > 0 && catalog.length === 0) setCatalog(catalogCached);
+
+        const hydrominesCatalogCached = await IndexedDBStorage.getCollection<HydrominesCatalogItem>('hydromines_catalog');
+        if (hydrominesCatalogCached.length > 0 && hydrominesCatalog.length === 0) setHydrominesCatalog(hydrominesCatalogCached);
 
         const movementsCached = await IndexedDBStorage.getCollection<Mouvement>('mouvements');
         if (movementsCached.length > 0 && rawMouvements.length === 0) setRawMouvements(movementsCached);
@@ -1235,6 +1330,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       unsubs.push(safeOnSnapshot(query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(200)), setAuditLogs, 'auditLogs'));
       unsubs.push(safeOnSnapshot(collection(db, 'transferts'), setRawTransferts, 'transferts'));
       unsubs.push(safeOnSnapshot(collection(db, 'inventaires'), setInventaires, 'inventaires'));
+      unsubs.push(safeOnSnapshot(collection(db, 'hydromines_catalog'), setHydrominesCatalog, 'hydromines_catalog'));
 
       loadStaticCollection('catalog', setCatalog);
       loadStaticCollection('engins', setEngins);
@@ -1318,7 +1414,22 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           const article = updatedArticles[index];
           const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
           const newQty = isAddition ? article.quantity + item.quantity : article.quantity - item.quantity;
-          updatedArticles[index] = { ...article, quantity: Math.max(0, newQty) };
+          
+          let priceProps = {};
+          if (isAddition && item.price !== undefined) {
+            const calcul = calculatePriceUpdates(article, item.quantity, item.price, movementId, auth.currentUser?.email || 'Lecteur-Offline');
+            priceProps = {
+              price: calcul.price,
+              lastPurchasePrice: calcul.lastPurchasePrice,
+              priceHistory: calcul.priceHistory
+            };
+          }
+
+          updatedArticles[index] = { 
+            ...article, 
+            quantity: Math.max(0, newQty),
+            ...priceProps
+          };
         }
       }
       setRawArticles(updatedArticles);
@@ -1380,7 +1491,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         for (const item of mouvement.items) {
           const artInfo = articleDataMap.get(item.articleId)!;
           const article = artInfo.data;
-          totalValue += item.quantity * (article.price || 0);
           
           const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
           const newQty = isAddition ? article.quantity + item.quantity : article.quantity - item.quantity;
@@ -1388,10 +1498,23 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           if (newQty < 0) {
             throw new Error("STOCK_INSUFFISANT");
           }
+
+          let priceProps = {};
+          if (isAddition && item.price !== undefined) {
+            const calcul = calculatePriceUpdates(article, item.quantity, item.price, movementId, auth.currentUser?.email || 'Mines-User');
+            priceProps = {
+              price: calcul.price,
+              lastPurchasePrice: calcul.lastPurchasePrice,
+              priceHistory: calcul.priceHistory
+            };
+          }
+
+          totalValue += item.quantity * (item.price || article.price || 0);
+
           articleUpdates.push({ 
             ref: artInfo.ref, 
             newQty, 
-            data: { ...article, quantity: newQty }, 
+            data: { ...article, quantity: newQty, ...priceProps }, 
             isNew: artInfo.isNew 
           });
         }
@@ -1401,7 +1524,17 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           if (update.isNew) {
             transaction.set(update.ref, cleanObject(update.data));
           } else {
-            transaction.update(update.ref, { quantity: update.newQty });
+            const updatePayload: any = { quantity: update.newQty };
+            if (update.data.price !== undefined) {
+              updatePayload.price = update.data.price;
+            }
+            if (update.data.lastPurchasePrice !== undefined) {
+              updatePayload.lastPurchasePrice = update.data.lastPurchasePrice;
+            }
+            if (update.data.priceHistory !== undefined) {
+              updatePayload.priceHistory = update.data.priceHistory;
+            }
+            transaction.update(update.ref, updatePayload);
           }
         }
 
@@ -1715,7 +1848,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (isSimulationMode()) {
       const id = t.id || generateSecureUUID();
       let updatedArticles = [...rawArticles];
-      if (t.status === 'IN_TRANSIT') {
+      if (t.status === 'IN_TRANSIT' || t.status === 'EXPEDIE') {
         t.items.forEach((item) => {
           const index = updatedArticles.findIndex(a => a.id === item.articleId);
           if (index !== -1) {
@@ -1725,7 +1858,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         });
       }
       setRawArticles(updatedArticles);
-      setRawTransferts(prev => [{ ...t, id, status: t.status || 'PENDING_APPROVAL' }, ...prev]);
+      setRawTransferts(prev => [{ ...t, id, status: t.status || 'DEMANDE' }, ...prev]);
       return;
     }
     const id = t.id || generateSecureUUID();
@@ -1740,8 +1873,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
 
         // If transfer starts directly subverted or in transit, decrement stock.
-        // But if it is PENDING_APPROVAL, we DO NOT decrement stock yet, just save the document!
-        if (t.status === 'IN_TRANSIT') {
+        if (t.status === 'IN_TRANSIT' || t.status === 'EXPEDIE') {
           let totalValue = 0;
           const articleUpdates: { ref: any, newQty: number }[] = [];
 
@@ -1769,19 +1901,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           transaction.set(tRef, cleanObject({
             ...t,
             id,
-            status: 'IN_TRANSIT'
+            status: t.status
           }));
 
           // Log audit inside transaction
           logActionTx(transaction, 'TRANSFERT_OUT', `Transfert d'id ${t.reference} vers ${t.targetSite} lancé`, t.sourceSite, totalValue);
         } else {
-          // PENDING_APPROVAL - draft or waiting for authorization - no stock change yet
+          // Brouillon / Demande / etc - no stock change yet
           transaction.set(tRef, cleanObject({
             ...t,
             id,
-            status: t.status || 'PENDING_APPROVAL'
+            status: t.status || 'DEMANDE'
           }));
-          logActionTx(transaction, 'TRANSFERT_DRAFT', `Brouillon de transfert ${t.reference} créé`, t.sourceSite, 0);
+          logActionTx(transaction, 'TRANSFERT_DRAFT', `Transfert ${t.reference} créé au statut ${t.status || 'DEMANDE'}`, t.sourceSite, 0);
         }
       });
     } finally {
@@ -1881,25 +2013,26 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     activePromisesRef.current[id] = promise;
     return promise;
-  }, [isSafeMode, rcglResult, articles, isDegradedNetwork, executeTransfertDirect, addNotification]);
+  }, [transferts, isSafeMode, rcglResult, isDegradedNetwork, executeTransfertDirect, addNotification]);
 
-  const executeApproveTransfertDirect = React.useCallback(async (id: string, approuvePar: string) => {
+  const executeApproveTransfertDirect = React.useCallback(async (id: string, approuvePar: string, comment?: string) => {
     if (isSimulationMode()) {
       let updatedTransferts = [...rawTransferts];
       const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
       if (tIndex !== -1) {
         const tx = updatedTransferts[tIndex];
-        updatedTransferts[tIndex] = { ...tx, status: 'IN_TRANSIT', expediteur: approuvePar, dateEnvoi: new Date().toISOString() };
-        
-        let updatedArticles = [...rawArticles];
-        tx.items.forEach((item) => {
-          const index = updatedArticles.findIndex(a => a.id === item.articleId);
-          if (index !== -1) {
-            const art = updatedArticles[index];
-            updatedArticles[index] = { ...art, quantity: Math.max(0, art.quantity - item.quantity) };
-          }
-        });
-        setRawArticles(updatedArticles);
+        const newHistory = [...(tx.history || []), {
+          status: 'APPROUVE' as TransfertStatus,
+          date: new Date().toISOString(),
+          userEmail: approuvePar,
+          comment: comment || 'Transfert approuvé'
+        }];
+        updatedTransferts[tIndex] = { 
+          ...tx, 
+          status: 'APPROUVE', 
+          approverEmail: approuvePar, 
+          history: newHistory,
+        };
       }
       setRawTransferts(updatedTransferts);
       return;
@@ -1914,47 +2047,31 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
         const t = tSnap.data() as Transfert;
 
-        if (t.status !== 'PENDING_APPROVAL') {
-          throw new Error("TRANSFERT_DEJA_LANCE_OU_RECEP");
+        if (t.status !== 'DEMANDE' && t.status !== 'PENDING_APPROVAL') {
+          throw new Error("Le transfert doit être au statut DEMANDE pour être approuvé.");
         }
 
-        let totalValue = 0;
-        const articleUpdates: { ref: any, newQty: number }[] = [];
-
-        for (const item of t.items) {
-          const artRef = doc(db, 'articles', item.articleId);
-          const artSnap = await transaction.get(artRef);
-          if (!artSnap.exists()) {
-            throw new Error("ARTICLE_INTROUVABLE");
-          }
-          const art = artSnap.data() as Article;
-          
-          if (art.quantity < item.quantity) {
-            throw new Error("STOCK_INSUFFISANT");
-          }
-
-          totalValue += item.quantity * (item.price || 0);
-          articleUpdates.push({ ref: artRef, newQty: art.quantity - item.quantity });
-        }
-
-        for (const update of articleUpdates) {
-          transaction.update(update.ref, { quantity: update.newQty });
-        }
+        const newHistory = [...(t.history || []), {
+          status: 'APPROUVE' as TransfertStatus,
+          date: new Date().toISOString(),
+          userEmail: approuvePar,
+          comment: comment || 'Transfert approuvé par le superviseur'
+        }];
 
         transaction.update(tRef, {
-          status: 'IN_TRANSIT',
-          expediteur: approuvePar,
-          dateEnvoi: new Date().toISOString()
+          status: 'APPROUVE',
+          approverEmail: approuvePar,
+          history: newHistory
         });
 
-        logActionTx(transaction, 'TRANSFERT_OUT', `Transfert ${t.reference} approuvé et lancé vers ${t.targetSite}`, t.sourceSite, totalValue);
+        logActionTx(transaction, 'TRANSFERT_APPROVE', `Transfert ${t.reference} approuvé`, t.sourceSite, 0);
       });
     } finally {
       unregisterPendingOp(id);
     }
-  }, [rawArticles, rawTransferts]);
+  }, [rawTransferts]);
 
-  const approveTransfert = React.useCallback(async (id: string, approuvePar: string) => {
+  const approveTransfert = React.useCallback(async (id: string, approuvePar: string, comment?: string) => {
     checkWritePermission();
     checkMaintenanceLock();
     const sourceT = transferts.find(t => t.id === id);
@@ -1979,13 +2096,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           await new Promise(r => setTimeout(r, 2500));
         }
 
-        await executeApproveTransfertDirect(id, approuvePar);
+        await executeApproveTransfertDirect(id, approuvePar, comment);
 
         const duration = performance.now() - startTime;
         updateAvgTxDuration(duration);
         addTechLog('INFO', `Transfert ID: ${id} approuvé par ${approuvePar}`, duration);
         setTxStats(s => ({ ...s, success: s.success + 1 }));
-        toast.success("Transfert approuvé et convoi lancé !");
+        toast.success("Transfert approuvé avec succès !");
       } catch (err: any) {
         const duration = performance.now() - startTime;
         const errMsg = err.message || String(err);
@@ -1993,18 +2110,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         
         if (isNetworkError(errMsg, errCode)) {
           addTechLog('WARN', `Réseau défectueux. Approbation mise en file d'attente : ${errMsg}`, duration);
-          RetryQueueFSM.enqueue('APPROVE_TRANSFERT', { id, approuvePar }, intentId, sourceT?.sourceSite);
+          RetryQueueFSM.enqueue('APPROVE_TRANSFERT', { id, approuvePar, comment }, intentId, sourceT?.sourceSite);
           refreshFSMStates();
           toast.warning("Réseau indisponible. Approbation stockée localement.");
         } else {
           addTechLog('ERROR', `Échec approbation transfert : ${errMsg}`, duration);
           setTxStats(s => ({ ...s, failed: s.failed + 1 }));
-          
-          let userMessage = errMsg;
-          if (errCode === 'permission-denied') {
-            userMessage = "Accès refusé : vous n'avez pas les droits de versement/validation pour ce chantier. Contactez un administrateur.";
-          }
-          throw new Error(userMessage);
+          throw new Error(errMsg);
         }
       } finally {
         activeTxCount.current -= 1;
@@ -2016,73 +2128,154 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     return promise;
   }, [transferts, isSafeMode, rcglResult, isDegradedNetwork, executeApproveTransfertDirect]);
 
-  const executeCompleteTransfertDirect = React.useCallback(async (
+  const executeExpedierTransfertDirect = React.useCallback(async (id: string, expediePar: string, comment?: string) => {
+    if (isSimulationMode()) {
+      let updatedTransferts = [...rawTransferts];
+      const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
+      if (tIndex !== -1) {
+        const tx = updatedTransferts[tIndex];
+        let updatedArticles = [...rawArticles];
+        tx.items.forEach((item) => {
+          const index = updatedArticles.findIndex(a => a.id === item.articleId);
+          if (index !== -1) {
+            const art = updatedArticles[index];
+            updatedArticles[index] = { ...art, quantity: Math.max(0, art.quantity - item.quantity) };
+          }
+        });
+        setRawArticles(updatedArticles);
+
+        const newHistory = [...(tx.history || []), {
+          status: 'EXPEDIE' as TransfertStatus,
+          date: new Date().toISOString(),
+          userEmail: expediePar,
+          comment: comment || 'Convoi expédié inter-sites'
+        }];
+
+        updatedTransferts[tIndex] = {
+          ...tx,
+          status: 'EXPEDIE',
+          shipperEmail: expediePar,
+          dateEnvoi: new Date().toISOString(),
+          history: newHistory
+        };
+      }
+      setRawTransferts(updatedTransferts);
+      return;
+    }
+
+    registerPendingOp(id);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const tRef = doc(db, 'transferts', id);
+        const tSnap = await transaction.get(tRef);
+        if (!tSnap.exists()) {
+          throw new Error("TRANSFERT_INTROUVABLE");
+        }
+        const t = tSnap.data() as Transfert;
+        if (t.status !== 'APPROUVE') {
+          throw new Error("Le transfert doit être approuvé pour être expédié.");
+        }
+
+        let totalValue = 0;
+        const articleUpdates: { ref: any, newQty: number }[] = [];
+
+        for (const item of t.items) {
+          const artRef = doc(db, 'articles', item.articleId);
+          const artSnap = await transaction.get(artRef);
+          if (!artSnap.exists()) {
+            throw new Error(`ARTICLE_INTROUVABLE: ${item.articleId}`);
+          }
+          const art = artSnap.data() as Article;
+          
+          if (art.quantity < item.quantity) {
+            throw new Error(`STOCK_INSUFFISANT: Stock insuffisant pour l'article ${art.designation} (${art.quantity} dispo, ${item.quantity} requis).`);
+          }
+
+          totalValue += item.quantity * (item.price || 0);
+          articleUpdates.push({ ref: artRef, newQty: art.quantity - item.quantity });
+        }
+
+        for (const update of articleUpdates) {
+          transaction.update(update.ref, { quantity: update.newQty });
+        }
+
+        const newHistory = [...(t.history || []), {
+          status: 'EXPEDIE' as TransfertStatus,
+          date: new Date().toISOString(),
+          userEmail: expediePar,
+          comment: comment || 'Convoi expédié - stock d\'origine débité'
+        }];
+
+        transaction.update(tRef, {
+          status: 'EXPEDIE',
+          shipperEmail: expediePar,
+          dateEnvoi: new Date().toISOString(),
+          history: newHistory
+        });
+
+        // Log sortant pour traçabilité locale
+        const outboundMovementId = generateSecureUUID();
+        const outboundMovementRef = doc(db, 'mouvements', outboundMovementId);
+        transaction.set(outboundMovementRef, cleanObject({
+          id: outboundMovementId,
+          site: t.sourceSite,
+          date: new Date().toISOString(),
+          type: 'TRANSFERT_OUT',
+          reference: t.reference,
+          items: t.items.map(item => ({
+            articleId: item.articleId,
+            quantity: item.quantity,
+            price: item.price || 0
+          })),
+          notes: `Expédition de transfert réf: ${t.reference} vers ${t.targetSite}`,
+          status: 'COMPLETE'
+        }));
+
+        logActionTx(transaction, 'TRANSFERT_OUT', `Transfert ${t.reference} expédié vers ${t.targetSite}`, t.sourceSite, totalValue);
+      });
+    } finally {
+      unregisterPendingOp(id);
+    }
+  }, [rawArticles, rawTransferts]);
+
+  const expedierTransfert = React.useCallback(async (id: string, expediePar: string, comment?: string) => {
+    checkWritePermission();
+    checkMaintenanceLock();
+    const sourceT = transferts.find(t => t.id === id);
+    
+    const promise = (async () => {
+      const startTime = performance.now();
+      try {
+        await executeExpedierTransfertDirect(id, expediePar, comment);
+        addTechLog('INFO', `Transfert ID: ${id} expédié par ${expediePar}`, performance.now() - startTime);
+        toast.success("Transfert expédié, les pièces sont maintenant en transit !");
+      } catch (err: any) {
+        toast.error(`Échec expédition : ${err.message || err}`);
+        throw err;
+      }
+    })();
+    return promise;
+  }, [transferts, executeExpedierTransfertDirect]);
+
+  const executeReceptionnerTransfertDirect = React.useCallback(async (
     id: string, 
     recepteur: string, 
-    receivedItems?: MouvementItem[], 
-    disputeReason?: string
+    receivedItems: MouvementItem[], 
+    disputeReason?: string,
+    comment?: string
   ) => {
     if (isSimulationMode()) {
       let updatedTransferts = [...rawTransferts];
       const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
       if (tIndex !== -1) {
         const tx = updatedTransferts[tIndex];
-        updatedTransferts[tIndex] = { ...tx, status: 'RECEIVED', recepteur, receivedItems, disputeReason };
-        
-        let updatedArticles = [...rawArticles];
-        const finalReceivedItems = receivedItems || tx.items;
-        finalReceivedItems.forEach((item) => {
-          const index = updatedArticles.findIndex(a => a.id === item.articleId);
-          if (index !== -1) {
-            const art = updatedArticles[index];
-            updatedArticles[index] = { ...art, quantity: art.quantity + item.quantity };
-          }
-        });
-        setRawArticles(updatedArticles);
-
-        // Create the corresponding TRANSFERT_IN movement logically so that RCGL verification doesn't raise version skew issues
-        const inboundMovementId = generateSecureUUID();
-        const newMouvement: Mouvement = {
-          id: inboundMovementId,
-          site: tx.targetSite,
-          date: new Date().toISOString(),
-          type: 'TRANSFERT_IN',
-          reference: tx.reference,
-          items: finalReceivedItems.map(item => ({
-            articleId: item.articleId,
-            quantity: item.quantity,
-            price: item.price || 0
-          })),
-          notes: `Réception de transfert réf: ${tx.reference} de ${tx.sourceSite}${disputeReason ? ' [AVEC LITIGE]' : ''}`,
-          status: 'COMPLETE'
-        };
-        setRawMouvements(prev => [newMouvement, ...prev]);
-      }
-      setRawTransferts(updatedTransferts);
-      return;
-    }
-    registerPendingOp(id);
-    try {
-      await runTransaction(db, async (transaction) => {
-        // 1. Read transfer status inside transaction
-        const tRef = doc(db, 'transferts', id);
-        const tSnap = await transaction.get(tRef);
-        if (!tSnap.exists()) {
-          throw new Error("TRANSFERT_INTROUVABLE");
-        }
-        const transfert = tSnap.data() as Transfert;
-
-        if (transfert.status === 'RECEIVED' || transfert.status === 'CLOSED' || transfert.status === 'RECU') {
-          throw new Error("TRANSFERT_DEJA_RECEPTIONNE");
-        }
-
-        // 1. Perform coherence verification
         let isDivergent = false;
-        const finalReceivedItems = receivedItems || transfert.items;
 
-        transfert.items.forEach((sentItem) => {
-          const recItem = finalReceivedItems.find(r => r.articleId === sentItem.articleId);
-          if (!recItem || recItem.quantity !== sentItem.quantity) {
+        receivedItems.forEach((recItem) => {
+          const sentItem = tx.items.find(s => s.articleId === recItem.articleId);
+          const recQty = recItem.quantityReceived !== undefined ? recItem.quantityReceived : recItem.quantity;
+          const dmgQty = recItem.quantityDamaged || 0;
+          if (!sentItem || recQty !== sentItem.quantity || dmgQty > 0) {
             isDivergent = true;
           }
         });
@@ -2091,6 +2284,191 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           isDivergent = true;
         }
 
+        const nextStatus: TransfertStatus = isDivergent ? 'LITIGE' : 'RECEPTIONNE';
+        const finalDisputeReason = disputeReason || (isDivergent ? "Écarts ou avaries constatés lors du contrôle" : undefined);
+
+        const newHistory = [...(tx.history || []), {
+          status: nextStatus,
+          date: new Date().toISOString(),
+          userEmail: recepteur,
+          comment: comment || (isDivergent ? `Litige déclaré: ${finalDisputeReason}` : 'Contrôle réception terminé sans anomalie')
+        }];
+
+        updatedTransferts[tIndex] = {
+          ...tx,
+          status: nextStatus,
+          receiverEmail: recepteur,
+          dateReception: new Date().toISOString(),
+          receivedItems,
+          disputeReason: finalDisputeReason,
+          history: newHistory
+        };
+      }
+      setRawTransferts(updatedTransferts);
+      return;
+    }
+
+    registerPendingOp(id);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const tRef = doc(db, 'transferts', id);
+        const tSnap = await transaction.get(tRef);
+        if (!tSnap.exists()) {
+          throw new Error("TRANSFERT_INTROUVABLE");
+        }
+        const tx = tSnap.data() as Transfert;
+        if (tx.status !== 'EXPEDIE' && tx.status !== 'IN_TRANSIT') {
+          throw new Error("Le transfert doit être au statut EXPEDIE pour pouvoir être contrôlé.");
+        }
+
+        let isDivergent = false;
+        receivedItems.forEach((recItem) => {
+          const sentItem = tx.items.find(s => s.articleId === recItem.articleId);
+          const recQty = recItem.quantityReceived !== undefined ? recItem.quantityReceived : recItem.quantity;
+          const dmgQty = recItem.quantityDamaged || 0;
+          if (!sentItem || recQty !== sentItem.quantity || dmgQty > 0) {
+            isDivergent = true;
+          }
+        });
+
+        if (disputeReason) {
+          isDivergent = true;
+        }
+
+        const nextStatus: TransfertStatus = isDivergent ? 'LITIGE' : 'RECEPTIONNE';
+        const finalDisputeReason = disputeReason || (isDivergent ? "Écarts ou avaries constatés lors du contrôle de réception" : undefined);
+
+        const newHistory = [...(tx.history || []), {
+          status: nextStatus,
+          date: new Date().toISOString(),
+          userEmail: recepteur,
+          comment: comment || (isDivergent ? `Contrôle réception avec litige : ${finalDisputeReason}` : 'Contrôle réception terminé sans écart')
+        }];
+
+        transaction.update(tRef, {
+          status: nextStatus,
+          receiverEmail: recepteur,
+          dateReception: serverTimestamp(),
+          receivedItems,
+          disputeReason: finalDisputeReason || null,
+          history: newHistory
+        });
+
+        logActionTx(transaction, 'TRANSFERT_RECEPTION', `Transfert ${tx.reference} contrôlé [Statut: ${nextStatus}]`, tx.targetSite, 0);
+
+        if (isDivergent) {
+          const anomalyId = generateSecureUUID();
+          const anomalyRef = doc(db, 'anomalyReports', anomalyId);
+          transaction.set(anomalyRef, cleanObject({
+            id: anomalyId,
+            site: tx.targetSite,
+            timestamp: serverTimestamp(),
+            type: 'STOCK_INCOHERENCE',
+            severity: 'HIGH',
+            description: `DIVERGENCE RÉCEPTION EXTÉRIEURE - Transfert ${tx.reference} de ${tx.sourceSite}. Enregistrée par ${recepteur}.`,
+            status: 'NEW',
+            suggestedAction: "Résoudre l'écart et valider d'autorité lors de la clôture métier."
+          }));
+        }
+      });
+    } finally {
+      unregisterPendingOp(id);
+    }
+  }, [rawTransferts]);
+
+  const receptionnerTransfert = React.useCallback(async (
+    id: string, 
+    recepteur: string, 
+    receivedItems: MouvementItem[], 
+    disputeReason?: string,
+    comment?: string
+  ) => {
+    checkWritePermission();
+    checkMaintenanceLock();
+    
+    const promise = (async () => {
+      try {
+        await executeReceptionnerTransfertDirect(id, recepteur, receivedItems, disputeReason, comment);
+        toast.success("Contrôle de réception physique enregistré !");
+      } catch (err: any) {
+        toast.error(`Échec enregistrement contrôle : ${err.message || err}`);
+        throw err;
+      }
+    })();
+    return promise;
+  }, [executeReceptionnerTransfertDirect]);
+
+  const executeAccepterEtCloturerTransfertDirect = React.useCallback(async (
+    id: string, 
+    acceptePar: string, 
+    comment?: string
+  ) => {
+    if (isSimulationMode()) {
+      let updatedTransferts = [...rawTransferts];
+      const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
+      if (tIndex !== -1) {
+        const tx = updatedTransferts[tIndex];
+        let updatedArticles = [...rawArticles];
+        const itemsToUse = tx.receivedItems || tx.items;
+        
+        itemsToUse.forEach((item) => {
+          const recQty = item.quantityReceived !== undefined ? item.quantityReceived : item.quantity;
+          const dmgQty = item.quantityDamaged || 0;
+          const usableQty = Math.max(0, recQty - dmgQty);
+
+          const index = updatedArticles.findIndex(a => a.id === item.articleId);
+          if (index !== -1) {
+            const art = updatedArticles[index];
+            const calcul = calculatePriceUpdates(
+              art, 
+              usableQty, 
+              item.price || 0, 
+              id, 
+              acceptePar
+            );
+            updatedArticles[index] = { 
+              ...art, 
+              quantity: art.quantity + usableQty,
+              price: calcul.price,
+              lastPurchasePrice: calcul.lastPurchasePrice,
+              priceHistory: calcul.priceHistory
+            };
+          }
+        });
+        setRawArticles(updatedArticles);
+
+        const newHistory = [...(tx.history || []), {
+          status: 'ACCEPTE' as TransfertStatus,
+          date: new Date().toISOString(),
+          userEmail: acceptePar,
+          comment: comment || 'Transfert accepté et clôturé'
+        }];
+
+        updatedTransferts[tIndex] = { 
+          ...tx, 
+          status: 'ACCEPTE', 
+          history: newHistory 
+        };
+      }
+      setRawTransferts(updatedTransferts);
+      return;
+    }
+
+    registerPendingOp(id);
+    try {
+      await runTransaction(db, async (transaction) => {
+        const tRef = doc(db, 'transferts', id);
+        const tSnap = await transaction.get(tRef);
+        if (!tSnap.exists()) {
+          throw new Error("TRANSFERT_INTROUVABLE");
+        }
+        const tx = tSnap.data() as Transfert;
+
+        if (tx.status !== 'RECEPTIONNE' && tx.status !== 'LITIGE' && tx.status !== 'RECEIVED' && tx.status !== 'DISPUTED') {
+          throw new Error("Le transfert doit être réceptionné ou en litige pour pouvoir être accepté et intégré.");
+        }
+
+        const itemsToUse = tx.receivedItems || tx.items;
         const targetArticleWork: {
           ref: any;
           exists: boolean;
@@ -2099,56 +2477,79 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
           sourceArticle: Article;
           deterministicId: string;
           transferItem: any;
+          targetArticleData: Article | null;
+          usableQty: number;
         }[] = [];
 
         let totalValue = 0;
 
-        // 2. Read source articles and target articles first (read before write)
-        for (const item of finalReceivedItems) {
+        for (const item of itemsToUse) {
           const sourceArticleRef = doc(db, 'articles', item.articleId);
           const sourceArticleSnap = await transaction.get(sourceArticleRef);
           if (!sourceArticleSnap.exists()) {
-            throw new Error("ARTICLE_INTROUVABLE");
+            throw new Error(`ARTICLE_SOURCE_INTROUVABLE: ID ${item.articleId}`);
           }
           const sourceArticle = sourceArticleSnap.data() as Article;
 
-          // Compute unique deterministic site + reference ID
-          const targetDeterministicId = `${transfert.targetSite}_${sourceArticle.ref.trim().toUpperCase().replace(/\s+/g, '_')}`;
+          const targetDeterministicId = `${tx.targetSite}_${sourceArticle.ref.trim().toUpperCase().replace(/\s+/g, '_')}`;
           const targetArticleRef = doc(db, 'articles', targetDeterministicId);
           const targetArticleSnap = await transaction.get(targetArticleRef);
 
           let exists = false;
           let currentQty = 0;
+          let targetArticleData: Article | null = null;
           if (targetArticleSnap.exists()) {
             exists = true;
-            const targetArticle = targetArticleSnap.data() as Article;
-            currentQty = targetArticle.quantity;
+            targetArticleData = targetArticleSnap.data() as Article;
+            currentQty = targetArticleData.quantity;
           }
 
-          totalValue += item.quantity * (item.price || 0);
+          const recQty = item.quantityReceived !== undefined ? item.quantityReceived : item.quantity;
+          const dmgQty = item.quantityDamaged || 0;
+          const usableQty = Math.max(0, recQty - dmgQty);
+
+          totalValue += usableQty * (item.price || 0);
 
           targetArticleWork.push({
             ref: targetArticleRef,
             exists,
             currentQty,
-            newQty: currentQty + item.quantity,
+            newQty: currentQty + usableQty,
             sourceArticle,
             deterministicId: targetDeterministicId,
-            transferItem: item
+            transferItem: item,
+            targetArticleData,
+            usableQty
           });
         }
 
-        // 3. Perform edits/creations
         for (const work of targetArticleWork) {
           if (work.exists) {
+            let priceProps = {};
+            if (work.targetArticleData && work.transferItem.price !== undefined) {
+              const calcul = calculatePriceUpdates(
+                work.targetArticleData,
+                work.usableQty,
+                work.transferItem.price,
+                id,
+                acceptePar
+              );
+              priceProps = {
+                price: calcul.price,
+                lastPurchasePrice: calcul.lastPurchasePrice,
+                priceHistory: calcul.priceHistory
+              };
+            }
             transaction.update(work.ref, {
               quantity: work.newQty,
+              ...priceProps,
               active: true
             });
           } else {
+            const initialPrice = work.transferItem.price || work.sourceArticle.price || 0;
             const newArticle: Article = {
               id: work.deterministicId,
-              site: transfert.targetSite,
+              site: tx.targetSite,
               ref: work.sourceArticle.ref,
               designation: work.sourceArticle.designation,
               type: work.sourceArticle.type,
@@ -2158,68 +2559,119 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
               component: work.sourceArticle.component || '',
               subComponent: work.sourceArticle.subComponent || '',
               unit: work.sourceArticle.unit,
-              quantity: work.transferItem.quantity,
+              quantity: work.usableQty,
               minStock: work.sourceArticle.minStock || 0,
               location: 'A affecter',
-              price: work.sourceArticle.price || 0,
+              price: initialPrice,
+              lastPurchasePrice: initialPrice,
+              priceHistory: [
+                {
+                  date: new Date().toISOString(),
+                  price: initialPrice,
+                  type: 'ACHAT',
+                  quantityAttached: work.usableQty,
+                  mouvementId: id,
+                  userEmail: acceptePar
+                },
+                {
+                  date: new Date().toISOString(),
+                  price: initialPrice,
+                  type: 'PMP',
+                  quantityAttached: work.usableQty,
+                  mouvementId: id,
+                  userEmail: acceptePar
+                }
+              ],
               active: true,
-              notes: `Créé par transfert depuis ${transfert.sourceSite}`
+              notes: `Créé par transfert depuis ${tx.sourceSite}`
             };
             transaction.set(work.ref, cleanObject(newArticle));
           }
 
-          // Create entry movement log on target site
           const inboundMovementId = generateSecureUUID();
           const inboundMovementRef = doc(db, 'mouvements', inboundMovementId);
           transaction.set(inboundMovementRef, cleanObject({
             id: inboundMovementId,
-            site: transfert.targetSite,
+            site: tx.targetSite,
             date: new Date().toISOString(),
             type: 'TRANSFERT_IN',
-            reference: transfert.reference,
+            reference: tx.reference,
             items: [{
               articleId: work.deterministicId,
-              quantity: work.transferItem.quantity,
+              quantity: work.usableQty,
               price: work.transferItem.price || 0
             }],
-            notes: `Réception de transfert réf: ${transfert.reference} de ${transfert.sourceSite}${isDivergent ? ' [AVEC DIVERGENCE SIGNE]' : ''}`,
+            notes: `Intégration d'écriture transfert réf: ${tx.reference} de ${tx.sourceSite}${work.usableQty !== work.transferItem.quantity ? ' (Quantités altérées)' : ''}`,
             status: 'COMPLETE'
           }));
         }
 
-        // 4. Update the transfer record with serverTimestamp()
-        const nextStatus = isDivergent ? 'DISPUTED' : 'RECEIVED';
+        const newHistory = [...(tx.history || []), {
+          status: 'ACCEPTE' as TransfertStatus,
+          date: new Date().toISOString(),
+          userEmail: acceptePar,
+          comment: comment || 'Acceptation finale et comptabilisation du stock'
+        }];
+
         transaction.update(tRef, {
-          status: nextStatus,
-          dateReception: serverTimestamp(),
-          recepteur,
-          receivedItems: finalReceivedItems,
-          disputeReason: disputeReason || (isDivergent ? "Quantités reçues non conformes au bon d'expédition." : '')
+          status: 'ACCEPTE',
+          history: newHistory
         });
 
-        // 5. Audit Log inside transaction
-        logActionTx(transaction, 'TRANSFERT_IN', `Transfert ${transfert.reference} réceptionné [${nextStatus}]`, transfert.targetSite, totalValue);
-
-        // 6. Forensic Anomaly trigger if divergent
-        if (isDivergent) {
-          const anomalyId = generateSecureUUID();
-          const anomalyRef = doc(db, 'anomalyReports', anomalyId);
-          transaction.set(anomalyRef, cleanObject({
-            id: anomalyId,
-            site: transfert.targetSite,
-            timestamp: serverTimestamp(),
-            type: 'STOCK_INCOHERENCE',
-            severity: 'HIGH',
-            description: `DIVERGENCE LOGISTIQUE INTER-SITES: Le transfert ${transfert.reference} de ${transfert.sourceSite} comporte des écarts de réception enregistrés par ${recepteur}.`,
-            status: 'NEW',
-            suggestedAction: "Déclencher un inventaire contradictoire du sas et ajuster les écarts."
-          }));
-        }
+        logActionTx(transaction, 'TRANSFERT_ACCEPT', `Transfert ${tx.reference} clôturé et intégré au PMP`, tx.targetSite, totalValue);
       });
     } finally {
       unregisterPendingOp(id);
     }
   }, [rawArticles, rawTransferts]);
+
+  const accepterEtCloturerTransfert = React.useCallback(async (id: string, acceptePar: string, comment?: string) => {
+    checkWritePermission();
+    checkMaintenanceLock();
+    
+    const promise = (async () => {
+      try {
+        await executeAccepterEtCloturerTransfertDirect(id, acceptePar, comment);
+        toast.success("Validation comtable effectuée ! Le PMP destinataire a été recalculé.");
+      } catch (err: any) {
+        toast.error(`Échec validation finale : ${err.message || err}`);
+        throw err;
+      }
+    })();
+    return promise;
+  }, [executeAccepterEtCloturerTransfertDirect]);
+
+  const deleteTransfert = React.useCallback(async (id: string) => {
+    checkWritePermission();
+    checkMaintenanceLock();
+    if (isSimulationMode()) {
+      setRawTransferts(prev => prev.filter(t => t.id !== id));
+      return;
+    }
+    const tRef = doc(db, 'transferts', id);
+    await deleteDoc(tRef);
+    toast.success("Brouillon supprimé.");
+  }, []);
+
+  const getArticleTransitQty = React.useCallback((articleRef: string, siteCode: SiteCode) => {
+    let transitTotal = 0;
+    
+    rawTransferts.forEach((t) => {
+      // Transit est actif quand expédié (EXPEDIE) ou reçu physiquement mais pas encore accepté (RECEPTIONNE, LITIGE)
+      const isTransitStatus = ['EXPEDIE', 'IN_TRANSIT', 'RECEPTIONNE', 'LITIGE'].includes(t.status);
+      
+      if (t.targetSite === siteCode && isTransitStatus) {
+        t.items.forEach((item) => {
+          const art = rawArticles.find(a => a.id === item.articleId);
+          if (art && art.ref.trim().toUpperCase() === articleRef.trim().toUpperCase()) {
+            transitTotal += item.quantity;
+          }
+        });
+      }
+    });
+    
+    return transitTotal;
+  }, [rawTransferts, rawArticles]);
 
   const completeTransfert = React.useCallback(async (
     id: string, 
@@ -2230,98 +2682,19 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     checkWritePermission();
     checkMaintenanceLock();
     const sourceT = transferts.find(t => t.id === id);
-    const intentId = getOrCreateIntent(`rx-${id}-${sourceT?.targetSite || 'SMI'}`);
+    const itemsToUse = receivedItems || sourceT?.items || [];
     
-    if (activePromisesRef.current[id]) {
-      return activePromisesRef.current[id];
-    }
-
     const promise = (async () => {
-      const startTime = performance.now();
-      setTxStats(s => ({ ...s, total: s.total + 1 }));
-      activeTxCount.current += 1;
-      
-      if (activeTxCount.current > 1) {
-        setTxStats(s => ({ ...s, contentions: s.contentions + 1 }));
-        addTechLog('WARN', `Contention sur finalisation de transfert : ${id}`);
-      }
-
-      try {
-        if (isSafeMode) {
-          const detail = rcglResult.skewDescription || `Snapshot obsolète (${rcglResult.freshnessGapMs}ms)`;
-          throw new Error(`CONSISTENCY_VIOLATION: Enregistrement rejeté par RCGL. Raison: ${detail}. Mode sécurisé activé.`);
-        }
-
-        const validation = validateCompleteTransferInvariants(id, recepteur, transferts);
-        if (!validation.isValid) {
-          throw new Error(`INVARIANT_VIOLATION: ${validation.errorMsg}`);
-        }
-
-        if (isDegradedNetwork) {
-          await new Promise(r => setTimeout(r, 2500));
-        }
-
-        await executeCompleteTransfertDirect(id, recepteur, receivedItems, disputeReason);
-
-        const duration = performance.now() - startTime;
-        updateAvgTxDuration(duration);
-        addTechLog('INFO', `Transfert réceptionné avec succès par : ${recepteur}`, duration);
-        setTxStats(s => ({ ...s, success: s.success + 1 }));
-
-        // Trigger notifications
-        const isDisputed = !!disputeReason || (receivedItems && sourceT && receivedItems.some((item, idx) => item.quantity !== sourceT.items[idx]?.quantity));
-        addNotification({
-          siteId: sourceT?.sourceSite || 'SMI',
-          type: isDisputed ? 'CRITICAL' : 'INFO',
-          category: 'TRANSFER',
-          message: isDisputed 
-            ? `Litige sur transfert ${sourceT?.reference} : Réceptionné avec écarts par ${recepteur}.`
-            : `Transfert ${sourceT?.reference} réceptionné et complété avec succès par ${recepteur}.`,
-          relatedEntityId: id,
-          actionRoute: 'TRANSFERS_RETURNS'
-        });
-        
-        addNotification({
-          siteId: sourceT?.targetSite || 'SMI',
-          type: isDisputed ? 'WARNING' : 'INFO',
-          category: 'TRANSFER',
-          message: isDisputed 
-            ? `Réception de transfert ${sourceT?.reference} validée avec litige.`
-            : `Réception de transfert ${sourceT?.reference} complétée avec succès.`,
-          relatedEntityId: id,
-          actionRoute: 'TRANSFERS_RETURNS'
-        });
-      } catch (err: any) {
-        const duration = performance.now() - startTime;
-        const errMsg = err.message || String(err);
-        const errCode = err.code || '';
-        
-        if (isNetworkError(errMsg, errCode)) {
-          addTechLog('WARN', `Réseau déconnecté. Réception de transfert mise en file de reprise : ${errMsg}`, duration);
-          
-          RetryQueueFSM.enqueue('COMPLETE_TRANSFERT', { id, recepteur, receivedItems, disputeReason }, intentId, sourceT?.targetSite);
-          refreshFSMStates();
-
-          toast.warning("Réseau indisponible. Réception sauvegardée localement.");
-        } else {
-          addTechLog('ERROR', `Échec de la réception de transfert : ${errMsg}`, duration);
-          setTxStats(s => ({ ...s, failed: s.failed + 1 }));
-          
-          let userMessage = errMsg;
-          if (errCode === 'permission-denied') {
-            userMessage = "Accès refusé : vous n'avez pas les droits pour réceptionner sur ce chantier. Contactez un administrateur.";
-          }
-          throw new Error(userMessage);
-        }
-      } finally {
-        activeTxCount.current -= 1;
-        delete activePromisesRef.current[id];
-      }
+      const defaultRecItems = itemsToUse.map(it => ({
+        ...it,
+        quantityReceived: it.quantity,
+        quantityDamaged: 0
+      }));
+      await executeReceptionnerTransfertDirect(id, recepteur, defaultRecItems, disputeReason, "Réception directe");
+      await executeAccepterEtCloturerTransfertDirect(id, recepteur, "Acceptation directe");
     })();
-
-    activePromisesRef.current[id] = promise;
     return promise;
-  }, [transferts, isSafeMode, rcglResult, isDegradedNetwork, executeCompleteTransfertDirect, addNotification]);
+  }, [transferts, executeReceptionnerTransfertDirect, executeAccepterEtCloturerTransfertDirect]);
 
   const executeCloseTransfertDirect = React.useCallback(async (id: string, motifCloture: string) => {
     registerPendingOp(id);
@@ -3045,6 +3418,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     await setDoc(doc(db, 'catalog', item.id), cleanObject(item), { merge: true });
   }, []);
 
+  const saveHydrominesCatalogItem = React.useCallback(async (item: HydrominesCatalogItem) => {
+    checkWritePermission();
+    if (isSimulationMode()) {
+      setHydrominesCatalog(prev => {
+        const idx = prev.findIndex(x => x.id === item.id);
+        if (idx !== -1) {
+          const next = [...prev];
+          next[idx] = { ...next[idx], ...item };
+          return next;
+        }
+        return [item, ...prev];
+      });
+      return;
+    }
+    checkMaintenanceLock();
+    await setDoc(doc(db, 'hydromines_catalog', item.id), cleanObject(item), { merge: true });
+  }, []);
+
   const deleteCatalogItem = React.useCallback(async (id: string) => {
     checkWritePermission();
     if (isSimulationMode()) {
@@ -3259,13 +3650,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const value = React.useMemo(() => ({
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
-    engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
+    engins, perfos, agents, catalog, hydrominesCatalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs, deletionRequests,
     currentSite, setCurrentSite,
     currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
+    expedierTransfert, receptionnerTransfert, accepterEtCloturerTransfert, deleteTransfert, getArticleTransitQty,
     saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
-    setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus,
+    setAgent, saveCatalogItem, deleteCatalogItem, saveHydrominesCatalogItem, addPurchaseRequest, updatePRStatus,
     loadMoreMouvements,
     networkQuality,
 
@@ -3285,13 +3677,14 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     collectSystemMetrics, exportForensic
   }), [
     articles, mouvements, distributions, auditLogs, transferts, inventaires,
-    engins, perfos, agents, catalog, accounts, purchaseRequests, anomalyReports,
+    engins, perfos, agents, catalog, hydrominesCatalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs, deletionRequests,
     currentSite, setCurrentSite,
     currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
+    expedierTransfert, receptionnerTransfert, accepterEtCloturerTransfert, deleteTransfert, getArticleTransitQty,
     saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
-    setAgent, saveCatalogItem, deleteCatalogItem, addPurchaseRequest, updatePRStatus,
+    setAgent, saveCatalogItem, deleteCatalogItem, saveHydrominesCatalogItem, addPurchaseRequest, updatePRStatus,
     loadMoreMouvements,
     networkQuality,
     isSafeMode,

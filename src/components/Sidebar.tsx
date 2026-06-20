@@ -27,7 +27,8 @@ import {
   FileText,
   Smartphone,
   Sun,
-  Moon
+  Moon,
+  Database
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { SITES } from '../demoData';
@@ -49,13 +50,15 @@ export type Page =
   | 'AUDIT_LOG'
   | 'USER_MGMT'
   | 'GESTION_ARTICLES'
+  | 'CATALOGUE_HYDROMINES'
   | 'REPORTS'
   | 'RESTOCK_MGMT'
   | 'RETURNS'
   | 'FINANCE'
   | 'SEARCH_RESULTS'
   | 'TRACEABILITY'
-  | 'TRANSFERS';
+  | 'TRANSFERS'
+  | 'ANALYSE_EQUIPEMENTS';
 
 interface SidebarProps {
   currentPage: Page;
@@ -93,8 +96,9 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
 
       { id: 'TRACEABILITY', label: 'Grand Registre des Bons', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white font-black', section: 'REGISTRES' },
       { id: 'GESTION_ARTICLES', label: 'Catalogue des Articles', icon: Settings2, section: 'REGISTRES' },
+      { id: 'CATALOGUE_HYDROMINES', label: 'Catalogue Hydromines ⭐', icon: Database, section: 'REGISTRES', activeColor: 'bg-gradient-to-r from-sky-50 to-rose-50 text-slate-900 font-extrabold border-sky-100 shadow-sm' },
 
-      { id: 'REPORTS', label: 'Rapports d’Activité', icon: FileText, activeColor: 'bg-slate-900 text-white font-black', section: 'ADMINISTRATION' },
+      { id: 'ANALYSE_EQUIPEMENTS', label: 'Rapports & Analyses 📊', icon: Activity, activeColor: 'text-indigo-755 bg-indigo-500/10 border border-indigo-500/20 font-extrabold', section: 'ADMINISTRATION' },
       { id: 'USER_MGMT', label: 'Paramètres système', icon: Users, section: 'ADMINISTRATION' },
 
       { id: 'FINANCE', label: 'Valeur du Stock Mère', icon: Landmark, activeColor: 'bg-amber-500/5 text-amber-700 shadow-sm border border-amber-500/10 font-bold', section: 'DIRECTION' }
@@ -119,11 +123,11 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
         if (item.id !== 'FINANCE') allowedPageIds.add(item.id);
       });
     } else if (userRole === 'MAGASINIER') {
-      const allowed = ['COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES'];
+      const allowed = ['COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
       allowed.forEach(id => allowedPageIds.add(id));
     } else {
       // LECTURE_SEULE
-      const allowed = ['COCKPIT', 'STOCK_ENGINS', 'TRACEABILITY', 'GESTION_ARTICLES'];
+      const allowed = ['COCKPIT', 'STOCK_ENGINS', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
       allowed.forEach(id => allowedPageIds.add(id));
     }
 
@@ -165,7 +169,7 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       )}
       
       <aside className={cn(
-        "w-[260px] bg-white border-r border-slate-100 h-screen fixed inset-y-0 left-0 overflow-y-auto flex flex-col no-print shadow-2xl shadow-slate-350/50 transition-all duration-300 ease-in-out z-50",
+        "w-[260px] bg-white border-r border-slate-100/70 h-screen fixed inset-y-0 left-0 overflow-y-auto flex flex-col no-print shadow-xl shadow-slate-100/20 transition-all duration-300 ease-in-out z-50",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
       {/* Visual Effect exclusively for the top of the sidebar */}
