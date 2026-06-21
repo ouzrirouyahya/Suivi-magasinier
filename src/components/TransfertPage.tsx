@@ -20,7 +20,8 @@ import {
   Boxes,
   HelpCircle,
   FileSpreadsheet,
-  ArrowRightLeft
+  ArrowRightLeft,
+  Eye
 } from 'lucide-react';
 import { Article, SiteCode, Transfert, MouvementItem, TransfertStatus, UserAccount } from '../types';
 import { SITES } from '../demoData';
@@ -37,6 +38,8 @@ interface TransfertPageProps {
 }
 
 export function TransfertPage({ currentSite, articles, transferts, onAddTransfert, onCompleteTransfert, currentUser }: TransfertPageProps) {
+  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+
   const {
     approveTransfert,
     expedierTransfert,
@@ -235,6 +238,18 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
 
   return (
     <div className="space-y-6 animate-in fade-in duration-700 pb-20 p-4 max-w-7xl mx-auto flex-1">
+      {isReadOnly && (
+        <div className="flex items-center gap-3 px-6 py-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-sm font-bold no-print shadow-sm font-sans mb-4">
+          <Eye className="w-5 h-5 shrink-0 text-amber-653 animate-pulse" />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-black uppercase text-amber-800 font-sans">Mode Consultation Seule</span>
+            <span className="text-xs font-normal text-[#a0522d] leading-relaxed">
+              Votre compte administrateur est en lecture seule. Contactez le SUPER_ADMIN pour obtenir des droits d'écriture.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Dynamic Dashboard metrics targeting zero piece loss */}
       <section className="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-4">
         <div className="bg-white border border-slate-200/80 p-4 rounded-2xl shadow-sm flex flex-col justify-between">
@@ -336,7 +351,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
               {currentSite === 'ALL' ? 'TOUS LES SITES' : currentSite}
             </div>
 
-            {!isCreating && (
+            {!isCreating && !isReadOnly && (
               <button 
                 type="button"
                 onClick={() => setIsCreating(true)}
@@ -887,6 +902,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                       )}
 
                       {/* Action blocks based on roles and current status */}
+                      <div className={cn("space-y-4", isReadOnly && "pointer-events-none opacity-50 select-none")}>
                       
                       {/* BROUILLON Action Block */}
                       {t.status === 'BROUILLON' && t.sourceSite === currentSite && (
@@ -1109,6 +1125,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                           </div>
                         </div>
                       )}
+                      </div>
                       
                     </div>
                   )}

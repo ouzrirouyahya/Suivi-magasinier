@@ -345,13 +345,13 @@ export default function App() {
     if (MAGASINIER_AND_ABOVE.includes(page)) {
       return ['MAGASINIER', 'ADMIN', 'SUPER_ADMIN'].includes(role);
     }
-    // LECTURE_SEULE : accès limité
-    return ['COCKPIT', 'STOCK_ENGINS', 'STOCK_PERFORATEURS', 'STOCK_CONSOMMABLES', 
-            'STOCK_EPI', 'SEARCH_RESULTS', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'].includes(page);
+    return false;
   };
 
   const renderPage = () => {
-    const userRole = currentUser?.role || 'LECTURE_SEULE';
+    const userRole = currentUser?.role || 'ADMIN';
+    const isReadOnlyUser = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+    
     if (!canAccessPage(currentPage, userRole)) {
       return (
         <div className="flex flex-col items-center justify-center h-full gap-6 text-slate-400 p-8">
@@ -435,6 +435,7 @@ export default function App() {
             agents={agents}
             initialArticleId={selectedArticleId || undefined}
             onArticleCreate={saveArticle}
+            isReadOnly={isReadOnlyUser}
             onSubmit={async (m) => {
               try {
                 await toast.promise(addMouvement(m), {

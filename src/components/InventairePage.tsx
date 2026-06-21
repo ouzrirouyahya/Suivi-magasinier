@@ -39,6 +39,8 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   const [compteur, setCompteur] = useState(currentUser?.name || currentUser?.email || '');
   const [viewingInventaire, setViewingInventaire] = useState<Inventaire | null>(null);
 
+  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+
   useEffect(() => {
     if (currentUser && !compteur) {
       setCompteur(currentUser.name || currentUser.email || '');
@@ -84,6 +86,10 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   }
 
   const startInventory = (type: 'TOURNANT' | 'ANNUEL', category?: string) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de commencer un inventaire.");
+      return;
+    }
     if (!compteur.trim()) {
       toast.error('Veuillez saisir le nom du compteur.');
       return;
@@ -126,6 +132,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   };
 
   const updateCount = (articleId: string, count: number) => {
+    if (isReadOnly) return;
     if (!activeSession) return;
     setActiveSession({
       ...activeSession,
@@ -144,6 +151,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   };
 
   const updateJustification = (articleId: string, justification: string) => {
+    if (isReadOnly) return;
     if (!activeSession) return;
     setActiveSession({
       ...activeSession,
@@ -152,18 +160,26 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   };
 
   const handleValidate = () => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule.");
+      return;
+    }
     if (!activeSession) return;
     if (confirm('Voulez-vous valider cet inventaire ? Les stocks seront mis à jour définitivement.')) {
       onSaveInventaire({ 
-        ...activeSession, 
-        status: 'VALIDE',
-        validePar: currentUser?.name || currentUser?.email || 'Admin'
+         ...activeSession, 
+         status: 'VALIDE',
+         validePar: currentUser?.name || currentUser?.email || 'Admin'
       });
       setActiveSession(null);
     }
   };
 
   const handleSaveDraft = () => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule.");
+      return;
+    }
     if (!activeSession) return;
     onSaveInventaire({ ...activeSession });
     setActiveSession(null);
@@ -171,6 +187,10 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   };
 
   const handleSetAllConform = () => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule.");
+      return;
+    }
     if (!activeSession) return;
     if (confirm("Voulez-vous prérégler tous les comptages de cette session comme conformes au stock théorique ?")) {
       const conformItems = activeSession.items.map(item => ({
@@ -185,6 +205,18 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-24 mission-control-bg p-12 flex-1">
+      {isReadOnly && (
+        <div className="flex items-center gap-3 px-6 py-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-sm font-bold no-print shadow-sm">
+          <Eye className="w-5 h-5 shrink-0 text-amber-655 animate-pulse" />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-black uppercase text-amber-800">Mode Consultation Seule</span>
+            <span className="text-xs font-normal text-amber-700/90 leading-relaxed">
+              Votre compte administrateur est en lecture seule. Contactez le SUPER_ADMIN pour obtenir des droits d'écriture.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
       <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
         <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
@@ -232,7 +264,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       </div>
 
       {!activeSession && (
-        <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row gap-6 justify-between items-center animate-in fade-in duration-300">
+        <div className={cn("bg-white border border-slate-200/60 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row gap-6 justify-between items-center animate-in fade-in duration-300", isReadOnly && "pointer-events-none opacity-60 select-none")}>
           <div className="flex flex-col text-left">
             <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Nom du compteur</label>
             <input
@@ -272,7 +304,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       )}
 
       {activeSession ? (
-        <div className="space-y-8">
+        <div className={cn("space-y-8", isReadOnly && "pointer-events-none opacity-75")}>
           <div className="card glass p-10 sticky top-4 z-40 bg-white/95 backdrop-blur-2xl border-sky-100 flex flex-col xl:flex-row items-center justify-between gap-10 shadow-2xl shadow-sky-950/5">
             <div className="flex items-center gap-8">
               <div className="w-20 h-20 rounded-[2.5rem] bg-sky-600 text-white flex items-center justify-center shadow-2xl shadow-sky-600/30">

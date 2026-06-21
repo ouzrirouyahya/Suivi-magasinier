@@ -113,7 +113,7 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       DIRECTION: { id: 'SEP_DIRECTION', label: '6. Direction', isSeparator: true }
     };
 
-    const userRole = currentUser?.role || 'LECTURE_SEULE';
+    const userRole = currentUser?.role || 'ADMIN';
     const allowedPageIds = new Set<string>();
 
     if (userRole === 'SUPER_ADMIN') {
@@ -124,10 +124,6 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       });
     } else if (userRole === 'MAGASINIER') {
       const allowed = ['COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
-      allowed.forEach(id => allowedPageIds.add(id));
-    } else {
-      // LECTURE_SEULE
-      const allowed = ['COCKPIT', 'STOCK_ENGINS', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
       allowed.forEach(id => allowedPageIds.add(id));
     }
 

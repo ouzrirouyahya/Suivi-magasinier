@@ -888,7 +888,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     }
   };
 
-  const isReadOnly = currentUser?.role === 'MAGASINIER' || currentUser?.role === 'LECTURE_SEULE';
+  const isReadOnly = currentUser?.role === 'MAGASINIER' || (currentUser?.role === 'ADMIN' && !currentUser?.canWrite);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">

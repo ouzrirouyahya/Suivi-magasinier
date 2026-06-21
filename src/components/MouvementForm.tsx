@@ -47,9 +47,10 @@ interface MouvementFormProps {
   onSubmit: (mouvement: Mouvement) => void;
   onArticleCreate?: (article: Article) => void;
   initialArticleId?: string;
+  isReadOnly?: boolean;
 }
 
-export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
+export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId, isReadOnly = false }: MouvementFormProps) {
   const { hydrominesCatalog = [], saveHydrominesCatalogItem, importFromHydrominesCatalog } = useInventory();
 
   // Automatic selection after import state & effect
@@ -716,6 +717,10 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de valider.");
+      return;
+    }
     setFormSubmitted(true);
 
     if (site === 'ALL') {
@@ -827,6 +832,18 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-10 animate-in fade-in slide-in-from-bottom-6 duration-700">
+      {isReadOnly && (
+        <div className="flex items-center gap-3 px-6 py-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-sm font-bold no-print shadow-sm">
+          <Eye className="w-5 h-5 shrink-0 text-amber-650 animate-pulse" />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-black uppercase text-amber-800">Mode Consultation Seule</span>
+            <span className="text-xs font-normal text-[#a0522d] leading-relaxed">
+              Votre compte administrateur est en lecture seule. Contactez le SUPER_ADMIN pour obtenir des droits d'écriture.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
       <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print mb-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
@@ -882,7 +899,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className={cn("space-y-4", isReadOnly && "pointer-events-none opacity-70")}>
         {site === 'ALL' && (
           <div className="flex items-center gap-3 px-6 py-5 bg-amber-50 
                           border-2 border-amber-300 rounded-2xl mb-4">

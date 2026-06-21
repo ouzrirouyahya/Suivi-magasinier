@@ -30,6 +30,23 @@ service cloud.firestore {
       );
     }
 
+    // Vrai uniquement pour le SUPER_ADMIN strict (pas un ADMIN simple), 
+    // utilisé pour les actions réservées exclusivement au niveau le plus 
+    // élevé (gestion des droits des autres admins notamment)
+    function isSuperAdmin() {
+      return isSignedIn() && isEmailVerified() && (
+        request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
+        (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'SUPER_ADMIN')
+      );
+    }
+
+    // Vrai si l'utilisateur est ADMIN avec canWrite explicitement à true
+    function isAdminWithWriteAccess() {
+      return isActive() && exists(/databases/$(database)/documents/accounts/$(request.auth.uid))
+        && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'ADMIN'
+        && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.get('canWrite', false) == true;
+    }
+
     function isMaintenanceLocked() {
       return exists(/databases/$(database)/documents/metadata/system_config) && get(/databases/$(database)/documents/metadata/system_config).data.maintenanceMode == true;
     }
@@ -96,7 +113,13 @@ service cloud.firestore {
 
     // System-wide write condition with Maintenance Mode protection
     function canWrite(allowedRoles) {
-      return isAnyRole(allowedRoles) && (!isMaintenanceLocked() || isAdmin());
+      return isMaintenanceLocked() && !isSuperAdmin() 
+        ? false 
+        : (
+          isSuperAdmin() ||
+          (('ADMIN' in allowedRoles) && isAdminWithWriteAccess()) ||
+          (('MAGASINIER' in allowedRoles) && isActive() && exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'MAGASINIER' && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role in allowedRoles)
+        );
     }
 
     function incoming() {
@@ -168,12 +191,13 @@ service cloud.firestore {
 
     function isValidAccount(data) {
       return data.keys().hasAll(['id', 'email', 'name', 'role', 'active'])
-        && data.keys().size() <= 15
+        && data.keys().size() <= 16
         && data.id is string && data.id.size() > 0 && data.id.size() <= 128
         && data.email is string && data.email.size() > 0 && data.email.size() <= 256
         && data.name is string && data.name.size() > 0 && data.name.size() <= 256
-        && data.role is string && data.role in ['SUPER_ADMIN', 'ADMIN', 'MAGASINIER', 'LECTURE_SEULE']
+        && data.role is string && data.role in ['SUPER_ADMIN', 'ADMIN', 'MAGASINIER']
         && data.active is bool
+        && (!data.keys().contains('canWrite') || data.canWrite is bool)
         && data.get('createdAt', '') is string && data.get('createdAt', '').size() <= 128
         && (!data.keys().contains('status') || data.status in ['PENDING', 'APPROVED', 'REJECTED'])
         && (!data.keys().contains('requestedRole') || data.requestedRole in ['ADMIN', 'MAGASINIER'])
@@ -318,19 +342,20 @@ service cloud.firestore {
     match /accounts/{userId} {
       allow read, get, list: if true;
       allow create: if isSignedIn() && isValidId(userId) && isOwner(userId) && isValidAccount(incoming()) && (
-        isAdmin() || 
+        isSuperAdmin() || 
         // Cas particulier des comptes administrateurs racine créés directement actifs
         (incoming().active == true && request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com']) ||
         // Tout utilisateur connecté peut créer sa demande d'accès en attente d'approbation
         (incoming().active == false && incoming().status == 'PENDING')
       );
       allow update: if isValidId(userId) && isSignedIn() && (
-        isAdmin() || (
+        isSuperAdmin() || (
           isOwner(userId)
           && incoming().role == existing().role
           && incoming().active == existing().active
           // L'utilisateur ne peut pas modifier lui-même son statut d'approbation s'il est déjà défini
           && (incoming().status == existing().status || (!existing().keys().contains('status') && incoming().status == 'PENDING'))
+          && (!incoming().keys().contains('canWrite') || incoming().canWrite == existing().get('canWrite', false))
           && isValidAccount(incoming())
         )
       );
@@ -381,19 +406,6 @@ service cloud.firestore {
       allow read: if canReadIfActive();
       allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDeletionRequest(incoming());
       allow update: if isAdmin() && isValidId(id);
-      allow delete: if isAdmin();
-    }
-
-    // Real-time viewer telemetry tracking: guest/viewer users log session details
-    match /viewer_sessions/{sessionId} {
-      allow read: if canReadIfActive();
-      allow create, update: if isSignedIn();
-      allow delete: if isAdmin();
-    }
-
-    match /viewer_activity/{activityId} {
-      allow read: if canReadIfActive();
-      allow create, update: if isSignedIn();
       allow delete: if isAdmin();
     }
 

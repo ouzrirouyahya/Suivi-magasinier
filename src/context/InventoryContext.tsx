@@ -345,7 +345,6 @@ type InventoryContextType = {
   maintenanceLogs: MaintenanceLog[];
   currentUser: UserAccount | null;
   isLoaded: boolean;
-  isViewer: boolean;
   notifications: AppNotification[];
   addNotification: (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead'>) => Promise<void>;
   markNotificationAsRead: (id: string) => Promise<void>;
@@ -538,21 +537,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
 
 
-  const isViewer = React.useMemo(() => {
-    return !currentUser || currentUser.role === 'LECTURE_SEULE';
-  }, [currentUser]);
-
-  const isViewerRef = React.useRef(isViewer);
-  React.useEffect(() => {
-    isViewerRef.current = isViewer;
-  }, [isViewer]);
-
   const checkWritePermission = () => {
-    // Write permissions are checked in firestore rules or simulated
-  };
-
-  const isSimulationMode = () => {
-    return isViewerRef.current;
+    // Write permissions are checked in firestore rules
   };
 
   const checkMaintenanceLock = () => {
@@ -1381,7 +1367,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       details, 
       amount,
       userId: auth.currentUser?.uid || 'system_service_account',
-      userRole: currentUser?.role || 'LECTURE_SEULE',
+      userRole: currentUser?.role || 'ADMIN',
       deviceInfo,
       sourcePlatform: 'HydroMines Web Application Core'
     }));
@@ -1400,44 +1386,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       details, 
       amount,
       userId: auth.currentUser?.uid || 'system_service_account',
-      userRole: currentUser?.role || 'LECTURE_SEULE',
+      userRole: currentUser?.role || 'ADMIN',
       deviceInfo,
       sourcePlatform: 'HydroMines Web Application Core'
     }));
   };
 
   const executeMouvementDirect = React.useCallback(async (mouvement: Mouvement) => {
-    if (isSimulationMode()) {
-      const movementId = mouvement.id || generateSecureUUID();
-      let updatedArticles = [...rawArticles];
-      for (const item of mouvement.items) {
-        const index = updatedArticles.findIndex(a => a.id === item.articleId);
-        if (index !== -1) {
-          const article = updatedArticles[index];
-          const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
-          const newQty = isAddition ? article.quantity + item.quantity : article.quantity - item.quantity;
-          
-          let priceProps = {};
-          if (isAddition && item.price !== undefined) {
-            const calcul = calculatePriceUpdates(article, item.quantity, item.price, movementId, auth.currentUser?.email || 'Lecteur-Offline');
-            priceProps = {
-              price: calcul.price,
-              lastPurchasePrice: calcul.lastPurchasePrice,
-              priceHistory: calcul.priceHistory
-            };
-          }
-
-          updatedArticles[index] = { 
-            ...article, 
-            quantity: Math.max(0, newQty),
-            ...priceProps
-          };
-        }
-      }
-      setRawArticles(updatedArticles);
-      setRawMouvements(prev => [{ ...mouvement, id: movementId, date: mouvement.date || new Date().toISOString() }, ...prev]);
-      return;
-    }
     const movementId = mouvement.id || generateSecureUUID();
     registerPendingOp(movementId);
     try {
@@ -1682,22 +1637,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [isSafeMode, rcglResult, articles, mouvements, isDegradedNetwork, executeMouvementDirect, addNotification, currentUser]);
 
   const executeMaintenanceLogDirect = React.useCallback(async (log: MaintenanceLog) => {
-    if (isSimulationMode()) {
-      const id = log.id || generateSecureUUID();
-      let updatedArticles = [...rawArticles];
-      if (log.partsUsed && log.partsUsed.length > 0) {
-        log.partsUsed.forEach((part) => {
-          const index = updatedArticles.findIndex(a => a.id === part.articleId);
-          if (index !== -1) {
-            const article = updatedArticles[index];
-            updatedArticles[index] = { ...article, quantity: Math.max(0, article.quantity - part.quantity) };
-          }
-        });
-      }
-      setRawArticles(updatedArticles);
-      setRawMaintenanceLogs(prev => [{ ...log, id }, ...prev]);
-      return;
-    }
     const id = log.id || generateSecureUUID();
     registerPendingOp(id);
     try {
@@ -1847,22 +1786,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [isSafeMode, rcglResult, articles, isDegradedNetwork, executeMaintenanceLogDirect]);
 
   const executeTransfertDirect = React.useCallback(async (t: Transfert) => {
-    if (isSimulationMode()) {
-      const id = t.id || generateSecureUUID();
-      let updatedArticles = [...rawArticles];
-      if (t.status === 'IN_TRANSIT' || t.status === 'EXPEDIE') {
-        t.items.forEach((item) => {
-          const index = updatedArticles.findIndex(a => a.id === item.articleId);
-          if (index !== -1) {
-            const art = updatedArticles[index];
-            updatedArticles[index] = { ...art, quantity: Math.max(0, art.quantity - item.quantity) };
-          }
-        });
-      }
-      setRawArticles(updatedArticles);
-      setRawTransferts(prev => [{ ...t, id, status: t.status || 'DEMANDE' }, ...prev]);
-      return;
-    }
     const id = t.id || generateSecureUUID();
     registerPendingOp(id);
     try {
@@ -2018,27 +1941,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [transferts, isSafeMode, rcglResult, isDegradedNetwork, executeTransfertDirect, addNotification]);
 
   const executeApproveTransfertDirect = React.useCallback(async (id: string, approuvePar: string, comment?: string) => {
-    if (isSimulationMode()) {
-      let updatedTransferts = [...rawTransferts];
-      const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
-      if (tIndex !== -1) {
-        const tx = updatedTransferts[tIndex];
-        const newHistory = [...(tx.history || []), {
-          status: 'APPROUVE' as TransfertStatus,
-          date: new Date().toISOString(),
-          userEmail: approuvePar,
-          comment: comment || 'Transfert approuvé'
-        }];
-        updatedTransferts[tIndex] = { 
-          ...tx, 
-          status: 'APPROUVE', 
-          approverEmail: approuvePar, 
-          history: newHistory,
-        };
-      }
-      setRawTransferts(updatedTransferts);
-      return;
-    }
     registerPendingOp(id);
     try {
       await runTransaction(db, async (transaction) => {
@@ -2131,40 +2033,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [transferts, isSafeMode, rcglResult, isDegradedNetwork, executeApproveTransfertDirect]);
 
   const executeExpedierTransfertDirect = React.useCallback(async (id: string, expediePar: string, comment?: string) => {
-    if (isSimulationMode()) {
-      let updatedTransferts = [...rawTransferts];
-      const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
-      if (tIndex !== -1) {
-        const tx = updatedTransferts[tIndex];
-        let updatedArticles = [...rawArticles];
-        tx.items.forEach((item) => {
-          const index = updatedArticles.findIndex(a => a.id === item.articleId);
-          if (index !== -1) {
-            const art = updatedArticles[index];
-            updatedArticles[index] = { ...art, quantity: Math.max(0, art.quantity - item.quantity) };
-          }
-        });
-        setRawArticles(updatedArticles);
-
-        const newHistory = [...(tx.history || []), {
-          status: 'EXPEDIE' as TransfertStatus,
-          date: new Date().toISOString(),
-          userEmail: expediePar,
-          comment: comment || 'Convoi expédié inter-sites'
-        }];
-
-        updatedTransferts[tIndex] = {
-          ...tx,
-          status: 'EXPEDIE',
-          shipperEmail: expediePar,
-          dateEnvoi: new Date().toISOString(),
-          history: newHistory
-        };
-      }
-      setRawTransferts(updatedTransferts);
-      return;
-    }
-
     registerPendingOp(id);
     try {
       await runTransaction(db, async (transaction) => {
@@ -2266,50 +2134,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     disputeReason?: string,
     comment?: string
   ) => {
-    if (isSimulationMode()) {
-      let updatedTransferts = [...rawTransferts];
-      const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
-      if (tIndex !== -1) {
-        const tx = updatedTransferts[tIndex];
-        let isDivergent = false;
-
-        receivedItems.forEach((recItem) => {
-          const sentItem = tx.items.find(s => s.articleId === recItem.articleId);
-          const recQty = recItem.quantityReceived !== undefined ? recItem.quantityReceived : recItem.quantity;
-          const dmgQty = recItem.quantityDamaged || 0;
-          if (!sentItem || recQty !== sentItem.quantity || dmgQty > 0) {
-            isDivergent = true;
-          }
-        });
-
-        if (disputeReason) {
-          isDivergent = true;
-        }
-
-        const nextStatus: TransfertStatus = isDivergent ? 'LITIGE' : 'RECEPTIONNE';
-        const finalDisputeReason = disputeReason || (isDivergent ? "Écarts ou avaries constatés lors du contrôle" : undefined);
-
-        const newHistory = [...(tx.history || []), {
-          status: nextStatus,
-          date: new Date().toISOString(),
-          userEmail: recepteur,
-          comment: comment || (isDivergent ? `Litige déclaré: ${finalDisputeReason}` : 'Contrôle réception terminé sans anomalie')
-        }];
-
-        updatedTransferts[tIndex] = {
-          ...tx,
-          status: nextStatus,
-          receiverEmail: recepteur,
-          dateReception: new Date().toISOString(),
-          receivedItems,
-          disputeReason: finalDisputeReason,
-          history: newHistory
-        };
-      }
-      setRawTransferts(updatedTransferts);
-      return;
-    }
-
     registerPendingOp(id);
     try {
       await runTransaction(db, async (transaction) => {
@@ -2405,57 +2229,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     acceptePar: string, 
     comment?: string
   ) => {
-    if (isSimulationMode()) {
-      let updatedTransferts = [...rawTransferts];
-      const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
-      if (tIndex !== -1) {
-        const tx = updatedTransferts[tIndex];
-        let updatedArticles = [...rawArticles];
-        const itemsToUse = tx.receivedItems || tx.items;
-        
-        itemsToUse.forEach((item) => {
-          const recQty = item.quantityReceived !== undefined ? item.quantityReceived : item.quantity;
-          const dmgQty = item.quantityDamaged || 0;
-          const usableQty = Math.max(0, recQty - dmgQty);
-
-          const index = updatedArticles.findIndex(a => a.id === item.articleId);
-          if (index !== -1) {
-            const art = updatedArticles[index];
-            const calcul = calculatePriceUpdates(
-              art, 
-              usableQty, 
-              item.price || 0, 
-              id, 
-              acceptePar
-            );
-            updatedArticles[index] = { 
-              ...art, 
-              quantity: art.quantity + usableQty,
-              price: calcul.price,
-              lastPurchasePrice: calcul.lastPurchasePrice,
-              priceHistory: calcul.priceHistory
-            };
-          }
-        });
-        setRawArticles(updatedArticles);
-
-        const newHistory = [...(tx.history || []), {
-          status: 'ACCEPTE' as TransfertStatus,
-          date: new Date().toISOString(),
-          userEmail: acceptePar,
-          comment: comment || 'Transfert accepté et clôturé'
-        }];
-
-        updatedTransferts[tIndex] = { 
-          ...tx, 
-          status: 'ACCEPTE', 
-          history: newHistory 
-        };
-      }
-      setRawTransferts(updatedTransferts);
-      return;
-    }
-
     registerPendingOp(id);
     try {
       await runTransaction(db, async (transaction) => {
@@ -2646,10 +2419,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const deleteTransfert = React.useCallback(async (id: string) => {
     checkWritePermission();
     checkMaintenanceLock();
-    if (isSimulationMode()) {
-      setRawTransferts(prev => prev.filter(t => t.id !== id));
-      return;
-    }
     const tRef = doc(db, 'transferts', id);
     await deleteDoc(tRef);
     toast.success("Brouillon supprimé.");
@@ -2774,64 +2543,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const saveInventaire = React.useCallback(async (i: Inventaire) => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      const id = i.id || generateId();
-      const item = { ...i, id };
-      setInventaires(prev => {
-        const idx = prev.findIndex(x => x.id === id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = item;
-          return next;
-        }
-        return [item, ...prev];
-      });
-
-      if (i.status === 'VALIDE') {
-        const adjustedItems = item.items.filter(item => item.difference !== 0);
-        const adjustedCount = adjustedItems.length;
-
-        // update rawArticles
-        setRawArticles(prev => {
-          const next = [...prev];
-          for (const adjusted of adjustedItems) {
-            const idx = next.findIndex(a => a.id === adjusted.articleId);
-            if (idx !== -1) {
-              let updatedQty = adjusted.countedQuantity;
-              if (updatedQty === undefined || updatedQty === null || isNaN(updatedQty)) {
-                updatedQty = adjusted.theoricQuantity;
-              }
-              next[idx] = { ...next[idx], quantity: updatedQty };
-            }
-          }
-          return next;
-        });
-
-        // Add audit log mock for simulation mode
-        for (const adjusted of adjustedItems) {
-          const formattedDate = new Date(i.date).toLocaleDateString('fr-FR');
-          const detailsString = `Inventaire ${i.type} du ${formattedDate} — Écart : ${adjusted.difference > 0 ? '+' : ''}${adjusted.difference} pour article ${adjusted.articleId}. Compteur : ${i.compteur || 'N/A'}.`;
-          
-          setAuditLogs(prev => [
-            {
-              id: generateSecureUUID(),
-              timestamp: new Date().toISOString(),
-              userEmail: auth.currentUser?.email || 'Système',
-              site: i.site,
-              action: 'AJUSTEMENT_INVENTAIRE',
-              details: detailsString,
-              amount: 0,
-              userId: auth.currentUser?.uid || 'system_service_account',
-              userRole: currentUser?.role || 'LECTURE_SEULE'
-            },
-            ...prev
-          ]);
-        }
-
-        toast.success(`Inventaire validé — ${adjustedCount} article(s) ajusté(s) dans le stock.`);
-      }
-      return;
-    }
     checkMaintenanceLock();
     const id = i.id || generateId();
 
@@ -2882,20 +2593,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const saveArticle = React.useCallback(async (a: Article) => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      const id = a.id || generateId();
-      const item = { ...a, id };
-      setRawArticles(prev => {
-        const idx = prev.findIndex(x => x.id === id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = item;
-          return next;
-        }
-        return [item, ...prev];
-      });
-      return;
-    }
     checkMaintenanceLock();
     const id = a.id || generateId();
     const item = { ...a, id };
@@ -2922,23 +2619,13 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const deleteArticles = React.useCallback(async (ids: string[]) => {
     checkWritePermission();
     if (ids.length === 0) return;
-    const isViewer = isSimulationMode();
     
     const targetArticles = rawArticles.filter(a => ids.includes(a.id));
     if (targetArticles.length === 0) return;
 
     const isAdminUser = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
 
-    if (isAdminUser || isViewer) {
-      if (isViewer) {
-        setRawArticles(prev => prev.filter(x => !ids.includes(x.id)));
-        toast.success(ids.length === 1 
-          ? "Article supprimé de l'application (Simulé)" 
-          : `${ids.length} articles supprimés de l'application (Simulé)`
-        );
-        return;
-      }
-
+    if (isAdminUser) {
       checkMaintenanceLock();
       try {
         const batch = writeBatch(db);
@@ -2998,7 +2685,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const importAllCatalogToArticles = React.useCallback(async (targetSite: SiteCode, excludeCostly: boolean | number = true) => {
     checkWritePermission();
-    const isViewer = isSimulationMode();
     
     // Find catalog items that are not already present in rawArticles for targetSite
     const existingRefs = new Set(
@@ -3023,32 +2709,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     if (itemsToImport.length === 0) {
       return { imported: 0, skipped: MASTER_CATALOG.length };
-    }
-
-    if (isViewer) {
-      const newArticles: Article[] = itemsToImport.map(item => ({
-        id: generateId(),
-        site: targetSite,
-        ref: item.reference,
-        designation: item.designation,
-        type: item.suggestedType,
-        category: item.functionalCategory,
-        functionalCategory: item.functionalCategory,
-        subCategory: item.subCategory,
-        component: item.component,
-        subComponent: item.subComponent,
-        notes: item.notes,
-        unit: 'Pcs',
-        quantity: 0,
-        minStock: 1,
-        location: '',
-        price: item.price || 0,
-        active: true
-      }));
-
-      setRawArticles(prev => [...newArticles, ...prev]);
-      
-      return { imported: newArticles.length, skipped: MASTER_CATALOG.length - newArticles.length };
     }
 
     checkMaintenanceLock();
@@ -3109,36 +2769,9 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const importSpecificCatalogItems = React.useCallback(async (targetSite: SiteCode, itemsToImport: CatalogItem[]) => {
     checkWritePermission();
-    const isViewer = isSimulationMode();
     
     if (itemsToImport.length === 0) {
       return { imported: 0, skipped: 0 };
-    }
-
-    if (isViewer) {
-      const newArticles: Article[] = itemsToImport.map(item => ({
-        id: generateId(),
-        site: targetSite,
-        ref: item.reference,
-        designation: item.designation,
-        type: item.suggestedType,
-        category: item.functionalCategory,
-        functionalCategory: item.functionalCategory,
-        subCategory: item.subCategory,
-        component: item.component,
-        subComponent: item.subComponent,
-        notes: item.notes,
-        unit: 'Pcs',
-        quantity: 0,
-        minStock: 1,
-        location: '',
-        price: item.price || 0,
-        active: true
-      }));
-
-      setRawArticles(prev => [...newArticles, ...prev]);
-      
-      return { imported: newArticles.length, skipped: 0 };
     }
 
     checkMaintenanceLock();
@@ -3202,7 +2835,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     items: HydrominesCatalogItem[]
   ) => {
     checkWritePermission();
-    const isViewer = isSimulationMode();
     
     if (items.length === 0) {
       return { imported: 0, skipped: 0 };
@@ -3223,27 +2855,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
     if (itemsToImport.length === 0) {
       return { imported: 0, skipped: skippedCount };
-    }
-
-    if (isViewer) {
-      const newArticles: Article[] = itemsToImport.map(item => ({
-        id: generateId(),
-        site: targetSite,
-        ref: item.reference,
-        designation: item.designation,
-        type: item.suggestedType as StockType,
-        category: item.functionalCategory,
-        functionalCategory: item.functionalCategory,
-        unit: item.unit || 'Pcs',
-        quantity: 0,
-        minStock: 1,
-        location: '',
-        price: 0,
-        active: true,
-        hydrominesCatalogRefId: item.id
-      }));
-      setRawArticles(prev => [...newArticles, ...prev]);
-      return { imported: newArticles.length, skipped: skippedCount };
     }
 
     checkMaintenanceLock();
@@ -3349,19 +2960,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const toggleUser = React.useCallback(async (id: string) => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      setAccounts(prev => {
-        const idx = prev.findIndex(x => x.id === id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], active: !next[idx].active };
-          return next;
-        }
-        return prev;
-      });
-      return;
-    }
-    // Only ADMIN can toggle, handled by Firestore Rules, but check maintenance too
     checkMaintenanceLock();
     const user = accounts.find(u => u.id === id);
     if (user) await setDoc(doc(db, 'accounts', id), { active: !user.active }, { merge: true });
@@ -3369,18 +2967,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const setUserRole = React.useCallback(async (id: string, role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER') => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      setAccounts(prev => {
-        const idx = prev.findIndex(x => x.id === id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], role };
-          return next;
-        }
-        return prev;
-      });
-      return;
-    }
     checkMaintenanceLock();
     const user = accounts.find(u => u.id === id);
     if (user) await setDoc(doc(db, 'accounts', id), { role }, { merge: true });
@@ -3388,18 +2974,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const setUserAssignedSite = React.useCallback(async (id: string, site: SiteCode | '') => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      setAccounts(prev => {
-        const idx = prev.findIndex(x => x.id === id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], assignedSite: site || undefined };
-          return next;
-        }
-        return prev;
-      });
-      return;
-    }
     checkMaintenanceLock();
     const user = accounts.find(u => u.id === id);
     if (user) {
@@ -3430,9 +3004,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return [...prev, item];
     });
 
-    if (isSimulationMode()) {
-      return;
-    }
     checkMaintenanceLock();
     console.log("SAVING ENGIN:", data)
     if (!data) await setDoc(doc(db, 'engins', id), { deleted: true }, { merge: true });
@@ -3462,9 +3033,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return [...prev, item];
     });
 
-    if (isSimulationMode()) {
-      return;
-    }
     checkMaintenanceLock();
     console.log("SAVING PERFO:", data)
     if (!data) await setDoc(doc(db, 'perfos', id), { deleted: true }, { merge: true });
@@ -3494,9 +3062,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       return [...prev, item];
     });
 
-    if (isSimulationMode()) {
-      return;
-    }
     checkMaintenanceLock();
     console.log("SAVING AGENT:", data)
     if (!data) await setDoc(doc(db, 'agents', id), { deleted: true }, { merge: true });
@@ -3505,74 +3070,24 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const saveCatalogItem = React.useCallback(async (item: CatalogItem) => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      setCatalog(prev => {
-        const idx = prev.findIndex(x => x.id === item.id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], ...item };
-          return next;
-        }
-        return [...prev, item];
-      });
-      return;
-    }
     checkMaintenanceLock();
     await setDoc(doc(db, 'catalog', item.id), cleanObject(item), { merge: true });
   }, []);
 
   const saveHydrominesCatalogItem = React.useCallback(async (item: HydrominesCatalogItem) => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      setHydrominesCatalog(prev => {
-        const idx = prev.findIndex(x => x.id === item.id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], ...item };
-          return next;
-        }
-        return [item, ...prev];
-      });
-      return;
-    }
     checkMaintenanceLock();
     await setDoc(doc(db, 'hydromines_catalog', item.id), cleanObject(item), { merge: true });
   }, []);
 
   const deleteCatalogItem = React.useCallback(async (id: string) => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      setCatalog(prev => {
-        const idx = prev.findIndex(x => x.id === id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], deleted: true };
-          return next;
-        }
-        return prev;
-      });
-      return;
-    }
     checkMaintenanceLock();
     await setDoc(doc(db, 'catalog', id), { deleted: true }, { merge: true });
   }, []);
 
   const addPurchaseRequest = React.useCallback(async (pr: PurchaseRequest) => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      const rId = pr.id || generateId();
-      const item = { ...pr, id: rId };
-      setPurchaseRequests(prev => {
-        const idx = prev.findIndex(x => x.id === rId);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = item;
-          return next;
-        }
-        return [item, ...prev];
-      });
-      return;
-    }
     checkMaintenanceLock();
     const id = pr.id || generateId();
     await setDoc(doc(db, 'purchaseRequests', id), cleanObject({ ...pr, id }));
@@ -3580,18 +3095,6 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
   const updatePRStatus = React.useCallback(async (id: string, status: any) => {
     checkWritePermission();
-    if (isSimulationMode()) {
-      setPurchaseRequests(prev => {
-        const idx = prev.findIndex(x => x.id === id);
-        if (idx !== -1) {
-          const next = [...prev];
-          next[idx] = { ...next[idx], status };
-          return next;
-        }
-        return prev;
-      });
-      return;
-    }
     checkMaintenanceLock();
     await setDoc(doc(db, 'purchaseRequests', id), { status }, { merge: true });
   }, []);
@@ -3756,7 +3259,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     engins, perfos, agents, catalog, hydrominesCatalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs, deletionRequests,
     currentSite, setCurrentSite,
-    currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
+    currentUser, isLoaded, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
     expedierTransfert, receptionnerTransfert, accepterEtCloturerTransfert, deleteTransfert, getArticleTransitQty,
     saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, importFromHydrominesCatalog, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
@@ -3783,7 +3286,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     engins, perfos, agents, catalog, hydrominesCatalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs, deletionRequests,
     currentSite, setCurrentSite,
-    currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
+    currentUser, isLoaded, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
     expedierTransfert, receptionnerTransfert, accepterEtCloturerTransfert, deleteTransfert, getArticleTransitQty,
     saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, importFromHydrominesCatalog, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,

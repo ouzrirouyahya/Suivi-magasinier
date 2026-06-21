@@ -325,11 +325,13 @@ export const UserAdmin = React.memo(function UserAdmin({
   const handleApproveUser = async (user: UserAccount) => {
     try {
       const userRef = doc(db, 'accounts', user.id);
+      const isNewAdmin = (user.requestedRole || 'MAGASINIER') === 'ADMIN';
       await updateDoc(userRef, {
         status: 'APPROVED',
         active: true,
         role: user.requestedRole || 'MAGASINIER',
-        assignedSite: user.assignedSite || null
+        assignedSite: user.assignedSite || null,
+        ...(isNewAdmin ? { canWrite: false } : {})
       });
       toast.success(`Accès approuvé pour ${user.name}`);
     } catch (err: any) {
@@ -344,13 +346,28 @@ export const UserAdmin = React.memo(function UserAdmin({
       await updateDoc(userRef, {
         status: 'REJECTED',
         active: false,
-        role: 'LECTURE_SEULE',
-        assignedSite: null
+        role: 'ADMIN',
+        assignedSite: null,
+        canWrite: false
       });
       toast.success(`Accès refusé pour ${user.name}`);
     } catch (err: any) {
       console.error("[UserAdmin] Erreur lors du rejet :", err);
       toast.error(`Erreur lors du rejet : ${err.message || err}`);
+    }
+  };
+
+  const handleToggleAdminWriteAccess = async (user: UserAccount) => {
+    try {
+      const userRef = doc(db, 'accounts', user.id);
+      await updateDoc(userRef, { 
+        canWrite: !user.canWrite 
+      });
+      toast.success(
+        `Droits d'écriture ${!user.canWrite ? 'accordés à' : 'retirés de'} ${user.name}`
+      );
+    } catch (e: any) {
+      toast.error(`Erreur : ${e.message || e}`);
     }
   };
 
@@ -566,7 +583,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                               <select
                                 value={user.role}
                                 onChange={(e) => {
-                                  const roleVal = e.target.value as 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'LECTURE_SEULE';
+                                  const roleVal = e.target.value as 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER';
                                   setUserRole(user.id, roleVal)
                                     .then(() => toast.success(`Rôle mis à jour`))
                                     .catch((err: any) => toast.error(`Erreur: ${err.message || err}`));
@@ -576,10 +593,30 @@ export const UserAdmin = React.memo(function UserAdmin({
                                 <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                                 <option value="ADMIN">ADMIN</option>
                                 <option value="MAGASINIER">MAGASINIER</option>
-                                <option value="LECTURE_SEULE">LECTURE_SEULE</option>
                               </select>
                             )}
                           </div>
+
+                          {/* Toggle canWrite for ADMINs */}
+                          {user.role === 'ADMIN' && currentUser?.role === 'SUPER_ADMIN' && (
+                            <div className="flex items-center justify-between gap-2">
+                              <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block whitespace-nowrap">
+                                Droits d'écriture
+                              </label>
+                              <button
+                                onClick={() => handleToggleAdminWriteAccess(user)}
+                                className={cn(
+                                  "w-10 h-5 rounded-full transition-all relative cursor-pointer",
+                                  user.canWrite ? "bg-emerald-500" : "bg-slate-200"
+                                )}
+                              >
+                                <span className={cn(
+                                  "absolute top-0.5 w-4 h-4 bg-white rounded-full transition-all shadow",
+                                  user.canWrite ? "left-5" : "left-0.5"
+                                )} />
+                              </button>
+                            </div>
+                          )}
 
                           {/* Site selection */}
                           <div className="flex items-center justify-between gap-2">

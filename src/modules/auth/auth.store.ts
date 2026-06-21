@@ -6,12 +6,10 @@ interface AuthState {
   accounts: UserAccount[];
   isLoaded: boolean;
   currentSite: SiteCode;
-  isViewer: boolean;
   setCurrentUser: (user: UserAccount | null | ((prev: UserAccount | null) => UserAccount | null)) => void;
   setAccounts: (accounts: UserAccount[] | ((prev: UserAccount[]) => UserAccount[])) => void;
   setIsLoaded: (loaded: boolean | ((prev: boolean) => boolean)) => void;
   setCurrentSite: (site: SiteCode) => void;
-  setIsViewer: (viewer: boolean | ((prev: boolean) => boolean)) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
@@ -19,7 +17,6 @@ export const useAuthStore = create<AuthState>((set) => ({
   accounts: [],
   isLoaded: false,
   currentSite: 'ALL',
-  isViewer: false,
   setCurrentUser: (arg) => set((state) => ({
     currentUser: typeof arg === 'function' ? (arg as Function)(state.currentUser) : arg
   })),
@@ -32,8 +29,5 @@ export const useAuthStore = create<AuthState>((set) => ({
   setCurrentSite: (currentSite) => {
     localStorage.setItem('hydromines_current_site', currentSite);
     set({ currentSite });
-  },
-  setIsViewer: (arg) => set((state) => ({
-    isViewer: typeof arg === 'function' ? (arg as Function)(state.isViewer) : arg
-  }))
+  }
 }));

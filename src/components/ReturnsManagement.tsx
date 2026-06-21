@@ -15,7 +15,8 @@ import {
   ArrowRight,
   Filter,
   Check,
-  ChevronDown
+  ChevronDown,
+  Eye
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { Mouvement, Article } from '../types';
@@ -23,8 +24,10 @@ import { cn, formatDate, generateId, formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
 
 export function ReturnsManagement() {
-  const { mouvements, articles, addMouvement, agents, currentSite } = useInventory();
+  const { mouvements, articles, addMouvement, agents, currentSite, currentUser } = useInventory();
   
+  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+
   // Articles search states for predictive auto-complete bar
   const [articleSearchQuery, setArticleSearchQuery] = useState('');
   const [showArticleDropdown, setShowArticleDropdown] = useState(false);
@@ -75,6 +78,10 @@ export function ReturnsManagement() {
 
   // Handle return transaction
   const handleReturn = async () => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de valider un retour.");
+      return;
+    }
     if (!selectedArticleId) {
       toast.error("Veuillez sélectionner un article de rechange.");
       return;
@@ -225,6 +232,18 @@ export function ReturnsManagement() {
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
+      {isReadOnly && (
+        <div className="flex items-center gap-3 px-6 py-4 bg-amber-50 border border-amber-200 rounded-2xl text-amber-700 text-sm font-bold no-print shadow-sm font-sans mb-4">
+          <Eye className="w-5 h-5 shrink-0 text-amber-653 animate-pulse" />
+          <div className="flex flex-col gap-1">
+            <span className="text-sm font-black uppercase text-amber-800 font-sans">Mode Consultation Seule</span>
+            <span className="text-xs font-normal text-[#a0522d] leading-relaxed">
+              Votre compte administrateur est en lecture seule. Contactez le SUPER_ADMIN pour obtenir des droits d'écriture.
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
       <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print mb-6">
         <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
@@ -288,7 +307,7 @@ export function ReturnsManagement() {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Return creation workflow column */}
-        <div className="lg:col-span-1 space-y-4">
+        <div className={cn("lg:col-span-1 space-y-4", isReadOnly && "pointer-events-none opacity-50 select-none")}>
           <div className="card p-5 bg-white border border-slate-100 shadow-sm border-t-4 border-t-sky-500 rounded-2xl">
             <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4 flex items-center gap-2">
               <RotateCcw className="w-4 h-4 text-sky-500" />
