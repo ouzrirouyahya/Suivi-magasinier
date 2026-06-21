@@ -113,8 +113,8 @@ service cloud.firestore {
 
     // System-wide write condition with Maintenance Mode protection
     function canWrite(allowedRoles) {
-      return isMaintenanceLocked() && !isSuperAdmin() 
-        ? false 
+      return isMaintenanceLocked() 
+        ? (isSuperAdmin() || (('ADMIN' in allowedRoles) && isAdminWithWriteAccess()))
         : (
           isSuperAdmin() ||
           (('ADMIN' in allowedRoles) && isAdminWithWriteAccess()) ||
@@ -332,8 +332,8 @@ service cloud.firestore {
       allow read: if canReadSite(resource.data.site);
       allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) 
                     && isValidId(articleId) && isValidArticle(incoming());
-      allow update: if canWriteOnSite(['ADMIN', 'MAGASINIER', 'MAINTENANCE'], existing().site) 
-                    && canWriteOnSite(['ADMIN', 'MAGASINIER', 'MAINTENANCE'], incoming().site)
+      allow update: if canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site) 
+                    && canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site)
                     && isValidId(articleId) && isValidArticle(incoming());
       allow delete: if canWrite(['ADMIN']) && isValidId(articleId);
     }
@@ -390,14 +390,14 @@ service cloud.firestore {
     // Audit logs: Strictly append-only. Immutable once recorded.
     match /auditLogs/{id} {
       allow read: if canReadIfActive();
-      allow create: if true; // Let viewers and background routines log audits
+      allow create: if canReadIfActive() && isValidId(id) && isValidAuditLog(incoming());
       allow update, delete: if false;
     }
 
     // Reports: Generated analysis storage
     match /reports/{reportId} {
       allow read: if canReadIfActive();
-      allow create: if true;
+      allow create: if canReadIfActive() && isValidId(reportId) && isValidReport(incoming());
       allow update, delete: if isAdmin();
     }
 
@@ -445,8 +445,8 @@ service cloud.firestore {
     // Anomaly Reports
     match /anomalyReports/{id} {
       allow read: if canReadIfActive();
-      allow create: if true; // Match active user/daemon triggers
-      allow update: if true;
+      allow create: if canReadIfActive() && isValidId(id) && isValidAnomalyReport(incoming());
+      allow update: if canReadIfActive() && isValidId(id) && isValidAnomalyReport(incoming());
       allow delete: if isAdmin();
     }
 
@@ -461,8 +461,8 @@ service cloud.firestore {
     // Notifications
     match /notifications/{id} {
       allow read: if canReadIfActive();
-      allow create: if true;
-      allow update: if true;
+      allow create: if canReadIfActive() && isValidId(id) && isValidNotification(incoming());
+      allow update: if canReadIfActive() && isValidId(id);
       allow delete: if isAdmin() && isValidId(id);
     }
   }
