@@ -66,24 +66,52 @@ export function FinancialDashboard() {
 
   return (
     <div className="space-y-6">
-       <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-black uppercase tracking-tighter flex items-center gap-3">
-            <div className="p-2 bg-emerald-100 rounded-xl">
-              <Landmark className="w-6 h-6 text-emerald-600" />
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone luxueuse */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <Landmark className="w-10 h-10 stroke-[2.2]" />
             </div>
-            <span className="luminous-gold-white-text">Performance Financière</span>
-          </h2>
-          <p className="text-slate-500 font-medium text-sm mt-1">
-            Rapport détaillé de la valorisation des stocks et flux monétaires.
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-           <button className="btn bg-white border border-slate-200 text-slate-700 px-4 h-10 rounded-xl font-bold uppercase text-[10px] tracking-widest flex items-center gap-2">
+          </div>
+
+          {/* Section centrale : Titre géant et sous-titre */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#b8860b]">
+                Valorisation Actifs &amp; Comptabilité analytique
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                Performance Financière
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Rapport détaillé de la valorisation des stocks, flux monétaires et bilans des sites
+            </p>
+          </div>
+
+          {/* Section droite : Informations / Actions */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">VALORISATION COMPTABLE</span>
+            </div>
+            
+            <button className="btn bg-white border border-slate-200 text-slate-700 px-3 h-8 rounded-lg font-black uppercase text-[9px] tracking-wider flex items-center gap-1.5 cursor-pointer mt-1">
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Export Excel
-           </button>
+            </button>
+          </div>
+          
         </div>
-      </header>
+      </div>
 
       {/* Financial KPIs */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

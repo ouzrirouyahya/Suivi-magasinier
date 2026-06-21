@@ -26,7 +26,8 @@ import {
   Sparkles,
   RefreshCw,
   Eye,
-  Info
+  Info,
+  Star
 } from 'lucide-react';
 import { Article, Mouvement, MouvementItem, SiteCode, EnginMaster, PerfoMaster, AgentMaster, CatalogItem, HydrominesCatalogItem, StockType } from '../types';
 import { cn, formatCurrency, generateId } from '../lib/utils';
@@ -49,7 +50,28 @@ interface MouvementFormProps {
 }
 
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId }: MouvementFormProps) {
-  const { hydrominesCatalog = [], saveHydrominesCatalogItem } = useInventory();
+  const { hydrominesCatalog = [], saveHydrominesCatalogItem, importFromHydrominesCatalog } = useInventory();
+
+  // Automatic selection after import state & effect
+  const [pendingImports, setPendingImports] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (pendingImports.length === 0) return;
+    const nextPending = [...pendingImports];
+    let foundAny = false;
+    for (const ref of pendingImports) {
+      const art = articles.find(a => a.site === site && a.ref.trim().toUpperCase() === ref.trim().toUpperCase());
+      if (art) {
+        addItem(art);
+        const idx = nextPending.indexOf(ref);
+        if (idx > -1) nextPending.splice(idx, 1);
+        foundAny = true;
+      }
+    }
+    if (foundAny) {
+      setPendingImports(nextPending);
+    }
+  }, [articles, pendingImports, site]);
 
   // Hydromines Catalog Selector States
   const [isSelectorModalOpen, setIsSelectorModalOpen] = useState(false);
@@ -270,8 +292,22 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     return sorted.slice(0, 50);
   }, [filteredArticles, categoryFilter]);
 
+  const filteredHydrominesCatalog = useMemo(() => {
+    if (!search || search.length < 2) return [];
+    const searchLower = search.toLowerCase();
+    const existingRefs = new Set(
+      articles.filter(a => a.site === site).map(a => a.ref.trim().toUpperCase())
+    );
+    return hydrominesCatalog.filter(item => 
+      item.status === 'ACTIF' &&
+      !existingRefs.has(item.reference.trim().toUpperCase()) &&
+      (item.designation.toLowerCase().includes(searchLower) || 
+       item.reference.toLowerCase().includes(searchLower))
+    ).slice(0, 10);
+  }, [hydrominesCatalog, search, articles, site]);
+
   const filteredCatalogItems = useMemo(() => {
-    if (type !== 'ENTREE' || !search || site === 'ALL') return [];
+    if (!search || site === 'ALL') return [];
     if (search.length < 2) return [];
 
     const normSearch = search.toLowerCase();
@@ -287,15 +323,16 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
 
     return matches.slice(0, 15);
-  }, [type, search, catalog, categoryFilter, articles, site]);
+  }, [search, catalog, categoryFilter, articles, site]);
 
   // Unified Search Result List for Smooth Arrow Navigation
   const dropdownItems = useMemo(() => {
-    const list: Array<{ type: 'article' | 'catalog'; payload: any }> = [];
+    const list: Array<{ type: 'article' | 'hydromines' | 'catalog'; payload: any }> = [];
     sortedArticles.forEach(a => list.push({ type: 'article', payload: a }));
+    filteredHydrominesCatalog.forEach(h => list.push({ type: 'hydromines', payload: h }));
     filteredCatalogItems.forEach(c => list.push({ type: 'catalog', payload: c }));
     return list;
-  }, [sortedArticles, filteredCatalogItems]);
+  }, [sortedArticles, filteredHydrominesCatalog, filteredCatalogItems]);
 
   // Keyboard navigation effects
   useEffect(() => {
@@ -326,6 +363,27 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
   }, [lastAddedLineId]);
 
+  const handleImportFromHydromines = async (item: HydrominesCatalogItem) => {
+    if (!importFromHydrominesCatalog || !site || site === 'ALL') return;
+    try {
+      setPendingImports(prev => [...prev, item.reference]);
+      const result = await importFromHydrominesCatalog(site, [item]);
+      if (result.imported > 0) {
+        toast.success(`"${item.designation}" ajouté au stock de ${site}`);
+        setSearch('');
+        setShowResults(false);
+      } else if (result.skipped > 0) {
+        toast.warning(`"${item.designation}" existe déjà dans le stock de ${site}`);
+        setPendingImports(prev => prev.filter(r => r !== item.reference));
+        const exLog = articles.find(a => a.site === site && a.ref.trim().toUpperCase() === item.reference.trim().toUpperCase());
+        if (exLog) addItem(exLog);
+      }
+    } catch (e: any) {
+      toast.error(`Erreur lors de l'import : ${e.message || e}`);
+      setPendingImports(prev => prev.filter(r => r !== item.reference));
+    }
+  };
+
   const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'ArrowDown') {
       e.preventDefault();
@@ -339,6 +397,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
         const selected = dropdownItems[focusedIndex];
         if (selected.type === 'article') {
           addItem(selected.payload);
+        } else if (selected.type === 'hydromines') {
+          handleImportFromHydromines(selected.payload);
         } else if (selected.type === 'catalog') {
           addCatalogItem(selected.payload);
         }
@@ -1195,7 +1255,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               onKeyDown={handleSearchKeyDown}
             />
             {showResults && search && (
-              <div ref={dropdownRef} className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[60] max-h-96 overflow-y-auto p-4 space-y-2 animate-in slide-in-from-top-2 duration-300">
+              <div ref={dropdownRef} className="absolute top-full left-0 right-0 mt-3 bg-white border border-slate-100 rounded-2xl shadow-2xl z-[60] max-h-96 overflow-y-auto p-4 space-y-4 animate-in slide-in-from-top-2 duration-300">
                 
                 {/* Keyboard Navigation Assist Helper */}
                 <div className="flex items-center justify-between px-2 pb-2 mb-1 border-b border-slate-100 text-[10px] text-slate-400 font-bold uppercase tracking-wider select-none">
@@ -1205,6 +1265,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   </span>
                 </div>
 
+                {/* Groupe 1: Articles enregistrés à ce site (Stock existant, local) */}
                 {sortedArticles.length > 0 && (
                   <div className="space-y-1">
                     <p className="text-[10px] font-black text-sky-600 uppercase tracking-widest px-2 mb-2">Articles enregistrés à ce site</p>
@@ -1239,55 +1300,95 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   </div>
                 )}
                 
-                {/* If type is ENTREE, we search local stock first. If not found or if the user wants to buy another SKU, display helpful panel */}
-                {type === 'ENTREE' && (
-                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2 mt-1">
-                    {sortedArticles.length === 0 && (
-                      <div className="bg-amber-50/60 border border-amber-100 p-6 rounded-2xl text-center space-y-4">
-                        <div className="flex flex-col items-center gap-2">
-                          <AlertCircle className="w-8 h-8 text-amber-500 animate-pulse" />
+                {/* Groupe 2: Catalogue Hydromines (pièce de référence officielle) */}
+                {filteredHydrominesCatalog.length > 0 && (
+                  <div className="space-y-1 pt-2 border-t border-slate-100 mt-2">
+                    <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest px-2 mb-2 flex items-center gap-1">
+                      <Star className="w-3 h-3 fill-emerald-500 text-emerald-500" />
+                      Catalogue Hydromines — Référence officielle
+                    </p>
+                    {filteredHydrominesCatalog.map((item, idx) => {
+                      const absoluteIndex = sortedArticles.length + idx;
+                      const isFocused = absoluteIndex === focusedIndex;
+                      return (
+                        <button 
+                          key={item.id} 
+                          type="button" 
+                          onClick={() => handleImportFromHydromines(item)}
+                          className={cn(
+                            "w-full text-left p-4 rounded-xl border transition-all group/item flex items-center justify-between",
+                            isFocused 
+                              ? "bg-emerald-50 text-emerald-950 border-emerald-300 shadow-sm"
+                              : "border-transparent hover:bg-emerald-50/40"
+                          )}
+                        >
                           <div>
-                            <p className="text-xs font-black text-amber-950 uppercase">Référence absente du stock physique.</p>
-                            <p className="text-[10px] text-amber-800 font-bold uppercase mt-0.5">Cet article n'a pas encore été approvisionné sur ce chantier.</p>
+                            <p className="font-black text-base text-slate-900 group-hover/item:text-emerald-900 transition-colors uppercase tracking-tight">
+                              {item.designation}
+                            </p>
+                            <p className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest mt-0.5">
+                              {item.reference}
+                            </p>
                           </div>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setHmSearchTerm(search);
-                            setIsSelectorModalOpen(true);
-                            setSelectorTab('hm_select');
-                          }}
-                          className="mx-auto flex items-center gap-2 px-5 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-sky-600/10 active:scale-95 cursor-pointer font-black"
-                        >
-                          ⭐ Ajouter depuis le Catalogue Hydromines
+                          <span className="text-[10px] font-black text-emerald-600 bg-white border border-emerald-200 px-3 py-1.5 rounded-lg group-hover/item:bg-emerald-600 group-hover/item:text-white transition-all uppercase flex-shrink-0">
+                            + Ajouter au stock
+                          </span>
                         </button>
-                      </div>
-                    )}
-                    {sortedArticles.length > 0 && (
-                      <div className="flex justify-center pt-2">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setHmSearchTerm(search);
-                            setIsSelectorModalOpen(true);
-                            setSelectorTab('hm_select');
-                          }}
-                          className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-sky-100 text-slate-705 hover:text-sky-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
-                        >
-                          ⭐ Vous ne trouvez pas la référence ? Rechercher dans le Catalogue Hydromines
-                        </button>
-                      </div>
-                    )}
+                      );
+                    })}
                   </div>
                 )}
 
-                {/* Keep general catalog list as a fallback underneath local articles */}
-                {type === 'ENTREE' && filteredCatalogItems.length > 0 && sortedArticles.length > 0 && (
+                {/* Helper buttons when local stock is empty */}
+                {sortedArticles.length === 0 && (
+                  <div className="pt-2 border-t border-slate-100 flex flex-col gap-2 mt-1">
+                    <div className="bg-amber-50/60 border border-amber-100 p-6 rounded-2xl text-center space-y-4">
+                      <div className="flex flex-col items-center gap-2">
+                        <AlertCircle className="w-8 h-8 text-amber-500 animate-pulse" />
+                        <div>
+                          <p className="text-xs font-black text-amber-950 uppercase">Référence absente du stock physique.</p>
+                          <p className="text-[10px] text-amber-800 font-bold uppercase mt-0.5">Cet article n'a pas encore été approvisionné sur ce chantier.</p>
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setHmSearchTerm(search);
+                          setIsSelectorModalOpen(true);
+                          setSelectorTab('hm_select');
+                        }}
+                        className="mx-auto flex items-center gap-2 px-5 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition-all shadow-md shadow-sky-600/10 active:scale-95 cursor-pointer font-black"
+                      >
+                        ⭐ Consulter le Catalogue Technique Hydromines
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {sortedArticles.length > 0 && filteredHydrominesCatalog.length === 0 && (
+                  <div className="flex justify-center pt-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setHmSearchTerm(search);
+                        setIsSelectorModalOpen(true);
+                        setSelectorTab('hm_select');
+                      }}
+                      className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-sky-100 text-slate-705 hover:text-sky-800 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all cursor-pointer"
+                    >
+                      ⭐ Rechercher plus amplement dans le catalogue Hydromines
+                    </button>
+                  </div>
+                )}
+
+                {/* Groupe 3: Catalogue Général (Bibliothèque technique complète) */}
+                {filteredCatalogItems.length > 0 && (
                   <div className="space-y-1 pt-2 border-t border-slate-100 mt-2">
-                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 mb-2">Catalogue Général (Prêt pour Importation)</p>
+                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 mb-2">
+                      Bibliothèque Technique complète — Si absent du Catalogue Hydromines
+                    </p>
                     {filteredCatalogItems.map((item, idx) => {
-                      const absoluteIndex = sortedArticles.length + idx;
+                      const absoluteIndex = sortedArticles.length + filteredHydrominesCatalog.length + idx;
                       const isFocused = absoluteIndex === focusedIndex;
                       return (
                         <button 
@@ -1321,7 +1422,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   </div>
                 )}
 
-                {sortedArticles.length === 0 && (type !== 'ENTREE' || !search) && (
+                {sortedArticles.length === 0 && filteredHydrominesCatalog.length === 0 && filteredCatalogItems.length === 0 && (
                   <div className="p-6 text-center text-slate-400 font-bold uppercase text-xs tracking-wider">
                     Aucun article trouvé pour "{search}"
                   </div>

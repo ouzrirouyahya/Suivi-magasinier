@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw, Filter, TrendingDown, TrendingUp, CheckCircle2, Activity, ShieldAlert, Download, FileSpreadsheet, Clock, Eye } from 'lucide-react';
+import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw, Filter, TrendingDown, TrendingUp, CheckCircle2, Activity, ShieldAlert, Download, FileSpreadsheet, Clock, Eye, Info } from 'lucide-react';
 import { Article, StockType, SiteCode, CatalogItem, HydrominesCatalogItem } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { MASTER_CATALOG } from '../catalogData';
@@ -901,49 +901,83 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
         </div>
       )}
 
-      <header className="flex flex-col md:flex-row items-center justify-between gap-4 pb-4 border-b border-slate-100">
-        <div>
-          <h2 className="text-3xl font-black tracking-tight uppercase leading-none">
-            <span className="luminous-gold-white-text">Articles &amp; Références Stock</span>
-          </h2>
-          <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1 opacity-70">Gestion du référentiel et des pièces de rechange configurées sur le site : {site}</p>
-        </div>
-        {!isReadOnly && (
-          <div className="flex gap-2 flex-wrap justify-end">
-            <button 
-              onClick={() => {
-                changeCatalogFilter('ALL');
-                setIsCatalogOpen(true);
-              }} 
-              className="btn bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm h-10 px-4 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 cursor-pointer"
-            >
-              <BookOpen className="w-4 h-4 text-indigo-200 group-hover:scale-110 transition-transform" /> 
-              <span>Rechercher dans le Catalogue National</span>
-            </button>
-
-            {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && (
-              <button 
-                onClick={() => setIsBulkImportModalOpen(true)}
-                disabled={isBulkImporting}
-                className="btn bg-sky-50 text-sky-700 border border-sky-100 hover:border-sky-500 hover:bg-sky-100 shadow-sm h-10 px-3 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 disabled:opacity-50 select-none cursor-pointer"
-                title="Générer collectivement les fiches d'articles pour ce site avec filtres intelligents"
-              >
-                {isBulkImporting ? (
-                  <RefreshCcw className="w-3.5 h-3.5 animate-spin text-sky-600" />
-                ) : (
-                  <Upload className="w-3.5 h-3.5 text-sky-500 group-hover:scale-110 transition-transform" />
-                )}
-                <span>Générer d'après le Master</span>
-              </button>
-            )}
-
-            <button onClick={handleCreate} className="btn bg-slate-950 hover:bg-slate-800 text-white shadow-sm h-10 px-4 rounded-xl transition-all active:scale-95 group font-black uppercase text-[10px] tracking-widest flex items-center gap-2 cursor-pointer">
-              <Plus className="w-4 h-4 group-hover:rotate-90 transition-transform duration-500" /> 
-              <span>Création Manuelle</span>
-            </button>
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone luxueuse */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <Layers className="w-10 h-10 stroke-[2.2]" />
+            </div>
           </div>
-        )}
-      </header>
+
+          {/* Section centrale : Titre géant et sous-titre */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#b8860b]">
+                Référentiel &amp; Nomenclature Technique
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                Bibliothèque Technique
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Source brute des catalogues constructeurs (ST2G, ST2D, T23) – À consulter uniquement
+            </p>
+          </div>
+
+          {/* Section droite : Informations / Chantier & Actions principales */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">SMI NOMENCLATURE</span>
+            </div>
+            <div className="px-3.5 py-1.5 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-lg text-xs font-black text-[#ffd700] shadow-md uppercase tracking-widest select-none leading-none mb-1">
+              {site === 'ALL' ? 'TOUS LES SITES' : site}
+            </div>
+
+            {!isReadOnly && (
+              <div className="flex gap-1.5 flex-wrap justify-center lg:justify-end">
+                <button 
+                  onClick={() => {
+                    changeCatalogFilter('ALL');
+                    setIsCatalogOpen(true);
+                  }} 
+                  className="btn bg-indigo-50 border border-indigo-200 text-indigo-700 hover:bg-indigo-100 shadow-sm px-2.5 h-7 rounded-lg transition-all active:scale-95 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                >
+                  <BookOpen className="w-3.5 h-3.5" /> 
+                  <span>Catalogue</span>
+                </button>
+
+                <button 
+                  onClick={handleCreate} 
+                  className="btn bg-slate-950 hover:bg-slate-900 text-white shadow-sm px-2.5 h-7 rounded-lg transition-all active:scale-95 text-[9px] font-black uppercase tracking-wider flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus className="w-3.5 h-3.5" /> 
+                  <span>Créer</span>
+                </button>
+              </div>
+            )}
+          </div>
+          
+        </div>
+      </div>
+
+      {/* BANDEAU D'INFORMATION FLUX OBLIGATOIRE */}
+      <div className="flex items-center gap-3 px-6 py-4 bg-sky-50 border border-sky-200 rounded-2xl mb-4">
+        <Info className="w-5 h-5 text-sky-600 shrink-0" />
+        <p className="text-xs text-sky-800 font-bold leading-normal">
+          <span className="uppercase tracking-wider mr-1">Règle de Gestion :</span>
+          Cette page "Bibliothèque Technique" est la source brute des catalogues constructeurs (ST2G, ST2D, T23). L'import direct au stock physique est désactivé. Veuillez d'abord ajouter la pièce au Catalogue Hydromines pour validation, puis l'importer en stock depuis ce dernier.
+        </p>
+      </div>
 
       {/* SECTION CARTES STATISTIQUES (KPIs VISUELS) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
@@ -1585,26 +1619,18 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                                     ) : (
                                       <button
                                         type="button"
-                                        onClick={() => handleImportFromCatalog(item)}
-                                        className="text-[9px] font-black uppercase bg-indigo-600 text-white px-2 py-1 rounded-lg hover:bg-indigo-700 active:scale-95 transition-all shadow-sm cursor-pointer text-center"
+                                        disabled={inHM}
+                                        onClick={() => handleAddToHydrominesCatalog(item)}
+                                        className={cn(
+                                          "text-[9.5px] font-black uppercase px-2.5 py-1.5 rounded-lg transition-colors border shadow-xs cursor-pointer text-center leading-none",
+                                          inHM 
+                                            ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" 
+                                            : "bg-amber-50 text-amber-750 border-amber-200 hover:bg-amber-100 active:scale-95"
+                                        )}
                                       >
-                                        ➕ Activer
+                                        {inHM ? "⭐ Déjà HM" : "⭐ Ajouter au Catalogue Hydromines"}
                                       </button>
                                     )}
-                                    
-                                    <button
-                                      type="button"
-                                      disabled={inHM}
-                                      onClick={() => handleAddToHydrominesCatalog(item)}
-                                      className={cn(
-                                        "text-[9.5px] font-black uppercase px-2 py-1.5 rounded-lg transition-colors border shadow-xs cursor-pointer text-center leading-none",
-                                        inHM 
-                                          ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" 
-                                          : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100 active:scale-95"
-                                      )}
-                                    >
-                                      {inHM ? "⭐ Déjà HM" : "⭐ Ajouter HM"}
-                                    </button>
                                   </div>
                                 );
                               })()}

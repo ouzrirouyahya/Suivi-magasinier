@@ -76,46 +76,75 @@ export const TraceabilityCenter = memo(({ site, logs, mouvements, articles }: Tr
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-16">
-      {/* Page Header */}
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div className="flex items-center gap-6">
-          <div className="w-16 h-16 rounded-[1.6rem] bg-slate-950 text-white flex items-center justify-center shadow-2xl shadow-slate-900/10">
-            <ShieldCheck className="w-8 h-8" />
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone luxueuse */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <ShieldCheck className="w-10 h-10 stroke-[2.2]" />
+            </div>
           </div>
-          <div>
-            <h2 className="text-4xl font-black tracking-tighter uppercase leading-none">
-              <span className="luminous-gold-white-text">Grand Registre</span>
-            </h2>
-            <p className="text-sm text-slate-500 font-bold uppercase tracking-[0.05em] mt-2 opacity-70">
-              Traçabilité et archivage des bons de mouvement — {site === 'ALL' ? 'Tous les sites (Global)' : site}
+
+          {/* Section centrale : Titre géant et sous-titre */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#b8860b]">
+                Registre Général de Sécurité &amp; Traçabilité
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                Grand Registre
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Traçabilité absolue des entrées, sorties et actions systèmes de la mine
             </p>
           </div>
-        </div>
 
-        {/* Tab Controls */}
-        <div className="flex bg-slate-150 p-1 rounded-xl shrink-0">
-          <button 
-            onClick={() => setActiveTab('FLUX')}
-            className={cn(
-              "px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-              activeTab === 'FLUX' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
-            )}
-          >
-            <History className="w-3.5 h-3.5" />
-            Flux de Stock
-          </button>
-          <button 
-            onClick={() => setActiveTab('AUDIT')}
-            className={cn(
-              "px-6 py-2.5 rounded-lg text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-2",
-              activeTab === 'AUDIT' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
-            )}
-          >
-            <Activity className="w-3.5 h-3.5" />
-            Audit Système
-          </button>
+          {/* Section droite : Filtres de site & Contrôles des onglets */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-3">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">SÉCURITÉ SITE</span>
+            </div>
+            
+            <div className="px-3.5 py-1.5 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-lg text-xs font-black text-[#ffd700] shadow-md uppercase tracking-widest mb-1 select-none">
+              {site === 'ALL' ? 'TOUS LES SITES' : site}
+            </div>
+
+            <div className="flex bg-slate-100 p-1 rounded-xl shrink-0 border border-slate-200/40">
+              <button 
+                onClick={() => setActiveTab('FLUX')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                  activeTab === 'FLUX' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                )}
+              >
+                <History className="w-3 h-3" />
+                Flux
+              </button>
+              <button 
+                onClick={() => setActiveTab('AUDIT')}
+                className={cn(
+                  "px-3.5 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all flex items-center gap-1.5",
+                  activeTab === 'AUDIT' ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400 hover:text-slate-600"
+                )}
+              >
+                <Activity className="w-3 h-3" />
+                Audit
+              </button>
+            </div>
+          </div>
+          
         </div>
-      </header>
+      </div>
 
       {/* KPI Dashboard - High Polish Design requested by user */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6">

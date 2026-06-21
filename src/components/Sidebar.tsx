@@ -83,25 +83,25 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
   // Memoized menuItems with precise dependencies
   const menuItems = React.useMemo(() => {
     const itemTemplates = [
-      { id: 'COCKPIT', label: 'Mon Magasin', icon: LayoutDashboard, activeColor: 'bg-indigo-50 text-indigo-700 font-black border border-indigo-100', section: 'MON_MAGASIN' },
+      { id: 'COCKPIT', label: 'Mon Magasin', icon: LayoutDashboard, section: 'MON_MAGASIN' },
       
-      { id: 'BON_ENTREE', label: 'Bons d’Entrée', icon: ArrowDownLeft, activeColor: 'text-emerald-755 bg-emerald-500/10 border border-emerald-500/20 font-black', section: 'BONS_MOUVEMENT' },
-      { id: 'BON_SORTIE', label: 'Bons de Sortie', icon: ArrowUpRight, activeColor: 'text-rose-755 bg-rose-500/10 border border-rose-500/20 font-black', section: 'BONS_MOUVEMENT' },
-      { id: 'TRANSFERS', label: 'Transferts Inter-Sites', icon: Truck, activeColor: 'text-blue-755 bg-blue-500/10 border border-blue-500/20', section: 'BONS_MOUVEMENT' },
-      { id: 'RETURNS', label: 'Retours Chantiers', icon: RotateCcw, activeColor: 'text-teal-755 bg-teal-500/10 border border-teal-500/20', section: 'BONS_MOUVEMENT' },
+      { id: 'BON_ENTREE', label: 'Bons d’Entrée', icon: ArrowDownLeft, section: 'BONS_MOUVEMENT' },
+      { id: 'BON_SORTIE', label: 'Bons de Sortie', icon: ArrowUpRight, section: 'BONS_MOUVEMENT' },
+      { id: 'TRANSFERS', label: 'Transferts Inter-Sites', icon: Truck, section: 'BONS_MOUVEMENT' },
+      { id: 'RETURNS', label: 'Retours Chantiers', icon: RotateCcw, section: 'BONS_MOUVEMENT' },
 
       { id: 'STOCK_ENGINS', label: 'État Général des Stocks', icon: Package, section: 'STOCKS_INVENTAIRE' },
       { id: 'INVENTAIRE', label: 'Inventaire Physique', icon: ClipboardCheck, section: 'STOCKS_INVENTAIRE' },
-      { id: 'RESTOCK_MGMT', label: 'Alertes & Commandes', icon: ShoppingCart, activeColor: 'bg-amber-500/10 text-amber-750 hover:bg-amber-500/15 border border-amber-500/20', badge: (criticalCount + warningCount) || 0, section: 'STOCKS_INVENTAIRE' },
+      { id: 'RESTOCK_MGMT', label: 'Alertes & Commandes', icon: ShoppingCart, badge: (criticalCount + warningCount) || 0, section: 'STOCKS_INVENTAIRE' },
 
-      { id: 'TRACEABILITY', label: 'Grand Registre des Bons', icon: ShieldCheck, activeColor: 'bg-slate-900 text-white font-black', section: 'REGISTRES' },
-      { id: 'GESTION_ARTICLES', label: 'Catalogue des Articles', icon: Settings2, section: 'REGISTRES' },
-      { id: 'CATALOGUE_HYDROMINES', label: 'Catalogue Hydromines ⭐', icon: Database, section: 'REGISTRES', activeColor: 'bg-gradient-to-r from-sky-50 to-rose-50 text-slate-900 font-extrabold border-sky-100 shadow-sm' },
+      { id: 'TRACEABILITY', label: 'Grand Registre des Bons', icon: ShieldCheck, section: 'REGISTRES' },
+      { id: 'GESTION_ARTICLES', label: 'Bibliothèque Technique', icon: Settings2, section: 'REGISTRES' },
+      { id: 'CATALOGUE_HYDROMINES', label: 'Catalogue Hydromines ⭐', icon: Database, section: 'REGISTRES' },
 
-      { id: 'ANALYSE_EQUIPEMENTS', label: 'Rapports & Analyses 📊', icon: Activity, activeColor: 'text-indigo-755 bg-indigo-500/10 border border-indigo-500/20 font-extrabold', section: 'ADMINISTRATION' },
+      { id: 'ANALYSE_EQUIPEMENTS', label: 'Rapports & Analyses 📊', icon: Activity, section: 'ADMINISTRATION' },
       { id: 'USER_MGMT', label: 'Paramètres système', icon: Users, section: 'ADMINISTRATION' },
 
-      { id: 'FINANCE', label: 'Valeur du Stock Mère', icon: Landmark, activeColor: 'bg-amber-500/5 text-amber-700 shadow-sm border border-amber-500/10 font-bold', section: 'DIRECTION' }
+      { id: 'FINANCE', label: 'Valeur du Stock Mère', icon: Landmark, section: 'DIRECTION' }
     ];
 
     const sectionHeaders: Record<string, { label: string; id: string; isSeparator: boolean }> = {
@@ -173,31 +173,31 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
       {/* Visual Effect exclusively for the top of the sidebar */}
-      <div className="absolute top-0 left-0 right-0 h-40 z-0 pointer-events-none overflow-hidden border-b border-sky-50 shadow-inner">
-        <div className="absolute -top-12 -left-12 w-32 h-32 bg-sky-100/40 rounded-full blur-2xl" />
-        <div className="absolute -top-8 -right-8 w-24 h-24 bg-[#FF5252]/10 rounded-full blur-2xl" />
-        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/20 to-transparent" />
+      <div className="absolute top-0 left-0 right-0 h-40 z-0 pointer-events-none overflow-hidden border-b border-amber-50/50 shadow-inner">
+        <div className="absolute -top-12 -left-12 w-32 h-32 bg-amber-100/15 rounded-full blur-2xl" />
+        <div className="absolute -top-8 -right-8 w-24 h-24 bg-amber-500/5 rounded-full blur-2xl" />
+        <div className="absolute inset-0 bg-gradient-to-t from-white via-white/10 to-transparent" />
       </div>
 
-      <div className="p-4 pb-2 relative z-10 flex items-center gap-3">
+      <div className="p-4 pb-2 relative z-10 flex flex-col items-center text-center gap-2">
         <img 
           src={hydrominesLogo} 
           alt="Hydromines" 
-          className="w-10 h-10 object-contain drop-shadow"
+          className="w-14 h-14 object-contain drop-shadow"
           referrerPolicy="no-referrer"
         />
-        <div className="flex flex-col">
-          <h1 className="text-lg font-black tracking-tighter flex items-center gap-0.5 leading-none">
+        <div className="flex flex-col items-center">
+          <h1 className="text-xl font-black tracking-tighter flex items-center gap-0.5 leading-none">
             <span className="logo-hydro text-sky-500">HYDRO</span>
             <span className="logo-mines text-[#FF5252]">MINES</span>
           </h1>
-          <span className="text-[9px] text-slate-400 font-bold uppercase tracking-[0.05em] mt-1 leading-none">Suivi magasinier</span>
+          <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.07em] mt-1.5 leading-none">Suivi magasinier</span>
         </div>
       </div>
 
       <div className="px-4 mb-4 relative z-10">
         <div className="bg-slate-50/50 rounded-xl p-2 border border-slate-100 flex items-center gap-3 relative group">
-          <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center text-sky-500">
+          <div className="w-8 h-8 rounded-lg bg-white shadow-sm border border-slate-100 flex items-center justify-center text-amber-500">
             <MapPin className="w-4 h-4" />
           </div>
           <div className="flex-1">
@@ -224,21 +224,10 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
       <nav className="flex-1 px-3 pb-8 flex flex-col gap-0.5 relative z-10">
         {menuItems.map((item) => {
           if (item.isSeparator) {
-            const isOperational = item.id === 'SEP_OPERATIONAL' || item.id === 'SEP_MON_MAGASIN';
-            const isIntelligence = item.id === 'SEP_INTELLIGENCE';
-            const isLogistics = item.id === 'SEP_LOGISTICS' || item.id === 'SEP_BONS_MOUVEMENT' || item.id === 'SEP_STOCKS_INVENTAIRE';
-            const isGovernance = item.id === 'SEP_GOVERNANCE' || item.id === 'SEP_REGISTRES' || item.id === 'SEP_ADMINISTRATION' || item.id === 'SEP_DIRECTION';
-            
             return (
               <div 
                 key={item.id} 
-                className={cn(
-                  "px-3 pt-5 pb-1.5 text-[11px] font-extrabold uppercase tracking-[0.07em] flex items-center gap-2 mt-4 first:mt-0 transition-all",
-                  isOperational && "text-sky-600 border-l-2 border-sky-400 pl-2 bg-sky-50/20 py-0.5 rounded-r",
-                  isIntelligence && "text-indigo-650 border-l-2 border-indigo-400 pl-2 bg-indigo-50/30 py-1 rounded-r shadow-sm",
-                  isLogistics && "text-slate-800 border-l-2 border-neutral-400 pl-2 bg-neutral-50 py-0.5 rounded-r",
-                  isGovernance && "text-rose-600 border-l-2 border-rose-450 pl-2 bg-rose-50/10 py-0.5 rounded-r"
-                )}
+                className="px-3 pt-5 pb-1.5 text-[11px] font-black uppercase tracking-[0.07em] flex items-center gap-2 mt-4 first:mt-0 transition-all text-amber-700/90 border-l-2 border-amber-500 pl-2 bg-amber-50/5 py-0.5 rounded-r"
               >
                 {item.label}
               </div>
@@ -249,9 +238,9 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
             return (
               <div 
                 key={item.id} 
-                className="px-3 pt-3.5 pb-1 text-[9px] font-black text-slate-400/90 uppercase tracking-widest flex items-center gap-1.5 mt-2 transition-all"
+                className="px-3 pt-3.5 pb-1 text-[9px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5 mt-2 transition-all"
               >
-                <span className={cn("w-1.5 h-1.5 rounded-full inline-block", item.dotColor || "bg-indigo-500")} />
+                <span className={cn("w-1.5 h-1.5 rounded-full inline-block", item.dotColor || "bg-amber-500")} />
                 {item.label}
               </div>
             );
@@ -259,7 +248,6 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
           
           const Icon = item.icon!;
           const isActive = currentPage === item.id;
-          const isFieldWorkspace = item.id === 'FIELD_WORKSPACE';
           
           return (
             <button
@@ -267,23 +255,15 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
                onClick={() => handlePageSelect(item.id as Page)}
                className={cn(
                  "group flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-bold transition-all w-full text-left relative",
-                 isFieldWorkspace
-                   ? (isActive 
-                       ? "bg-amber-400 text-slate-950 shadow-md ring-2 ring-amber-500/30 font-black border border-amber-550"
-                       : "text-slate-750 bg-amber-500/5 hover:text-slate-950 hover:bg-amber-500/10 border border-dashed border-amber-400/35"
-                     )
-                   : (isActive 
-                       ? (item.activeColor || "bg-sky-50 text-sky-600 shadow-sm ring-1 ring-sky-100") 
-                       : "text-slate-500 hover:text-sky-500 hover:bg-slate-50/50"
-                     )
+                 isActive 
+                   ? "bg-amber-50/45 text-amber-700 border border-amber-500/10 shadow-sm font-black" 
+                   : "text-slate-500 hover:text-amber-600 hover:bg-amber-50/20"
                )}
              >
               <Icon className={cn(
                 "w-4 h-4 transition-colors",
-                isFieldWorkspace
-                  ? (isActive ? "text-slate-950 stroke-[2.5]" : "text-amber-600 animate-pulse")
-                  : (isActive ? "" : "text-slate-400 group-hover:text-sky-500")
-               )} />
+                isActive ? "text-amber-600 stroke-[2.2]" : "text-slate-400 group-hover:text-amber-500"
+              )} />
               <span className="flex-1 truncate uppercase tracking-[0.05em]">{item.label}</span>
               {typeof item.badge === 'number' && item.badge > 0 && (
                 <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-lg shadow-rose-200">
@@ -291,7 +271,7 @@ export const Sidebar = React.memo(function Sidebar({ currentPage, setPage, curre
                 </span>
               )}
               {isActive && (
-                <div className="w-1 h-1 bg-sky-500 rounded-full" />
+                <div className="w-1 h-3 bg-amber-500 rounded-full" />
               )}
             </button>
           );

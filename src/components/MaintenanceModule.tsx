@@ -301,31 +301,56 @@ export function MaintenanceModule() {
       <div className="absolute top-0 right-0 w-96 h-96 bg-indigo-500/10 rounded-full blur-[120px] pointer-events-none -mr-32 -mt-32" />
       <div className="absolute bottom-0 left-0 w-96 h-96 bg-emerald-500/5 rounded-full blur-[140px] pointer-events-none -ml-32 -mb-32" />
 
-      {/* Header section with branding */}
-      <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-900">
-        <div>
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-[9px] font-black uppercase tracking-[0.4em] px-2.5 py-0.5 bg-indigo-500 text-indigo-950 rounded flex items-center gap-1.5 shadow-sm shadow-indigo-500/20">
-              <Cpu className="w-3.5 h-3.5 animate-pulse" /> SRE MECHANIC ENGINE
-            </span>
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone luxueuse */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <Wrench className="w-10 h-10 stroke-[2.2]" />
+            </div>
           </div>
-          <h2 className="text-3xl font-black uppercase tracking-tighter flex items-center gap-3 mt-1.5">
-            <span className="luminous-gold-white-text">MÉCANICIEN IA HYDRO</span>
-          </h2>
-          <p className="text-slate-400 font-medium text-xs mt-1 max-w-xl leading-relaxed">
-            Assistant IA expert de décision, d'optimisation de carburant HydroFuel et de diagnostics mécaniques prescriptifs sur la flotte de roulage et perforateurs.
-          </p>
-        </div>
 
-        <div className="flex items-center gap-3 shrink-0">
-          <button 
-            onClick={() => setShowAddLog(true)}
-            className="px-5 h-12 rounded-xl bg-slate-900 border border-slate-800 hover:border-indigo-500 hover:bg-slate-800 text-slate-200 text-xs font-black uppercase tracking-wider flex items-center gap-2.5 transition-all shadow-md active:scale-95 text-center"
-          >
-            <Plus className="w-4 h-4 text-indigo-400" /> Enregistrer Travaux
-          </button>
+          {/* Section centrale : Titre géant et sous-titre */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-800">
+                SRE Mechanised Engine Diagnostic Support
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                IA Mécanicien Hydro
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Analyse mécanique, diagnostics prescriptifs et suivi d'optimisation fuel de la flotte
+            </p>
+          </div>
+
+          {/* Section droite : Informations / Actions */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">SMI MAINTENANCE</span>
+            </div>
+            
+            <button 
+              onClick={() => setShowAddLog(true)}
+              className="btn bg-slate-950 hover:bg-slate-900 text-white shadow-sm px-3 h-8 rounded-lg transition-all active:scale-95 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-pointer mt-1"
+            >
+              <Plus className="w-3.5 h-3.5 text-amber-500" />
+              <span>Saisir Travaux</span>
+            </button>
+          </div>
+          
         </div>
-      </header>
+      </div>
 
       {/* Page Tabs */}
       <div className="flex border-b border-slate-900 overflow-x-auto my-6 gap-2">

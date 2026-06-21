@@ -7,7 +7,7 @@ import {
   ChevronDown, ChevronUp
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
-import { HydrominesCatalogItem, CatalogItem, Article } from '../types';
+import { HydrominesCatalogItem, CatalogItem, Article, SiteCode } from '../types';
 import { MASTER_CATALOG } from '../catalogData';
 import { generateId, formatCurrency, cn } from '../lib/utils';
 import { toast } from 'sonner';
@@ -16,13 +16,27 @@ export function HydrominesCatalog() {
   const { 
     hydrominesCatalog = [], 
     saveHydrominesCatalogItem,
+    importFromHydrominesCatalog,
     currentUser,
     articles = [],
-    mouvements = []
+    mouvements = [],
+    currentSite
   } = useInventory();
 
   // Tab switcher state for cockpit/pilotage dashboard vs registry list
   const [activeTab, setActiveTab2] = useState<'dashboard' | 'registry'>('dashboard');
+
+  // Multi-selection and import to Stock states
+  const [selectedItems, setSelectedItems] = useState<HydrominesCatalogItem[]>([]);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importTargetSite, setImportTargetSite] = useState<SiteCode>('SMI');
+  const [isImporting, setIsImporting] = useState(false);
+
+  // Reset selected items on tab or filters change
+  const handleTabChange = (tab: 'dashboard' | 'registry') => {
+    setActiveTab2(tab);
+    setSelectedItems([]);
+  };
 
   // Search & Filters state
   const [searchTerm, setSearchTerm] = useState('');
@@ -413,6 +427,62 @@ export function HydrominesCatalog() {
     });
   }, [hydrominesCatalog, searchTerm, activeFamily, activeStatus, activeCritical]);
 
+  // Multi-selection selection handlers
+  const isAllSelected = useMemo(() => {
+    return filteredItems.length > 0 && filteredItems.every(fItem => selectedItems.some(sItem => sItem.id === fItem.id));
+  }, [filteredItems, selectedItems]);
+
+  const handleSelectAll = () => {
+    if (isAllSelected) {
+      // Unselect only those that are currently visible/filtered
+      setSelectedItems(prev => prev.filter(sItem => !filteredItems.some(fItem => fItem.id === sItem.id)));
+    } else {
+      // Select all visible/filtered items without losing previously selected ones
+      setSelectedItems(prev => {
+        const unique = new Map<string, HydrominesCatalogItem>(prev.map(item => [item.id, item]));
+        filteredItems.forEach(item => unique.set(item.id, item));
+        return Array.from(unique.values());
+      });
+    }
+  };
+
+  const handleToggleSelect = (item: HydrominesCatalogItem) => {
+    setSelectedItems(prev => {
+      const exists = prev.some(x => x.id === item.id);
+      if (exists) {
+        return prev.filter(x => x.id !== item.id);
+      } else {
+        return [...prev, item];
+      }
+    });
+  };
+
+  const handleOpenImportModal = () => {
+    setImportTargetSite(currentSite && currentSite !== 'ALL' ? currentSite : 'SMI');
+    setIsImportModalOpen(true);
+  };
+
+  const handleImportSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (selectedItems.length === 0) {
+      toast.error("Aucun article sélectionné pour l'import d'inventaire.");
+      return;
+    }
+    setIsImporting(true);
+    try {
+      const res = await importFromHydrominesCatalog(importTargetSite, selectedItems);
+      toast.success(
+        `${res.imported} pièce(s) importée(s) vers ${importTargetSite} (${res.skipped} déjà existante(s) ignorée(s))`
+      );
+      setSelectedItems([]);
+      setIsImportModalOpen(false);
+    } catch (err: any) {
+      toast.error(`Erreur lors de l'importation vers le stock : ${err.message || err}`);
+    } finally {
+      setIsImporting(false);
+    }
+  };
+
   // Compute unique categories based on selected tech catalog
   const availableCategories = useMemo(() => {
     const matched = MASTER_CATALOG.filter(it => {
@@ -521,30 +591,58 @@ export function HydrominesCatalog() {
 
   return (
     <div className="space-y-8 font-sans pb-16">
-      {/* Visual Elegant Header mimicking Hydromines Corporate Brand */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white border border-slate-100 rounded-3xl p-8 shadow-[0_10px_35px_rgba(0,0,0,0.02)] border-l-4 border-l-sky-500">
-        <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 animate-pulse" />
-            <span className="text-[10px] font-black tracking-[0.25em] text-slate-400 uppercase">Grand Registre Centralisé</span>
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone luxueuse */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <Database className="w-10 h-10 stroke-[2.2]" />
+            </div>
           </div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 uppercase">
-            <span className="luminous-gold-white-text">Catalogue hydro-mines ⭐</span>
-          </h1>
-          <p className="text-sm font-medium text-slate-500 mt-1 max-w-xl">
-            Répertoire d'autorité unifié pour les pièces d'engins souterrains, d'EPI et de consommables miniers.
-          </p>
+
+          {/* Section centrale : Titre géant et sous-titre */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#b8860b]">
+                Répertoire Centralisé &amp; Base d'Autorité
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                Catalogue hydro-mines ⭐
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Répertoire National d'autorité unifié pour les pièces d'engins souterrains et consommables miniers
+            </p>
+          </div>
+
+          {/* Section droite : Informations / Actions */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">SMI CATALOGUE MASTER</span>
+            </div>
+            
+            {isAdminOrMagasinier && (
+              <button
+                type="button"
+                onClick={handleOpenCreateModal}
+                className="btn bg-slate-950 hover:bg-slate-900 text-white shadow-sm px-3 h-8 rounded-lg transition-all active:scale-95 text-[9px] font-black uppercase tracking-widest flex items-center gap-1.5 cursor-pointer mt-1"
+              >
+                <Plus className="w-3.5 h-3.5 text-amber-500" />
+                <span>Nouveau</span>
+              </button>
+            )}
+          </div>
+          
         </div>
-        {isAdminOrMagasinier && (
-          <button
-            type="button"
-            onClick={handleOpenCreateModal}
-            className="flex items-center gap-2 px-6 py-3.5 bg-gradient-to-r from-slate-950 to-slate-900 hover:from-slate-900 hover:to-slate-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl shadow-slate-950/10 cursor-pointer transition-all hover:-translate-y-0.5 active:scale-95"
-          >
-            <Plus className="w-4 h-4 text-sky-400" />
-            Ajouter une référence
-          </button>
-        )}
       </div>
 
       {/* 7 KPI High-density Grid Cards representing the Pilotage Indicators */}
@@ -631,7 +729,7 @@ export function HydrominesCatalog() {
       <div className="flex bg-slate-100/80 p-1 rounded-2xl max-w-sm border border-slate-200/50">
         <button
           type="button"
-          onClick={() => setActiveTab2('dashboard')}
+          onClick={() => handleTabChange('dashboard')}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
             activeTab === 'dashboard'
@@ -644,7 +742,7 @@ export function HydrominesCatalog() {
         </button>
         <button
           type="button"
-          onClick={() => setActiveTab2('registry')}
+          onClick={() => handleTabChange('registry')}
           className={cn(
             "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl text-[10px] font-black uppercase tracking-wider transition-all cursor-pointer",
             activeTab === 'registry'
@@ -721,7 +819,7 @@ export function HydrominesCatalog() {
                         </div>
                       ))}
                       {enhancedStats.sansPrix.length > 5 && (
-                        <p className="text-[9px] font-black text-sky-600 text-right mt-1 cursor-pointer" onClick={() => { setActiveTab2('registry'); setSearchTerm(enhancedStats.sansPrix[0].reference); }}>
+                        <p className="text-[9px] font-black text-sky-600 text-right mt-1 cursor-pointer" onClick={() => { handleTabChange('registry'); setSearchTerm(enhancedStats.sansPrix[0].reference); }}>
                           + {enhancedStats.sansPrix.length - 5} autres... Rechercher
                         </p>
                       )}
@@ -771,7 +869,7 @@ export function HydrominesCatalog() {
                         </div>
                       ))}
                       {enhancedStats.sansCat.length > 5 && (
-                        <p className="text-[9px] font-black text-sky-600 text-right mt-1 cursor-pointer" onClick={() => { setActiveTab2('registry'); setSearchTerm(enhancedStats.sansCat[0].reference); }}>
+                        <p className="text-[9px] font-black text-sky-600 text-right mt-1 cursor-pointer" onClick={() => { handleTabChange('registry'); setSearchTerm(enhancedStats.sansCat[0].reference); }}>
                           + {enhancedStats.sansCat.length - 5} autres...
                         </p>
                       )}
@@ -958,7 +1056,7 @@ export function HydrominesCatalog() {
                       ))
                     )}
                     {enhancedStats.dormant.length > 5 && (
-                      <p className="text-[9px] font-black text-sky-600 text-center cursor-pointer mt-2 leading-none" onClick={() => { setActiveTab2('registry'); }}>
+                      <p className="text-[9px] font-black text-sky-600 text-center cursor-pointer mt-2 leading-none" onClick={() => { handleTabChange('registry'); }}>
                         + Voir les {enhancedStats.dormant.length - 5} autres références au registre
                       </p>
                     )}
@@ -1112,12 +1210,50 @@ export function HydrominesCatalog() {
             </div>
           </div>
 
+          {/* Bulk Actions Header */}
+          {selectedItems.length > 0 && isAdminOrMagasinier && (
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-amber-50/70 border border-amber-200/60 px-6 py-4 rounded-3xl mb-4 animate-fadeIn">
+              <div className="flex items-center gap-2.5">
+                <Database className="w-4.5 h-4.5 text-amber-600 shrink-0" />
+                <span className="text-xs font-bold text-amber-900 uppercase tracking-wide">
+                  {selectedItems.length} pièce{selectedItems.length > 1 ? 's' : ''} sélectionnée{selectedItems.length > 1 ? 's' : ''} pour l'import d'un chantier
+                </span>
+              </div>
+              <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={handleOpenImportModal}
+                  className="w-full sm:w-auto px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white shadow-sm rounded-xl transition-all active:scale-95 text-[10px] font-black uppercase tracking-wider flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <span>Importer vers le Stock</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedItems([])}
+                  className="px-3 py-2 text-[10px] font-bold uppercase tracking-wider text-slate-500 hover:text-slate-800 transition-colors"
+                >
+                  Annuler
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* List Table Grid block */}
           <div className="bg-white border border-slate-100 rounded-3xl shadow-sm overflow-hidden">
             <div className="overflow-x-auto min-w-full">
               <table className="w-full text-left border-collapse select-none">
                 <thead>
                   <tr className="bg-slate-50/50 border-b border-slate-100/80 text-slate-400 font-extrabold uppercase tracking-wider text-[10px]">
+                    {isAdminOrMagasinier && (
+                      <th className="px-4 py-4.5 w-12 text-center">
+                        <input
+                          type="checkbox"
+                          checked={isAllSelected}
+                          onChange={handleSelectAll}
+                          className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                        />
+                      </th>
+                    )}
                     <th className="px-6 py-4.5 w-12 text-center">N°</th>
                     <th className="px-6 py-4.5 w-36">Référence</th>
                     <th className="px-6 py-4.5">Description</th>
@@ -1131,16 +1267,31 @@ export function HydrominesCatalog() {
                 <tbody className="divide-y divide-slate-100/60">
                   {filteredItems.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="px-6 py-20 text-center text-slate-400">
+                      <td colSpan={isAdminOrMagasinier ? 9 : 8} className="px-6 py-20 text-center text-slate-400">
                         <Database className="w-12 h-12 text-slate-200 mx-auto mb-3 opacity-60" />
                         <p className="font-bold text-sm text-slate-850">Aucun article trouvé dans le Catalogue Hydromines</p>
                         <p className="text-xs text-slate-400 mt-1">Utilisez l'ajout depuis le catalogue technique pour enrichir la liste sans erreurs.</p>
                       </td>
                     </tr>
                   ) : (
-                    filteredItems.map((item, idx) => (
-                      <tr key={item.id} className="hover:bg-slate-50/40 transition-colors">
-                        <td className="px-6 py-4 text-slate-350 text-center font-mono text-[10.5px] font-semibold">{idx + 1}</td>
+                    filteredItems.map((item, idx) => {
+                      const isSelected = selectedItems.some(x => x.id === item.id);
+                      return (
+                        <tr key={item.id} className={cn(
+                          "hover:bg-slate-50/40 transition-colors",
+                          isSelected && "bg-amber-50/20 hover:bg-amber-50/30"
+                        )}>
+                          {isAdminOrMagasinier && (
+                            <td className="px-4 py-4 text-center">
+                              <input
+                                type="checkbox"
+                                checked={isSelected}
+                                onChange={() => handleToggleSelect(item)}
+                                className="w-4 h-4 rounded border-slate-300 text-amber-600 focus:ring-amber-500 cursor-pointer"
+                              />
+                            </td>
+                          )}
+                          <td className="px-6 py-4 text-slate-350 text-center font-mono text-[10.5px] font-semibold">{idx + 1}</td>
                         <td className="px-6 py-4 font-mono text-xs font-black text-slate-900 tracking-wide uppercase">
                           {item.reference}
                         </td>
@@ -1221,7 +1372,8 @@ export function HydrominesCatalog() {
                           </td>
                         )}
                       </tr>
-                    ))
+                    );
+                  })
                   )}
                 </tbody>
               </table>
@@ -1235,6 +1387,90 @@ export function HydrominesCatalog() {
           </div>
         </div>
       )}
+
+      {/* Import to Stock Modal */}
+      <AnimatePresence>
+        {isImportModalOpen && (
+          <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 animate-none">
+            {/* Backdrop */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsImportModalOpen(false)}
+              className="absolute inset-0 bg-slate-950/40 backdrop-blur-sm"
+            />
+
+            {/* Modal Box */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl border border-slate-150 overflow-hidden flex flex-col z-[120]"
+            >
+              {/* Box Header */}
+              <div className="px-6 py-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-tight">
+                    Importer vers le Stock
+                  </h3>
+                  <p className="text-[10px] font-semibold text-slate-400 mt-0.5">Sélection du chantier physique de destination</p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsImportModalOpen(false)}
+                  className="p-1.5 hover:bg-slate-150 text-slate-400 hover:text-slate-700 rounded-xl transition-all cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Form */}
+              <form onSubmit={handleImportSubmit}>
+                <div className="p-6 space-y-4">
+                  <div className="bg-amber-50 border border-amber-200/50 rounded-xl p-3 text-xs text-amber-800 font-bold leading-normal">
+                    <p>
+                      Vous vous apprêtez à initialiser librement en stock pour le chantier choisi {selectedItems.length} pièce(s) d'origine certifiée Hydromines.
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-black uppercase text-slate-450 tracking-wider">Chantier Cible (Stock destination)</label>
+                    <select
+                      value={importTargetSite}
+                      onChange={(e) => setImportTargetSite(e.target.value as SiteCode)}
+                      required
+                      className="w-full bg-slate-50 border border-slate-150 rounded-2xl px-4 py-3 text-xs font-bold text-slate-705 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:bg-white transition-all"
+                    >
+                      {['SMI', 'OUMEJRANE', 'KOUDIA', 'BOU-AZZER', 'OUANSIMI'].map(site => (
+                        <option key={site} value={site}>{site}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                {/* Footer Controls */}
+                <div className="px-6 py-4.5 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setIsImportModalOpen(false)}
+                    className="px-4 py-2.5 rounded-xl border border-slate-205 text-[10.5px] font-black uppercase tracking-wider text-slate-500 hover:bg-slate-100 transition-all cursor-pointer"
+                  >
+                    Fermer
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isImporting || selectedItems.length === 0}
+                    className="px-4.5 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-black text-[10.5px] uppercase tracking-wider transition-all disabled:opacity-50 cursor-pointer flex items-center gap-1.5"
+                  >
+                    {isImporting ? "Importation..." : "Lancer l'importation"}
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Create / Edit Modal Dialog */}
       <AnimatePresence>

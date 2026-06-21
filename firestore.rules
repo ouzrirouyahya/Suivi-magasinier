@@ -48,6 +48,52 @@ service cloud.firestore {
       );
     }
 
+    // Renvoie le site assigné de l'utilisateur connecté (ou null)
+    function userAssignedSite() {
+      return exists(/databases/$(database)/documents/accounts/$(request.auth.uid))
+        ? get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.get('assignedSite', null)
+        : null;
+    }
+
+    // Vrai si l'utilisateur est ADMIN/SUPER_ADMIN (accès tous sites) 
+    // OU si le site du document concerné correspond exactement à son 
+    // site assigné
+    function canWriteOnSite(allowedRoles, docSite) {
+      return canWrite(allowedRoles) && (
+        isAdmin() || userAssignedSite() == docSite
+      );
+    }
+
+    // Variante pour les transferts, qui impliquent deux sites 
+    // (source et destination) : le magasinier doit être assigné à 
+    // l'un des deux sites concernés par l'opération
+    function canWriteOnTransfertSites(allowedRoles, sourceSite, targetSite) {
+      return canWrite(allowedRoles) && (
+        isAdmin() || userAssignedSite() == sourceSite || userAssignedSite() == targetSite
+      );
+    }
+
+    // Vrai si l'utilisateur est connecté, actif, ET soit ADMIN/SUPER_ADMIN 
+    // (accès total), soit MAGASINIER/LECTURE_SEULE assigné exactement à docSite
+    function canReadSite(docSite) {
+      return isActive() && (
+        isAdmin() || userAssignedSite() == docSite
+      );
+    }
+
+    // Variante pour les transferts (deux sites concernés)
+    function canReadTransfertSites(sourceSite, targetSite) {
+      return isActive() && (
+        isAdmin() || userAssignedSite() == sourceSite || userAssignedSite() == targetSite
+      );
+    }
+
+    // Pour les collections globales sans notion de site (accessible à 
+    // tout utilisateur actif, peu importe son chantier)
+    function canReadIfActive() {
+      return isActive();
+    }
+
     // System-wide write condition with Maintenance Mode protection
     function canWrite(allowedRoles) {
       return isAnyRole(allowedRoles) && (!isMaintenanceLocked() || isAdmin());
@@ -233,11 +279,11 @@ service cloud.firestore {
 
     // Master Catalog Rules
     match /catalog/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
     match /hydromines_catalog/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidHydrominesCatalog(incoming());
     }
     match /metadata/{id} {
@@ -245,23 +291,26 @@ service cloud.firestore {
       allow write: if isAdmin() && isValidId(id); // System admins bypass canWrite during lockdown
     }
     match /engins/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
     match /perfos/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
     match /agents/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
     }
 
     // Stocks/Articles: Protected from non-magasiniers and arbitrary value-poisoning
     match /articles/{articleId} {
-      allow read: if true;
-      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(articleId) && isValidArticle(incoming());
-      allow update: if canWrite(['ADMIN', 'MAGASINIER', 'MAINTENANCE']) && isValidId(articleId) && isValidArticle(incoming());
+      allow read: if canReadSite(resource.data.site);
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) 
+                    && isValidId(articleId) && isValidArticle(incoming());
+      allow update: if canWriteOnSite(['ADMIN', 'MAGASINIER', 'MAINTENANCE'], existing().site) 
+                    && canWriteOnSite(['ADMIN', 'MAGASINIER', 'MAINTENANCE'], incoming().site)
+                    && isValidId(articleId) && isValidArticle(incoming());
       allow delete: if canWrite(['ADMIN']) && isValidId(articleId);
     }
 
@@ -289,9 +338,10 @@ service cloud.firestore {
 
     // Secure Transferts
     match /transferts/{id} {
-      allow read: if true;
-      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidTransfert(incoming());
-      allow update: if isValidId(id) && canWrite(['ADMIN', 'MAGASINIER']) && (
+      allow read: if canReadTransfertSites(resource.data.sourceSite, resource.data.targetSite);
+      allow create: if canWriteOnTransfertSites(['ADMIN', 'MAGASINIER'], incoming().sourceSite, incoming().targetSite) 
+                    && isValidId(id) && isValidTransfert(incoming());
+      allow update: if isValidId(id) && canWriteOnTransfertSites(['ADMIN', 'MAGASINIER'], existing().sourceSite, existing().targetSite) && (
         isAdmin() || (
           existing().status == 'EN_TRANSIT' &&
           incoming().status == 'RECU' &&
@@ -305,29 +355,30 @@ service cloud.firestore {
 
     // Transactional Movements: Append-only, never modifiable except by ADMIN, never deletable
     match /mouvements/{id} {
-      allow read: if true;
-      allow create: if canWrite(['ADMIN', 'MAGASINIER', 'MAINTENANCE']) && isValidId(id) && isValidMouvement(incoming());
+      allow read: if canReadSite(resource.data.site);
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER', 'MAINTENANCE'], incoming().site) 
+                    && isValidId(id) && isValidMouvement(incoming());
       allow update: if canWrite(['ADMIN']) && isValidId(id) && isValidMouvement(incoming());
       allow delete: if false;
     }
 
     // Audit logs: Strictly append-only. Immutable once recorded.
     match /auditLogs/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow create: if true; // Let viewers and background routines log audits
       allow update, delete: if false;
     }
 
     // Reports: Generated analysis storage
     match /reports/{reportId} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow create: if true;
       allow update, delete: if isAdmin();
     }
 
     // Deletion requests: submitted by magaziniers, approved/rejected by admins
     match /deletionRequests/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDeletionRequest(incoming());
       allow update: if isAdmin() && isValidId(id);
       allow delete: if isAdmin();
@@ -335,40 +386,53 @@ service cloud.firestore {
 
     // Real-time viewer telemetry tracking: guest/viewer users log session details
     match /viewer_sessions/{sessionId} {
-      allow read, create, update, write: if true; // Guest and viewer trackers can write telemetry freely
+      allow read: if canReadIfActive();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
     }
 
     match /viewer_activity/{activityId} {
-      allow read, create, update, write: if true; // Activity tracking can write telemetry freely
+      allow read: if canReadIfActive();
+      allow create, update: if isSignedIn();
+      allow delete: if isAdmin();
     }
 
     // Inventaires
     match /inventaires/{id} {
-      allow read: if true;
-      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidInventaire(incoming());
-      allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidInventaire(incoming());
+      allow read: if canReadSite(resource.data.site);
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) 
+                    && isValidId(id) && isValidInventaire(incoming());
+      allow update: if canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site)
+                    && canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site)
+                    && isValidId(id) && isValidInventaire(incoming());
       allow delete: if isAdmin();
     }
 
     // Distributions
     match /distributions/{id} {
-      allow read: if true;
-      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDistribution(incoming());
-      allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDistribution(incoming());
+      allow read: if canReadSite(resource.data.site);
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) 
+                    && isValidId(id) && isValidDistribution(incoming());
+      allow update: if canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site)
+                    && canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site)
+                    && isValidId(id) && isValidDistribution(incoming());
       allow delete: if isAdmin();
     }
 
     // Purchase Requests
     match /purchaseRequests/{id} {
-      allow read: if true;
-      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidPurchaseRequest(incoming());
-      allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidPurchaseRequest(incoming());
+      allow read: if canReadSite(resource.data.site);
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) 
+                    && isValidId(id) && isValidPurchaseRequest(incoming());
+      allow update: if canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site)
+                    && canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site)
+                    && isValidId(id) && isValidPurchaseRequest(incoming());
       allow delete: if isAdmin();
     }
 
     // Anomaly Reports
     match /anomalyReports/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow create: if true; // Match active user/daemon triggers
       allow update: if true;
       allow delete: if isAdmin();
@@ -376,7 +440,7 @@ service cloud.firestore {
 
     // Maintenance Logs
     match /maintenanceLogs/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidMaintenanceLog(incoming());
       allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidMaintenanceLog(incoming());
       allow delete: if isAdmin();
@@ -384,7 +448,7 @@ service cloud.firestore {
 
     // Notifications
     match /notifications/{id} {
-      allow read: if true;
+      allow read: if canReadIfActive();
       allow create: if true;
       allow update: if true;
       allow delete: if isAdmin() && isValidId(id);

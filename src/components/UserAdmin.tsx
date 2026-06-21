@@ -365,38 +365,70 @@ export const UserAdmin = React.memo(function UserAdmin({
   ));
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <header className="flex flex-col md:flex-row md:items-center justify-between gap-3">
-        <div>
-          <h2 className="text-5xl font-black flex items-center gap-4 tracking-tighter uppercase leading-none">
-            <Users className="w-16 h-16 text-sky-500" />
-            <span className="luminous-gold-white-text">Paramètres système</span>
-          </h2>
-          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-4 opacity-70">Contrôle des accès et bases de données maîtres</p>
-        </div>
-        
-        <div className="flex bg-slate-100 p-1 rounded-xl flex-wrap gap-1">
-          {isAdminUser && (
-            <button 
-              onClick={() => setActiveTab('USERS')}
-              className={cn("px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'USERS' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
-            >Utilisateurs</button>
-          )}
-          <button 
-            onClick={() => setActiveTab('ENGINS')}
-            className={cn("px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'ENGINS' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
-          >Parc Engins</button>
-          <button 
-            onClick={() => setActiveTab('EFFECTIF')}
-            className={cn("px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'EFFECTIF' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
-          >Effectif</button>
-          <button 
-            onClick={() => setActiveTab('PERFOS')}
-            className={cn("px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'PERFOS' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
-          >Perfos</button>
+    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700 pb-16">
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone luxueuse */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <Users className="w-10 h-10 stroke-[2.2]" />
+            </div>
+          </div>
 
+          {/* Section centrale : Titre géant et sous-titre */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#b8860b]">
+                Administration, Accès &amp; Référentiel Parc
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                Paramètres Système
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Contrôle des accès utilisateurs, pilotes d'engins, effectif et perforateurs
+            </p>
+          </div>
+
+          {/* Section droite : Informations & Contrôles des onglets */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">SMI PARAMÈTRES</span>
+            </div>
+            
+            <div className="flex bg-slate-100 p-1 rounded-xl flex-wrap gap-1 border border-slate-200/40 justify-center">
+              {isAdminUser && (
+                <button 
+                  onClick={() => setActiveTab('USERS')}
+                  className={cn("px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'USERS' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+                >Utilisateurs</button>
+              )}
+              <button 
+                onClick={() => setActiveTab('ENGINS')}
+                className={cn("px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'ENGINS' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+              >Parc Engins</button>
+              <button 
+                onClick={() => setActiveTab('EFFECTIF')}
+                className={cn("px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'EFFECTIF' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+              >Effectif</button>
+              <button 
+                onClick={() => setActiveTab('PERFOS')}
+                className={cn("px-2 py-1 rounded-lg text-[9px] font-black uppercase tracking-widest transition-all", activeTab === 'PERFOS' ? "bg-white text-sky-600 shadow-sm" : "text-slate-400 hover:text-slate-600")}
+              >Perfos</button>
+            </div>
+          </div>
+          
         </div>
-      </header>
+      </div>
 
       <div className="card glass p-4">
         {activeTab === 'USERS' && (

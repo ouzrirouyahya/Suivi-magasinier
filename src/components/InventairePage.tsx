@@ -185,28 +185,66 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-24 mission-control-bg p-12 flex-1">
-      <header className="flex items-center justify-between mb-10">
-        <div>
-          <h2 className="text-5xl font-black tracking-tighter uppercase leading-none">
-            <span className="luminous-gold-white-text">Contrôle Inventaire</span>
-          </h2>
-          <p className="text-xl text-slate-500 font-bold uppercase tracking-[0.05em] mt-3 opacity-70">
-            Audit du Stock Réel vs Système d'Information
-          </p>
-        </div>
-        {!activeSession && (
-          <div className="flex flex-wrap gap-6 justify-end items-center">
-            <div className="flex flex-col text-left">
-              <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Nom du compteur</label>
-              <input
-                type="text"
-                value={compteur}
-                onChange={(e) => setCompteur(e.target.value)}
-                placeholder="Prénom et Nom du magasinier"
-                className="input-field h-12 px-4 shadow-sm border border-slate-200 focus:border-sky-500 font-black tracking-tight rounded-xl bg-white w-64 text-sm"
-              />
+      {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
+      <div className="bg-white border-2 border-amber-500/10 rounded-[14px] shadow-sm overflow-hidden no-print">
+        <div className="grid grid-cols-1 lg:grid-cols-12 items-stretch">
+          
+          {/* Section gauche : Icone luxueuse */}
+          <div className="lg:col-span-3 p-6 flex items-center justify-center bg-white">
+            <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-lg relative bg-gradient-to-br from-[#121c26] to-[#04080c] border border-amber-500/30 text-[#ffd700]">
+              <div className="absolute inset-0 rounded-full animate-pulse opacity-13 bg-current scale-110" />
+              <ClipboardCheck className="w-10 h-10 stroke-[2.2]" />
             </div>
-            <div className="flex bg-white p-3 rounded-2xl border border-slate-100 shadow-sm gap-3">
+          </div>
+
+          {/* Section centrale : Titre géant et sous-titre */}
+          <div className="lg:col-span-6 p-6 lg:p-8 flex flex-col justify-center items-center text-center gap-3 bg-white">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-50 border border-amber-200/40">
+              <span className="w-2 h-2 rounded-full animate-pulse bg-[#b8860b]" />
+              <span className="text-[10px] font-black uppercase tracking-widest text-amber-800">
+                Audit &amp; réconciliation des stocks physiques
+              </span>
+            </div>
+            
+            <h1 className="text-3xl lg:text-4xl xl:text-5xl tracking-normal leading-none uppercase font-black">
+              <span className="luminous-gold-white-text">
+                Contrôle Inventaire
+              </span>
+            </h1>
+            
+            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">
+              Contrôle contradictoire et audit exhaustif en temps réel par rapport au système
+            </p>
+          </div>
+
+          {/* Section droite : Informations / Chantier */}
+          <div className="lg:col-span-3 bg-white p-6 flex flex-col justify-center items-center lg:items-end gap-2.5">
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-amber-50/80 border border-amber-200/30 rounded-md shadow-sm">
+              <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
+              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">SMI AUDITEUR</span>
+            </div>
+            <div className="px-3.5 py-1.5 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-lg text-xs font-black text-[#ffd700] shadow-md uppercase tracking-widest select-none leading-none">
+              {currentSite === 'ALL' ? 'TOUS LES SITES' : currentSite}
+            </div>
+          </div>
+          
+        </div>
+      </div>
+
+      {!activeSession && (
+        <div className="bg-white border border-slate-200/60 p-6 rounded-2xl shadow-sm flex flex-col md:flex-row gap-6 justify-between items-center animate-in fade-in duration-300">
+          <div className="flex flex-col text-left">
+            <label className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Nom du compteur</label>
+            <input
+              type="text"
+              value={compteur}
+              onChange={(e) => setCompteur(e.target.value)}
+              placeholder="Prénom et Nom du magasinier"
+              className="input-field h-11 px-4 shadow-sm border border-slate-200 focus:border-sky-500 font-black tracking-tight rounded-xl bg-slate-50 w-64 text-xs outline-none"
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex bg-slate-100 p-1.5 rounded-xl border border-slate-200/50 gap-2">
               {[
                 { id: 'ENGINS', label: 'Engins', icon: Truck },
                 { id: 'PERFORATEURS', label: 'Perforateurs', icon: Drill },
@@ -216,22 +254,22 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                 <button
                   key={t.id}
                   onClick={() => startInventory('TOURNANT', t.id)}
-                  className="px-6 py-3 hover:bg-sky-50 text-sky-700 rounded-[1.25rem] transition-all flex items-center gap-4 group"
+                  className="px-4 py-2 hover:bg-white hover:shadow-sm text-slate-700 rounded-lg transition-all flex items-center gap-2 group cursor-pointer"
                 >
-                  <t.icon className="w-8 h-8 text-sky-400 group-hover:scale-110 transition-transform" />
-                  <span className="text-sm font-black uppercase tracking-widest">{t.label}</span>
+                  <t.icon className="w-4 h-4 text-slate-400 group-hover:scale-110 transition-transform group-hover:text-amber-500" />
+                  <span className="text-[10px] font-black uppercase tracking-wider">{t.label}</span>
                 </button>
               ))}
             </div>
             <button 
               onClick={() => startInventory('ANNUEL')}
-              className="btn btn-primary h-16 px-12 rounded-2xl gap-4 shadow-xl text-lg uppercase tracking-widest font-black"
+              className="btn bg-[#b8860b] hover:bg-amber-700 text-white shadow-md shadow-amber-500/10 h-11 px-6 rounded-xl gap-2 font-black uppercase tracking-widest text-xs cursor-pointer flex items-center"
             >
-              <Archive className="w-7 h-7" /> Annuel
+              <Archive className="w-4 h-4" /> <span>Annuel</span>
             </button>
           </div>
-        )}
-      </header>
+        </div>
+      )}
 
       {activeSession ? (
         <div className="space-y-8">

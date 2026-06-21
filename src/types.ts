@@ -59,6 +59,7 @@ export interface Article {
   notes?: string;
   compatibility?: string;
   criticality?: 'CRITIQUE' | 'HAUTE' | 'MOYENNE' | 'BASSE';
+  hydrominesCatalogRefId?: string; // Référence vers HydrominesCatalogItem.id d'origine
 }
 
 export interface PriceHistoryEntry {

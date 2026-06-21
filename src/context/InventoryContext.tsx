@@ -33,7 +33,8 @@ import {
   DeletionRequest,
   HydrominesCatalogItem,
   PriceHistoryEntry,
-  TransfertStatus
+  TransfertStatus,
+  StockType
 } from '../types';
 import { INITIAL_ARTICLES, INITIAL_MOUVEMENTS, INITIAL_ENGINS, INITIAL_PERFOS, INITIAL_AGENTS } from '../demoData';
 
@@ -366,6 +367,7 @@ type InventoryContextType = {
   deleteArticles: (ids: string[]) => Promise<void>;
   importAllCatalogToArticles: (targetSite: SiteCode, excludeCostly?: boolean | number) => Promise<{ imported: number, skipped: number }>;
   importSpecificCatalogItems: (targetSite: SiteCode, items: CatalogItem[]) => Promise<{ imported: number, skipped: number }>;
+  importFromHydrominesCatalog: (targetSite: SiteCode, items: HydrominesCatalogItem[]) => Promise<{ imported: number, skipped: number }>;
   approveDeletionRequest: (requestId: string) => Promise<void>;
   rejectDeletionRequest: (requestId: string) => Promise<void>;
   deletionRequests: DeletionRequest[];
@@ -3194,6 +3196,107 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       throw new Error(`Erreur lors de l'importation groupée ciblée : ${err.message || err}`);
     }
   }, [logAction]);
+  
+  const importFromHydrominesCatalog = React.useCallback(async (
+    targetSite: SiteCode, 
+    items: HydrominesCatalogItem[]
+  ) => {
+    checkWritePermission();
+    const isViewer = isSimulationMode();
+    
+    if (items.length === 0) {
+      return { imported: 0, skipped: 0 };
+    }
+
+    // Empêcher les doublons : vérifier si un article avec la même 
+    // référence existe déjà sur ce site
+    const existingRefs = new Set(
+      rawArticles
+        .filter(a => a.site === targetSite)
+        .map(a => a.ref.trim().toUpperCase())
+    );
+
+    const itemsToImport = items.filter(
+      item => !existingRefs.has(item.reference.trim().toUpperCase())
+    );
+    const skippedCount = items.length - itemsToImport.length;
+
+    if (itemsToImport.length === 0) {
+      return { imported: 0, skipped: skippedCount };
+    }
+
+    if (isViewer) {
+      const newArticles: Article[] = itemsToImport.map(item => ({
+        id: generateId(),
+        site: targetSite,
+        ref: item.reference,
+        designation: item.designation,
+        type: item.suggestedType as StockType,
+        category: item.functionalCategory,
+        functionalCategory: item.functionalCategory,
+        unit: item.unit || 'Pcs',
+        quantity: 0,
+        minStock: 1,
+        location: '',
+        price: 0,
+        active: true,
+        hydrominesCatalogRefId: item.id
+      }));
+      setRawArticles(prev => [...newArticles, ...prev]);
+      return { imported: newArticles.length, skipped: skippedCount };
+    }
+
+    checkMaintenanceLock();
+    try {
+      const chunkSize = 450;
+      let importedCount = 0;
+
+      for (let i = 0; i < itemsToImport.length; i += chunkSize) {
+        const chunk = itemsToImport.slice(i, i + chunkSize);
+        const batch = writeBatch(db);
+        const chunkArticles: Article[] = [];
+
+        for (const item of chunk) {
+          const artId = generateId();
+          const art: Article = {
+            id: artId,
+            site: targetSite,
+            ref: item.reference,
+            designation: item.designation,
+            type: item.suggestedType as StockType,
+            category: item.functionalCategory,
+            functionalCategory: item.functionalCategory,
+            unit: item.unit || 'Pcs',
+            quantity: 0,
+            minStock: 1,
+            location: '',
+            price: 0,
+            active: true,
+            hydrominesCatalogRefId: item.id
+          };
+          chunkArticles.push(art);
+          batch.set(doc(db, 'articles', artId), cleanObject(art));
+        }
+
+        await batch.commit();
+        importedCount += chunk.length;
+        
+        setRawArticles(prev => {
+          const mergedMap = new Map<string, Article>(prev.map(a => [a.id, a]));
+          chunkArticles.forEach(art => mergedMap.set(art.id, art));
+          return Array.from(mergedMap.values());
+        });
+      }
+
+      await logAction('IMPORT_HYDROMINES_CATALOG', 
+        `${importedCount} article(s) importé(s) depuis le Catalogue Hydromines vers ${targetSite}`, targetSite);
+
+      return { imported: importedCount, skipped: skippedCount };
+    } catch (err: any) {
+      handleFirestoreError(err, OperationType.WRITE, 'articles (import hydromines catalog)');
+      throw err;
+    }
+  }, [rawArticles, currentUser, logAction]);
 
   const approveDeletionRequest = React.useCallback(async (requestId: string) => {
     checkMaintenanceLock();
@@ -3656,7 +3759,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
     expedierTransfert, receptionnerTransfert, accepterEtCloturerTransfert, deleteTransfert, getArticleTransitQty,
-    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
+    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, importFromHydrominesCatalog, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, saveHydrominesCatalogItem, addPurchaseRequest, updatePRStatus,
     loadMoreMouvements,
     networkQuality,
@@ -3683,7 +3786,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     currentUser, isLoaded, isViewer, notifications, addNotification, markNotificationAsRead, markAllNotificationsAsRead, addMouvement, addMaintenanceLog, addTransfert, completeTransfert,
     approveTransfert, closeTransfert,
     expedierTransfert, receptionnerTransfert, accepterEtCloturerTransfert, deleteTransfert, getArticleTransitQty,
-    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
+    saveInventaire, saveArticle, deleteArticle, deleteArticles, importAllCatalogToArticles, importSpecificCatalogItems, importFromHydrominesCatalog, approveDeletionRequest, rejectDeletionRequest, toggleUser, setUserRole, setUserAssignedSite, setEngin, setPerfo,
     setAgent, saveCatalogItem, deleteCatalogItem, saveHydrominesCatalogItem, addPurchaseRequest, updatePRStatus,
     loadMoreMouvements,
     networkQuality,
