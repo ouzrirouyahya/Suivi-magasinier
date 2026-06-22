@@ -70,7 +70,9 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     importAllCatalogToArticles,
     importSpecificCatalogItems,
     hydrominesCatalog = [],
-    saveHydrominesCatalogItem
+    saveHydrominesCatalogItem,
+    ghostArticles = [],
+    catalogUsageStats = []
   } = useInventory();
 
   const [isBulkImporting, setIsBulkImporting] = useState(false);
@@ -192,6 +194,104 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   };
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeMainViewTab, setActiveMainViewTab] = useState<'STOCK' | 'DIAGNOSTIC' | 'USAGE_REEL'>('STOCK');
+  const [showOnlyMissing, setShowOnlyMissing] = useState(true);
+  const [showNeverUsed, setShowNeverUsed] = useState(false);
+  const [realUsageSearch, setRealUsageSearch] = useState('');
+  const [selectedGhostIds, setSelectedGhostIds] = useState<string[]>([]);
+  const [ghostSearch, setGhostSearch] = useState('');
+
+  const handleExportGhostCsv = () => {
+    const headers = "Référence;Désignation;Site;Date de création\n";
+    const rows = ghostArticles.map(a => {
+      const ref = a.ref || '';
+      const des = a.designation || '';
+      const siteCode = a.site || '';
+      const date = a.createdAt ? new Date(a.createdAt).toLocaleDateString('fr-FR') : '-';
+      return `"${ref.replace(/"/g, '""')}";"${des.replace(/"/g, '""')}";"${siteCode.replace(/"/g, '""')}";"${date}"`;
+    }).join("\n");
+    
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + encodeURIComponent(headers + rows);
+    const link = document.createElement("a");
+    link.setAttribute("href", csvContent);
+    link.setAttribute("download", `diagnostic_articles_fantomes_${site}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success("Fichier CSV de diagnostic téléchargé !");
+  };
+
+  const handleDeleteSelectedGhosts = async () => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule.");
+      return;
+    }
+    if (selectedGhostIds.length === 0) return;
+    if (confirm(`Voulez-vous vraiment supprimer définitivement les ${selectedGhostIds.length} articles fantômes sélectionnés ?`)) {
+      try {
+        await deleteArticles(selectedGhostIds);
+        setSelectedGhostIds([]);
+        toast.success("Articles fantômes sélectionnés supprimés avec succès !");
+      } catch (error: any) {
+        toast.error(`Erreur lors de la suppression : ${error.message || error}`);
+      }
+    }
+  };
+
+  const filteredGhostArticles = React.useMemo(() => {
+    const search = ghostSearch.toLowerCase().trim();
+    if (!search) return ghostArticles;
+    return ghostArticles.filter(a => 
+      (a.ref || '').toLowerCase().includes(search) ||
+      (a.designation || '').toLowerCase().includes(search) ||
+      (a.site || '').toLowerCase().includes(search)
+    );
+  }, [ghostArticles, ghostSearch]);
+
+  const isAllGhostsSelected = filteredGhostArticles.length > 0 && filteredGhostArticles.every(a => selectedGhostIds.includes(a.id));
+
+  const toggleSelectAllGhosts = () => {
+    if (isAllGhostsSelected) {
+      setSelectedGhostIds(prev => prev.filter(id => !filteredGhostArticles.some(a => a.id === id)));
+    } else {
+      const newSelected = Array.from(new Set([...selectedGhostIds, ...filteredGhostArticles.map(a => a.id)]));
+      setSelectedGhostIds(newSelected);
+    }
+  };
+
+  const toggleSelectGhost = (id: string) => {
+    setSelectedGhostIds(prev => 
+      prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    );
+  };
+
+  const missingUsedCount = React.useMemo(() => {
+    return catalogUsageStats.filter(s => s.isUsed && !s.isInHydrominesCatalog).length;
+  }, [catalogUsageStats]);
+
+  const displayedStats = React.useMemo(() => {
+    let list = catalogUsageStats;
+    if (showNeverUsed) {
+      list = list.filter(s => !s.isUsed);
+    } else {
+      list = list.filter(s => s.isUsed);
+      if (showOnlyMissing) {
+        list = list.filter(s => !s.isInHydrominesCatalog);
+      }
+    }
+
+    const search = realUsageSearch.toLowerCase().trim();
+    if (search) {
+      list = list.filter(s => 
+        (s.catalogItem.reference || '').toLowerCase().includes(search) ||
+        (s.catalogItem.designation || '').toLowerCase().includes(search) ||
+        (s.catalogItem.functionalCategory || '').toLowerCase().includes(search)
+      );
+    }
+
+    return [...list].sort((a, b) => b.movementCount - a.movementCount);
+  }, [catalogUsageStats, showOnlyMissing, showNeverUsed, realUsageSearch]);
+
   const [editingArticle, setEditingArticle] = useState<Partial<Article> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isCatalogOpen, setIsCatalogOpen] = useState(false);
@@ -222,6 +322,15 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       outOfStockCount
     };
   }, [articles, site]);
+
+  const ghostBreakdown = React.useMemo(() => {
+    const counts: Record<string, number> = {};
+    ghostArticles.forEach(a => {
+      const s = a.site || 'Autre';
+      counts[s] = (counts[s] || 0) + 1;
+    });
+    return counts;
+  }, [ghostArticles]);
 
   // Compute unique classification categories active for this site's articles
   const activeStockCategories = React.useMemo(() => {
@@ -979,7 +1088,64 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
         </p>
       </div>
 
-      {/* SECTION CARTES STATISTIQUES (KPIs VISUELS) */}
+      {/* TABS SELECTOR */}
+      <div className="border-b border-slate-200 flex items-center justify-between no-print mb-6">
+        <div className="flex gap-6">
+          <button
+            type="button"
+            onClick={() => setActiveMainViewTab('STOCK')}
+            className={cn(
+              "pb-3.5 text-xs font-black uppercase tracking-wider relative transition-all cursor-pointer",
+              activeMainViewTab === 'STOCK' 
+                ? "text-[#121c26] border-b-2 border-[#121c26] font-bold" 
+                : "text-slate-400 hover:text-slate-600"
+            )}
+          >
+            Nomenclature du Stock ({site === 'ALL' ? 'Tous les sites' : site})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveMainViewTab('DIAGNOSTIC')}
+            className={cn(
+              "pb-3.5 text-xs font-black uppercase tracking-wider relative transition-all cursor-pointer flex items-center gap-2",
+              activeMainViewTab === 'DIAGNOSTIC' 
+                ? "text-[#121c26] border-b-2 border-[#121c26] font-bold" 
+                : "text-slate-400 hover:text-slate-600"
+            )}
+          >
+            <span>Diagnostic Stock (Articles Fantômes)</span>
+            {ghostArticles.length > 0 && (
+              <span className="bg-rose-100 text-rose-700 text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse">
+                {ghostArticles.length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => {
+              setActiveMainViewTab('USAGE_REEL');
+              setShowNeverUsed(false);
+            }}
+            className={cn(
+              "pb-3.5 text-xs font-black uppercase tracking-wider relative transition-all cursor-pointer flex items-center gap-2",
+              activeMainViewTab === 'USAGE_REEL' 
+                ? "text-[#121c26] border-b-2 border-[#121c26] font-bold" 
+                : "text-slate-400 hover:text-slate-600"
+            )}
+          >
+            <span>Analyse Usage Réel</span>
+            {missingUsedCount > 0 && (
+              <span className="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full">
+                {missingUsedCount} action{missingUsedCount > 1 ? 's' : ''}
+              </span>
+            )}
+          </button>
+        </div>
+      </div>
+
+      {activeMainViewTab === 'STOCK' && (
+        <>
+          {/* SECTION CARTES STATISTIQUES (KPIs VISUELS) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in slide-in-from-top-4 duration-500">
         <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow relative overflow-hidden group">
           <div className="absolute top-0 left-0 w-1 h-full bg-slate-900 group-hover:bg-indigo-600 transition-colors" />
@@ -1429,6 +1595,416 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
           </tbody>
         </table>
       </div>
+        </>
+      )}
+
+      {activeMainViewTab === 'DIAGNOSTIC' && (
+        <div className="space-y-6">
+          {/* Compteur total + répartition par site (cartes/badges) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-in fade-in duration-300">
+            <div className="bg-white border hover:shadow-md transition-shadow duration-300 border-rose-500/10 rounded-2xl p-5 shadow-sm relative overflow-hidden group animate-in fade-in slide-in-from-top-4 duration-500">
+              <div className="absolute top-0 left-0 w-1 h-full bg-rose-500" />
+              <p className="text-[10px] font-black text-rose-500 uppercase tracking-widest">Total Fantômes Identifiés</p>
+              <p className="text-3xl font-black text-slate-900 mt-1">{ghostArticles.length} articles</p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1.5">Quantité = 0 & aucun mouvement historique</p>
+            </div>
+            {Object.entries(ghostBreakdown).map(([siteName, count]) => (
+              <div key={siteName} className="bg-white border hover:shadow-md transition-shadow duration-300 border-slate-100 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
+                <div className="absolute top-0 left-0 w-1 h-full bg-slate-950" />
+                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Site : {siteName}</p>
+                <p className="text-2xl font-black text-slate-950 mt-1">{count} articles</p>
+                <p className="text-[9px] text-[#b8860b] font-bold uppercase tracking-wider mt-1.5">Fiches inactives à assainir</p>
+              </div>
+            ))}
+          </div>
+
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
+              <div className="relative flex-1 max-w-sm w-full">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Rechercher référence ou désignation..."
+                  value={ghostSearch}
+                  onChange={(e) => setGhostSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold font-sans text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+              </div>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleExportGhostCsv}
+                  className="bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200 px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 cursor-pointer transition-all active:scale-95"
+                >
+                  <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                  <span>Exporter DIAGNOSTIC en CSV</span>
+                </button>
+                {!isReadOnly && (
+                  <button
+                    type="button"
+                    disabled={selectedGhostIds.length === 0}
+                    onClick={handleDeleteSelectedGhosts}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all active:scale-95",
+                      selectedGhostIds.length > 0
+                        ? "bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/10 cursor-pointer"
+                        : "bg-slate-100 text-slate-400 cursor-not-allowed"
+                    )}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    <span>Supprimer la sélection ({selectedGhostIds.length})</span>
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Tableau */}
+            <div className="table-container glass border-0 shadow-xl ring-1 ring-slate-900/5 overflow-hidden rounded-xl bg-white mt-4">
+              <table className="w-full text-left">
+                <thead>
+                  <tr className="bg-slate-50 border-b border-slate-100 text-[10px] font-black uppercase tracking-wider text-slate-400 h-10 select-none">
+                    <th className="pl-4 w-10">
+                      <input
+                        type="checkbox"
+                        checked={isAllGhostsSelected}
+                        onChange={toggleSelectAllGhosts}
+                        className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                      />
+                    </th>
+                    <th className="pl-4 py-3">Référence</th>
+                    <th className="px-4 py-3">Désignation</th>
+                    <th className="px-4 py-3">Site</th>
+                    <th className="px-4 py-3">Date de création</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-semibold text-slate-700">
+                  {filteredGhostArticles.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-12 text-center text-slate-400 font-bold uppercase tracking-wider">
+                        Aucun article fantôme détecté.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredGhostArticles.map((a) => (
+                      <tr key={a.id} className="hover:bg-slate-50/50 transition-colors">
+                        <td className="pl-4 py-3.5">
+                          <input
+                            type="checkbox"
+                            checked={selectedGhostIds.includes(a.id)}
+                            onChange={() => toggleSelectGhost(a.id)}
+                            className="rounded text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+                          />
+                        </td>
+                        <td className="pl-4 py-3.5 font-mono text-slate-900 font-bold">
+                          {a.ref || '-'}
+                        </td>
+                        <td className="px-4 py-3.5 text-slate-900">
+                          {a.designation}
+                        </td>
+                        <td className="px-4 py-3.5">
+                          <span className="inline-flex px-2 py-0.5 bg-slate-100 text-slate-700 text-[9px] font-black uppercase rounded-md tracking-wider">
+                            {a.site || '-'}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3.5 text-slate-500 font-mono">
+                          {a.createdAt ? new Date(a.createdAt).toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                        </td>
+                      </tr>
+                    ))
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeMainViewTab === 'USAGE_REEL' && (
+        <div className="space-y-6 animate-in fade-in duration-300">
+          
+          {/* BANDEAU EXPLICATIF */}
+          <div className="bg-slate-50 border border-slate-150 p-6 rounded-2xl flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider flex items-center gap-2">
+                <Activity className="w-4 h-4 text-indigo-600 animate-pulse" />
+                Aide à la Décision : Analyse Objective des Flux terrain
+              </h3>
+              <p className="text-xs text-slate-500 font-medium leading-relaxed max-w-3xl">
+                Ici, nous croisons automatiquement les données brutes du catalogue constructeur avec l'historique complet des entrées et sorties physiques. Cela vous permet d'identifier les pièces réellement consommées sur le terrain et de les ajouter en un clic au Catalogue Hydromines.
+              </p>
+            </div>
+          </div>
+
+          {/* 3 CARTES STATS GLOBALES */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Références utilisées */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-slate-900" />
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
+                <TrendingUp className="w-3.5 h-3.5 text-slate-500" />
+                Taux de Rotation Réel
+              </p>
+              <p className="text-2xl font-black text-slate-950 mt-1">
+                {catalogUsageStats.filter(s => s.isUsed).length} / {catalogUsageStats.length} réf.
+              </p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                Pièces ayant eu au moins un mouvement enregistré
+              </p>
+            </div>
+
+            {/* Réf. déjà au catalogue Hydromines */}
+            <div className="bg-white border border-slate-100 rounded-2xl p-5 shadow-sm relative overflow-hidden group">
+              <div className="absolute top-0 left-0 w-1 h-full bg-emerald-500" />
+              <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest flex items-center gap-1.5">
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                Couverture Catalogue
+              </p>
+              <p className="text-2xl font-black text-emerald-700 mt-1">
+                {catalogUsageStats.filter(s => s.isInHydrominesCatalog).length} références
+              </p>
+              <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                Homologuées au catalogue officiel d'autorité unique
+              </p>
+            </div>
+
+            {/* Références utilisées MAIS absentes (ALERTE ACTIONNABLE DÉCISIVE) */}
+            <div className={cn(
+               "bg-amber-50/50 border border-amber-500/20 rounded-2xl p-5 shadow-sm relative overflow-hidden group transition-all duration-300",
+               missingUsedCount > 0 ? "bg-amber-50 border-amber-500/30 ring-2 ring-amber-500/5" : ""
+            )}>
+              <div className="absolute top-0 left-0 w-1 h-full bg-amber-500" />
+              <p className="text-[10px] font-black text-amber-800 uppercase tracking-widest flex items-center gap-1.5">
+                <AlertCircle className="w-3.5 h-3.5 text-amber-600 animate-bounce" />
+                Actions Prioritaires (Manquantes)
+              </p>
+              <p className="text-2xl font-black text-amber-900 mt-1">
+                {missingUsedCount} utilisées absentes
+              </p>
+              <p className="text-[9px] text-amber-755/90 font-bold uppercase tracking-wider mt-1">
+                Consommées mais manquantes au Catalogue Maître Hydromines
+              </p>
+            </div>
+          </div>
+
+          {/* TABLEAU ET TOGGLES */}
+          <div className="bg-white border border-slate-100 rounded-2xl p-6 shadow-sm space-y-4">
+            <div className="flex flex-col lg:flex-row gap-4 items-stretch lg:items-center justify-between">
+              
+              {/* Recherche intégrée */}
+              <div className="relative flex-1 max-w-sm">
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Filtrer par Réf, Désignation, Famille..."
+                  value={realUsageSearch}
+                  onChange={(e) => setRealUsageSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold font-sans text-slate-700 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20"
+                />
+                {realUsageSearch && (
+                  <button
+                    onClick={() => setRealUsageSearch('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs"
+                  >
+                    Effacer
+                  </button>
+                )}
+              </div>
+
+              {/* Toggles et Filtres */}
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNeverUsed(false);
+                    setShowOnlyMissing(!showOnlyMissing);
+                  }}
+                  disabled={showNeverUsed}
+                  className={cn(
+                    "px-4 py-2.5 rounded-xl border text-xs font-black uppercase tracking-wider select-none cursor-pointer transition-all flex items-center gap-2",
+                    showOnlyMissing && !showNeverUsed
+                      ? "bg-amber-600 text-white border-amber-600 shadow-sm"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                >
+                  <AlertCircle className="w-3.5 h-3.5" />
+                  Manquantes Seulement ({missingUsedCount})
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowNeverUsed(!showNeverUsed);
+                  }}
+                  className={cn(
+                    "px-4 py-2.5 rounded-xl border text-xs font-black uppercase tracking-wider select-none cursor-pointer transition-all flex items-center gap-2",
+                    showNeverUsed
+                      ? "bg-slate-900 text-white border-slate-900 shadow-sm"
+                      : "bg-white text-slate-600 border-slate-200 hover:bg-slate-50"
+                  )}
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  {showNeverUsed ? "Voir les pièces actives (mouvementées)" : `Voir aussi les jamais utilisées (${catalogUsageStats.filter(s => !s.isUsed).length})`}
+                </button>
+              </div>
+
+            </div>
+
+            {/* RÉSULTAT DU FILTRE BANDEAU */}
+            <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5 py-1">
+              <span>{displayedStats.length} référence{displayedStats.length > 1 ? 's' : ''} affichée{displayedStats.length > 1 ? 's' : ''}</span>
+              {showOnlyMissing && !showNeverUsed && <span>(filtré sur utilisées &amp; manquantes)</span>}
+              {showNeverUsed && <span>(filtré sur jamais utilisées)</span>}
+            </div>
+
+            {/* TABLEAU */}
+            <div className="overflow-x-auto rounded-xl border border-slate-100">
+              <table className="w-full text-left border-collapse table-auto">
+                <thead>
+                  <tr className="bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 select-none">
+                    <th className="px-4 py-3">Référence</th>
+                    <th className="px-4 py-3">Désignation &amp; Machine / Catégorie</th>
+                    <th className="px-4 py-3 text-center">Nb mouvements</th>
+                    <th className="px-4 py-3 text-center">Quantité sortie</th>
+                    <th className="px-4 py-3">Chantiers concernés</th>
+                    <th className="px-4 py-3">Dernière utilisation</th>
+                    <th className="px-4 py-3 text-right">Statut / Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 text-xs font-sans">
+                  {displayedStats.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-6 py-12 text-center text-slate-400">
+                        <Database className="w-10 h-10 mx-auto text-slate-300 stroke-1 mb-2 animate-bounce" />
+                        <p className="text-xs font-black uppercase tracking-wider text-slate-500">Aucune référence de rechange correspondante</p>
+                        <p className="text-[11px] text-slate-400 mt-0.5">Modifiez vos filtres de recherche ou sélectionnez un autre onglet.</p>
+                      </td>
+                    </tr>
+                  ) : (
+                    displayedStats.map((stat) => {
+                      const c = stat.catalogItem;
+                      return (
+                        <tr 
+                          key={c.id} 
+                          className={cn(
+                            "hover:bg-slate-50/70 transition-colors",
+                            stat.isUsed && !stat.isInHydrominesCatalog ? "bg-amber-50/20" : ""
+                          )}
+                        >
+                          <td className="px-4 py-3.5 font-mono font-black text-slate-900">
+                            {c.reference}
+                          </td>
+                          <td className="px-4 py-3.5 max-w-sm">
+                            <div className="font-extrabold text-slate-800 uppercase tracking-wide truncate max-w-xs">{c.designation}</div>
+                            <div className="flex items-center gap-2 mt-1">
+                              {c.compatibility && (
+                                <span className="inline-flex items-center px-1.5 py-0.5 bg-blue-50 text-blue-700 text-[8.5px] font-black uppercase rounded">
+                                  {c.compatibility}
+                                </span>
+                              )}
+                              <span className="text-[9px] text-slate-400 font-bold uppercase truncate max-w-[150px]">
+                                {c.functionalCategory}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-4 py-3.5 text-center font-mono font-black text-slate-700">
+                            {stat.isUsed ? (
+                              <span className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 px-2 py-1 rounded-lg">
+                                {stat.movementCount}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 text-center font-mono font-black text-slate-700">
+                            {stat.totalQuantityOut > 0 ? (
+                              <span className="inline-flex items-center gap-1 bg-slate-100 text-slate-800 px-2 py-1 rounded-lg">
+                                {stat.totalQuantityOut}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5">
+                            {stat.sitesUsing.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {stat.sitesUsing.map(s => (
+                                  <span key={s} className="px-1.5 py-0.5 bg-slate-950 text-white text-[8px] font-black rounded uppercase">
+                                    {s}
+                                  </span>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 font-mono text-slate-500">
+                            {stat.lastUsedDate ? (
+                              <span className="flex items-center gap-1 text-[11px]">
+                                <Clock className="w-3 h-3 shrink-0 text-slate-400" />
+                                {new Date(stat.lastUsedDate).toLocaleDateString('fr-FR')}
+                              </span>
+                            ) : (
+                              <span className="text-slate-300">-</span>
+                            )}
+                          </td>
+                          <td className="px-4 py-3.5 text-right">
+                            {stat.isInHydrominesCatalog ? (
+                              <span className="inline-flex items-center justify-center gap-1 text-[9.5px] font-black text-emerald-600 bg-emerald-50 border border-emerald-150 px-2.5 py-1.5 rounded-lg uppercase tracking-wider leading-none select-none animate-in fade-in">
+                                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" />
+                                ✓ Déjà officialisé
+                              </span>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => handleAddToHydrominesCatalog(c)}
+                                className="inline-flex items-center gap-1 text-[9.5px] font-black uppercase bg-slate-950 text-white hover:bg-slate-900 border border-slate-950 px-2.5 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer leading-none shadow-sm"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Ajouter au Catalogue
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
+                </tbody>
+              </table>
+            </div>
+
+            {/* BOUTON REPASSER AUX JAUNAIS UTILISÉES EN FIN DE VUE */}
+            {!showNeverUsed && (
+              <div className="pt-4 flex justify-between items-center bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200">
+                <span className="text-[11px] text-slate-500 font-medium whitespace-normal">Vous pouvez consulter le reliquat de pièces du catalogue constructeur qui ne sont pas consommées sur le terrain.</span>
+                <button
+                  type="button"
+                  onClick={() => setShowNeverUsed(true)}
+                  className="text-[10px] font-black text-indigo-600 hover:text-indigo-850 uppercase tracking-widest flex items-center gap-1 transition-all cursor-pointer bg-white px-3 py-2 rounded-lg border border-slate-200 hover:border-indigo-200 hover:shadow-xs"
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  Voir ({catalogUsageStats.filter(s => !s.isUsed).length}) références jamais utilisées
+                </button>
+              </div>
+            )}
+
+            {showNeverUsed && (
+              <div className="pt-4 flex justify-between items-center bg-slate-50/50 p-4 rounded-xl border border-dashed border-slate-200">
+                <span className="text-[11px] text-slate-500 font-medium whitespace-normal">Affichage des références inactives. Retournez à la liste des références consommées d'abord.</span>
+                <button
+                  type="button"
+                  onClick={() => setShowNeverUsed(false)}
+                  className="text-[10px] font-black text-[#121c26] hover:text-black uppercase tracking-widest flex items-center gap-1 transition-all cursor-pointer bg-white px-3 py-2 rounded-lg border border-slate-200"
+                >
+                  <Activity className="w-3.5 h-3.5" />
+                  Retourner aux pièces consommées
+                </button>
+              </div>
+            )}
+
+          </div>
+
+        </div>
+      )}
 
             {isCatalogOpen && (
          <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-xl z-[110] flex items-center justify-center p-4">
@@ -1604,32 +2180,34 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                                   hm => hm.reference?.trim().toLowerCase() === item.reference?.trim().toLowerCase()
                                 );
                                 return (
-                                  <div className="flex flex-col gap-1.5 items-stretch justify-center max-w-[150px] mx-auto">
-                                    {isLocal ? (
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setIsCatalogOpen(false);
-                                          setSearchTerm(item.reference);
-                                        }}
-                                        className="text-[9px] font-black uppercase bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg hover:bg-sky-100 active:scale-95 transition-all cursor-pointer text-center"
-                                      >
-                                        Voir / Modifier
-                                      </button>
+                                  <div className="flex flex-col gap-1.5 items-stretch justify-center max-w-[200px] mx-auto animate-in fade-in duration-300">
+                                    {inHM ? (
+                                      <span className="inline-flex items-center justify-center gap-1 text-[9.5px] font-black text-emerald-600 bg-emerald-50 border border-emerald-150 px-2.5 py-1.5 rounded-lg uppercase tracking-wider text-center leading-none select-none">
+                                        Déjà dans le Catalogue Hydromines ✓
+                                      </span>
                                     ) : (
-                                      <button
-                                        type="button"
-                                        disabled={inHM}
-                                        onClick={() => handleAddToHydrominesCatalog(item)}
-                                        className={cn(
-                                          "text-[9.5px] font-black uppercase px-2.5 py-1.5 rounded-lg transition-colors border shadow-xs cursor-pointer text-center leading-none",
-                                          inHM 
-                                            ? "bg-slate-50 text-slate-400 border-slate-100 cursor-not-allowed" 
-                                            : "bg-amber-50 text-amber-750 border-amber-200 hover:bg-amber-100 active:scale-95"
+                                      <>
+                                        {isLocal ? (
+                                          <button
+                                            type="button"
+                                            onClick={() => {
+                                              setIsCatalogOpen(false);
+                                              setSearchTerm(item.reference);
+                                            }}
+                                            className="text-[9px] font-black uppercase bg-sky-50 text-sky-700 border border-sky-100 px-2 py-1 rounded-lg hover:bg-sky-100 active:scale-95 transition-all cursor-pointer text-center"
+                                          >
+                                            Voir / Modifier
+                                          </button>
+                                        ) : (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleAddToHydrominesCatalog(item)}
+                                            className="text-[9.5px] font-black uppercase bg-slate-950 text-white hover:bg-slate-900 border border-slate-950 px-2.5 py-1.5 rounded-lg active:scale-95 transition-all cursor-pointer text-center leading-none shadow-sm"
+                                          >
+                                            ⭐ Ajouter au Catalogue Hydromines
+                                          </button>
                                         )}
-                                      >
-                                        {inHM ? "⭐ Déjà HM" : "⭐ Ajouter au Catalogue Hydromines"}
-                                      </button>
+                                      </>
                                     )}
                                   </div>
                                 );

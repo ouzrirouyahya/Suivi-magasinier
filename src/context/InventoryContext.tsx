@@ -38,6 +38,16 @@ import {
 } from '../types';
 import { INITIAL_ARTICLES, INITIAL_MOUVEMENTS, INITIAL_ENGINS, INITIAL_PERFOS, INITIAL_AGENTS } from '../demoData';
 
+export interface CatalogUsageStats {
+  catalogItem: CatalogItem;
+  isUsed: boolean;
+  movementCount: number;
+  totalQuantityOut: number;
+  sitesUsing: string[];
+  isInHydrominesCatalog: boolean;
+  lastUsedDate: string | null;
+}
+
 /**
  * Calculates the new Weighted Average Cost Price (PMP) and tracks price history.
  */
@@ -327,6 +337,7 @@ import {
 
 type InventoryContextType = {
   articles: Article[];
+  ghostArticles: Article[];
   mouvements: Mouvement[];
   distributions: DistributionEPI[];
   auditLogs: AuditLog[];
@@ -418,7 +429,7 @@ type InventoryContextType = {
   collectSystemMetrics: () => any;
   exportForensic: () => string;
 
-
+  catalogUsageStats: CatalogUsageStats[];
 };
 
 const InventoryContext = createContext<InventoryContextType | null>(null);
@@ -486,6 +497,57 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   const [auditLogs, setAuditLogs] = useState<AuditLog[]>([]);
   const [recentlyCreatedArticles, setRecentlyCreatedArticles] = useState<Article[]>([]);
   const hasSetInitialSite = useRef(false);
+
+  const ghostArticles = React.useMemo(() => {
+    const usedArticleIds = new Set<string>();
+    rawMouvements.forEach(m => {
+      m.items.forEach(item => usedArticleIds.add(item.articleId));
+    });
+    return rawArticles.filter(a => 
+      (a.quantity || 0) === 0 && !usedArticleIds.has(a.id)
+    );
+  }, [rawArticles, rawMouvements]);
+
+  const catalogUsageStats: CatalogUsageStats[] = React.useMemo(() => {
+    const hydrominesRefs = new Set(
+      (hydrominesCatalog || []).map(h => h.reference.trim().toUpperCase())
+    );
+
+    return MASTER_CATALOG.map(catalogItem => {
+      const refNorm = catalogItem.reference.trim().toUpperCase();
+      const matchingArticles = rawArticles.filter(
+        a => a.ref.trim().toUpperCase() === refNorm
+      );
+      const matchingArticleIds = new Set(matchingArticles.map(a => a.id));
+
+      const relevantMovements = rawMouvements.filter(m =>
+        m.items.some(item => matchingArticleIds.has(item.articleId))
+      );
+
+      const totalQuantityOut = relevantMovements
+        .filter(m => m.type === 'SORTIE')
+        .reduce((sum, m) => {
+          const item = m.items.find(i => matchingArticleIds.has(i.articleId));
+          return sum + (item?.quantity || 0);
+        }, 0);
+
+      const sitesUsing = Array.from(new Set(relevantMovements.map(m => m.site)));
+
+      const sortedDates = relevantMovements
+        .map(m => m.date)
+        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+
+      return {
+        catalogItem,
+        isUsed: relevantMovements.length > 0,
+        movementCount: relevantMovements.length,
+        totalQuantityOut,
+        sitesUsing,
+        isInHydrominesCatalog: hydrominesRefs.has(refNorm),
+        lastUsedDate: sortedDates[0] || null
+      };
+    });
+  }, [rawArticles, rawMouvements, hydrominesCatalog]);
 
   const addNotification = React.useCallback(async (notif: Omit<AppNotification, 'id' | 'timestamp' | 'isRead' | 'severity' | 'status'> & { severity?: any; status?: any }) => {
     const id = generateSecureUUID();
@@ -3255,7 +3317,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   }, [isDegradedNetwork, retryQueue.length]);
 
   const value = React.useMemo(() => ({
-    articles, mouvements, distributions, auditLogs, transferts, inventaires,
+    articles, ghostArticles, catalogUsageStats, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, hydrominesCatalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs, deletionRequests,
     currentSite, setCurrentSite,
@@ -3282,7 +3344,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     forceRunQueue, clearDLQ, simulateRuleFailure, simulateConcurrentConflicts,
     collectSystemMetrics, exportForensic
   }), [
-    articles, mouvements, distributions, auditLogs, transferts, inventaires,
+    articles, ghostArticles, catalogUsageStats, mouvements, distributions, auditLogs, transferts, inventaires,
     engins, perfos, agents, catalog, hydrominesCatalog, accounts, purchaseRequests, anomalyReports,
     maintenanceLogs, deletionRequests,
     currentSite, setCurrentSite,

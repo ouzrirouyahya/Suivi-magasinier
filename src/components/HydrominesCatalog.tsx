@@ -645,6 +645,29 @@ export function HydrominesCatalog() {
         </div>
       </div>
 
+      {/* BANDEAU CATALOGUE OFFICIEL - SOURCE D'AUTORITÉ UNIQUE */}
+      <div className="flex flex-col md:flex-row items-center justify-between gap-4 px-6 py-5 bg-[#121c26] text-white border border-amber-500/20 rounded-2xl shadow-xl overflow-hidden relative group no-print">
+        <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-full blur-2xl group-hover:bg-amber-500/10 transition-all duration-700" />
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-[#ffd700] shrink-0">
+            <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+          </div>
+          <div>
+            <div className="flex items-center gap-2">
+              <span className="text-[10px] font-black uppercase tracking-widest text-[#ffd700] bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-md">
+                Norme de Sécurité &amp; Validation
+              </span>
+            </div>
+            <h2 className="text-sm font-black text-white uppercase tracking-wider mt-1">
+              Catalogue Hydromines Officiel d'Autorité Unique
+            </h2>
+            <p className="text-xs text-slate-300 font-medium leading-relaxed max-w-2xl mt-0.5">
+              Toutes les entrées, sorties et réapprovisionnements de pièces détachées sur chantiers doivent obligatoirement utiliser les fiches de ce catalogue. La Bibliothèque Technique sert exclusivement à l'homologation de nouvelles références.
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* 7 KPI High-density Grid Cards representing the Pilotage Indicators */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
         {/* Total References */}

@@ -307,33 +307,15 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     ).slice(0, 10);
   }, [hydrominesCatalog, search, articles, site]);
 
-  const filteredCatalogItems = useMemo(() => {
-    if (!search || site === 'ALL') return [];
-    if (search.length < 2) return [];
-
-    const normSearch = search.toLowerCase();
-    const matches = (catalog || []).filter(c => {
-      const matchesSearch = (c.designation || '').toLowerCase().includes(normSearch) || 
-                            (c.reference || '').toLowerCase().includes(normSearch);
-      const existsLocally = articles.some(a => a.site === site && a.ref.trim().toUpperCase() === (c.reference || '').trim().toUpperCase());
-      return matchesSearch && !existsLocally;
-    });
-
-    if (categoryFilter && categoryFilter !== 'ALL') {
-      return matches.filter(c => c.suggestedType === categoryFilter).slice(0, 15);
-    }
-
-    return matches.slice(0, 15);
-  }, [search, catalog, categoryFilter, articles, site]);
+  const filteredCatalogItems: any[] = [];
 
   // Unified Search Result List for Smooth Arrow Navigation
   const dropdownItems = useMemo(() => {
     const list: Array<{ type: 'article' | 'hydromines' | 'catalog'; payload: any }> = [];
     sortedArticles.forEach(a => list.push({ type: 'article', payload: a }));
     filteredHydrominesCatalog.forEach(h => list.push({ type: 'hydromines', payload: h }));
-    filteredCatalogItems.forEach(c => list.push({ type: 'catalog', payload: c }));
     return list;
-  }, [sortedArticles, filteredHydrominesCatalog, filteredCatalogItems]);
+  }, [sortedArticles, filteredHydrominesCatalog]);
 
   // Keyboard navigation effects
   useEffect(() => {
@@ -1398,50 +1380,21 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   </div>
                 )}
 
-                {/* Groupe 3: Catalogue Général (Bibliothèque technique complète) */}
-                {filteredCatalogItems.length > 0 && (
-                  <div className="space-y-1 pt-2 border-t border-slate-100 mt-2">
-                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest px-2 mb-2">
-                      Bibliothèque Technique complète — Si absent du Catalogue Hydromines
+                {/* Fallback pattern when nothing found in local stock or Hydromines Catalog */}
+                {search.length >= 2 && sortedArticles.length === 0 && filteredHydrominesCatalog.length === 0 && (
+                  <div className="p-6 text-center space-y-3">
+                    <p className="text-sm text-slate-500 font-medium">
+                      Aucune référence trouvée dans le stock ni dans le Catalogue Hydromines pour "{search}".
                     </p>
-                    {filteredCatalogItems.map((item, idx) => {
-                      const absoluteIndex = sortedArticles.length + filteredHydrominesCatalog.length + idx;
-                      const isFocused = absoluteIndex === focusedIndex;
-                      return (
-                        <button 
-                          key={item.id} 
-                          type="button" 
-                          onClick={() => addCatalogItem(item)} 
-                          className={cn(
-                            "w-full text-left p-4 rounded-xl border transition-all group/item flex items-center justify-between",
-                            isFocused 
-                              ? "bg-indigo-50 border-indigo-300 shadow-sm"
-                              : "border-dashed border-indigo-200 hover:border-indigo-300 hover:bg-indigo-50/50"
-                          )}
-                        >
-                          <div>
-                            <p className="font-black text-base text-slate-900 group-hover/item:text-indigo-950 transition-colors uppercase tracking-tight">
-                              {item.designation}
-                            </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-[10px] font-mono font-black text-slate-400 uppercase tracking-widest">{item.reference}</span>
-                              <span className="text-[8px] font-black bg-indigo-50 text-indigo-600 border border-indigo-100 px-1.5 py-0.25 rounded uppercase tracking-wider">
-                                Non instancié ici
-                              </span>
-                            </div>
-                          </div>
-                          <span className="text-[10px] font-black text-indigo-600 bg-white border border-indigo-200 px-3 py-1.5 rounded-lg group-hover/item:bg-indigo-600 group-hover/item:text-white transition-all uppercase flex-shrink-0">
-                            + Importer
-                          </span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-
-                {sortedArticles.length === 0 && filteredHydrominesCatalog.length === 0 && filteredCatalogItems.length === 0 && (
-                  <div className="p-6 text-center text-slate-400 font-bold uppercase text-xs tracking-wider">
-                    Aucun article trouvé pour "{search}"
+                    <button
+                      type="button"
+                      onClick={() => {
+                        toast.info("Recherchez cette référence dans la Bibliothèque Technique (menu Catalogue), puis ajoutez-la au Catalogue Hydromines pour pouvoir l'utiliser ici.");
+                      }}
+                      className="px-5 py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 rounded-xl text-xs font-black uppercase tracking-widest cursor-pointer transition-all active:scale-95"
+                    >
+                      Chercher dans la Bibliothèque Technique
+                    </button>
                   </div>
                 )}
               </div>
@@ -1640,100 +1593,12 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                 </button>
               </div>
 
-              {/* Subheader / Mode switcher tabs */}
-              <div className="bg-slate-100/50 p-2 border-b border-slate-150 flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectorTab('hm_select');
-                    setSelectedTechItem(null);
-                    setSelectedHMItem(null);
-                  }}
-                  className={cn(
-                    "px-4 py-2 text-xs font-black uppercase tracking-wider rounded-xl transition-all select-none cursor-pointer",
-                    selectorTab === 'hm_select'
-                      ? "bg-white text-slate-900 shadow-sm border border-slate-200"
-                      : "text-slate-500 hover:text-slate-800 hover:bg-slate-200/55"
-                  )}
-                >
-                  📦 Stock Principal Hydromines ({activeHMCatalogItems.length})
-                </button>
-                <div className="h-5 w-px bg-slate-300 mx-1 hidden sm:block" />
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-1">Enrichir le catalogue :</span>
-                
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectorTab('hm_enrich_st2g');
-                    setEnrichCategory('ALL');
-                    setEnrichSearch('');
-                    setEnrichLimit(30);
-                    setSelectedTechItem(null);
-                  }}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 select-none cursor-pointer",
-                    selectorTab === 'hm_enrich_st2g'
-                      ? "bg-sky-600 text-white shadow-sm font-black"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  )}
-                >
-                  ⭐ Ajouter depuis ST2G
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectorTab('hm_enrich_st2d');
-                    setEnrichCategory('ALL');
-                    setEnrichSearch('');
-                    setEnrichLimit(30);
-                    setSelectedTechItem(null);
-                  }}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 select-none cursor-pointer",
-                    selectorTab === 'hm_enrich_st2d'
-                      ? "bg-indigo-600 text-white shadow-sm font-black"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  )}
-                >
-                  ⭐ Ajouter depuis ST2D
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectorTab('hm_enrich_t23');
-                    setEnrichCategory('ALL');
-                    setEnrichSearch('');
-                    setEnrichLimit(30);
-                    setSelectedTechItem(null);
-                  }}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 select-none cursor-pointer",
-                    selectorTab === 'hm_enrich_t23'
-                      ? "bg-violet-600 text-white shadow-sm font-black"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  )}
-                >
-                  ⭐ Ajouter depuis T23
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSelectorTab('hm_enrich_manual');
-                    setManualRef('');
-                    setManualDes('');
-                  }}
-                  className={cn(
-                    "px-3 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center gap-1.5 select-none cursor-pointer",
-                    selectorTab === 'hm_enrich_manual'
-                      ? "bg-amber-600 text-white shadow-sm font-black"
-                      : "bg-white border border-slate-200 text-slate-600 hover:bg-slate-50"
-                  )}
-                >
-                  ✏️ Saisie manuelle de secours
-                </button>
+              {/* Subheader / Mode description banner */}
+              <div className="bg-slate-50 border-b border-slate-150 py-3.5 px-6 flex items-center justify-between">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                  <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
+                  Catalogue Maître Officiel Hydromines ({activeHMCatalogItems.length} fiches homologuées disponibles)
+                </span>
               </div>
 
               {/* MODES CONTENT */}
