@@ -343,7 +343,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   }, [articles, site]);
 
   const [activeCatalogType, setActiveCatalogType] = useState<StockType>('ENGINS');
-  const [activeCatalogFilter, setActiveCatalogFilter] = useState<'ALL' | 'ST2G' | 'ST2D' | 'MONTALBERT'>('ALL');
+  const [activeCatalogFilter, setActiveCatalogFilter] = useState<'ALL' | 'ST2G' | 'ST2D' | 'MONTABERT'>('ALL');
   const [catalogSearch, setCatalogSearch] = useState('');
   
   // Dynamic Catalog State
@@ -451,23 +451,25 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       
       const isST2G = comp.includes('st2g') || machs.some(m => m.includes('st2g')) || id.startsWith('st2g_');
       const isST2D = comp.includes('st2d') || machs.some(m => m.includes('st2d')) || id.startsWith('st2d_');
-      const isMontabert = comp.includes('montabert') || comp.includes('t23') || machs.some(m => m.includes('montabert') || m.includes('t23')) || id.startsWith('perf_') || id.startsWith('cop_');
+      const isMontabert = (comp.includes('montabert') || comp.includes('t23') || machs.some(m => m.includes('montabert') || m.includes('t23')) || id.startsWith('perf_t23_')) &&
+                          !comp.includes('hc50') && !comp.includes('hc110') && !comp.includes('cop') &&
+                          !machs.some(m => m.includes('hc50') || m.includes('hc110') || m.includes('cop'));
       
       if (activeCatalogFilter === 'ALL') return true;
       if (activeCatalogFilter === 'ST2G') return isST2G;
       if (activeCatalogFilter === 'ST2D') return isST2D;
-      if (activeCatalogFilter === 'MONTALBERT') return isMontabert;
+      if (activeCatalogFilter === 'MONTABERT') return isMontabert;
       
       return item.suggestedType === activeCatalogType;
     });
   }, [catalog, activeCatalogFilter, activeCatalogType]);
 
-  const changeCatalogFilter = (filter: 'ALL' | 'ST2G' | 'ST2D' | 'MONTALBERT') => {
+  const changeCatalogFilter = (filter: 'ALL' | 'ST2G' | 'ST2D' | 'MONTABERT') => {
     setActiveCatalogFilter(filter);
     if (filter === 'ALL') {
       setActiveCatalogType('ENGINS');
     } else {
-      setActiveCatalogType(filter === 'MONTALBERT' ? 'PERFORATEURS' : 'ENGINS');
+      setActiveCatalogType(filter === 'MONTABERT' ? 'PERFORATEURS' : 'ENGINS');
     }
     setNavPath([]);
     setCatalogSearch('');
@@ -583,8 +585,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
         const comp = (item.compatibility || '').toUpperCase();
         if (selectedMachine === 'ST2G') return comp.includes('ST2G');
         if (selectedMachine === 'ST2D') return comp.includes('ST2D');
-        if (selectedMachine === 'COP1838') return comp.includes('COP 1838') || comp.includes('COP');
-        if (selectedMachine === 'HC50') return comp.includes('HC50') || comp.includes('MONTABERT');
+        if (selectedMachine === 'T23') return comp.includes('T23') || comp.includes('MONTABERT');
         return true;
       });
     }
@@ -953,7 +954,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     let family: 'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' = 'AUTRE';
     if (activeCatalogFilter === 'ST2G') family = 'ST2G';
     else if (activeCatalogFilter === 'ST2D') family = 'ST2D';
-    else if (activeCatalogFilter === 'MONTALBERT') family = 'T23';
+    else if (activeCatalogFilter === 'MONTABERT') family = 'T23';
     else if (item.suggestedType === 'EPI') family = 'EPI';
     else if (item.suggestedType === 'CONSOMMABLES') family = 'CONSOMMABLES';
 
@@ -964,7 +965,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       suggestedType: item.suggestedType || 'CONSOMMABLES',
       functionalCategory: item.functionalCategory || 'Général',
       unit: item.unit || 'Standard',
-      sourceCatalog: activeCatalogFilter === 'MONTALBERT' ? 'T23' : activeCatalogFilter,
+      sourceCatalog: activeCatalogFilter === 'MONTABERT' ? 'T23' : activeCatalogFilter,
       equipmentFamily: family,
       status: 'ACTIF',
       isHydrominesCritical: false,
@@ -2059,8 +2060,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                      <option value="ALL">Machines (Toutes)</option>
                      <option value="ST2G">Scooptram ST2G</option>
                      <option value="ST2D">Scooptram ST2D</option>
-                     <option value="COP1838">Perfo COP 1838</option>
-                     <option value="HC50">Perfo HC50</option>
+                     <option value="T23">Perfo Montabert T23</option>
                   </select>
                 </div>
 

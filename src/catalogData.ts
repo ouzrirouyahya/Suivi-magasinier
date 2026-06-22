@@ -1,6 +1,6 @@
 import { CatalogItem } from './types';
 
-export const CATALOG_VERSION = '6.0'; // Updated to Catalog V6.0 with high-frequency maintenance parts under 25,000 MAD
+export const CATALOG_VERSION = '11.0';
 
 export const MASTER_CATALOG: CatalogItem[] = [
   {
@@ -2834,719 +2834,13 @@ export const MASTER_CATALOG: CatalogItem[] = [
     ]
   },
   {
-    "id": "perf_sub_01",
-    "functionalCategory": "Forage",
-    "subCategory": "Mécanisme de frappe",
-    "component": "Piston de frappe HC50",
-    "subComponent": "Alliage aciéré original Montabert",
-    "reference": "MB-T23-101",
-    "designation": "[FORAGE] - [PISTON DE FRAPPE MONTABERT] - [Piston principal de frappe Montabert haute résistance HC50] - (OEM: MB-T23-101)",
-    "notes": "Alliage spécial à cémentation profonde pour subir les hautes pulsations de percussion marteau.",
-    "proposedPrice": 16500,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Perforateur Montabert HC50",
-    "criticality": "CRITIQUE",
-    "price": 16500,
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "criticalityScore": 98,
-    "mtbfHours": 1000,
-    "overhaulIntervalHours": 2000,
-    "failureModes": [
-      "Écaillage de la face d'impact de flèche",
-      "Rayure de guidage mécanique de carter",
-      "Casse transversale sous sur-percussion"
-    ],
-    "relatedItems": [
-      "perf_sub_05",
-      "perf_az_mb_mem",
-      "perf_kit_500h"
-    ],
-    "stockQty": 3,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 59,
-    "replacementRisk": "HIGH",
-    "supplierReal": "Montabert SAS (Lyon, France)",
-    "commonName": "Piston Percuteur",
-    "searchTags": [
-      "FORAGE",
-      "MÉCANISME DE FRAPPE",
-      "URGENT",
-      "BLOCKING",
-      "PISTON",
-      "FRAPPE",
-      "MONTABERT",
-      "PRINCIPAL"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Montabert HC50",
-      "Montabert HC110"
-    ],
-    "interchangeableWith": [
-      "MB-COP-MB-T23-101"
-    ],
-    "mtbfStatus": "FIELD_PROVEN",
-    "operationalPriority": 5,
-    "downtimeImpact": "CRITICAL",
-    "realFailureReports": [
-      {
-        "date": "2026-04-05",
-        "symptom": "Perte de rendement mécanique brutal de l'assemblage",
-        "causeFound": "Infiltration directe de boue saline acide provoquant un défaut de lubrification hydro-statique."
-      }
-    ]
-  },
-  {
-    "id": "perf_sub_02",
-    "functionalCategory": "Forage",
-    "subCategory": "Mécanisme de frappe",
-    "component": "Piston de frappe COP",
-    "subComponent": "Epiroc original COP1838",
-    "reference": "8661 1639 00",
-    "designation": "[FORAGE] - [PISTON DE FRAPPE EPIROC] - [Piston d'origine de percussion pour marteau COP1838 HD] - (OEM: 8661 1639 00)",
-    "notes": "Piston haute disponibilité, traité thermiquement pour limiter le coefficient de déflexion.",
-    "proposedPrice": 28200,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Epiroc COP 1838",
-    "criticality": "CRITIQUE",
-    "price": 28200,
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "criticalityScore": 98,
-    "mtbfHours": 1200,
-    "overhaulIntervalHours": 2400,
-    "failureModes": [
-      "Fissuration longitudinale",
-      "Usure prématurée des guidages linéaires sous silice calcaire",
-      "Écaillage de collet d'emmanchement devant le tiroir"
-    ],
-    "relatedItems": [
-      "perf_cop_rev_kit",
-      "perf_sub_06",
-      "perf_hyd_01"
-    ],
-    "stockQty": 3,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 67,
-    "replacementRisk": "HIGH",
-    "supplierReal": "Epiroc Maroc Division Perforateurs",
-    "commonName": "Piston Percuteur",
-    "searchTags": [
-      "FORAGE",
-      "MÉCANISME DE FRAPPE",
-      "URGENT",
-      "BLOCKING",
-      "PISTON",
-      "FRAPPE",
-      "EPIROC",
-      "PERCUSSION"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Epiroc COP 1838"
-    ],
-    "interchangeableWith": [
-      "MB-COP-8661 1639 00"
-    ],
-    "mtbfStatus": "FIELD_PROVEN",
-    "operationalPriority": 5,
-    "downtimeImpact": "CRITICAL",
-    "realFailureReports": [
-      {
-        "date": "2026-04-05",
-        "symptom": "Perte de rendement mécanique brutal de l'assemblage",
-        "causeFound": "Infiltration directe de boue saline acide provoquant un défaut de lubrification hydro-statique."
-      }
-    ]
-  },
-  {
-    "id": "perf_sub_05",
-    "functionalCategory": "Forage",
-    "subCategory": "Systèmes de guidage",
-    "component": "Douille de guidage avant",
-    "subComponent": "Bronze nitruré sous friction",
-    "reference": "MB-T23-206",
-    "designation": "[FORAGE] - [DOUILLE DE GUIDAGE FRONTALE] - [Douille de guidage avant bronze nitruré de queue de piston] - (OEM: MB-T23-206)",
-    "notes": "Buse de centrage en alliage de bronze haute friction pour limiter les angles de désalignement axial.",
-    "proposedPrice": 3200,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Perforateurs Montabert & COP",
-    "criticality": "HAUTE",
-    "price": 3200,
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "criticalityScore": 89,
-    "mtbfHours": 500,
-    "overhaulIntervalHours": 1000,
-    "failureModes": [
-      "Ovalisation par balourd axial de queue d'emmanchement",
-      "Coincement du piston",
-      "Infiltration de débris rocheux"
-    ],
-    "relatedItems": [
-      "perf_sub_01",
-      "perf_lub_grs",
-      "perf_kit_250h"
-    ],
-    "stockQty": 4,
-    "minStock": 3,
-    "criticalStock": 1,
-    "leadTimeDays": 33,
-    "replacementRisk": "MEDIUM",
-    "supplierReal": "Montabert SAS (Lyon, France)",
-    "commonName": "Piston Percuteur",
-    "searchTags": [
-      "FORAGE",
-      "SYSTÈMES DE GUIDAGE",
-      "DOUILLE",
-      "GUIDAGE",
-      "FRONTALE",
-      "AVANT",
-      "BRONZE",
-      "NITRURÉ"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Montabert HC50",
-      "Montabert HC110",
-      "Epiroc COP 1838"
-    ],
-    "interchangeableWith": [
-      "MB-COP-MB-T23-206"
-    ],
-    "mtbfStatus": "ESTIMATED",
-    "operationalPriority": 4,
-    "downtimeImpact": "MEDIUM",
-    "realFailureReports": [
-      {
-        "date": "2026-04-05",
-        "symptom": "Perte de rendement mécanique brutal de l'assemblage",
-        "causeFound": "Infiltration directe de boue saline acide provoquant un défaut de lubrification hydro-statique."
-      }
-    ]
-  },
-  {
-    "id": "perf_sub_06",
-    "functionalCategory": "Forage",
-    "subCategory": "Soupapes de régulation",
-    "component": "Tiroir de distribution d'air",
-    "subComponent": "Acier cémenté rectifié",
-    "reference": "8663 3697 00",
-    "designation": "[FORAGE] - [TIROIR DE DISTRIBUTION AIR/HUILE] - [Tiroir de distribution principal d'origine rectifié hyper-fréquence] - (OEM: 8663 3697 00)",
-    "notes": "Tiroir de commande de pilotage d'air interne pour la suralimentation et le rinçage avant marteau.",
-    "proposedPrice": 11200,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Epiroc COP 1838",
-    "criticality": "CRITIQUE",
-    "price": 11200,
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "criticalityScore": 94,
-    "mtbfHours": 1500,
-    "overhaulIntervalHours": 3500,
-    "failureModes": [
-      "Rupture d'épinglage de régulation par coup de bélier",
-      "Rayures chroniques empêchant l'inversion de sens percussion"
-    ],
-    "relatedItems": [
-      "perf_sub_02",
-      "perf_cop_rev_kit"
-    ],
-    "stockQty": 2,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 65,
-    "replacementRisk": "HIGH",
-    "supplierReal": "Epiroc Maroc Division Perforateurs",
-    "commonName": "Tiroir de distribution d'air",
-    "searchTags": [
-      "FORAGE",
-      "SOUPAPES DE RÉGULATION",
-      "URGENT",
-      "BLOCKING",
-      "TIROIR",
-      "DISTRIBUTION",
-      "AIR/HUILE",
-      "PRINCIPAL"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Epiroc COP 1838"
-    ],
-    "interchangeableWith": [
-      "MB-COP-8663 3697 00"
-    ],
-    "mtbfStatus": "FIELD_PROVEN",
-    "operationalPriority": 5,
-    "downtimeImpact": "CRITICAL",
-    "realFailureReports": [
-      {
-        "date": "2026-04-05",
-        "symptom": "Perte de rendement mécanique brutal de l'assemblage",
-        "causeFound": "Infiltration directe de boue saline acide provoquant un défaut de lubrification hydro-statique."
-      }
-    ]
-  },
-  {
-    "id": "perf_hyd_01",
-    "functionalCategory": "Hydraulique",
-    "subCategory": "Amortissement",
-    "component": "Accumulateur de perfo",
-    "subComponent": "Double diaphragme azote",
-    "reference": "8648 3146 05",
-    "designation": "[HYDRAULIQUE] - [ACCUMULATEUR DE SÉCURITÉ MARTEAU] - [Accumulateur d'ondes de chocs hydraulique original COP1838] - (OEM: 8648 3146 05)",
-    "notes": "Accumulateur d'azote haute et basse pressions amortissant les vibrations de recul de la perche de perfo.",
-    "proposedPrice": 7500,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Epiroc COP 1838",
-    "criticality": "CRITIQUE",
-    "price": 7500,
-    "bomLevel": 3,
-    "unit": "ASSEMBLY",
-    "criticalityScore": 96,
-    "mtbfHours": 800,
-    "overhaulIntervalHours": 1600,
-    "failureModes": [
-      "Déchirure de la membrane HNBR d'origine",
-      "Baisse de charge azote provoquant chocs bélier intenses",
-      "Micro-fissuration d'embout"
-    ],
-    "relatedItems": [
-      "perf_sub_02",
-      "perf_az_mb_mem"
-    ],
-    "stockQty": 2,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 48,
-    "replacementRisk": "HIGH",
-    "supplierReal": "Epiroc Maroc Division Perforateurs",
-    "commonName": "Amortisseur de Percussion",
-    "searchTags": [
-      "HYDRAULIQUE",
-      "AMORTISSEMENT",
-      "URGENT",
-      "BLOCKING",
-      "ACCUMULATEUR",
-      "SÉCURITÉ",
-      "MARTEAU",
-      "D'ONDES"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Epiroc COP 1838"
-    ],
-    "interchangeableWith": [
-      "MB-COP-8648 3146 05"
-    ],
-    "mtbfStatus": "FIELD_PROVEN",
-    "operationalPriority": 5,
-    "downtimeImpact": "CRITICAL",
-    "realFailureReports": [
-      {
-        "date": "2026-01-20",
-        "symptom": "Percussion folle ou saccadée du marteau COP 1838 et vibration extrême du flexible HP",
-        "causeFound": "Rupture complète de la membrane HNBR de l'accumulateur de pression due aux micro-chocs thermiques à haute fréquence (250Hz) sous environnement acide."
-      }
-    ]
-  },
-  {
-    "id": "perf_fil_01",
-    "functionalCategory": "Filtration",
-    "subCategory": "Eau de Rinçage",
-    "component": "Filtre de genouillère",
-    "subComponent": "Crépine mesh inox anti-sable",
-    "reference": "MB-T23-301d",
-    "designation": "[FILTRATION] - [FILTRE DE RINCAGE DE GENOUILLÈRE] - [Filtre crépine mesh acier inoxydable anti-sable de forage] - (OEM: MB-T23-301d)",
-    "notes": "Filtre fin protégeant la chambre d'injection d'eau interne du perforateur.",
-    "proposedPrice": 450,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Tous perforateurs",
-    "criticality": "MOYENNE",
-    "price": 450,
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "criticalityScore": 65,
-    "mtbfHours": 250,
-    "overhaulIntervalHours": 500,
-    "failureModes": [
-      "Colmatage par silice en suspension d'eau de forage",
-      "Déchirure de la maille inox",
-      "Corrosion acide"
-    ],
-    "relatedItems": [
-      "perf_sub_01",
-      "perf_sub_05"
-    ],
-    "stockQty": 12,
-    "minStock": 4,
-    "criticalStock": 2,
-    "leadTimeDays": 15,
-    "replacementRisk": "LOW",
-    "supplierReal": "Epiroc Maroc Division Perforateurs",
-    "commonName": "Filtre de genouillère",
-    "searchTags": [
-      "FILTRATION",
-      "EAU DE RINÇAGE",
-      "FILTRE",
-      "RINCAGE",
-      "GENOUILLÈRE",
-      "CRÉPINE",
-      "MESH",
-      "ACIER"
-    ],
-    "urgentUse": false,
-    "compatibleMachines": [],
-    "interchangeableWith": [
-      "MB-COP-MB-T23-301d"
-    ],
-    "mtbfStatus": "ESTIMATED",
-    "operationalPriority": 2,
-    "downtimeImpact": "LOW",
-    "realFailureReports": [
-      {
-        "date": "2025-08-10",
-        "symptom": "Composant saturé ou usure mineure relevée en cours de shift",
-        "causeFound": "Colmatage par poussière minérale et silice calcaire de fond de puits."
-      }
-    ]
-  },
-  {
-    "id": "perf_az_mb_mem",
-    "functionalCategory": "Hydraulique",
-    "subCategory": "Amortissement",
-    "component": "Membrane Azote marteau",
-    "subComponent": "Membrane azote HP originale Montabert",
-    "reference": "MB-T23-999",
-    "designation": "[HYDRAULIQUE] - [MEMBRANE AZOTE DIAPHRAGME HNBR] - [Diaphragme élastomère calibré anti-abrasion Montabert] - (OEM: MB-T23-999)",
-    "notes": "Membrane élastomère de rechange HNBR pour amortisseur Montabert HC50/HC110.",
-    "proposedPrice": 4200,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Perforateur Montabert HC50",
-    "criticality": "CRITIQUE",
-    "price": 4200,
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "criticalityScore": 92,
-    "mtbfHours": 600,
-    "overhaulIntervalHours": 1200,
-    "failureModes": [
-      "Éclatement de cloison",
-      "Porosité à l'azote sous friction haute fréquence (250 Hz)",
-      "Craquelures marginales"
-    ],
-    "relatedItems": [
-      "perf_hyd_01",
-      "perf_az_mb_valve"
-    ],
-    "stockQty": 2,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 64,
-    "replacementRisk": "HIGH",
-    "supplierReal": "Montabert SAS (Lyon, France)",
-    "commonName": "Membrane Azote (Boule)",
-    "searchTags": [
-      "HYDRAULIQUE",
-      "AMORTISSEMENT",
-      "URGENT",
-      "BLOCKING",
-      "MEMBRANE",
-      "AZOTE",
-      "DIAPHRAGME",
-      "HNBR"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Montabert HC50",
-      "Montabert HC110"
-    ],
-    "interchangeableWith": [
-      "MB-COP-MB-T23-999"
-    ],
-    "mtbfStatus": "FIELD_PROVEN",
-    "operationalPriority": 5,
-    "downtimeImpact": "CRITICAL",
-    "realFailureReports": [
-      {
-        "date": "2026-01-20",
-        "symptom": "Percussion folle ou saccadée du marteau COP 1838 et vibration extrême du flexible HP",
-        "causeFound": "Rupture complète de la membrane HNBR de l'accumulateur de pression due aux micro-chocs thermiques à haute fréquence (250Hz) sous environnement acide."
-      }
-    ]
-  },
-  {
-    "id": "perf_az_mb_valve",
-    "functionalCategory": "Forage",
-    "subCategory": "Soupapes de régulation",
-    "component": "Clapet de régulation de percussion",
-    "subComponent": "Tiroir hydraulique haute fréquence",
-    "reference": "8663 3697 55",
-    "designation": "[FORAGE] - [CLAPET DE RÉGULATION DE MARTEAU] - [Distributeur et valve de pilotage hydraulique commandée par delta P] - (OEM: 8663 3697 55)",
-    "notes": "Distributeur hydraulique haute précision inversant l'admission d'huile de frappe.",
-    "proposedPrice": 9200,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Perforateur Montabert HC50 / HC110",
-    "criticality": "CRITIQUE",
-    "price": 9200,
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "criticalityScore": 94,
-    "mtbfHours": 1500,
-    "overhaulIntervalHours": 3000,
-    "failureModes": [
-      "Rayures d'engrènement de commande",
-      "Rupture d'épaulement calibré",
-      "Incrustation de limaille"
-    ],
-    "relatedItems": [
-      "perf_sub_01",
-      "perf_az_mb_mem"
-    ],
-    "stockQty": 3,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 61,
-    "replacementRisk": "HIGH",
-    "supplierReal": "Montabert SAS (Lyon, France)",
-    "commonName": "Clapet de régulation de percussion",
-    "searchTags": [
-      "FORAGE",
-      "SOUPAPES DE RÉGULATION",
-      "URGENT",
-      "BLOCKING",
-      "CLAPET",
-      "RÉGULATION",
-      "MARTEAU",
-      "DISTRIBUTEUR"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Montabert HC50",
-      "Montabert HC110"
-    ],
-    "interchangeableWith": [
-      "MB-COP-8663 3697 55"
-    ],
-    "mtbfStatus": "FIELD_PROVEN",
-    "operationalPriority": 5,
-    "downtimeImpact": "CRITICAL",
-    "realFailureReports": [
-      {
-        "date": "2026-04-05",
-        "symptom": "Perte de rendement mécanique brutal de l'assemblage",
-        "causeFound": "Infiltration directe de boue saline acide provoquant un défaut de lubrification hydro-statique."
-      }
-    ]
-  },
-  {
-    "id": "perf_lub_grs",
-    "functionalCategory": "Forage",
-    "subCategory": "Graissage",
-    "component": "Injecteur automatique de graisse",
-    "subComponent": "Injecteur de queue de piston lubrifié",
-    "reference": "MB-T23-550",
-    "designation": "[FORAGE] - [INJECTEUR AUTOMATIQUE DE GRAISSE] - [Buse d'injection de reboit permanent de graisse de queue de piston] - (OEM: MB-T23-550)",
-    "notes": "Assure la décharge de graisse sous signal d'air forcé permanent pour limiter la dégradation queue/douille d'emmanchement.",
-    "proposedPrice": 5800,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Tous perforateurs",
-    "criticality": "HAUTE",
-    "price": 5800,
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "criticalityScore": 89,
-    "mtbfHours": 800,
-    "overhaulIntervalHours": 1600,
-    "failureModes": [
-      "Bouchage de l'orifice fin d'injection par boue cuivrée",
-      "Fuite sur raccord d'air pilote",
-      "Casse de ressort interne"
-    ],
-    "relatedItems": [
-      "perf_sub_05",
-      "perf_fill_gasket_joint_copper"
-    ],
-    "stockQty": 3,
-    "minStock": 3,
-    "criticalStock": 1,
-    "leadTimeDays": 24,
-    "replacementRisk": "MEDIUM",
-    "supplierReal": "Epiroc Maroc Division Perforateurs",
-    "commonName": "Injecteur Carburant",
-    "searchTags": [
-      "FORAGE",
-      "GRAISSAGE",
-      "INJECTEUR",
-      "AUTOMATIQUE",
-      "GRAISSE",
-      "BUSE",
-      "D'INJECTION",
-      "REBOIT"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [],
-    "interchangeableWith": [
-      "MB-COP-MB-T23-550"
-    ],
-    "mtbfStatus": "ESTIMATED",
-    "operationalPriority": 4,
-    "downtimeImpact": "MEDIUM",
-    "realFailureReports": [
-      {
-        "date": "2026-04-05",
-        "symptom": "Perte de rendement mécanique brutal de l'assemblage",
-        "causeFound": "Infiltration directe de boue saline acide provoquant un défaut de lubrification hydro-statique."
-      }
-    ]
-  },
-  {
-    "id": "perf_fill_gasket_joint_copper",
-    "functionalCategory": "Consommables",
-    "subCategory": "Joints d'étanchéité",
-    "component": "Joint de raccordement",
-    "subComponent": "Cuivre recuit de valve perforateur",
-    "reference": "MB-COP-WSH-X",
-    "designation": "[CONSOMMABLES] - [JOINT DE RACCORDEMENT CUIVRE] - [Kit 20 joints cuivre recuit d'étanchéité corps de valve SRE] - (OEM: MB-COP-WSH-X)",
-    "notes": "Joints d'absorption ultime pour raccords HP de pilotage hydraulique marteau.",
-    "proposedPrice": 450,
-    "suggestedType": "CONSOMMABLES",
-    "source": "MASTER",
-    "compatibility": "Tous perforateurs",
-    "criticality": "HAUTE",
-    "price": 450,
-    "bomLevel": 3,
-    "unit": "KIT",
-    "criticalityScore": 80,
-    "mtbfHours": 300,
-    "overhaulIntervalHours": 600,
-    "failureModes": [
-      "Fuites de signal par non-écrasement",
-      "Pincement excessif lors du serrage rapide au front"
-    ],
-    "relatedItems": [
-      "perf_lub_grs",
-      "perf_az_mb_valve",
-      "perf_sub_06"
-    ],
-    "stockQty": 4,
-    "minStock": 3,
-    "criticalStock": 1,
-    "leadTimeDays": 25,
-    "replacementRisk": "MEDIUM",
-    "supplierReal": "Epiroc Maroc Division Perforateurs",
-    "commonName": "Pochette de Joints Racleurs",
-    "searchTags": [
-      "CONSOMMABLES",
-      "JOINTS D'ÉTANCHÉITÉ",
-      "JOINT",
-      "RACCORDEMENT",
-      "CUIVRE",
-      "JOINTS",
-      "RECUIT",
-      "D'ÉTANCHÉITÉ"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [],
-    "interchangeableWith": [
-      "MB-COP-MB-COP-WSH-X"
-    ],
-    "mtbfStatus": "ESTIMATED",
-    "operationalPriority": 4,
-    "downtimeImpact": "MEDIUM",
-    "realFailureReports": [
-      {
-        "date": "2026-03-12",
-        "symptom": "Chute de pression hydraulique graduelle et suintement au niveau du nez de vérin",
-        "causeFound": "Abrasion prématurée provoquée par l'incrustation de poussière abrasive de silice (SiO2) sur la lèvre externe du racleur."
-      }
-    ]
-  },
-  {
-    "id": "perf_fil_hoses",
-    "functionalCategory": "Hydraulique",
-    "subCategory": "Tuyauterie flexible",
-    "component": "Kit de flexibles de tourelle HP",
-    "subComponent": "Tuyaux flexibles sur-blindés quatre-tresses",
-    "reference": "MB-T23-HPF",
-    "designation": "[HYDRAULIQUE] - [KIT FLEXIBLES BLINDÉS HP] - [Assortiment flexibles tourelle sur-blindés retour cuve 4 tresses] - (OEM: MB-T23-HPF)",
-    "notes": "Flexibles à spirale d'acier haute ténacité protégeant les conduits de commande percussion de l'impact silice.",
-    "proposedPrice": 11200,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Perforateur Montabert HC50 / HC110",
-    "criticality": "HAUTE",
-    "price": 11200,
-    "bomLevel": 3,
-    "unit": "KIT",
-    "criticalityScore": 88,
-    "mtbfHours": 400,
-    "overhaulIntervalHours": 800,
-    "failureModes": [
-      "Abrasion externe par frottement de glissière",
-      "Rupture de sertissage arrière",
-      "Craquelure thermique"
-    ],
-    "relatedItems": [
-      "perf_sub_01",
-      "perf_az_mb_valve"
-    ],
-    "stockQty": 4,
-    "minStock": 3,
-    "criticalStock": 1,
-    "leadTimeDays": 30,
-    "replacementRisk": "MEDIUM",
-    "supplierReal": "Montabert SAS (Lyon, France)",
-    "commonName": "Flexible HP Blindé",
-    "searchTags": [
-      "HYDRAULIQUE",
-      "TUYAUTERIE FLEXIBLE",
-      "FLEXIBLES",
-      "BLINDÉS",
-      "ASSORTIMENT",
-      "TOURELLE",
-      "RETOUR",
-      "CUVE"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Montabert HC50",
-      "Montabert HC110"
-    ],
-    "interchangeableWith": [
-      "MB-COP-MB-T23-HPF"
-    ],
-    "mtbfStatus": "ESTIMATED",
-    "operationalPriority": 4,
-    "downtimeImpact": "MEDIUM",
-    "realFailureReports": [
-      {
-        "date": "2026-02-14",
-        "symptom": "Rupture franche du flexible ou échauffement avec bruits mécaniques au niveau du train de roulement",
-        "causeFound": "Friction abrasive de particules rocheuses et abrasion continue sous gaine de glissement avant avant-projet."
-      }
-    ]
-  },
-  {
     "id": "st2g_kit_250h",
     "functionalCategory": "Consommables",
     "subCategory": "Kits Maintenance",
     "component": "Kit Maintenance 250H",
     "subComponent": "Périodicité 250 Heures ST2G",
-    "reference": "ST2G-KNT-250H",
-    "designation": "[SÉCURITÉ MAINTENANCE] - [KIT ENTIÈRE SRE 250H] - [Kit complet périodique d'étanchéité et filtres ST2G] - (OEM: ST2G-KNT-250H)",
+    "reference": "5580 0088 25",
+    "designation": "[SÉCURITÉ MAINTENANCE] - [KIT ENTIÈRE SRE 250H] - [Kit complet périodique d'étanchéité et filtres ST2G] - (OEM: 5580 0088 25)",
     "notes": "Comprend filtres périodiques absolus, un ensemble de joints toriques basiques et un flacon de graisse universelle.",
     "proposedPrice": 5200,
     "suggestedType": "CONSOMMABLES",
@@ -3609,8 +2903,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Kits Maintenance",
     "component": "Kit Maintenance 500H",
     "subComponent": "Périodicité 500 Heures ST2G",
-    "reference": "ST2G-KNT-500H",
-    "designation": "[SÉCURITÉ MAINTENANCE] - [KIT ENTIÈRE SRE 500H] - [Kit d'usure intermédiaire joints béquille et transmission] - (OEM: ST2G-KNT-500H)",
+    "reference": "5580 0088 50",
+    "designation": "[SÉCURITÉ MAINTENANCE] - [KIT ENTIÈRE SRE 500H] - [Kit d'usure intermédiaire joints béquille et transmission] - (OEM: 5580 0088 50)",
     "notes": "Kit complet de rechange comprenant joints racleurs de vérin, kit de joints de transmission convertisseur et croisillon de cardan.",
     "proposedPrice": 9800,
     "suggestedType": "CONSOMMABLES",
@@ -3674,8 +2968,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Kits Overhaul",
     "component": "Kit Overhaul Rebuild Moteur",
     "subComponent": "Périodicité Overhaul Deutz L04",
-    "reference": "ST2G-MOT-REBUILD",
-    "designation": "[MOTEUR] - [KIT OVERHAUL REBUILD DEUTZ] - [Kit reconstruction intégrale chemises pistons bielles et soupapes ST2G] - (OEM: ST2G-MOT-REBUILD)",
+    "reference": "5580 0088 99",
+    "designation": "[MOTEUR] - [KIT OVERHAUL REBUILD DEUTZ] - [Kit reconstruction intégrale chemises pistons bielles et soupapes ST2G] - (OEM: 5580 0088 99)",
     "notes": "Reconstruction mécanique absolue du Deutz D914 L04 pour redémarrer à zero le compteur d'heures sous-sol.",
     "proposedPrice": 42000,
     "suggestedType": "ENGINS",
@@ -3869,136 +3163,6 @@ export const MASTER_CATALOG: CatalogItem[] = [
     ]
   },
   {
-    "id": "perf_kit_250h",
-    "functionalCategory": "Forage",
-    "subCategory": "Kits Maintenance",
-    "component": "Kit Joints Corps 250H",
-    "subComponent": "Périodicité 250 Heures Perforateur",
-    "reference": "MB-T23-K250",
-    "designation": "[SÉCURITÉ MAINTENANCE] - [KIT D'ANCHETÉ PÉRIODIQUE 250H] - [Kit de joints HNBR de corps avant et arrière marteau T23 SRE] - (OEM: MB-T23-K250)",
-    "notes": "Kit complet de joints de rechange spécifiques pour prévenir l'infiltration d'eau dans les accumulateurs.",
-    "proposedPrice": 4800,
-    "suggestedType": "CONSOMMABLES",
-    "source": "MASTER",
-    "compatibility": "Perforateur Montabert HC50",
-    "criticality": "CRITIQUE",
-    "price": 4800,
-    "bomLevel": 3,
-    "unit": "KIT",
-    "criticalityScore": 92,
-    "mtbfHours": 250,
-    "overhaulIntervalHours": 250,
-    "failureModes": [
-      "Infiltration d'eau de rinçage calcaire dans les accumulateurs",
-      "Rupture de joints toriques extérieurs"
-    ],
-    "relatedItems": [
-      "perf_az_mb_mem",
-      "perf_fill_gasket_joint_copper"
-    ],
-    "stockQty": 3,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 63,
-    "replacementRisk": "HIGH",
-    "supplierReal": "Montabert SAS (Lyon, France)",
-    "commonName": "Pochette de Joints Racleurs",
-    "searchTags": [
-      "FORAGE",
-      "KITS MAINTENANCE",
-      "URGENT",
-      "BLOCKING",
-      "SÉCURITÉ",
-      "MAINTENANCE",
-      "D'ANCHETÉ",
-      "PÉRIODIQUE"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Montabert HC50",
-      "Montabert HC110"
-    ],
-    "interchangeableWith": [
-      "MB-COP-MB-T23-K250"
-    ],
-    "mtbfStatus": "FIELD_PROVEN",
-    "operationalPriority": 5,
-    "downtimeImpact": "CRITICAL",
-    "realFailureReports": [
-      {
-        "date": "2026-03-12",
-        "symptom": "Chute de pression hydraulique graduelle et suintement au niveau du nez de vérin",
-        "causeFound": "Abrasion prématurée provoquée par l'incrustation de poussière abrasive de silice (SiO2) sur la lèvre externe du racleur."
-      }
-    ]
-  },
-  {
-    "id": "perf_kit_500h",
-    "functionalCategory": "Forage",
-    "subCategory": "Kits Maintenance",
-    "component": "Kit Overhaul Intermédiaire 500H",
-    "subComponent": "Périodicité 500 Heures Perforateur",
-    "reference": "EP-COP-K500",
-    "designation": "[SÉCURITÉ MAINTENANCE] - [KIT RENSEIGNÉ OVERHAUL INTERMÉDIAIRE 500H] - [Guidages étanchéités et bagues bronze d'origine] - (OEM: EP-COP-K500)",
-    "notes": "Kit d'étanchéité et de guidage complet pour la percussion EPIROC COP 1838 et Montabert HC50.",
-    "proposedPrice": 18500,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Epiroc COP 1838",
-    "criticality": "CRITIQUE",
-    "price": 18500,
-    "bomLevel": 3,
-    "unit": "KIT",
-    "criticalityScore": 97,
-    "mtbfHours": 500,
-    "overhaulIntervalHours": 500,
-    "failureModes": [
-      "Ovalisation de douille de bati avant",
-      "Fuite de signal pilote tiroir",
-      "Baisse progressive d'énergie de perforation"
-    ],
-    "relatedItems": [
-      "perf_sub_02",
-      "perf_sub_05",
-      "perf_sub_06",
-      "perf_hyd_01"
-    ],
-    "stockQty": 4,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 51,
-    "replacementRisk": "HIGH",
-    "supplierReal": "Epiroc Maroc Division Perforateurs",
-    "commonName": "Sac Kit Entretien",
-    "searchTags": [
-      "FORAGE",
-      "KITS MAINTENANCE",
-      "URGENT",
-      "BLOCKING",
-      "SÉCURITÉ",
-      "MAINTENANCE",
-      "RENSEIGNÉ",
-      "OVERHAUL"
-    ],
-    "urgentUse": true,
-    "compatibleMachines": [
-      "Epiroc COP 1838"
-    ],
-    "interchangeableWith": [
-      "MB-COP-EP-COP-K500"
-    ],
-    "mtbfStatus": "FIELD_PROVEN",
-    "operationalPriority": 5,
-    "downtimeImpact": "CRITICAL",
-    "realFailureReports": [
-      {
-        "date": "2026-04-05",
-        "symptom": "Perte de rendement mécanique brutal de l'assemblage",
-        "causeFound": "Infiltration directe de boue saline acide provoquant un défaut de lubrification hydro-statique."
-      }
-    ]
-  },
-  {
     "id": "st2g_hyd_04",
     "functionalCategory": "Hydraulique",
     "subCategory": "Génération de puissance",
@@ -4020,8 +3184,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Servo-valve proportionnelle",
-    "searchTags": ["HYDRAULIQUE", "SERVO-VALVE", "REXROTH", "ST2G"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "HYDRAULIQUE",
+      "SERVO-VALVE",
+      "REXROTH",
+      "ST2G"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_05",
@@ -4045,8 +3216,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 25,
     "commonName": "Banc distributeur complet",
-    "searchTags": ["DISTRIBUTEUR", "PARKER", "HYDRAULIQUE", "L90LS"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "DISTRIBUTEUR",
+      "PARKER",
+      "HYDRAULIQUE",
+      "L90LS"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_06",
@@ -4070,8 +3248,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Clapet de Décharge",
-    "searchTags": ["SOUPAPE", "LIMITEUR", "RELIEF", "PARKER"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "SOUPAPE",
+      "LIMITEUR",
+      "RELIEF",
+      "PARKER"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_07",
@@ -4095,8 +3280,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 21,
     "commonName": "Vérin de direction ST2G",
-    "searchTags": ["VÉRIN", "DIRECTION", "HYDRAULIQUE", "ST2G"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "VÉRIN",
+      "DIRECTION",
+      "HYDRAULIQUE",
+      "ST2G"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_08",
@@ -4120,8 +3312,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 7,
     "commonName": "Joints de vérin direction",
-    "searchTags": ["JOINTS", "VÉRIN", "DIRECTION", "POCHETTE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "JOINTS",
+      "VÉRIN",
+      "DIRECTION",
+      "POCHETTE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_09",
@@ -4145,8 +3344,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 3,
     "leadTimeDays": 5,
     "commonName": "Racleur de Silice",
-    "searchTags": ["RACLEUR", "SILICE", "JOINT", "VÉRIN"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "RACLEUR",
+      "SILICE",
+      "JOINT",
+      "VÉRIN"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_10",
@@ -4170,8 +3376,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 14,
     "commonName": "Accumulateur de frein SAHR",
-    "searchTags": ["ACCUMULATEUR", "FREIN", "SAHR", "PARKER", "AZOTE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "ACCUMULATEUR",
+      "FREIN",
+      "SAHR",
+      "PARKER",
+      "AZOTE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_11",
@@ -4195,8 +3409,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 18,
     "commonName": "Priority Valve",
-    "searchTags": ["VALVE", "PRIORITAIRE", "DIRECTION", "DANFOSS"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "VALVE",
+      "PRIORITAIRE",
+      "DIRECTION",
+      "DANFOSS"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_12",
@@ -4220,8 +3441,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 3,
     "leadTimeDays": 8,
     "commonName": "Filtre hydraulique retour",
-    "searchTags": ["FILTRE", "CARTOUCHE", "RETOUR", "HYDRAULIQUE", "10M"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "FILTRE",
+      "CARTOUCHE",
+      "RETOUR",
+      "HYDRAULIQUE",
+      "10M"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_13",
@@ -4245,8 +3474,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Reniflard réservoir",
-    "searchTags": ["BOUCHON", "RENIFLARD", "SILICA", "HUMIDITÉ"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "BOUCHON",
+      "RENIFLARD",
+      "SILICA",
+      "HUMIDITÉ"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_14",
@@ -4270,8 +3506,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Capteur pression 400B",
-    "searchTags": ["CAPTEUR", "TRANSMETTEUR", "PRESSION", "DANFOSS"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "CAPTEUR",
+      "TRANSMETTEUR",
+      "PRESSION",
+      "DANFOSS"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_15",
@@ -4295,8 +3538,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Flector de Pompe Hydraulique",
-    "searchTags": ["ACCOUPLEMENT", "FLECTOR", "BOWEX", "POMPE", "DEUTZ"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "ACCOUPLEMENT",
+      "FLECTOR",
+      "BOWEX",
+      "POMPE",
+      "DEUTZ"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_16",
@@ -4320,8 +3571,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Mallette joints O-Ring",
-    "searchTags": ["COFFRET", "MALLETTE", "JOINTS", "TORIQUES", "ORING"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "COFFRET",
+      "MALLETTE",
+      "JOINTS",
+      "TORIQUES",
+      "ORING"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_hyd_03",
@@ -4345,8 +3604,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 45,
     "commonName": "Pompe Hydraulique ST2D",
-    "searchTags": ["POMPE", "REXROTH", "PISTONS", "VARIABLE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "POMPE",
+      "REXROTH",
+      "PISTONS",
+      "VARIABLE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_04",
@@ -4370,8 +3637,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 30,
     "commonName": "Distributeur d'huile Danfoss",
-    "searchTags": ["DISTRIBUTEUR", "PVG32", "DANFOSS", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "DISTRIBUTEUR",
+      "PVG32",
+      "DANFOSS",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_05",
@@ -4395,8 +3669,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 25,
     "commonName": "Vérin de cavage ST2D",
-    "searchTags": ["VÉRIN", "BENNAGE", "CAVAGE", "ST2D", "DUMPER"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "VÉRIN",
+      "BENNAGE",
+      "CAVAGE",
+      "ST2D",
+      "DUMPER"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_06",
@@ -4420,8 +3702,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 8,
     "commonName": "Joints vérin levage ST2D",
-    "searchTags": ["JOINTS", "VÉRIN", "LEVAGE", "PACK", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "JOINTS",
+      "VÉRIN",
+      "LEVAGE",
+      "PACK",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_07",
@@ -4445,8 +3735,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Valve de freinage",
-    "searchTags": ["VALVE", "FREIN", "MICO", "SAFETY"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "VALVE",
+      "FREIN",
+      "MICO",
+      "SAFETY"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_08",
@@ -4470,8 +3767,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Sonde température huile",
-    "searchTags": ["SONDE", "CAPTEUR", "TEMPÉRATURE", "DANFOSS"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "SONDE",
+      "CAPTEUR",
+      "TEMPÉRATURE",
+      "DANFOSS"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_09",
@@ -4495,8 +3799,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 6,
     "commonName": "Noyau clapet de filtre",
-    "searchTags": ["FILTRE", "CARTOUCHE", "PILOTAGE", "5M"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "FILTRE",
+      "CARTOUCHE",
+      "PILOTAGE",
+      "5M"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_10",
@@ -4520,8 +3831,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Accumulateur Ride Control",
-    "searchTags": ["ACCUMULATEUR", "AMORTISSEUR", "SUSPENSION", "PARKER"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "ACCUMULATEUR",
+      "AMORTISSEUR",
+      "SUSPENSION",
+      "PARKER"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_11",
@@ -4545,8 +3863,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 28,
     "commonName": "Swivel Joint Central",
-    "searchTags": ["JOINT", "ROBUSTE", "INTERCONNECT", "ROTATIF"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "JOINT",
+      "ROBUSTE",
+      "INTERCONNECT",
+      "ROTATIF"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_12",
@@ -4570,8 +3895,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Electrovanne bypass safety",
-    "searchTags": ["ELECTROVANNE", "SOLENOID", "PARKER", "VALVE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "ELECTROVANNE",
+      "SOLENOID",
+      "PARKER",
+      "VALVE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "perf_t23_01",
@@ -4585,7 +3917,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 16500,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 16500,
     "bomLevel": 3,
@@ -4595,8 +3927,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 21,
     "commonName": "Piston de percussion T23",
-    "searchTags": ["PISTON", "PERCUSSION", "T23", "MONTABERT"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "PISTON",
+      "PERCUSSION",
+      "T23",
+      "MONTABERT"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_02",
@@ -4610,7 +3950,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 2400,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "HAUTE",
     "price": 2400,
     "bomLevel": 3,
@@ -4620,8 +3960,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 14,
     "commonName": "Bague bronze avant T23",
-    "searchTags": ["BAGUE", "GUIDAGE", "BRONZE", "T23", "MONTABERT"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "BAGUE",
+      "GUIDAGE",
+      "BRONZE",
+      "T23",
+      "MONTABERT"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_03",
@@ -4635,7 +3984,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 1500,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 1500,
     "bomLevel": 3,
@@ -4645,8 +3994,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 7,
     "commonName": "Pochette de joints HP T23",
-    "searchTags": ["JOINTS", "VRING", "ETANCHEITE", "HP", "MONTABERT"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "JOINTS",
+      "VRING",
+      "ETANCHEITE",
+      "HP",
+      "MONTABERT"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_04",
@@ -4660,7 +4018,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 6500,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 6500,
     "bomLevel": 3,
@@ -4670,8 +4028,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 18,
     "commonName": "Tiroir distributeur T23",
-    "searchTags": ["DISTRIBUTEUR", "TIROIR", "CYCLE", "VALVE", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "DISTRIBUTEUR",
+      "TIROIR",
+      "CYCLE",
+      "VALVE",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_05",
@@ -4685,7 +4052,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 9500,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 9500,
     "bomLevel": 3,
@@ -4695,8 +4062,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Accumulateur HP T23",
-    "searchTags": ["ACCUMULATEUR", "HP", "MEMBRANE", "MONTABERT", "FORAGE"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "ACCUMULATEUR",
+      "HP",
+      "MEMBRANE",
+      "MONTABERT",
+      "FORAGE"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_06",
@@ -4710,7 +4086,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 5600,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "HAUTE",
     "price": 5600,
     "bomLevel": 3,
@@ -4720,8 +4096,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Accumulateur BP T23",
-    "searchTags": ["ACCUMULATEUR", "BP", "RETOUR", "MONTABERT"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "ACCUMULATEUR",
+      "BP",
+      "RETOUR",
+      "MONTABERT"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_07",
@@ -4735,7 +4119,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 1100,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 1100,
     "bomLevel": 3,
@@ -4745,8 +4129,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 7,
     "commonName": "Membrane T23 d'origine",
-    "searchTags": ["MEMBRANE", "ACCUMULATEUR", "NITRILE", "RECHANGE"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "MEMBRANE",
+      "ACCUMULATEUR",
+      "NITRILE",
+      "RECHANGE"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_08",
@@ -4760,7 +4152,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 3500,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 3500,
     "bomLevel": 3,
@@ -4770,8 +4162,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Shank T38 Montabert",
-    "searchTags": ["SHANK", "EMMANCHEMENT", "T38", "ADAPTER"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "SHANK",
+      "EMMANCHEMENT",
+      "T38",
+      "ADAPTER"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_09",
@@ -4785,7 +4185,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 2800,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "HAUTE",
     "price": 2800,
     "bomLevel": 3,
@@ -4795,8 +4195,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Boîte d'injection rinçage T23",
-    "searchTags": ["RINÇAGE", "BOITE", "FLUSHING", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "RINÇAGE",
+      "BOITE",
+      "FLUSHING",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_10",
@@ -4810,7 +4218,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 650,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 650,
     "bomLevel": 3,
@@ -4820,8 +4228,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 3,
     "leadTimeDays": 5,
     "commonName": "Joints d'eau Flushing T23",
-    "searchTags": ["JOINTS", "EAU", "RINÇAGE", "POCHETTE"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "JOINTS",
+      "EAU",
+      "RINÇAGE",
+      "POCHETTE"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_11",
@@ -4835,7 +4251,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 24500,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 24500,
     "bomLevel": 3,
@@ -4845,8 +4261,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 40,
     "commonName": "Front Head Montabert T23",
-    "searchTags": ["CORPS", "CARTER", "AVANT", "HEAD", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "CORPS",
+      "CARTER",
+      "AVANT",
+      "HEAD",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_12",
@@ -4860,7 +4285,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 3800,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 3800,
     "bomLevel": 3,
@@ -4870,8 +4295,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Set de 4 Tirants T23",
-    "searchTags": ["TIRANTS", "SERRAGE", "CONIQUES", "VIS", "SET"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "TIRANTS",
+      "SERRAGE",
+      "CONIQUES",
+      "VIS",
+      "SET"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_13",
@@ -4885,7 +4319,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 6800,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 6800,
     "bomLevel": 3,
@@ -4895,8 +4329,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 18,
     "commonName": "Moteur de rotation T23",
-    "searchTags": ["MOTEUR", "ROTATION", "OMS80", "GEROTOR"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "MOTEUR",
+      "ROTATION",
+      "OMS80",
+      "GEROTOR"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_14",
@@ -4910,7 +4352,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 4100,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 4100,
     "bomLevel": 3,
@@ -4920,8 +4362,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Pochette révision T23 1000H",
-    "searchTags": ["KIT", "REVISION", "OVERHAUL", "COMPLETE", "1000H"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "KIT",
+      "REVISION",
+      "OVERHAUL",
+      "COMPLETE",
+      "1000H"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_15",
@@ -4935,7 +4386,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 5400,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "HAUTE",
     "price": 5400,
     "bomLevel": 3,
@@ -4945,8 +4396,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 14,
     "commonName": "Piston d'amortisseur T23",
-    "searchTags": ["AMORTISSEUR", "RECUL", "PISTON", "DAMPENER", "MONTABERT", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "AMORTISSEUR",
+      "RECUL",
+      "PISTON",
+      "DAMPENER",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_16",
@@ -4960,7 +4421,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 1250,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "HAUTE",
     "price": 1250,
     "bomLevel": 3,
@@ -4970,8 +4431,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Joints d'amortisseur T23",
-    "searchTags": ["JOINTS", "AMORTISSEUR", "SET", "POCHETTE", "DAMPENER", "ST2G"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "JOINTS",
+      "AMORTISSEUR",
+      "SET",
+      "POCHETTE",
+      "DAMPENER",
+      "ST2G"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_17",
@@ -4985,7 +4456,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 4200,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 4200,
     "bomLevel": 3,
@@ -4995,8 +4466,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 8,
     "commonName": "Douille de rotation T23",
-    "searchTags": ["DOUILLE", "BAGUES", "ROTATION", "CANNELE", "COUPLING", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "DOUILLE",
+      "BAGUES",
+      "ROTATION",
+      "CANNELE",
+      "COUPLING",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_18",
@@ -5010,7 +4491,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 1850,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "MOYENNE",
     "price": 1850,
     "bomLevel": 3,
@@ -5020,8 +4501,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Butée arrière de percussion T23",
-    "searchTags": ["BUTEE", "PERCUSSION", "RETOUR", "THRUST", "BRONZE", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "BUTEE",
+      "PERCUSSION",
+      "RETOUR",
+      "THRUST",
+      "BRONZE",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_19",
@@ -5035,7 +4526,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 6800,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "HAUTE",
     "price": 6800,
     "bomLevel": 3,
@@ -5045,8 +4536,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Mallette azote Montabert T23",
-    "searchTags": ["MALLETTE", "AZOTE", "CHARGE", "MANOMETRE", "KIT", "ACCUMULATEUR", "GONFLAGE"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "MALLETTE",
+      "AZOTE",
+      "CHARGE",
+      "MANOMETRE",
+      "KIT",
+      "ACCUMULATEUR",
+      "GONFLAGE"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_20",
@@ -5060,7 +4562,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 1450,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 1450,
     "bomLevel": 3,
@@ -5070,8 +4572,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 5,
     "commonName": "Flexible HP percussion T23",
-    "searchTags": ["FLEXIBLE", "PERCUSSION", "HP", "ALIMENTATION", "HYDRAULIQUE", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "FLEXIBLE",
+      "PERCUSSION",
+      "HP",
+      "ALIMENTATION",
+      "HYDRAULIQUE",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_21",
@@ -5085,7 +4597,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 2600,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "HAUTE",
     "price": 2600,
     "bomLevel": 3,
@@ -5095,8 +4607,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Patins de glissière berceau T23",
-    "searchTags": ["PATINS", "GLISSIERE", "GUIDAGE", "BERCEAU", "BRONZE", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "PATINS",
+      "GLISSIERE",
+      "GUIDAGE",
+      "BERCEAU",
+      "BRONZE",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_22",
@@ -5110,7 +4632,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 380,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "MOYENNE",
     "price": 380,
     "bomLevel": 3,
@@ -5120,8 +4642,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 4,
     "commonName": "Prise Minimess Azote T23",
-    "searchTags": ["PRISE", "PRESSION", "MINIMESS", "RACCORD", "TEST", "AZOTE", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "PRISE",
+      "PRESSION",
+      "MINIMESS",
+      "RACCORD",
+      "TEST",
+      "AZOTE",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_23",
@@ -5135,7 +4668,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 950,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "CRITIQUE",
     "price": 950,
     "bomLevel": 3,
@@ -5145,8 +4678,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Clapet anti-retour air T23",
-    "searchTags": ["CLAPET", "AIR", "SOUFFLAGE", "VALVE", "CHECK", "MONTABERT", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "CLAPET",
+      "AIR",
+      "SOUFFLAGE",
+      "VALVE",
+      "CHECK",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
   {
     "id": "perf_t23_24",
@@ -5160,7 +4704,7 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "proposedPrice": 280,
     "suggestedType": "PERFORATEURS",
     "source": "MASTER",
-    "compatibility": "MONTALBERT T23",
+    "compatibility": "MONTABERT T23",
     "criticality": "MOYENNE",
     "price": 280,
     "bomLevel": 3,
@@ -5170,12 +4714,1312 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 3,
     "commonName": "Bouchon valve azote T23",
-    "searchTags": ["BOUCHON", "VALVE", "AZOTE", "ACCUMULATEUR", "CAPUCHON", "T23"],
-    "compatibleMachines": ["Montabert T23", "MONTALBERT T23"]
+    "searchTags": [
+      "BOUCHON",
+      "VALVE",
+      "AZOTE",
+      "ACCUMULATEUR",
+      "CAPUCHON",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
   },
-  // ==========================================
-  // ST2D BATTERY / ELECTRIC SYSTEM (CSV 1)
-  // ==========================================
+  {
+    "id": "perf_t23_25",
+    "functionalCategory": "Forage",
+    "subCategory": "Systèmes de Soufflage",
+    "component": "Chute de soufflage T23",
+    "subComponent": "Dispositif d'injection d'air et soufflage de rinçage",
+    "reference": "9100 2300 50",
+    "designation": "[FORAGE] - [SOUFFLAGES T23] - [Chute d'air et raccord de soufflage rapide d'origine Montabert] - (OEM: 9100 2300 50)",
+    "notes": "Système d'injection d'air étanche et régulation de soufflage T23 d'origine pour le nettoyage optimal des trous de forage.",
+    "proposedPrice": 1450,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "CRITIQUE",
+    "price": 1450,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 8,
+    "minStock": 3,
+    "criticalStock": 1,
+    "leadTimeDays": 5,
+    "commonName": "Chute soufflage T23",
+    "searchTags": [
+      "SOUFFLAGE",
+      "CHUTE",
+      "AIR",
+      "RINÇAGE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_26",
+    "functionalCategory": "Forage",
+    "subCategory": "Consommables de Forage",
+    "component": "Taillant à boutons coniques T23",
+    "subComponent": "Taillant conique 32mm",
+    "reference": "9100 2300 26",
+    "designation": "[FORAGE] - [TAILLANT CONIQUE T23] - [Taillant biconique à boutons carbure 32mm emmanchement conique] - (OEM: 9100 2300 26)",
+    "notes": "Taillant haute résistance de 32mm de diamètre pour la pénétration géologique dure des chantiers Hydromines.",
+    "proposedPrice": 650,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "CRITIQUE",
+    "price": 650,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 45,
+    "minStock": 15,
+    "criticalStock": 5,
+    "leadTimeDays": 3,
+    "commonName": "Taillant conique 32mm T23",
+    "searchTags": [
+      "TAILLANT",
+      "CONIQUE",
+      "32MM",
+      "BOUTON",
+      "BIT",
+      "MONTABERT",
+      "T23",
+      "FORAGE"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_27",
+    "functionalCategory": "Forage",
+    "subCategory": "Consommables de Forage",
+    "component": "Barre de forage conique T23",
+    "subComponent": "Barre conique 1.8m",
+    "reference": "9100 2300 27",
+    "designation": "[FORAGE] - [BARRE CONIQUE 1.8M T23] - [Tige de forage à emmanchement conique longueur 1.8M] - (OEM: 9100 2300 27)",
+    "notes": "Barre de forage hexagonale conique trempée de 1.8 mètres pour la transmission directe de couple et d'impact.",
+    "proposedPrice": 1850,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "CRITIQUE",
+    "price": 1850,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 30,
+    "minStock": 10,
+    "criticalStock": 3,
+    "leadTimeDays": 4,
+    "commonName": "Barre conique 1.8m T23",
+    "searchTags": [
+      "BARRE",
+      "CONIQUE",
+      "1.8M",
+      "TIGE",
+      "FORAGE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_28",
+    "functionalCategory": "Forage",
+    "subCategory": "Consommables de Forage",
+    "component": "Barre de forage conique T23",
+    "subComponent": "Barre conique 2.4m",
+    "reference": "9100 2300 28",
+    "designation": "[FORAGE] - [BARRE CONIQUE 2.4M T23] - [Tige de forage à emmanchement conique longueur 2.4M] - (OEM: 9100 2300 28)",
+    "notes": "Barre conique hexagonale haute pénétration de 2.4 mètres d'avancement pour forage d'abattage lourd.",
+    "proposedPrice": 2200,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "CRITIQUE",
+    "price": 2200,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 25,
+    "minStock": 8,
+    "criticalStock": 3,
+    "leadTimeDays": 4,
+    "commonName": "Barre conique 2.4m T23",
+    "searchTags": [
+      "BARRE",
+      "CONIQUE",
+      "2.4M",
+      "TIGE",
+      "FORAGE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_29",
+    "functionalCategory": "Forage",
+    "subCategory": "Systèmes de Soufflage",
+    "component": "Tube d'eau de rinçage",
+    "subComponent": "Aiguille d'eau haute pression",
+    "reference": "9100 2300 55",
+    "designation": "[FORAGE] - [TUBE D'EAU DE RINÇAGE] - [Aiguille d'injection d'eau centrale anti-corrosion Montabert T23] - (OEM: 9100 2300 55)",
+    "notes": "Amène l'eau au centre du shank pour l'évacuation des sédiments. Pièce extrêmement sensible aux pliures et à l'usure chimique.",
+    "proposedPrice": 1150,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 1150,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 15,
+    "minStock": 5,
+    "criticalStock": 2,
+    "leadTimeDays": 6,
+    "commonName": "Tube d'eau T23",
+    "searchTags": [
+      "TUBE",
+      "EAU",
+      "AIGUILLE",
+      "INJECTION",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_30",
+    "functionalCategory": "Forage",
+    "subCategory": "Rotation",
+    "component": "Douille de mandrin",
+    "subComponent": "Chuck Sleeve douille cannelée de guidage shank",
+    "reference": "9100 2300 60",
+    "designation": "[FORAGE] - [DOUILLE DE MANDRIN CHUCK] - [Douille d'emmanchement cannelée haute résistance Montabert T23] - (OEM: 9100 2300 60)",
+    "notes": "Bague intérieure du mandrin maintenant l'emmanchement de l'outil et transmettant la rotation directe.",
+    "proposedPrice": 3800,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "CRITIQUE",
+    "price": 3800,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 6,
+    "minStock": 2,
+    "criticalStock": 1,
+    "leadTimeDays": 10,
+    "commonName": "Douille mandrin T23",
+    "searchTags": [
+      "DOUILLE",
+      "MANDRIN",
+      "CHUCK",
+      "SLEEVE",
+      "EMMANCHEMENT",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_31",
+    "functionalCategory": "Forage",
+    "subCategory": "Guidage Métallique",
+    "component": "Butée de percussion avant",
+    "subComponent": "Thrust bushing bague d'arrêt avant",
+    "reference": "9100 2300 65",
+    "designation": "[FORAGE] - [BUTÉE DE PERCUSSION AVANT] - [Bague d'arrêt d'impact avant en bronze-acier Montabert T23] - (OEM: 9100 2300 65)",
+    "notes": "Absorbe les chocs à vide du piston de percussion lorsque le taillant ne touche pas le front de taille.",
+    "proposedPrice": 2450,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 2450,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 8,
+    "minStock": 3,
+    "criticalStock": 1,
+    "leadTimeDays": 12,
+    "commonName": "Butée avant percussion T23",
+    "searchTags": [
+      "BUTEE",
+      "AVANT",
+      "THRUST",
+      "BUSHING",
+      "PERCUSSION",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_32",
+    "functionalCategory": "Forage",
+    "subCategory": "Joints d'étanchéité",
+    "component": "Pochette de joints de rotation",
+    "subComponent": "Rotation seals pack d'étanchéité",
+    "reference": "9100 2300 70",
+    "designation": "[FORAGE] - [POCHETTE JOINTS DE ROTATION] - [Kit de bagues d'étanchéité d'huile de rotation T23] - (OEM: 9100 2300 70)",
+    "notes": "Prévient les fuites d'huile au niveau de l'arbre d'entraînement et du moteur de rotation.",
+    "proposedPrice": 980,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 980,
+    "bomLevel": 3,
+    "unit": "KIT",
+    "stockQty": 12,
+    "minStock": 4,
+    "criticalStock": 1,
+    "leadTimeDays": 5,
+    "commonName": "Joints rotation T23",
+    "searchTags": [
+      "JOINTS",
+      "ROTATION",
+      "KIT",
+      "POCHETTE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_33",
+    "functionalCategory": "Forage",
+    "subCategory": "Kits Maintenance",
+    "component": "Kit goupilles de corps",
+    "subComponent": "Goupilles de calage et clavettes de blocage",
+    "reference": "9100 2300 75",
+    "designation": "[FORAGE] - [KIT GOUPILLES & VIS SECURES] - [Kit de visserie spéciale d'assemblage et clavettes T23] - (OEM: 9100 2300 75)",
+    "notes": "Assortiment complet de clavettes et vis spéciales pour fixer les carters et le bloc de rinçage sans desserrage sous vibrations.",
+    "proposedPrice": 850,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 850,
+    "bomLevel": 3,
+    "unit": "KIT",
+    "stockQty": 15,
+    "minStock": 5,
+    "criticalStock": 1,
+    "leadTimeDays": 4,
+    "commonName": "Visserie de sûreté T23",
+    "searchTags": [
+      "VISSERIE",
+      "GOUPILLES",
+      "CLAVETTES",
+      "KIT",
+      "SÉCURITÉ",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_34",
+    "functionalCategory": "Forage",
+    "subCategory": "Rotation",
+    "component": "Accouplement moteur rotation",
+    "subComponent": "Flasque d'accouplement cannelée femelle d'origine",
+    "reference": "9100 2300 80",
+    "designation": "[FORAGE] - [ACCOUPLEMENT MOTEUR DE ROTATION] - [Flasque réceptrice renforcée d'origine Montabert T23] - (OEM: 9100 2300 80)",
+    "notes": "Permet de lier l'axe cannelé du moteur OMS 80 à la transmission de rotation en évitant les surcharges mécaniques.",
+    "proposedPrice": 1950,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 1950,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 6,
+    "minStock": 2,
+    "criticalStock": 1,
+    "leadTimeDays": 8,
+    "commonName": "Accouplement moteur T23",
+    "searchTags": [
+      "ACCOUPLEMENT",
+      "MOTEUR",
+      "ROTATION",
+      "FLASQUE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_35",
+    "functionalCategory": "Forage",
+    "subCategory": "Sécurité & Soupapes",
+    "component": "Clapet anti-retour d'eau",
+    "subComponent": "Soupape étanche d'injection d'eau",
+    "reference": "9100 2300 85",
+    "designation": "[FORAGE] - [CLAPET ANTI-RETOUR EAU RINÇAGE] - [Soupape métallique à ressort taré d'injection d'eau T23] - (OEM: 9100 2300 85)",
+    "notes": "Empêche tout reflux d'air comprimé ou de sédiment du trou vers la pompe ou le système d'alimentation d'eau.",
+    "proposedPrice": 880,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 880,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 10,
+    "minStock": 3,
+    "criticalStock": 1,
+    "leadTimeDays": 5,
+    "commonName": "Clapet eau T23",
+    "searchTags": [
+      "CLAPET",
+      "EAU",
+      "SOUPAPE",
+      "CHECK",
+      "VALVE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_36",
+    "functionalCategory": "Forage",
+    "subCategory": "Béquille & Avancement",
+    "component": "Piston de béquille pneumatique",
+    "subComponent": "Axe télescopique chrome-acier de béquille T23",
+    "reference": "9100 2301 01",
+    "designation": "[FORAGE] - [PISTON DE BÉQUILLE PNEUMATIQUE] - [Piston d'avance télescopique renforcé pour béquille T23] - (OEM: 9100 2301 01)",
+    "notes": "Piston central assurant la poussée constante du perforateur sur le front de taille en mine souterraine.",
+    "proposedPrice": 2800,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 2800,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 8,
+    "minStock": 2,
+    "criticalStock": 1,
+    "leadTimeDays": 7,
+    "commonName": "Piston béquille T23",
+    "searchTags": [
+      "PISTON",
+      "BEQUILLE",
+      "AVANCE",
+      "AIR",
+      "LEG",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_37",
+    "functionalCategory": "Forage",
+    "subCategory": "Béquille & Avancement",
+    "component": "Pochette de joints de béquille",
+    "subComponent": "Kit COMPLET d'étanchéités pour béquille pneumatique T23",
+    "reference": "9100 2301 02",
+    "designation": "[FORAGE] - [POCHETTE JOINTS DE BÉQUILLE] - [Kit complet de joints toriques et racleurs béquille Montabert T23] - (OEM: 9100 2301 02)",
+    "notes": "Empêche les fuites d'air comprimé d'avancement pour garantir une pression de contact homogène sur la roche.",
+    "proposedPrice": 650,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 650,
+    "bomLevel": 3,
+    "unit": "KIT",
+    "stockQty": 20,
+    "minStock": 6,
+    "criticalStock": 2,
+    "leadTimeDays": 4,
+    "commonName": "Joints béquille T23",
+    "searchTags": [
+      "JOINTS",
+      "BEQUILLE",
+      "KIT",
+      "POCHETTE",
+      "SEALS",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_38",
+    "functionalCategory": "Forage",
+    "subCategory": "Béquille & Avancement",
+    "component": "Poignée de commande de béquille",
+    "subComponent": "Valve de poignée rotative de contrôle béquille",
+    "reference": "9100 2301 03",
+    "designation": "[FORAGE] - [POIGNÉE DE COMMANDE DE BÉQUILLE] - [Poignée rotative de contrôle d'avance pneumatique béquille] - (OEM: 9100 2301 03)",
+    "notes": "Poignée de commande manuelle d'ajustement micrométrique de la poussée directe de la béquille de forage.",
+    "proposedPrice": 1950,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 1950,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 5,
+    "minStock": 2,
+    "criticalStock": 1,
+    "leadTimeDays": 9,
+    "commonName": "Poignée commande béquille T23",
+    "searchTags": [
+      "POIGNEE",
+      "VALVE",
+      "CONTROLE",
+      "BEQUILLE",
+      "AVANCE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_39",
+    "functionalCategory": "Forage",
+    "subCategory": "Rotation",
+    "component": "Roue à rochet de rotation",
+    "subComponent": "Couronne à rochet rotative interne",
+    "reference": "9100 2301 05",
+    "designation": "[FORAGE] - [ROUE À ROCHET DE ROTATION] - [Roue crantée à cliquets de distribution de couple rotatif] - (OEM: 9100 2301 05)",
+    "notes": "Pièce fondamentale mécanique déterminant le sens unique et la puissance de la rotation par percussion.",
+    "proposedPrice": 3200,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "CRITIQUE",
+    "price": 3200,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 4,
+    "minStock": 1,
+    "criticalStock": 1,
+    "leadTimeDays": 11,
+    "commonName": "Roue rochet rotation",
+    "searchTags": [
+      "ROUE",
+      "ROCHET",
+      "RAT CHET",
+      "WHEEL",
+      "ROTATION",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_40",
+    "functionalCategory": "Forage",
+    "subCategory": "Rotation",
+    "component": "Kit cliquet & ressort de roue",
+    "subComponent": "Dispositif à cliquets d'arrêt roue à rochet",
+    "reference": "9100 2301 06",
+    "designation": "[FORAGE] - [KIT CLIQUETS ET RESSORTS ROTATION] - [Dispositif de cliquets de poussée avec ressorts d'origine T23] - (OEM: 9100 2301 06)",
+    "notes": "Assure le verrouillage pas-à-pas de la rotation mécanique de l'outil sous chaque impulsion de frappe.",
+    "proposedPrice": 480,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 480,
+    "bomLevel": 3,
+    "unit": "KIT",
+    "stockQty": 15,
+    "minStock": 5,
+    "criticalStock": 2,
+    "leadTimeDays": 5,
+    "commonName": "Cliquet rotation T23",
+    "searchTags": [
+      "CLIQUET",
+      "RESSORT",
+      "ROCHET",
+      "ROTATION",
+      "PAWL",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_41",
+    "functionalCategory": "Forage",
+    "subCategory": "Rotation",
+    "component": "Rifle Nut bronze",
+    "subComponent": "Écrou cannelé de bielle hélicoïdale de rotation",
+    "reference": "9100 2301 08",
+    "designation": "[FORAGE] - [ÉCROU CANNELÉ RIFLE NUT] - [Écrou femelle hélicoïdal en bronze fritté à haute friction] - (OEM: 9100 2301 08)",
+    "notes": "Engraine avec la bielle cannelée pour transformer le va-et-vient linéaire du piston en couple rotatif.",
+    "proposedPrice": 1850,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 1850,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 6,
+    "minStock": 2,
+    "criticalStock": 1,
+    "leadTimeDays": 8,
+    "commonName": "Écrou hélicoïdal Rifle Nut T23",
+    "searchTags": [
+      "RIFLE",
+      "NUT",
+      "ECROU",
+      "CANNELÉ",
+      "ROTATION",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_42",
+    "functionalCategory": "Forage",
+    "subCategory": "Sécurité & Soupapes",
+    "component": "Silencieux d'échappement",
+    "subComponent": "Coque isolante polyuréthane d'échappement",
+    "reference": "9100 2301 10",
+    "designation": "[FORAGE] - [SILENCIEUX COMPACT ET ABSORBANT T23] - [Enveloppe de réduction sonore en polyuréthane élastomère] - (OEM: 9100 2301 10)",
+    "notes": "Indispensable pour limiter l'exposition sonore des mineurs aux bruits d'échappement d'air comprimé (>110dB).",
+    "proposedPrice": 950,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 950,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 5,
+    "minStock": 1,
+    "criticalStock": 1,
+    "leadTimeDays": 7,
+    "commonName": "Silencieux T23",
+    "searchTags": [
+      "SILENCIEUX",
+      "ECHAPPEMENT",
+      "MUFFLER",
+      "POLYURETHANE",
+      "SECURITE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_43",
+    "functionalCategory": "Forage",
+    "subCategory": "Tirants",
+    "component": "Écrou de tirant borgne",
+    "subComponent": "Boulonnerie lourde de serrage de carter",
+    "reference": "9100 2301 12",
+    "designation": "[FORAGE] - [ÉCROU BORGNE DE SERRAGE CARBONE] - [Écrou borgne étanche haute tolérance pour tirants d'origine] - (OEM: 9100 2301 12)",
+    "notes": "Élément d'arrêt et de tension des tirants d'assemblage principaux. Soumis à d'extrêmes charges de traction.",
+    "proposedPrice": 150,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 150,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 30,
+    "minStock": 10,
+    "criticalStock": 4,
+    "leadTimeDays": 3,
+    "commonName": "Écrou tirant T23",
+    "searchTags": [
+      "ECROU",
+      "TIRANT",
+      "Serrage",
+      "MUT",
+      "BOULON",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_44",
+    "functionalCategory": "Forage",
+    "subCategory": "Kits Maintenance",
+    "component": "Ressort de rappel de soupape",
+    "subComponent": "Axe élastique de gâchette commande",
+    "reference": "9100 2301 15",
+    "designation": "[FORAGE] - [RESSORT DE RAPPEL DE SÉCURITÉ GÂCHETTE] - [Ressort hélicoïdal en acier à haute résilience handle] - (OEM: 9100 2301 15)",
+    "notes": "Ressort de rappel rapide pour la poignée de commande d'admission d'air et de fluide de rinçage.",
+    "proposedPrice": 220,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 220,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 25,
+    "minStock": 5,
+    "criticalStock": 2,
+    "leadTimeDays": 3,
+    "commonName": "Ressort gâchette T23",
+    "searchTags": [
+      "RESSORT",
+      "RAPPEL",
+      "POIGNEE",
+      "SPRING",
+      "GÂCHETTE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_45",
+    "functionalCategory": "Forage",
+    "subCategory": "Guidage Métallique",
+    "component": "Ressort amortisseur avant",
+    "subComponent": "Support hélicoïdal lourd amortisseur d'outils",
+    "reference": "9100 2301 18",
+    "designation": "[FORAGE] - [RESSORT AMORTISSEUR AVANT] - [Spire d'amortissement à ressort lourd d'origine Montabert] - (OEM: 9100 2301 18)",
+    "notes": "Ressort de grande résistance destiné à amortir les vibrations de l'outil et les rebonds sur le nez du perforateur.",
+    "proposedPrice": 380,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 380,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 14,
+    "minStock": 4,
+    "criticalStock": 2,
+    "leadTimeDays": 5,
+    "commonName": "Ressort amortisseur nez T23",
+    "searchTags": [
+      "RESSORT",
+      "AMORTISSEUR",
+      "SPRING",
+      "NEZ",
+      "BUMPER",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_46",
+    "functionalCategory": "Forage",
+    "subCategory": "Joints d'étanchéité",
+    "component": "Joint torique couvercle arrière",
+    "subComponent": "Joint torique statique élastomère NBR",
+    "reference": "9100 2301 20",
+    "designation": "[FORAGE] - [JOINT TORIQUE COUVERCLE ARRIÈRE] - [Joint d'étanchéité statique du carter arrière] - (OEM: 9100 2301 20)",
+    "notes": "Assure l'étanchéité haute pression du couvercle arrière du bloc percussion.",
+    "proposedPrice": 95,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 95,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 45,
+    "minStock": 15,
+    "criticalStock": 5,
+    "leadTimeDays": 3,
+    "commonName": "O-Ring carter arrière T23",
+    "searchTags": [
+      "JOINT",
+      "TORIQUE",
+      "ORING",
+      "CARTER",
+      "ARRIERE",
+      "NBR",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_47",
+    "functionalCategory": "Forage",
+    "subCategory": "Joints d'étanchéité",
+    "component": "Joint plat d'assemblage",
+    "subComponent": "Joint d'assemblage carter central",
+    "reference": "9100 2301 22",
+    "designation": "[FORAGE] - [JOINT PLAT CARTER] - [Gasket d'assemblage étanche de carter principal] - (OEM: 9100 2301 22)",
+    "notes": "Joint plat en fibres aramide destiné à éviter toute fuite au plan de joint du carter.",
+    "proposedPrice": 120,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 120,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 30,
+    "minStock": 10,
+    "criticalStock": 3,
+    "leadTimeDays": 5,
+    "commonName": "Joint carter central T23",
+    "searchTags": [
+      "JOINT",
+      "PLAT",
+      "GASKET",
+      "CARTER",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_48",
+    "functionalCategory": "Forage",
+    "subCategory": "Kits Maintenance",
+    "component": "Circlips de retenue de douille",
+    "subComponent": "Circlips intérieur en acier à ressort",
+    "reference": "9100 2301 24",
+    "designation": "[FORAGE] - [CIRCLIPS RETENUE DOUILLE] - [Circlips de blocage de bague de rotation] - (OEM: 9100 2301 24)",
+    "notes": "Axe d'arrêt intérieur logeant le roulement ou la douille de mandrin cannelée.",
+    "proposedPrice": 65,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "BASSE",
+    "price": 65,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 20,
+    "minStock": 6,
+    "criticalStock": 2,
+    "leadTimeDays": 4,
+    "commonName": "Circlips douille T23",
+    "searchTags": [
+      "CIRCLIPS",
+      "REVENUE",
+      "DOUILLE",
+      "RETENTION",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_49",
+    "functionalCategory": "Forage",
+    "subCategory": "Béquille & Avancement",
+    "component": "Vis H à embase béquille",
+    "subComponent": "Vis de fixation béquille-perforateur renforcée M16",
+    "reference": "9100 2301 26",
+    "designation": "[FORAGE] - [VIS FIXATION BÉQUILLE] - [Vis de couplage mécanique renforcée classe 10.9] - (OEM: 9100 2301 26)",
+    "notes": "Fixe solidement la console d'accouplement de la béquille pneumatique au perforateur T23.",
+    "proposedPrice": 85,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 85,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 60,
+    "minStock": 20,
+    "criticalStock": 5,
+    "leadTimeDays": 3,
+    "commonName": "Vis béquille T23",
+    "searchTags": [
+      "VIS",
+      "BOULON",
+      "FIXATION",
+      "BEQUILLE",
+      "M16",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_50",
+    "functionalCategory": "Forage",
+    "subCategory": "Tirants",
+    "component": "Rondelle Belleville de tirant",
+    "subComponent": "Rondelle de précharge élastique haute endurance",
+    "reference": "9100 2301 28",
+    "designation": "[FORAGE] - [RONDELLE BELLEVILLE TIRANT] - [Rondelle de ressort de tirants principaux] - (OEM: 9100 2301 28)",
+    "notes": "Maintient la tension constante des tirants d'assemblage malgré les chocs thermiques et vibratoires.",
+    "proposedPrice": 45,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 45,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 80,
+    "minStock": 24,
+    "criticalStock": 8,
+    "leadTimeDays": 5,
+    "commonName": "Rondelle Belleville T23",
+    "searchTags": [
+      "RONDELLE",
+      "BELLEVILLE",
+      "TIRANT",
+      "RESSORT",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_51",
+    "functionalCategory": "Forage",
+    "subCategory": "Joints d'étanchéité",
+    "component": "Joint à lèvre racleur d'amortisseur",
+    "subComponent": "Joint d'étanchéité dynamique de bague d'amortissement",
+    "reference": "9100 2301 30",
+    "designation": "[FORAGE] - [JOINT RACLEUR AMORTISSEUR] - [Bague d'étanchéité à lèvre polyuréthane] - (OEM: 9100 2301 30)",
+    "notes": "Évite l'introduction de poussières de mine et d'eau sous pression dans le piston d'amortisseur.",
+    "proposedPrice": 185,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 185,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 35,
+    "minStock": 15,
+    "criticalStock": 5,
+    "leadTimeDays": 6,
+    "commonName": "Joint racleur amortisseur T23",
+    "searchTags": [
+      "JOINT",
+      "RACLEUR",
+      "LIPSEAL",
+      "AMORTISSEUR",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_52",
+    "functionalCategory": "Forage",
+    "subCategory": "Rotation",
+    "component": "Clavette de guidage de mandrin",
+    "subComponent": "Clavette parallèle de blocage d'accouplement",
+    "reference": "9100 2301 32",
+    "designation": "[FORAGE] - [CLAVETTE GUIDAGE MANDRIN] - [Clavette métallique d'indexation de transmission] - (OEM: 9100 2301 32)",
+    "notes": "Permet l'accouplement rotatif rigide entre le pignon de moteur et le manchon de rotation cannelé.",
+    "proposedPrice": 110,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 110,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 25,
+    "minStock": 8,
+    "criticalStock": 2,
+    "leadTimeDays": 4,
+    "commonName": "Clavette mandrin T23",
+    "searchTags": [
+      "CLAVETTE",
+      "GUIDAGE",
+      "KEY",
+      "MANDRIN",
+      "ROTATION",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_53",
+    "functionalCategory": "Forage",
+    "subCategory": "Systèmes de Soufflage",
+    "component": "Écrou de raccordement d'aiguille",
+    "subComponent": "Presse-étoupe fileté taraudé en laiton nickelé d'origine",
+    "reference": "9100 2301 34",
+    "designation": "[FORAGE] - [ÉCROU AIGUILLE EAU] - [Presse-étoupe de maintien du tube de rinçage] - (OEM: 9100 2301 34)",
+    "notes": "Fixe l'aiguille d'eau en son extrémité arrière et empêche tout desserrage lors des frappes violentes.",
+    "proposedPrice": 240,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 240,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 18,
+    "minStock": 6,
+    "criticalStock": 2,
+    "leadTimeDays": 7,
+    "commonName": "Écrou aiguille eau T23",
+    "searchTags": [
+      "ECROU",
+      "RACCORD",
+      "AIGUILLE",
+      "EAU",
+      "MANDRIN",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_54",
+    "functionalCategory": "Forage",
+    "subCategory": "Rotation",
+    "component": "Ressort de cliquet de rotation",
+    "subComponent": "Ressort de compression de cliquet de roue à rochet",
+    "reference": "9100 2301 36",
+    "designation": "[FORAGE] - [RESSORT DE CLIQUET] - [Petit ressort de poussée d'origine sous cliquets] - (OEM: 9100 2301 36)",
+    "notes": "Sous-tension mécanique des 4 cliquets de blocage de rotation hélicoïdale de la roue à rochet.",
+    "proposedPrice": 35,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "CRITIQUE",
+    "price": 35,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 120,
+    "minStock": 40,
+    "criticalStock": 15,
+    "leadTimeDays": 3,
+    "commonName": "Ressort cliquet T23",
+    "searchTags": [
+      "RESSORT",
+      "CLIQUET",
+      "SPRING",
+      "ROUET",
+      "ROCHET",
+      "ROTATION",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_55",
+    "functionalCategory": "Forage",
+    "subCategory": "Systèmes de Soufflage",
+    "component": "Bague d'étanchéité d'aiguille",
+    "subComponent": "Rondelles caoutchouc étanche pour aiguille d'eau",
+    "reference": "9100 2301 38",
+    "designation": "[FORAGE] - [RONDELLE CORPS AIGUILLE] - [Douille élastomère isolante du tube de rinçage] - (OEM: 9100 2301 38)",
+    "notes": "Empêche le fluide de rinçage (eau pressurisée) de s'infiltrer dans la mécanique d'échappement et de percussion.",
+    "proposedPrice": 40,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 40,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 150,
+    "minStock": 50,
+    "criticalStock": 15,
+    "leadTimeDays": 2,
+    "commonName": "Joint aiguille eau T23",
+    "searchTags": [
+      "RONDELLE",
+      "JOINT",
+      "BAGUE",
+      "AIGUILLE",
+      "EAU",
+      "SOUFFLAGE",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_56",
+    "functionalCategory": "Forage",
+    "subCategory": "Joints d'étanchéité",
+    "component": "Joint torique valve de charge",
+    "subComponent": "Joint torique de l'accumulateur d'azote",
+    "reference": "9100 2301 40",
+    "designation": "[FORAGE] - [JOINT TORIQUE VALVE AZOTE] - [Bague caoutchouc étanchéité de valve de gonflage] - (OEM: 9100 2301 40)",
+    "notes": "Assure l'étanchéité absolue de la valve de gonflage en gaz azote sur l'accumulateur haute pression.",
+    "proposedPrice": 55,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "HAUTE",
+    "price": 55,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 80,
+    "minStock": 30,
+    "criticalStock": 10,
+    "leadTimeDays": 3,
+    "commonName": "O-Ring valve azote T23",
+    "searchTags": [
+      "JOINT",
+      "TORIQUE",
+      "VALVE",
+      "AZOTE",
+      "CHARGE",
+      "ACCUMULATEUR",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_57",
+    "functionalCategory": "Forage",
+    "subCategory": "Kits Maintenance",
+    "component": "Bouchon de purge hydraulique",
+    "subComponent": "Bouchon fileté à vis d'étanchéité avec collet d'étanchéité",
+    "reference": "9100 2301 42",
+    "designation": "[FORAGE] - [BOUCHON PURGE HYDRAULIQUE] - [Bouchon en laiton d'isolement de galerie] - (OEM: 9100 2301 42)",
+    "notes": "Permet l'accès direct de diagnostic aux canaux de pression interne pour prise de mesure.",
+    "proposedPrice": 135,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "BASSE",
+    "price": 135,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 22,
+    "minStock": 6,
+    "criticalStock": 2,
+    "leadTimeDays": 4,
+    "commonName": "Bouchon purge T23",
+    "searchTags": [
+      "BOUCHON",
+      "PURGE",
+      "PORT",
+      "GLACE",
+      "DRAIN",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_58",
+    "functionalCategory": "Forage",
+    "subCategory": "Joints d'étanchéité",
+    "component": "Joint torique tiroir distributeur",
+    "subComponent": "Joint torique en Viton haute température",
+    "reference": "9100 2301 44",
+    "designation": "[FORAGE] - [JOINT TORIQUE DISTRIBUTEUR] - [Assortiment d'étanchéité statique du tiroir d'inversion] - (OEM: 9100 2301 44)",
+    "notes": "Isole hermétiquement les sections d'inversion hydraulique du bloc valve distributeur interne.",
+    "proposedPrice": 75,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "CRITIQUE",
+    "price": 75,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 90,
+    "minStock": 30,
+    "criticalStock": 10,
+    "leadTimeDays": 3,
+    "commonName": "O-Ring distributeur T23",
+    "searchTags": [
+      "JOINT",
+      "TORIQUE",
+      "DISTRIBUTEUR",
+      "VITON",
+      "INVERSION",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_59",
+    "functionalCategory": "Forage",
+    "subCategory": "Kits Maintenance",
+    "component": "Goupille élastique de verrouillage",
+    "subComponent": "Goupille fendue de haute sécurité en inox",
+    "reference": "9100 2301 46",
+    "designation": "[FORAGE] - [GOUPILLE ÉLASTIQUE VERROUILLAGE] - [Goupille mécanique de blocage axe de commande] - (OEM: 9100 2301 46)",
+    "notes": "Sécurise l'ergot de la gâchette et la tringlerie de direction contre tout glissement vibratoire.",
+    "proposedPrice": 25,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 25,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 110,
+    "minStock": 35,
+    "criticalStock": 10,
+    "leadTimeDays": 2,
+    "commonName": "Goupille commande T23",
+    "searchTags": [
+      "GOUPILLE",
+      "VERROUILLAGE",
+      "AXE",
+      "PIN",
+      "SPLIT",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
+  {
+    "id": "perf_t23_60",
+    "functionalCategory": "Forage",
+    "subCategory": "Guidage Métallique",
+    "component": "Silentbloc d'échappement béquille",
+    "subComponent": "Coussinet amortissant en élastomère de couplage",
+    "reference": "9100 2301 48",
+    "designation": "[FORAGE] - [SILENTBLOC AMORTISSEUR] - [Butée caoutchouc d'amortissement de vibrations] - (OEM: 9100 2301 48)",
+    "notes": "Silentbloc limitant la propagation des harmoniques de percussion vers la structure d'avancement de béquille brute.",
+    "proposedPrice": 190,
+    "suggestedType": "PERFORATEURS",
+    "source": "MASTER",
+    "compatibility": "MONTABERT T23",
+    "criticality": "MOYENNE",
+    "price": 190,
+    "bomLevel": 3,
+    "unit": "PIECE",
+    "stockQty": 28,
+    "minStock": 8,
+    "criticalStock": 2,
+    "leadTimeDays": 5,
+    "commonName": "Silentbloc échappement T23",
+    "searchTags": [
+      "SILENTBLOC",
+      "AMORTISSEUR",
+      "CUSHION",
+      "ECHAPPEMENT",
+      "CAOUTCHOUC",
+      "MONTABERT",
+      "T23"
+    ],
+    "compatibleMachines": [
+      "Montabert T23",
+      "MONTABERT T23"
+    ]
+  },
   {
     "id": "st2d_prop_me",
     "functionalCategory": "Propulsion",
@@ -5198,8 +6042,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 45,
     "commonName": "Moteur Traction 800V",
-    "searchTags": ["ME001", "MOTEUR", "ELEC", "TRACTION", "Aimants", "800V"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "ME001",
+      "MOTEUR",
+      "ELEC",
+      "TRACTION",
+      "Aimants",
+      "800V"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_prop_me_sta",
@@ -5223,8 +6076,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 25,
     "commonName": "Stator bobiné traction",
-    "searchTags": ["STATOR", "BOBINAGE", "ME001", "MOTEUR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "STATOR",
+      "BOBINAGE",
+      "ME001",
+      "MOTEUR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_prop_me_rot",
@@ -5248,8 +6108,14 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 30,
     "commonName": "Rotor de traction aimants",
-    "searchTags": ["ROTOR", "AIMANTS", "NEODYME"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "ROTOR",
+      "AIMANTS",
+      "NEODYME"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_prop_me_rou_av",
@@ -5273,8 +6139,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Roulement moteur avant céramique",
-    "searchTags": ["ROULEMENT", "MOTEUR", "CERAMIQUE", "AVANT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "ROULEMENT",
+      "MOTEUR",
+      "CERAMIQUE",
+      "AVANT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_prop_me_rou_ar",
@@ -5298,8 +6171,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 14,
     "commonName": "Kit roulement arrière moteur",
-    "searchTags": ["ROULEMENT", "MOTEUR", "ARRIERE", "KIT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "ROULEMENT",
+      "MOTEUR",
+      "ARRIERE",
+      "KIT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_prop_ont",
@@ -5323,8 +6203,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 45,
     "commonName": "Onduleur traction 800V",
-    "searchTags": ["ONDULEUR", "TRACTION", "INVERTER", "800V"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "ONDULEUR",
+      "TRACTION",
+      "INVERTER",
+      "800V"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_prop_ont_igbt",
@@ -5348,8 +6235,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Transistor IGBT de rechange",
-    "searchTags": ["IGBT", "TRANSISTOR", "ONDULEUR", "INFINEON"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "IGBT",
+      "TRANSISTOR",
+      "ONDULEUR",
+      "INFINEON"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_prop_dcdc",
@@ -5373,8 +6267,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 21,
     "commonName": "Convertisseur Haute Tension 24V",
-    "searchTags": ["CONVERTISSEUR", "DCDC", "24V", "REGULATION"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "CONVERTISSEUR",
+      "DCDC",
+      "24V",
+      "REGULATION"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_pack",
@@ -5398,8 +6299,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 90,
     "commonName": "Pack Batterie de Traction",
-    "searchTags": ["PACK", "BATTERIE", "LIION", "800V", "MSD"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "PACK",
+      "BATTERIE",
+      "LIION",
+      "800V",
+      "MSD"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_mod",
@@ -5423,8 +6332,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 30,
     "commonName": "Module unitaire batterie traction",
-    "searchTags": ["MODULE", "BATTERIE", "CELLULES", "LFP"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "MODULE",
+      "BATTERIE",
+      "CELLULES",
+      "LFP"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_bus",
@@ -5448,8 +6364,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 7,
     "commonName": "Barre d'interconnexion cuivre",
-    "searchTags": ["BUSBAR", "CUIVRE", "BATTERIE", "LIAISON"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "BUSBAR",
+      "CUIVRE",
+      "BATTERIE",
+      "LIAISON"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_cnt",
@@ -5473,8 +6396,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Contacteur de sécurité Pack",
-    "searchTags": ["CONTACTEUR", "CONTACTOR", "HT", "RELAIS", "VACUUM"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "CONTACTEUR",
+      "CONTACTOR",
+      "HT",
+      "RELAIS",
+      "VACUUM"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_bms",
@@ -5498,8 +6429,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Calculateur BMS principal",
-    "searchTags": ["BMS", "BCU", "EQUILIBRAGE", "CALCULATEUR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "BMS",
+      "BCU",
+      "EQUILIBRAGE",
+      "CALCULATEUR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_cmu",
@@ -5523,8 +6461,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Carte d'acquisition tension CMU",
-    "searchTags": ["CMU", "BMS", "SURVEILLANCE", "TENSION"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "CMU",
+      "BMS",
+      "SURVEILLANCE",
+      "TENSION"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_ref_pom",
@@ -5548,8 +6493,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 14,
     "commonName": "Pompe à eau glycol d'origine",
-    "searchTags": ["POMPE", "GLYCOL", "REFROIDISSEMENT", "BATTERIE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "POMPE",
+      "GLYCOL",
+      "REFROIDISSEMENT",
+      "BATTERIE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_obc",
@@ -5573,8 +6525,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 25,
     "commonName": "Chargeur embarqué 22kW d'origine",
-    "searchTags": ["OBC", "CHARGEUR", "EMBARQUE", "22KW", "AC"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "OBC",
+      "CHARGEUR",
+      "EMBARQUE",
+      "22KW",
+      "AC"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_batt_cab",
@@ -5598,8 +6558,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Câble blindé HT orange",
-    "searchTags": ["CABLE", "HT", "ORANGE", "BLINDE", "1000V"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "CABLE",
+      "HT",
+      "ORANGE",
+      "BLINDE",
+      "1000V"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_chassis_cad_av",
@@ -5623,8 +6591,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 60,
     "commonName": "Plaque latérale cadre avant",
-    "searchTags": ["PLAQUES", "CADRE", "AVANT", "STEEL", "3128"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "PLAQUES",
+      "CADRE",
+      "AVANT",
+      "STEEL",
+      "3128"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_chassis_boul",
@@ -5648,8 +6625,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 10,
     "leadTimeDays": 4,
     "commonName": "Boulon d'assemblage M24x3",
-    "searchTags": ["BOULON", "M24x3", "GRADE 10.9", "STRUCTURE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "BOULON",
+      "M24x3",
+      "GRADE 10.9",
+      "STRUCTURE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_red_el",
@@ -5673,8 +6658,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 30,
     "commonName": "Réducteur translation",
-    "searchTags": ["REDUCTEUR", "EPICYCLOIDAL", "TRANSLATION", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "REDUCTEUR",
+      "EPICYCLOIDAL",
+      "TRANSLATION",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_trans_diff_av",
@@ -5698,8 +6690,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 35,
     "commonName": "Différentiel de pont avant",
-    "searchTags": ["DIFFERENTIEL", "PONT", "AVANT", "SPICER"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "DIFFERENTIEL",
+      "PONT",
+      "AVANT",
+      "SPICER"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_hyd_pom_el",
@@ -5723,8 +6723,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Pompe hydraulique auxiliaire 24V",
-    "searchTags": ["POMPE", "HYD", "ELEC", "AUXIL", "24V"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "POMPE",
+      "HYD",
+      "ELEC",
+      "AUXIL",
+      "24V"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_ess_pont_av",
@@ -5748,8 +6756,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 45,
     "commonName": "Pont avant d'origine Scooptram",
-    "searchTags": ["PONT", "ESSIEU", "AVANT", "CARTER"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "PONT",
+      "ESSIEU",
+      "AVANT",
+      "CARTER"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_ess_pont_ar",
@@ -5773,8 +6789,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 47,
     "commonName": "Pont arrière freins immergés",
-    "searchTags": ["PONT", "ESSIEU", "ARRIERE", "SAHR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "PONT",
+      "ESSIEU",
+      "ARRIERE",
+      "SAHR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_ess_dem_av",
@@ -5798,8 +6822,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Demi-arbre lourd avant",
-    "searchTags": ["DEMIABRE", "ARBRE", "AVANT", "PONT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "DEMIABRE",
+      "ARBRE",
+      "AVANT",
+      "PONT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_ess_roule_int",
@@ -5823,8 +6855,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 7,
     "commonName": "Roulement de moyeu interne conique",
-    "searchTags": ["ROULEMENT", "CONIQUE", "MOYEU", "PONT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "ROULEMENT",
+      "CONIQUE",
+      "MOYEU",
+      "PONT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_ess_reduct",
@@ -5848,8 +6888,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Réducteur épicycloïdal de roue",
-    "searchTags": ["REDUCTEUR", "ROUE", "PONT", "EPICYCLOIDAL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "REDUCTEUR",
+      "ROUE",
+      "PONT",
+      "EPICYCLOIDAL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_ess_jante",
@@ -5873,8 +6921,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Jante renforcée 20 pouces",
-    "searchTags": ["JANTE", "ACIER", "ROUE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "JANTE",
+      "ACIER",
+      "ROUE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_ess_chain",
@@ -5898,8 +6954,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 10,
     "leadTimeDays": 8,
     "commonName": "Maillon de blindage de pneu",
-    "searchTags": ["CHAINE", "MAILLON", "BLINDAGE", "PROTECTION"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "CHAINE",
+      "MAILLON",
+      "BLINDAGE",
+      "PROTECTION"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_ess_boul",
@@ -5923,8 +6987,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 20,
     "leadTimeDays": 3,
     "commonName": "Goujon de roue M22x1.5",
-    "searchTags": ["GOUJON", "BOULON", "ROUE", "M22"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "GOUJON",
+      "BOULON",
+      "ROUE",
+      "M22"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_hyd_gr_elec",
@@ -5948,8 +7020,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 50,
     "commonName": "Centrale hydraulique 800V d'origine",
-    "searchTags": ["GHE001", "GROUPE", "HYD", "CENTRALE", "800V"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "GHE001",
+      "GROUPE",
+      "HYD",
+      "CENTRALE",
+      "800V"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_hyd_ver_godet",
@@ -5973,8 +7053,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 25,
     "commonName": "Vérin de cavage godet",
-    "searchTags": ["VERIN", "CAVAGE", "GODET", "CHROME", "3128"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "VERIN",
+      "CAVAGE",
+      "GODET",
+      "CHROME",
+      "3128"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_hyd_valves",
@@ -5998,8 +7087,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Comité de valves direction & levage",
-    "searchTags": ["BVE001", "VALVES", "DISTRIBUTEUR", "ELECTROVALVES"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "BVE001",
+      "VALVES",
+      "DISTRIBUTEUR",
+      "ELECTROVALVES"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_hyd_flex",
@@ -6023,8 +7119,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Kit de flexibles haute pression d'origine",
-    "searchTags": ["FLEXIBLES", "HYDRAULIQUE", "CONDUITES", "KIT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "FLEXIBLES",
+      "HYDRAULIQUE",
+      "CONDUITES",
+      "KIT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_hyd_fil_elem",
@@ -6048,8 +7152,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 4,
     "leadTimeDays": 3,
     "commonName": "Cartouche de filtre hydraulique retour",
-    "searchTags": ["FILTRE", "RETRACTEUR", "HYDRAULIQUE", "RETOUR", "2657"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2D", "Montabert T23"]
+    "searchTags": [
+      "FILTRE",
+      "RETRACTEUR",
+      "HYDRAULIQUE",
+      "RETOUR",
+      "2657"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2D",
+      "Montabert T23"
+    ]
   },
   {
     "id": "st2d_hyd_sahr",
@@ -6073,8 +7188,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Accumulateur azote de frein SAHR",
-    "searchTags": ["ACCUMULATEUR", "SAHR", "FREIN", "AZOTE", "VESSIE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "ACCUMULATEUR",
+      "SAHR",
+      "FREIN",
+      "AZOTE",
+      "VESSIE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_res",
@@ -6098,8 +7223,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 40,
     "commonName": "Réservoir d'huile hydraulique principal",
-    "searchTags": ["RESERVOIR", "CUVE", "HUILE", "HYDRAULIQUE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "RESERVOIR",
+      "CUVE",
+      "HUILE",
+      "HYDRAULIQUE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_hyd_rep_or",
@@ -6123,8 +7256,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 4,
     "leadTimeDays": 3,
     "commonName": "Boite de joints toriques hydraulique",
-    "searchTags": ["JOINTS", "TORIQUES", "ORING", "WITON", "KIT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Montabert T23"]
+    "searchTags": [
+      "JOINTS",
+      "TORIQUES",
+      "ORING",
+      "WITON",
+      "KIT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Montabert T23"
+    ]
   },
   {
     "id": "st2d_sec_frein_av",
@@ -6148,8 +7291,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Disques de frein en bronze fritté",
-    "searchTags": ["DISQUES", "FREIN", "PONT", "BRONZE", "SAHR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "DISQUES",
+      "FREIN",
+      "PONT",
+      "BRONZE",
+      "SAHR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_sec_frein_plaq",
@@ -6173,8 +7326,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Chambre de plaquettes de frein dumper",
-    "searchTags": ["PLAQUETTES", "USURE", "FREIN", "IMMERSIVE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "PLAQUETTES",
+      "USURE",
+      "FREIN",
+      "IMMERSIVE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_sec_maitre_cyl",
@@ -6198,8 +7360,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 18,
     "commonName": "Maître-cylindre de frein principal",
-    "searchTags": ["MAITRE", "CYLINDRE", "FREINAGE", "PISTON"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "MAITRE",
+      "CYLINDRE",
+      "FREINAGE",
+      "PISTON"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_sec_regen_res",
@@ -6223,8 +7394,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 30,
     "commonName": "Rhéostat dissipeur d'énergie",
-    "searchTags": ["RESISTANCE", "RHEOSTAT", "REGEN", "FREIN", "RFR001"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "RESISTANCE",
+      "RHEOSTAT",
+      "REGEN",
+      "FREIN",
+      "RFR001"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_sec_fre_park",
@@ -6248,8 +7427,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Étrier frein de stationnement de secours",
-    "searchTags": ["PARKING", "FREIN", "STATIONNEMENT", "ETRIER"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "PARKING",
+      "FREIN",
+      "STATIONNEMENT",
+      "ETRIER"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_sec_cabin",
@@ -6273,8 +7459,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 45,
     "commonName": "Arceau de sécurité d'origine ROPS FOPS",
-    "searchTags": ["ROPS", "FOPS", "CABINE", "PROTECTION", "STRUCT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "ROPS",
+      "FOPS",
+      "CABINE",
+      "PROTECTION",
+      "STRUCT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_sec_ext",
@@ -6298,8 +7494,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 3,
     "commonName": "Extincteur poudre machine 6KG",
-    "searchTags": ["EXTINCTEUR", "POUDRE", "6KG", "SÉCURITÉ"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D", "Montabert T23"]
+    "searchTags": [
+      "EXTINCTEUR",
+      "POUDRE",
+      "6KG",
+      "SÉCURITÉ"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D",
+      "Montabert T23"
+    ]
   },
   {
     "id": "st2d_sec_imd",
@@ -6323,8 +7529,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Vigilohm de rechange Bender IMD",
-    "searchTags": ["DDI001", "IMD", "BENDER", "VIGILOHM", "ISOLEMENT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "DDI001",
+      "IMD",
+      "BENDER",
+      "VIGILOHM",
+      "ISOLEMENT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_godet_fond",
@@ -6348,8 +7562,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 45,
     "commonName": "Godet blindé Hardox complet",
-    "searchTags": ["GODET", "HARDOX", "BLINDE", "CAVAGE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "GODET",
+      "HARDOX",
+      "BLINDE",
+      "CAVAGE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_godet_dent",
@@ -6373,8 +7596,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 4,
     "leadTimeDays": 5,
     "commonName": "Pointe de dent de godet Shark",
-    "searchTags": ["DENT", "SHARK", "CARBURE", "TUNGSTENE", "GODET"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "DENT",
+      "SHARK",
+      "CARBURE",
+      "TUNGSTENE",
+      "GODET"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_cab_seat",
@@ -6398,8 +7631,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Siège suspendu conducteur d'origine",
-    "searchTags": ["SIEGE", "SUSPENSION", "CONDUCTEUR", "ERGONOMIQUE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "SIEGE",
+      "SUSPENSION",
+      "CONDUCTEUR",
+      "ERGONOMIQUE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_cab_joy",
@@ -6423,8 +7665,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Joystick de rechange d'origine",
-    "searchTags": ["JOYSTICK", "COMMANDE", "MANETTE", "CAN", "JOY001"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "JOYSTICK",
+      "COMMANDE",
+      "MANETTE",
+      "CAN",
+      "JOY001"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_cab_vcu",
@@ -6448,8 +7700,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Calculateur VCU central",
-    "searchTags": ["VCU", "CALCULATEUR", "CONTRÔLE", "COMPUTER"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "VCU",
+      "CALCULATEUR",
+      "CONTRÔLE",
+      "COMPUTER"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_elec_pha",
@@ -6473,8 +7732,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Phare LED de travail 4800 lm",
-    "searchTags": ["PHARE", "LED", "ECLAIRAGE", "24V", "TRABAL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery", "Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "PHARE",
+      "LED",
+      "ECLAIRAGE",
+      "24V",
+      "TRABAL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery",
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_maint_500h",
@@ -6498,8 +7767,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Kit d'entretien périodique 500H",
-    "searchTags": ["KIT", "500H", "MAINTENANCE", "PREVENTIF", "ELECTRIC"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "KIT",
+      "500H",
+      "MAINTENANCE",
+      "PREVENTIF",
+      "ELECTRIC"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
   {
     "id": "st2d_maint_1000h",
@@ -6523,13 +7800,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 8,
     "commonName": "Kit d'overhaul et révision 1000H",
-    "searchTags": ["KIT", "1000H", "MAINTENANCE", "OVERHAUL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D Battery"]
+    "searchTags": [
+      "KIT",
+      "1000H",
+      "MAINTENANCE",
+      "OVERHAUL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D Battery"
+    ]
   },
-
-  // ==========================================
-  // ST2G DIESEL ENGINE / DRIVE SYSTEM (CSV 2)
-  // ==========================================
   {
     "id": "st2g_vilebrequin",
     "functionalCategory": "Moteur",
@@ -6552,8 +7832,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 21,
     "commonName": "Vilebrequin moteur Deutz",
-    "searchTags": ["VILEBREQUIN", "DEUTZ", "D914", "FORGE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "VILEBREQUIN",
+      "DEUTZ",
+      "D914",
+      "FORGE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_bielles",
@@ -6561,8 +7848,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Moteur Complet",
     "component": "Lot de bielles",
     "subComponent": "Bielles (kit 4 pièces) d'origine",
-    "reference": "5580 0088 06 K",
-    "designation": "[MOTEUR DIESEL] - [LOT BIELLES APPARIEES] - [Jeu de bielles d'Origine équilibrées constructeur] - (OEM: 5580 0088 06 K)",
+    "reference": "5580 0088 06",
+    "designation": "[MOTEUR DIESEL] - [LOT BIELLES APPARIEES] - [Jeu de bielles d'Origine équilibrées constructeur] - (OEM: 5580 0088 06)",
     "notes": "Permet de contrer le voilage mécanique lors d'accélération dumper.",
     "proposedPrice": 4800,
     "suggestedType": "CONSOMMABLES",
@@ -6577,8 +7864,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 14,
     "commonName": "Jeu de 4 bielles Deutz",
-    "searchTags": ["BIELLES", "BOULONS", "DEUTZ", "MOTEUR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "BIELLES",
+      "BOULONS",
+      "DEUTZ",
+      "MOTEUR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_turbo_garrett",
@@ -6602,8 +7896,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 15,
     "commonName": "Turbocompresseur Garrett Deutz",
-    "searchTags": ["TURBO", "GARRETT", "COMPRESSEUR", "ST2G"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "TURBO",
+      "GARRETT",
+      "COMPRESSEUR",
+      "ST2G"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2g_injecteur_jeu",
@@ -6611,8 +7913,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Injecteurs",
     "component": "Buses injecteurs",
     "subComponent": "Injecteurs (jeu de 4 d'origine)",
-    "reference": "5580 0088 04 SET",
-    "designation": "[MOTEUR DIESEL] - [JEU INJECTEURS D'ORIGINE] - [Buses d'injection calibrées 900 bars] - (OEM: 5580 0088 04 SET)",
+    "reference": "5580 0088 04",
+    "designation": "[MOTEUR DIESEL] - [JEU INJECTEURS D'ORIGINE] - [Buses d'injection calibrées 900 bars] - (OEM: 5580 0088 04)",
     "notes": "Indispensable pour limiter les émanations de soufre et d'oxydes d'azote au fond.",
     "proposedPrice": 3600,
     "suggestedType": "CONSOMMABLES",
@@ -6627,8 +7929,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Jeu d'injecteurs de gazole",
-    "searchTags": ["INJECTEURS", "SET", "CALIBRATION", "DIESEL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "INJECTEURS",
+      "SET",
+      "CALIBRATION",
+      "DIESEL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2g_pompe_inj",
@@ -6636,8 +7946,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Pompe à Injection",
     "component": "Pompe d'injection",
     "subComponent": "Pompe d'injection complète d'origine",
-    "reference": "3128 3035 00 A",
-    "designation": "[MOTEUR DIESEL] - [POMPE INJECTION SRE] - [Pompe mécanique haute pression d'origine Bosch] - (OEM: 3128 3035 00 A)",
+    "reference": "3128 3035 00",
+    "designation": "[MOTEUR DIESEL] - [POMPE INJECTION SRE] - [Pompe mécanique haute pression d'origine Bosch] - (OEM: 3128 3035 00)",
     "notes": "Calibrée pour alimentation continue sans baisse de charge utile.",
     "proposedPrice": 16900,
     "suggestedType": "ENGINS",
@@ -6652,8 +7962,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 25,
     "commonName": "Pompe d'injection Bosch",
-    "searchTags": ["POMPE", "INJECTION", "BOSCH", "DIESEL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "POMPE",
+      "INJECTION",
+      "BOSCH",
+      "DIESEL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_chassis_art",
@@ -6677,8 +7994,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 40,
     "commonName": "Articulation centrale complète",
-    "searchTags": ["CHASSIS", "ARTICULATION", "CENTRAL", "AXE", "3128"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "CHASSIS",
+      "ARTICULATION",
+      "CENTRAL",
+      "AXE",
+      "3128"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2g_trans_clark_c270",
@@ -6702,8 +8028,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 30,
     "commonName": "Convertisseur de couple Clark C270",
-    "searchTags": ["CONVERTISSEUR", "CLARK", "C270", "DIESEL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "CONVERTISSEUR",
+      "CLARK",
+      "C270",
+      "DIESEL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2g_trans_boite_pow",
@@ -6727,8 +8061,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 45,
     "commonName": "Boîte de vitesses Clark d'origine",
-    "searchTags": ["BOITE", "VITESSES", "POWERSHIFT", "CLARK", "TRANSMISSION"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "BOITE",
+      "VITESSES",
+      "POWERSHIFT",
+      "CLARK",
+      "TRANSMISSION"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_pom_rex",
@@ -6752,8 +8094,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 25,
     "commonName": "Pompe hydraulique Rexroth ST2G",
-    "searchTags": ["POMPE", "HYD", "REXROTH", "A10VSO"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "POMPE",
+      "HYD",
+      "REXROTH",
+      "A10VSO"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2g_hyd_valves_block",
@@ -6777,8 +8127,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 18,
     "commonName": "Distributeur de cavage / bennage ST2G",
-    "searchTags": ["VALVES", "BLOC", "DISTRIBUTEUR", "HYDRO"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "VALVES",
+      "BLOC",
+      "DISTRIBUTEUR",
+      "HYDRO"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2g_sec_frein_sa_p",
@@ -6802,8 +8160,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Frein de stationnement à ressort SAHR",
-    "searchTags": ["FREIN", "SAHR", "PARKING", "RESSORT", "ST2G"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "FREIN",
+      "SAHR",
+      "PARKING",
+      "RESSORT",
+      "ST2G"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2g_elec_alt",
@@ -6811,8 +8178,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Alternateur",
     "component": "Alternateur scellé",
     "subComponent": "Alternateur 24V complet d'origine",
-    "reference": "ALT 24V",
-    "designation": "[ÉLECTRICITÉ] - [ALTERNATEUR 24V BLINDÉ] - [Alternateur à encapsulation étanche anti-silice] - (OEM: ALT 24V)",
+    "reference": "5580 0088 12",
+    "designation": "[ÉLECTRICITÉ] - [ALTERNATEUR 24V BLINDÉ] - [Alternateur à encapsulation étanche anti-silice] - (OEM: 5580 0088 12)",
     "notes": "Diodes robustes, évite la surchauffe due au calcaire de front.",
     "proposedPrice": 3100,
     "suggestedType": "CONSOMMABLES",
@@ -6827,8 +8194,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Alternateur moteur Deutz",
-    "searchTags": ["ALTERNATEUR", "BOSCH", "24V", "DEUTZ", "CHARGING"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "ALTERNATEUR",
+      "BOSCH",
+      "24V",
+      "DEUTZ",
+      "CHARGING"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_elec_reg",
@@ -6836,8 +8211,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Alternateur",
     "component": "Régulateur de tension",
     "subComponent": "Régulateur de tension électronique",
-    "reference": "3128 3042 00 A",
-    "designation": "[ÉLECTRICITÉ] - [RÉGULATEUR TENSION] - [Régulateur compensé d'origine 28.5V] - (OEM: 3128 3042 00 A)",
+    "reference": "3128 3042 00",
+    "designation": "[ÉLECTRICITÉ] - [RÉGULATEUR TENSION] - [Régulateur compensé d'origine 28.5V] - (OEM: 3128 3042 00)",
     "notes": "Régulateur de secours, évite la surcharge des batteries auxiliaires.",
     "proposedPrice": 480,
     "suggestedType": "CONSOMMABLES",
@@ -6852,8 +8227,15 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 7,
     "commonName": "Régulateur d'alternateur",
-    "searchTags": ["REGULATEUR", "TENSION", "ALTERNATEUR", "DEUTZ"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "REGULATEUR",
+      "TENSION",
+      "ALTERNATEUR",
+      "DEUTZ"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_elec_dem",
@@ -6861,8 +8243,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Démarreur",
     "component": "Démarreur blindé",
     "subComponent": "Démarreur 24V complet scellé",
-    "reference": "DEM 24V",
-    "designation": "[ÉLECTRICITÉ] - [DÉMARREUR DIESEL 24V] - [Démarreur lourd d'Origine à pignon traité lanceur] - (OEM: DEM 24V)",
+    "reference": "5580 0088 14",
+    "designation": "[ÉLECTRICITÉ] - [DÉMARREUR DIESEL 24V] - [Démarreur lourd d'Origine à pignon traité lanceur] - (OEM: 5580 0088 14)",
     "notes": "Bobinage en cuivre scellé face à l'exhaure calcaire.",
     "proposedPrice": 4200,
     "suggestedType": "ENGINS",
@@ -6877,8 +8259,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Démarreur moteur Deutz 24V",
-    "searchTags": ["DEMARREUR", "START", "24V", "DEUTZ", "DIESEL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "DEMARREUR",
+      "START",
+      "24V",
+      "DEUTZ",
+      "DIESEL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_maint_250h_f",
@@ -6886,8 +8276,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "subCategory": "Kits Maintenance",
     "component": "Kit filtres 250H",
     "subComponent": "Filtres révision 250H",
-    "reference": "KIT 250H",
-    "designation": "[MAINTENANCE] - [FILTRE KIT 250H] - [Kit complet de cartouches d'Origine Deutz] - (OEM: KIT 250H)",
+    "reference": "5580 0088 88",
+    "designation": "[MAINTENANCE] - [FILTRE KIT 250H] - [Kit complet de cartouches d'Origine Deutz] - (OEM: 5580 0088 88)",
     "notes": "Indispensable pour de parfaites révisions d'entretien en atelier.",
     "proposedPrice": 1250,
     "suggestedType": "CONSOMMABLES",
@@ -6902,8 +8292,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 4,
     "commonName": "Pochette active de filtres 250H",
-    "searchTags": ["KIT", "FILTRES", "250H", "DEUTZ", "DIESEL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "KIT",
+      "FILTRES",
+      "250H",
+      "DEUTZ",
+      "DIESEL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_elec_phare_led",
@@ -6927,8 +8325,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 7,
     "commonName": "Phare de travail LED 24V",
-    "searchTags": ["PHARE", "LED", "ECLAIRAGE", "PROJECTEUR", "BLINDE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "PHARE",
+      "LED",
+      "ECLAIRAGE",
+      "PROJECTEUR",
+      "BLINDE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_sec_au",
@@ -6952,8 +8358,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Arrêt d'Urgence (Coup de Poing)",
-    "searchTags": ["ARRET", "URGENCE", "POING", "STOP", "BOUTON", "SAFETY"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "ARRET",
+      "URGENCE",
+      "POING",
+      "STOP",
+      "BOUTON",
+      "SAFETY"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_minimess",
@@ -6977,8 +8392,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 3,
     "leadTimeDays": 4,
     "commonName": "Prise de pression Minimess",
-    "searchTags": ["PRISE", "PRESSION", "MINIMESS", "RACCORD", "TEST", "COUPLEUR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "PRISE",
+      "PRESSION",
+      "MINIMESS",
+      "RACCORD",
+      "TEST",
+      "COUPLEUR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_cons_graisseur_m10",
@@ -7002,8 +8426,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 10,
     "leadTimeDays": 2,
     "commonName": "Graisseur M10 droit",
-    "searchTags": ["GRAISSEUR", "POMPE", "M10", "GRAISSAGE", "NIPPLE", "PETIT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "GRAISSEUR",
+      "POMPE",
+      "M10",
+      "GRAISSAGE",
+      "NIPPLE",
+      "PETIT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_cons_graisseur_c90",
@@ -7027,8 +8460,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 8,
     "leadTimeDays": 2,
     "commonName": "Graisseur M10 coudé 90°",
-    "searchTags": ["GRAISSEUR", "COUDE", "90", "M10", "GRAISSAGE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "GRAISSEUR",
+      "COUDE",
+      "90",
+      "M10",
+      "GRAISSAGE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_cons_goujon_ecrou",
@@ -7052,8 +8493,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 5,
     "leadTimeDays": 6,
     "commonName": "Goujon + Écrou de roue ST2G",
-    "searchTags": ["GOUJON", "ECROU", "ROUE", "PNEU", "ESSIEU", "KESSER", "VIS", "FIXATION"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "GOUJON",
+      "ECROU",
+      "ROUE",
+      "PNEU",
+      "ESSIEU",
+      "KESSER",
+      "VIS",
+      "FIXATION"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_mot_press_huile",
@@ -7077,8 +8529,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Mano-contact d'huile Deutz",
-    "searchTags": ["MANOCONTACT", "PRESSOSTAT", "HUILE", "PRESSURE", "SENSOR", "DEUTZ"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "MANOCONTACT",
+      "PRESSOSTAT",
+      "HUILE",
+      "PRESSURE",
+      "SENSOR",
+      "DEUTZ"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_mot_temp_sender",
@@ -7102,8 +8563,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Sonde température Deutz",
-    "searchTags": ["SONDE", "TEMPERATURE", "HUILE", "DEUTZ", "D914", "SENSOR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "SONDE",
+      "TEMPERATURE",
+      "HUILE",
+      "DEUTZ",
+      "D914",
+      "SENSOR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_fre_pressostat_sahr",
@@ -7127,8 +8597,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 8,
     "commonName": "Pressostat de frein SAHR",
-    "searchTags": ["PRESSOSTAT", "FREIN", "SAHR", "BOUTON", "SAFETY", "BREAKER", "BLOQUE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "PRESSOSTAT",
+      "FREIN",
+      "SAHR",
+      "BOUTON",
+      "SAFETY",
+      "BREAKER",
+      "BLOQUE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_elec_contact_cle",
@@ -7152,8 +8632,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Contacteur de démarrage à Clé",
-    "searchTags": ["CLE", "START", "CONTACTEUR", "NEIMAN", "DEMARRAGE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "CLE",
+      "START",
+      "CONTACTEUR",
+      "NEIMAN",
+      "DEMARRAGE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_v_bague",
@@ -7177,8 +8665,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 4,
     "commonName": "Bague guidage vérin",
-    "searchTags": ["BAGUE", "USURE", "GUIDAGE", "VERIN", "PTFE", "JOINT"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "BAGUE",
+      "USURE",
+      "GUIDAGE",
+      "VERIN",
+      "PTFE",
+      "JOINT"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_sec_buse_ansul",
@@ -7202,8 +8699,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 5,
     "commonName": "Buse anti-incendie Ansul",
-    "searchTags": ["BUSE", "INCENDIE", "ANSUL", "EXTINCTEUR", "FEU", "NOZZLE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "BUSE",
+      "INCENDIE",
+      "ANSUL",
+      "EXTINCTEUR",
+      "FEU",
+      "NOZZLE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_cons_collier_ech",
@@ -7227,8 +8733,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 4,
     "commonName": "Collier échappement V-Clamp",
-    "searchTags": ["COLLIER", "CLAMP", "ECHAPPEMENT", "V-BAND", "DEUTZ", "INOX"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "COLLIER",
+      "CLAMP",
+      "ECHAPPEMENT",
+      "V-BAND",
+      "DEUTZ",
+      "INOX"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_tra_filtre_c270",
@@ -7252,8 +8767,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 3,
     "leadTimeDays": 3,
     "commonName": "Filtre transmission Clark",
-    "searchTags": ["FILTRE", "TRANSMISSION", "CLARK", "BOITE", "SPICER", "OIL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "FILTRE",
+      "TRANSMISSION",
+      "CLARK",
+      "BOITE",
+      "SPICER",
+      "OIL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_art_axe_levier",
@@ -7277,8 +8801,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Axe de nez de brancard ST2G",
-    "searchTags": ["AXE", "BRANCARD", "GODET", "LEVIER", "AXE GODET", "TRAIRE", "GROUND"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "AXE",
+      "BRANCARD",
+      "GODET",
+      "LEVIER",
+      "AXE GODET",
+      "TRAIRE",
+      "GROUND"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_fil_decanteur_carburant",
@@ -7302,8 +8836,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 4,
     "leadTimeDays": 3,
     "commonName": "Filtre décanteur de carburant",
-    "searchTags": ["FILTRE", "DECANTEUR", "CARBURANT", "GASOIL", "EAU", "DEUTZ", "SEPARATEUR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "FILTRE",
+      "DECANTEUR",
+      "CARBURANT",
+      "GASOIL",
+      "EAU",
+      "DEUTZ",
+      "SEPARATEUR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_mot_bougie_prechauffage",
@@ -7327,8 +8871,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Bougie de préchauffage Deutz",
-    "searchTags": ["BOUGIE", "PRECHAUFFAGE", "MOTEUR", "START", "DEUTZ", "DIESEL"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "BOUGIE",
+      "PRECHAUFFAGE",
+      "MOTEUR",
+      "START",
+      "DEUTZ",
+      "DIESEL"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_pochette_orings",
@@ -7352,8 +8905,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 4,
     "commonName": "Kit joints toriques BSP/JIC ST2G",
-    "searchTags": ["JOINT", "TORIQUE", "ORING", "KIT", "MALLETTE", "COFFRET", "BSP", "JIC"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "JOINT",
+      "TORIQUE",
+      "ORING",
+      "KIT",
+      "MALLETTE",
+      "COFFRET",
+      "BSP",
+      "JIC"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_clapet_antiretour",
@@ -7377,8 +8941,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Clapet anti-retour de pilotage",
-    "searchTags": ["CLAPET", "RETOUR", "VALVE", "CHECK", "PILOTAGE", "SECURITE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "CLAPET",
+      "RETOUR",
+      "VALVE",
+      "CHECK",
+      "PILOTAGE",
+      "SECURITE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_hyd_bouchon_sae",
@@ -7402,8 +8975,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 3,
     "commonName": "Bouchon SAE bride métallique",
-    "searchTags": ["BOUCHON", "SAE", "BRIDE", "OBTURATEUR", "RACCORD", "CAPUCHON"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "BOUCHON",
+      "SAE",
+      "BRIDE",
+      "OBTURATEUR",
+      "RACCORD",
+      "CAPUCHON"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_art_rondelle_arret",
@@ -7427,8 +9009,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 5,
     "commonName": "Rondelle d'arrêt de pivot d'articulation",
-    "searchTags": ["RONDELLE", "CALAGE", "PIVOT", "ARTICULATION", "AXE", "EPAISSE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "RONDELLE",
+      "CALAGE",
+      "PIVOT",
+      "ARTICULATION",
+      "AXE",
+      "EPAISSE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_art_kit_goupilles",
@@ -7452,8 +9043,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 3,
     "commonName": "Kit de goupilles & boulons d'axes",
-    "searchTags": ["GOUPILLE", "VERROUILLAGE", "AXE", "BOULON", "KIT", "SECURITE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "GOUPILLE",
+      "VERROUILLAGE",
+      "AXE",
+      "BOULON",
+      "KIT",
+      "SECURITE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_elec_contact_pedale",
@@ -7477,8 +9077,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 7,
     "commonName": "Contacteur de pédale",
-    "searchTags": ["CONTACTEUR", "PEDALE", "FREIN", "ACCELERATEUR", "CABINE", "CAPTEUR"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "CONTACTEUR",
+      "PEDALE",
+      "FREIN",
+      "ACCELERATEUR",
+      "CABINE",
+      "CAPTEUR"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_elec_relais_demarrage",
@@ -7502,8 +9111,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 4,
     "commonName": "Relais de démarrage 24V",
-    "searchTags": ["RELAIS", "DEMARRAGE", "24V", "START", "ELECTRICITE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "RELAIS",
+      "DEMARRAGE",
+      "24V",
+      "START",
+      "ELECTRICITE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2g_elec_boite_fusibles",
@@ -7527,8 +9144,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 2,
     "commonName": "Boîte de fusibles scellés mine",
-    "searchTags": ["FUSIBLE", "FUSIBLES", "BOITE", "COFFRET", "KIT", "ELECTRICITE"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G"]
+    "searchTags": [
+      "FUSIBLE",
+      "FUSIBLES",
+      "BOITE",
+      "COFFRET",
+      "KIT",
+      "ELECTRICITE"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G"
+    ]
   },
   {
     "id": "st2d_elec_phare_led",
@@ -7552,8 +9178,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 7,
     "commonName": "Phare de travail LED ST2D",
-    "searchTags": ["PHARE", "LED", "ECLAIRAGE", "PROJECTEUR", "BLINDE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "PHARE",
+      "LED",
+      "ECLAIRAGE",
+      "PROJECTEUR",
+      "BLINDE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_sec_au",
@@ -7577,8 +9212,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Arrêt d'Urgence (Coup de Poing) ST2D",
-    "searchTags": ["ARRET", "URGENCE", "POING", "STOP", "BOUTON", "SAFETY", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "ARRET",
+      "URGENCE",
+      "POING",
+      "STOP",
+      "BOUTON",
+      "SAFETY",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_minimess",
@@ -7602,8 +9247,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 4,
     "commonName": "Prise de pression Minimess ST2D",
-    "searchTags": ["PRISE", "PRESSION", "MINIMESS", "RACCORD", "TEST", "COUPLEUR", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "PRISE",
+      "PRESSION",
+      "MINIMESS",
+      "RACCORD",
+      "TEST",
+      "COUPLEUR",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_cons_graisseur_m10",
@@ -7627,8 +9282,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 10,
     "leadTimeDays": 2,
     "commonName": "Graisseur M10 droit ST2D",
-    "searchTags": ["GRAISSEUR", "POMPE", "M10", "GRAISSAGE", "NIPPLE", "PETIT", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "GRAISSEUR",
+      "POMPE",
+      "M10",
+      "GRAISSAGE",
+      "NIPPLE",
+      "PETIT",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_cons_graisseur_c90",
@@ -7652,8 +9317,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 5,
     "leadTimeDays": 2,
     "commonName": "Graisseur M10 coudé 90° ST2D",
-    "searchTags": ["GRAISSEUR", "COUDE", "90", "M10", "GRAISSAGE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "GRAISSEUR",
+      "COUDE",
+      "90",
+      "M10",
+      "GRAISSAGE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_cons_goujon_ecrou",
@@ -7677,8 +9351,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 4,
     "leadTimeDays": 6,
     "commonName": "Goujon + Écrou de roue ST2D",
-    "searchTags": ["GOUJON", "ECROU", "ROUE", "PNEU", "ESSIEU", "VIS", "FIXATION", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "GOUJON",
+      "ECROU",
+      "ROUE",
+      "PNEU",
+      "ESSIEU",
+      "VIS",
+      "FIXATION",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_mot_press_huile",
@@ -7702,8 +9387,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Mano-contact d'huile Deutz ST2D",
-    "searchTags": ["MANOCONTACT", "PRESSOSTAT", "HUILE", "PRESSURE", "SENSOR", "DEUTZ", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "MANOCONTACT",
+      "PRESSOSTAT",
+      "HUILE",
+      "PRESSURE",
+      "SENSOR",
+      "DEUTZ",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_mot_temp_sender",
@@ -7727,8 +9422,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Sonde température Deutz ST2D",
-    "searchTags": ["SONDE", "TEMPERATURE", "DEUTZ", "SENSOR", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "SONDE",
+      "TEMPERATURE",
+      "DEUTZ",
+      "SENSOR",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_fre_pressostat_sahr",
@@ -7752,8 +9455,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 8,
     "commonName": "Pressostat de frein SAHR ST2D",
-    "searchTags": ["PRESSOSTAT", "FREIN", "SAHR", "BOUTON", "SAFETY", "BREAKER", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "PRESSOSTAT",
+      "FREIN",
+      "SAHR",
+      "BOUTON",
+      "SAFETY",
+      "BREAKER",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_elec_contact_cle",
@@ -7777,8 +9490,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Contacteur de démarrage à Clé ST2D",
-    "searchTags": ["CLE", "START", "CONTACTEUR", "NEIMAN", "DEMARRAGE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "CLE",
+      "START",
+      "CONTACTEUR",
+      "NEIMAN",
+      "DEMARRAGE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_v_bague",
@@ -7802,8 +9524,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 4,
     "commonName": "Bague guidage vérin ST2D",
-    "searchTags": ["BAGUE", "USURE", "GUIDAGE", "VERIN", "PTFE", "JOINT", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "BAGUE",
+      "USURE",
+      "GUIDAGE",
+      "VERIN",
+      "PTFE",
+      "JOINT",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_sec_buse_ansul",
@@ -7827,8 +9559,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Buse anti-incendie Ansul ST2D",
-    "searchTags": ["BUSE", "INCENDIE", "ANSUL", "EXTINCTEUR", "FEU", "NOZZLE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "BUSE",
+      "INCENDIE",
+      "ANSUL",
+      "EXTINCTEUR",
+      "FEU",
+      "NOZZLE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_cons_collier_ech",
@@ -7852,8 +9594,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 4,
     "commonName": "Collier échappement V-Clamp ST2D",
-    "searchTags": ["COLLIER", "CLAMP", "ECHAPPEMENT", "V-BAND", "DEUTZ", "INOX", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "COLLIER",
+      "CLAMP",
+      "ECHAPPEMENT",
+      "V-BAND",
+      "DEUTZ",
+      "INOX",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_tra_filtre_c270",
@@ -7877,8 +9629,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 3,
     "commonName": "Filtre transmission Clark ST2D",
-    "searchTags": ["FILTRE", "TRANSMISSION", "CLARK", "BOITE", "OIL", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "FILTRE",
+      "TRANSMISSION",
+      "CLARK",
+      "BOITE",
+      "OIL",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_art_axe_levier",
@@ -7902,8 +9663,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Axe de nez de brancard ST2D",
-    "searchTags": ["AXE", "BRANCARD", "GODET", "LEVIER", "AXE GODET", "TRAIRE", "GROUND", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "AXE",
+      "BRANCARD",
+      "GODET",
+      "LEVIER",
+      "AXE GODET",
+      "TRAIRE",
+      "GROUND",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_fil_decanteur_carburant",
@@ -7927,8 +9699,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 3,
     "leadTimeDays": 3,
     "commonName": "Filtre décanteur de carburant ST2D",
-    "searchTags": ["FILTRE", "DECANTEUR", "CARBURANT", "GASOIL", "EAU", "DEUTZ", "SEPARATEUR", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "FILTRE",
+      "DECANTEUR",
+      "CARBURANT",
+      "GASOIL",
+      "EAU",
+      "DEUTZ",
+      "SEPARATEUR",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_mot_bougie_prechauffage",
@@ -7952,8 +9735,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Bougie de préchauffage Deutz ST2D",
-    "searchTags": ["BOUGIE", "PRECHAUFFAGE", "MOTEUR", "START", "DEUTZ", "DIESEL", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "BOUGIE",
+      "PRECHAUFFAGE",
+      "MOTEUR",
+      "START",
+      "DEUTZ",
+      "DIESEL",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_pochette_orings",
@@ -7977,8 +9770,20 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 4,
     "commonName": "Kit joints toriques BSP/JIC ST2D",
-    "searchTags": ["JOINT", "TORIQUE", "ORING", "KIT", "MALLETTE", "COFFRET", "BSP", "JIC", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "JOINT",
+      "TORIQUE",
+      "ORING",
+      "KIT",
+      "MALLETTE",
+      "COFFRET",
+      "BSP",
+      "JIC",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_clapet_antiretour",
@@ -8002,8 +9807,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Clapet anti-retour de pilotage ST2D",
-    "searchTags": ["CLAPET", "RETOUR", "VALVE", "CHECK", "PILOTAGE", "SECURITE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "CLAPET",
+      "RETOUR",
+      "VALVE",
+      "CHECK",
+      "PILOTAGE",
+      "SECURITE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_hyd_bouchon_sae",
@@ -8027,8 +9842,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 3,
     "commonName": "Bouchon SAE bride métallique ST2D",
-    "searchTags": ["BOUCHON", "SAE", "BRIDE", "OBTURATEUR", "RACCORD", "CAPUCHON", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "BOUCHON",
+      "SAE",
+      "BRIDE",
+      "OBTURATEUR",
+      "RACCORD",
+      "CAPUCHON",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_art_rondelle_arret",
@@ -8052,8 +9877,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Rondelle d'arrêt de pivot d'articulation ST2D",
-    "searchTags": ["RONDELLE", "CALAGE", "PIVOT", "ARTICULATION", "AXE", "EPAISSE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "RONDELLE",
+      "CALAGE",
+      "PIVOT",
+      "ARTICULATION",
+      "AXE",
+      "EPAISSE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_art_kit_goupilles",
@@ -8077,8 +9912,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 3,
     "commonName": "Kit de goupilles & boulons d'axes ST2D",
-    "searchTags": ["GOUPILLE", "VERROUILLAGE", "AXE", "BOULON", "KIT", "SECURITE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "GOUPILLE",
+      "VERROUILLAGE",
+      "AXE",
+      "BOULON",
+      "KIT",
+      "SECURITE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_elec_contact_pedale",
@@ -8102,8 +9947,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 7,
     "commonName": "Contacteur de pédale ST2D",
-    "searchTags": ["CONTACTEUR", "PEDALE", "FREIN", "ACCELERATEUR", "CABINE", "CAPTEUR", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "CONTACTEUR",
+      "PEDALE",
+      "FREIN",
+      "ACCELERATEUR",
+      "CABINE",
+      "CAPTEUR",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_elec_relais_demarrage",
@@ -8127,8 +9982,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 4,
     "commonName": "Relais de démarrage 24V ST2D",
-    "searchTags": ["RELAIS", "DEMARRAGE", "24V", "START", "ELECTRICITE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "RELAIS",
+      "DEMARRAGE",
+      "24V",
+      "START",
+      "ELECTRICITE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "st2d_elec_boite_fusibles",
@@ -8152,33 +10016,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 2,
     "commonName": "Boîte de fusibles scellés mine ST2D",
-    "searchTags": ["FUSIBLE", "FUSIBLES", "BOITE", "COFFRET", "KIT", "ELECTRICITE", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2D"]
-  },
-  {
-    "id": "mine_perfo_cop_amortisseur",
-    "functionalCategory": "Hydraulique Forage",
-    "subCategory": "Amortisseur Perforateur",
-    "component": "Piston d'amortissement",
-    "subComponent": "COP 1838 / COP 1638",
-    "reference": "3115 1254 00",
-    "designation": "[PERFORATEURS] - [PISTON D'AMORTISSEMENT COP 1838] - [Piston d'absorption des ondes de choc retour] - (OEM: 3115 1254 00)",
-    "notes": "Spécifiquement conçu pour amortir la percussion et le retour de roche sous conditions extrêmes.",
-    "proposedPrice": 14500,
-    "price": 14500,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Epiroc COP1838",
-    "criticality": "HAUTE",
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "stockQty": 5,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 14,
-    "commonName": "Piston d'amortissement COP 1838",
-    "searchTags": ["PISTON", "AMORTISSEMENT", "COP1838", "COP1638", "ROCKDRILL", "AMORTISSEUR", "FORAGE"],
-    "compatibleMachines": ["Tous perforateurs Epiroc COP"]
+    "searchTags": [
+      "FUSIBLE",
+      "FUSIBLES",
+      "BOITE",
+      "COFFRET",
+      "KIT",
+      "ELECTRICITE",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "mine_engin_accouplement_canneles",
@@ -8202,8 +10051,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 10,
     "commonName": "Accouplement cannelé",
-    "searchTags": ["ACCOUPLEMENT", "CANNELÉ", "DENTS", "FLASQUE", "BOITE", "TRANSMISSION"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "ACCOUPLEMENT",
+      "CANNELÉ",
+      "DENTS",
+      "FLASQUE",
+      "BOITE",
+      "TRANSMISSION"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "mine_outil_pistolet_graisse_hp",
@@ -8227,8 +10086,16 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 5,
     "commonName": "Pistolet pneumatique de graissage",
-    "searchTags": ["PISTOLET", "GRAISSE", "PNEUMATIQUE", "OUTILLAGE", "LUBRIFICATION"],
-    "compatibleMachines": ["Tous engins et perforateurs"]
+    "searchTags": [
+      "PISTOLET",
+      "GRAISSE",
+      "PNEUMATIQUE",
+      "OUTILLAGE",
+      "LUBRIFICATION"
+    ],
+    "compatibleMachines": [
+      "Tous engins et perforateurs"
+    ]
   },
   {
     "id": "mine_engin_flexible_hp_fleche",
@@ -8252,8 +10119,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 3,
     "commonName": "Kit flexibles de flèche ST2",
-    "searchTags": ["FLEXIBLE", "HYDRAULIQUE", "BOOM", "FLECHE", "VÉRIN", "ST2G", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "FLEXIBLE",
+      "HYDRAULIQUE",
+      "BOOM",
+      "FLECHE",
+      "VÉRIN",
+      "ST2G",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "mine_engin_axe_pivot_bagues",
@@ -8277,8 +10155,20 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 20,
     "commonName": "Axe et bagues d'articulation centrale",
-    "searchTags": ["AXE", "PIVOT", "ARTICULATION", "CENTRAL", "BAGUES", "DIRECTION", "ST2G", "ST2D"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Epiroc Scooptram ST2D"]
+    "searchTags": [
+      "AXE",
+      "PIVOT",
+      "ARTICULATION",
+      "CENTRAL",
+      "BAGUES",
+      "DIRECTION",
+      "ST2G",
+      "ST2D"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Epiroc Scooptram ST2D"
+    ]
   },
   {
     "id": "mine_engin_electrovanne_parker_24v",
@@ -8302,58 +10192,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 12,
     "commonName": "Électrovanne Parker 24V",
-    "searchTags": ["ELECTROVANNE", "PARKER", "VALVE", "HYDRO", "AVANCEMENT", "24V"],
-    "compatibleMachines": ["Tous engins hydrauliques hydromines"]
-  },
-  {
-    "id": "mine_perfo_repartiteur_patin",
-    "functionalCategory": "Hydraulique Forage",
-    "subCategory": "Glissière",
-    "component": "Patins de guidage",
-    "subComponent": "Patins Ertalon haute intensité",
-    "reference": "3128 3004 55",
-    "designation": "[PERFORATEURS] - [KIT 4 PATINS ERTALON GLISSIÈRE] - [Jeu de patins d'usure de glissière télescopique COP] - (OEM: 3128 3004 55)",
-    "notes": "Empêche le contact métal-métal entre le perforateur et sa poutre d'avancement. Doit s'ajuster avec d'éventuelles cales.",
-    "proposedPrice": 4500,
-    "price": 4500,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Sandvik / Epiroc Glissières",
-    "criticality": "HAUTE",
-    "bomLevel": 3,
-    "unit": "KIT",
-    "stockQty": 12,
-    "minStock": 4,
-    "criticalStock": 2,
-    "leadTimeDays": 4,
-    "commonName": "Patins Ertalon glissière",
-    "searchTags": ["PATIN", "PATINS", "ERTALON", "GUIDAGE", "GLISSIÈRE", "POUTRE", "COP1838"],
-    "compatibleMachines": ["Glissières de perforation de Jumbo"]
-  },
-  {
-    "id": "mine_perfo_accum_membrane_hp",
-    "functionalCategory": "Hydraulique Forage",
-    "subCategory": "Accumulateurs",
-    "component": "Accumulateur",
-    "subComponent": "Membrane d'azote HP 140 bars",
-    "reference": "3115 0262 00",
-    "designation": "[PERFORATEURS] - [ACCUMULATEUR DE PERCUSSION HP] - [Sphère accumulateur d'impact d'origine COP 1838] - (OEM: 3115 0262 00)",
-    "notes": "Compense la perte de charge hydraulique instantanée lors de la percussion du piston de frappe. Livrée non-gonflée d'azote.",
-    "proposedPrice": 12400,
-    "price": 12400,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Epiroc COP 1838, COP 2238",
-    "criticality": "CRITIQUE",
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "stockQty": 4,
-    "minStock": 1,
-    "criticalStock": 1,
-    "leadTimeDays": 15,
-    "commonName": "Accumulateur d'impact HP",
-    "searchTags": ["ACCUMULATEUR", "SPHERE", "MEMBRANE", "AZOTE", "PERCUSSION", "HP", "COP1838"],
-    "compatibleMachines": ["Epiroc COP1838", "Epiroc COP2238"]
+    "searchTags": [
+      "ELECTROVANNE",
+      "PARKER",
+      "VALVE",
+      "HYDRO",
+      "AVANCEMENT",
+      "24V"
+    ],
+    "compatibleMachines": [
+      "Tous engins hydrauliques hydromines"
+    ]
   },
   {
     "id": "mine_outil_mano_gonflage_azote",
@@ -8377,8 +10226,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 0,
     "leadTimeDays": 7,
     "commonName": "Mallette de gonflage azote",
-    "searchTags": ["MALLETTE", "MANOMETRE", "GONFLAGE", "AZOTE", "OUTIL", "SPHERE", "COP"],
-    "compatibleMachines": ["Tous perforateurs et accumulateurs hydrauliques"]
+    "searchTags": [
+      "MALLETTE",
+      "MANOMETRE",
+      "GONFLAGE",
+      "AZOTE",
+      "OUTIL",
+      "SPHERE",
+      "COP"
+    ],
+    "compatibleMachines": [
+      "Tous perforateurs et accumulateurs hydrauliques"
+    ]
   },
   {
     "id": "mine_cons_flasque_joint_perfo",
@@ -8402,33 +10261,21 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 5,
     "leadTimeDays": 2,
     "commonName": "Joints toriques de rinçage d'eau",
-    "searchTags": ["JOINT", "JOINTS", "FLASQUE", "EAU", "INJECTION", "RINCAGE", "COP1838", "TORIQUE"],
-    "compatibleMachines": ["Epiroc COP1838", "Epiroc COP1638", "Epiroc COP1032"]
-  },
-  {
-    "id": "mine_perfo_raccord_pivot_bronze",
-    "functionalCategory": "Hydraulique Forage",
-    "subCategory": "Tête de Rinçage",
-    "component": "Raccord d'eau",
-    "subComponent": "Raccord d'eau pivotant en bronze",
-    "reference": "3115 9942 10",
-    "designation": "[PERFORATEURS] - [RACCORD DROIT PIVOTANT BRONZE] - [Raccord tournant d'injection d'eau pour tête de rinçage] - (OEM: 3115 9942 10)",
-    "notes": "Matériau bronze résistant à la corrosion saline des eaux d'exhaure souterraines. Vissé directement en tête de perforateur.",
-    "proposedPrice": 3400,
-    "price": 3400,
-    "suggestedType": "PERFORATEURS",
-    "source": "MASTER",
-    "compatibility": "Epiroc COP 1238 / 1838",
-    "criticality": "HAUTE",
-    "bomLevel": 3,
-    "unit": "PIECE",
-    "stockQty": 8,
-    "minStock": 2,
-    "criticalStock": 1,
-    "leadTimeDays": 5,
-    "commonName": "Raccord d'eau tournant en bronze",
-    "searchTags": ["RACCORD", "PIVOTANT", "BRONZE", "TETE", "RINÇAGE", "EAU", "FORAGE"],
-    "compatibleMachines": ["Epiroc COP1838", "Epiroc COP1238"]
+    "searchTags": [
+      "JOINT",
+      "JOINTS",
+      "FLASQUE",
+      "EAU",
+      "INJECTION",
+      "RINCAGE",
+      "COP1838",
+      "TORIQUE"
+    ],
+    "compatibleMachines": [
+      "Epiroc COP1838",
+      "Epiroc COP1638",
+      "Epiroc COP1032"
+    ]
   },
   {
     "id": "mine_cons_bouton_arret_urgence",
@@ -8452,8 +10299,18 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 2,
     "commonName": "Bouton d'arrêt d'urgence",
-    "searchTags": ["BOUTON", "ARRET", "URGENCE", "CHAMPIGNON", "SECURITE", "PUNCH", "COUPE_CIRCUIT"],
-    "compatibleMachines": ["Tous engins de transport et de perforation"]
+    "searchTags": [
+      "BOUTON",
+      "ARRET",
+      "URGENCE",
+      "CHAMPIGNON",
+      "SECURITE",
+      "PUNCH",
+      "COUPE_CIRCUIT"
+    ],
+    "compatibleMachines": [
+      "Tous engins de transport et de perforation"
+    ]
   },
   {
     "id": "mine_cons_capteur_inductif_telemec",
@@ -8477,8 +10334,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 3,
     "commonName": "Détecteur inductif M18",
-    "searchTags": ["CAPTEUR", "TELEMECANIQUE", "INDUCTIF", "PROXIMITE", "FIN_DE_COURSE", "AUTOMATE"],
-    "compatibleMachines": ["Bras et flèche des chargeurs et foreuses"]
+    "searchTags": [
+      "CAPTEUR",
+      "TELEMECANIQUE",
+      "INDUCTIF",
+      "PROXIMITE",
+      "FIN_DE_COURSE",
+      "AUTOMATE"
+    ],
+    "compatibleMachines": [
+      "Bras et flèche des chargeurs et foreuses"
+    ]
   },
   {
     "id": "mine_engin_injecteur_deutz_914",
@@ -8502,8 +10368,19 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 1,
     "leadTimeDays": 6,
     "commonName": "Injecteur Deutz 914",
-    "searchTags": ["INJECTEUR", "DEUTZ", "914", "FUEL", "DIESEL", "GAZOLE", "COMBUSTION"],
-    "compatibleMachines": ["Epiroc Scooptram ST2G", "Moteurs Deutz D914"]
+    "searchTags": [
+      "INJECTEUR",
+      "DEUTZ",
+      "914",
+      "FUEL",
+      "DIESEL",
+      "GAZOLE",
+      "COMBUSTION"
+    ],
+    "compatibleMachines": [
+      "Epiroc Scooptram ST2G",
+      "Moteurs Deutz D914"
+    ]
   },
   {
     "id": "mine_cons_bougie_prechauff_deutz",
@@ -8527,8 +10404,17 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 2,
     "commonName": "Bougie de préchauffage 24V",
-    "searchTags": ["BOUGIE", "PRECHAUFFAGE", "DEUTZ", "24V", "DEMARRAGE", "CRAYON"],
-    "compatibleMachines": ["Moteurs de secours deutz et scooptrams ST2"]
+    "searchTags": [
+      "BOUGIE",
+      "PRECHAUFFAGE",
+      "DEUTZ",
+      "24V",
+      "DEMARRAGE",
+      "CRAYON"
+    ],
+    "compatibleMachines": [
+      "Moteurs de secours deutz et scooptrams ST2"
+    ]
   },
   {
     "id": "epi_gant_kevlar",
@@ -8552,7 +10438,14 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 5,
     "leadTimeDays": 5,
     "commonName": "Gants Kevlar",
-    "searchTags": ["GANTS", "KEVLAR", "EPI", "PROTECTION", "MAIN", "SRE"]
+    "searchTags": [
+      "GANTS",
+      "KEVLAR",
+      "EPI",
+      "PROTECTION",
+      "MAIN",
+      "SRE"
+    ]
   },
   {
     "id": "epi_botte_s5",
@@ -8576,7 +10469,14 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 3,
     "leadTimeDays": 7,
     "commonName": "Bottes S5",
-    "searchTags": ["BOTTES", "SOUBLES", "S5", "EPI", "PIED", "PROTECTION"]
+    "searchTags": [
+      "BOTTES",
+      "SOUBLES",
+      "S5",
+      "EPI",
+      "PIED",
+      "PROTECTION"
+    ]
   },
   {
     "id": "epi_casque_led",
@@ -8600,7 +10500,14 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 10,
     "commonName": "Casque",
-    "searchTags": ["CASQUE", "MINE", "LED", "EPI", "TETE", "PROTECTION"]
+    "searchTags": [
+      "CASQUE",
+      "MINE",
+      "LED",
+      "EPI",
+      "TETE",
+      "PROTECTION"
+    ]
   },
   {
     "id": "epi_masque_ffp3",
@@ -8624,7 +10531,13 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 2,
     "leadTimeDays": 6,
     "commonName": "Masque FFP3",
-    "searchTags": ["MASQUE", "DOUBLE CARTOUCHE", "FFP3", "EPI", "RESPIRATION"]
+    "searchTags": [
+      "MASQUE",
+      "DOUBLE CARTOUCHE",
+      "FFP3",
+      "EPI",
+      "RESPIRATION"
+    ]
   },
   {
     "id": "epi_gilet_vis",
@@ -8648,7 +10561,12 @@ export const MASTER_CATALOG: CatalogItem[] = [
     "criticalStock": 5,
     "leadTimeDays": 4,
     "commonName": "Gilet réfléchissant",
-    "searchTags": ["GILET", "REFLÉCHISSANT", "JAUNE", "EPI", "VISIBILITE"]
+    "searchTags": [
+      "GILET",
+      "REFLÉCHISSANT",
+      "JAUNE",
+      "EPI",
+      "VISIBILITE"
+    ]
   }
 ];
-

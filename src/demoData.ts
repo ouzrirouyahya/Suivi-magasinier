@@ -25,8 +25,8 @@ export const INITIAL_ENGINS: EnginMaster[] = [
 ];
 
 export const INITIAL_PERFOS: PerfoMaster[] = [
-  { id: 'p1_smi', code: 'RIG 1 - COP 1838', site: 'SMI' },
-  { id: 'p2_smi', code: 'RIG 2 - HC50', site: 'SMI' },
+  { id: 'p1_smi', code: 'RIG 1 - MONTABERT T23', site: 'SMI' },
+  { id: 'p2_smi', code: 'RIG 2 - MONTABERT T23', site: 'SMI' },
 ];
 
 export const INITIAL_AGENTS: AgentMaster[] = [
@@ -112,46 +112,46 @@ export const INITIAL_ARTICLES: Article[] = [
     price: 290, active: true, compatibility: 'Scooptram ST2G / ST2D', criticality: 'MOYENNE'
   },
 
-  // --- PERFORATION & CONSOMMABLES ---
+  // --- PERFORATION & CONSOMMABLES (MONTABERT T23 UNIQUEMENT) ---
   { 
-    id: 'smi_perf_sub_02', site: 'SMI', ref: '8661 1639 00', 
-    designation: 'Piston de frappe original pour perforateur COP 1838', type: 'PERFORATEURS', 
-    category: 'Perforation', functionalCategory: 'Perforation', subCategory: 'Mécanisme de frappe', 
-    component: 'Piston de frappe COP', subComponent: 'Epiroc original', 
-    unit: 'Pcs', quantity: 3, minStock: 1, location: 'RAY-PERF-01', 
-    price: 28200, active: true, compatibility: 'Epiroc COP 1838', criticality: 'CRITIQUE'
+    id: 'smi_perf_t23_01', site: 'SMI', ref: '9100 2300 01',
+    designation: '[FORAGE] - [PISTON DE COUT] - [Piston de frappe d\'origine haute fréquence Montabert T23]', type: 'PERFORATEURS',
+    category: 'Perforation', functionalCategory: 'Forage', subCategory: 'Corps de Percussion',
+    component: 'Piston de percussion T23', subComponent: 'Piston en acier allié trempé Montabert',
+    unit: 'Pcs', quantity: 3, minStock: 1, location: 'RAY-PERF-01',
+    price: 16500, active: true, compatibility: 'MONTABERT T23', criticality: 'CRITIQUE'
   },
   { 
-    id: 'smi_perf_con_01', site: 'SMI', ref: 'MB-T23-801a', 
-    designation: 'Taillant à boutons coniques 38mm d\'injection d\'air', type: 'PERFORATEURS', 
-    category: 'Consommables', functionalCategory: 'Consommables', subCategory: 'Taillants', 
-    component: 'Taillant conique 38mm', subComponent: 'Boutons carbure', 
-    unit: 'Pcs', quantity: 120, minStock: 30, location: 'RAY-FOR-05', 
-    price: 380, active: true, compatibility: 'Tiges hexagonales coniques', criticality: 'MOYENNE'
+    id: 'smi_perf_t23_02', site: 'SMI', ref: '9100 2300 02',
+    designation: '[FORAGE] - [DOUILLE DE CENTRAGE PIÈCE] - [Bague de guidage bronze fritté haute tolérance Montabert T23]', type: 'PERFORATEURS',
+    category: 'Perforation', functionalCategory: 'Forage', subCategory: 'Guidage Métallique',
+    component: 'Bague de guidage piston', subComponent: 'Douille de centrage bronze d\'origine',
+    unit: 'Pcs', quantity: 8, minStock: 2, location: 'RAY-FOR-05',
+    price: 2400, active: true, compatibility: 'MONTABERT T23', criticality: 'HAUTE'
   },
   { 
-    id: 'smi_perf_con_02', site: 'SMI', ref: 'MB-T38-801b', 
-    designation: 'Taillant bouton T38 Retrac fileté 64mm Sandvik', type: 'PERFORATEURS', 
-    category: 'Consommables', functionalCategory: 'Consommables', subCategory: 'Taillants', 
-    component: 'Taillant fileté T38', subComponent: 'Boutons carbure de tungstène', 
-    unit: 'Pcs', quantity: 45, minStock: 15, location: 'RAY-FOR-06', 
-    price: 1450, active: true, compatibility: 'Tiges filetées T38', criticality: 'MOYENNE'
+    id: 'smi_perf_t23_03', site: 'SMI', ref: '9100 2300 03',
+    designation: '[FORAGE] - [POCHETTE JOINTS HP V-RING] - [Pochette de joints HP d\'origine Montabert T23]', type: 'PERFORATEURS',
+    category: 'Perforation', functionalCategory: 'Forage', subCategory: 'Joints d\'étanchéité',
+    component: 'Pochette d\'étanchéité HP', subComponent: 'V-Ring set étanchéité percussion T23',
+    unit: 'Pcs', quantity: 12, minStock: 3, location: 'RAY-FOR-12',
+    price: 1500, active: true, compatibility: 'MONTABERT T23', criticality: 'CRITIQUE'
   },
   { 
-    id: 'smi_perf_con_03', site: 'SMI', ref: 'MB-T23-702', 
-    designation: 'Tige de forage jumbo filetée T38 MF 3050mm Sandvik', type: 'PERFORATEURS', 
-    category: 'Consommables', functionalCategory: 'Consommables', subCategory: 'Tiges de forage', 
-    component: 'Tige de forage Jumbo', subComponent: 'Fileté T38 mâle/femelle 3m', 
-    unit: 'Pcs', quantity: 18, minStock: 5, location: 'PARC-FOR-A', 
-    price: 4200, active: true, compatibility: 'Jumbos de forage front de taille', criticality: 'HAUTE'
+    id: 'smi_perf_t23_26', site: 'SMI', ref: '9100 2300 26',
+    designation: '[FORAGE] - [TAILLANT CONIQUE T23] - [Taillant conique 32mm carbure de tungstène Montabert T23]', type: 'PERFORATEURS',
+    category: 'Consommables', functionalCategory: 'Forage', subCategory: 'Taillants',
+    component: 'Taillant conique T23', subComponent: 'Carbure de tungstène conique 11°',
+    unit: 'Pcs', quantity: 120, minStock: 30, location: 'RAY-FOR-06',
+    price: 360, active: true, compatibility: 'MONTABERT T23', criticality: 'MOYENNE'
   },
   { 
-    id: 'smi_perf_con_04', site: 'SMI', ref: 'MB-T23-203', 
-    designation: 'Shank Adapter COP 1838 cannelé filetage T38', type: 'PERFORATEURS', 
-    category: 'Consommables', functionalCategory: 'Consommables', subCategory: 'Liaisons filetées', 
-    component: 'Adaptateur d\'emmanchement', subComponent: 'Shank Adapter T38 COP', 
-    unit: 'Pcs', quantity: 8, minStock: 2, location: 'RAY-FOR-12', 
-    price: 5800, active: true, compatibility: 'Epiroc COP 1838', criticality: 'HAUTE'
+    id: 'smi_perf_t23_27', site: 'SMI', ref: '9100 2300 27',
+    designation: '[FORAGE] - [BARRE CONIQUE T23] - [Barre de forage conique hexagonale 22mm x 1.8m Montabert T23]', type: 'PERFORATEURS',
+    category: 'Consommables', functionalCategory: 'Forage', subCategory: 'Tiges de forage',
+    component: 'Barre conique T23', subComponent: 'Acier hexagonal creux 22mm conique 11°',
+    unit: 'Pcs', quantity: 18, minStock: 5, location: 'PARC-FOR-A',
+    price: 1150, active: true, compatibility: 'MONTABERT T23', criticality: 'HAUTE'
   },
 
   // ==========================================
@@ -182,12 +182,12 @@ export const INITIAL_ARTICLES: Article[] = [
     price: 380, active: true, compatibility: 'Scooptram ST2G / ST2D', criticality: 'MOYENNE'
   },
   { 
-    id: 'oumj_perf_sub_01', site: 'OUMEJRANE', ref: 'MB-T23-101', 
-    designation: 'Piston principal de frappe en alliage dur renforcé', type: 'PERFORATEURS', 
-    category: 'Perforation', functionalCategory: 'Perforation', subCategory: 'Mécanisme de frappe', 
-    component: 'Piston de frappe', subComponent: 'Alliage aciéré', 
+    id: 'oumj_perf_t23_01', site: 'OUMEJRANE', ref: '9100 2300 01', 
+    designation: '[FORAGE] - [PISTON DE COUT] - [Piston de frappe d\'origine haute fréquence Montabert T23]', type: 'PERFORATEURS', 
+    category: 'Perforation', functionalCategory: 'Forage', subCategory: 'Corps de Percussion', 
+    component: 'Piston de percussion T23', subComponent: 'Piston en acier allié trempé Montabert', 
     unit: 'Pcs', quantity: 2, minStock: 1, location: 'P-01', 
-    price: 16500, active: true, compatibility: 'Perfo Montabert HC50 / Tamrock', criticality: 'CRITIQUE'
+    price: 16500, active: true, compatibility: 'MONTABERT T23', criticality: 'CRITIQUE'
   },
 
   // ==========================================
@@ -202,12 +202,12 @@ export const INITIAL_ARTICLES: Article[] = [
     price: 9500, active: true, compatibility: 'ST2G / ST2D / Jumbos', criticality: 'HAUTE'
   },
   { 
-    id: 'kou_perf_sub_03', site: 'KOUDIA', ref: 'MB-T23-201', 
-    designation: 'Barre rifle (vis hélicoïdale de guidage rotation)', type: 'PERFORATEURS', 
-    category: 'Perforation', functionalCategory: 'Perforation', subCategory: 'Mécanisme de rotation', 
-    component: 'Barre rifle', subComponent: 'Cannelures hélice', 
+    id: 'kou_perf_t23_05', site: 'KOUDIA', ref: '9100 2300 05', 
+    designation: '[FORAGE] - [ROUE À CANNELURES] - [Bague de rotation cannelée bronze d\'origine Montabert T23]', type: 'PERFORATEURS', 
+    category: 'Perforation', functionalCategory: 'Forage', subCategory: 'Mécanisme de Rotation', 
+    component: 'Bague de rotation cannelée', subComponent: 'Bague cannelée bronze fritté', 
     unit: 'Pcs', quantity: 2, minStock: 1, location: 'RAY-ROT-1', 
-    price: 12500, active: true, compatibility: 'Perforateurs manuels / Jacklegs', criticality: 'HAUTE'
+    price: 4800, active: true, compatibility: 'MONTABERT T23', criticality: 'HAUTE'
   },
 
   // ==========================================
@@ -242,12 +242,12 @@ export const INITIAL_ARTICLES: Article[] = [
     price: 2200, active: true, compatibility: 'Tous engins de chantier', criticality: 'MOYENNE'
   },
   { 
-    id: 'oua_perf_con_06', site: 'OUANSIMI', ref: 'MB-T23-701', 
-    designation: 'Fleuret de forage conique R25 Hex 22 de longueur 1.8m', type: 'PERFORATEURS', 
-    category: 'Consommables', functionalCategory: 'Consommables', subCategory: 'Tiges de forage', 
-    component: 'Fleuret conique 1.8m', subComponent: 'HEX 22 conique 11°', 
+    id: 'oua_perf_t23_27', site: 'OUANSIMI', ref: '9100 2300 27', 
+    designation: '[FORAGE] - [BARRE CONIQUE T23] - [Barre de forage conique hexagonale 22mm x 1.8m Montabert T23]', type: 'PERFORATEURS', 
+    category: 'Consommables', functionalCategory: 'Forage', subCategory: 'Tiges de forage', 
+    component: 'Barre conique T23', subComponent: 'Acier hexagonal creux 22mm conique 11°', 
     unit: 'Pcs', quantity: 30, minStock: 10, location: 'RAY-FOR-02', 
-    price: 1180, active: true, compatibility: 'Perforateurs portatifs jacklegs', criticality: 'HAUTE'
+    price: 1150, active: true, compatibility: 'MONTABERT T23', criticality: 'HAUTE'
   }
 ];
 
