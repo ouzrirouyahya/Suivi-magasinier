@@ -1257,6 +1257,95 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
             }
           }
 
+          // Step 4: Automated, manager-like seeding for Hydromines Catalog (under 40,000 MAD, filtering out heavy assets)
+          const hmMetaRef = doc(db, 'metadata', 'hydromines_catalog_seeded_v3');
+          const hmMetaSnap = await getDoc(hmMetaRef);
+          if (!hmMetaSnap.exists()) {
+            console.log("[Hydromines Catalog Seed] Beginning automated high-quality enrichment...");
+            const toSeed: HydrominesCatalogItem[] = [];
+            
+            for (const item of MASTER_CATALOG) {
+              const price = item.price || 0;
+              
+              // Rule 1: price strictly under 40,000 MAD
+              if (price >= 40000) continue;
+              
+              // Rule 2: exclude cabine, chassis, godet, and complete engines (case insensitive)
+              const designationLower = (item.designation || '').toLowerCase();
+              const categoryLower = (item.functionalCategory || '').toLowerCase();
+              const componentLower = (item.component || '').toLowerCase();
+              const notesLower = (item.notes || '').toLowerCase();
+              
+              const isExcluded = 
+                designationLower.includes('cabine') || designationLower.includes('châssis') || designationLower.includes('chassis') || designationLower.includes('godet') || 
+                designationLower.includes('moteur complet') || designationLower.includes('bloc moteur') || designationLower.includes('moteur diesel complet') ||
+                categoryLower.includes('cabine') || categoryLower.includes('châssis') || categoryLower.includes('chassis') || categoryLower.includes('godet') ||
+                componentLower.includes('cabine') || componentLower.includes('châssis') || componentLower.includes('chassis') || componentLower.includes('godet') ||
+                notesLower.includes('moteur complet') || notesLower.includes('bloc moteur');
+                
+              if (isExcluded) continue;
+              
+              // Determine equipment family / compatibility
+              const compatibilityUpper = (item.compatibility || '').toUpperCase();
+              let family: 'ST2G' | 'ST2D' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' | null = null;
+              
+              if (compatibilityUpper.includes('T23')) {
+                family = 'T23';
+              } else if (compatibilityUpper.includes('T28')) {
+                family = 'T28';
+              } else if (compatibilityUpper.includes('ST2G')) {
+                family = 'ST2G';
+              } else if (compatibilityUpper.includes('ST2D')) {
+                family = 'ST2D';
+              }
+              
+              if (!family) {
+                continue; // Skip items that don't belong to any of these 4 main categories
+              }
+              
+              // Rule 3: For T28, only keep "soufflages" and several other small pieces (price < 5000)
+              if (family === 'T28') {
+                const isSoufflage = designationLower.includes('soufflage') || designationLower.includes('soufflages');
+                const isSmallPart = price < 5000;
+                if (!isSoufflage && !isSmallPart) {
+                  continue;
+                }
+              }
+              
+              // Construct HydrominesCatalogItem
+              const hmItem: HydrominesCatalogItem = {
+                id: `hm_${item.id || generateId()}`,
+                reference: item.reference,
+                designation: item.designation,
+                suggestedType: item.suggestedType || 'ENGINS',
+                functionalCategory: item.functionalCategory || 'Consommables',
+                unit: item.unit || 'PIECE',
+                sourceCatalog: family,
+                equipmentFamily: family,
+                status: 'ACTIF',
+                isHydrominesCritical: item.criticality === 'CRITIQUE' || item.criticality === 'HAUTE',
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              };
+              
+              toSeed.push(hmItem);
+            }
+            
+            console.log(`[Hydromines Catalog Seed] Found ${toSeed.length} candidate items to seed.`);
+            const chunkSize = 450;
+            for (let i = 0; i < toSeed.length; i += chunkSize) {
+              const chunk = toSeed.slice(i, i + chunkSize);
+              const batch = writeBatch(db);
+              chunk.forEach(hmItem => {
+                batch.set(doc(db, 'hydromines_catalog', hmItem.id), cleanObject(hmItem));
+              });
+              await batch.commit();
+            }
+            
+            await setDoc(hmMetaRef, { seeded: true, count: toSeed.length, date: new Date().toISOString() });
+            console.log(`[Hydromines Catalog Seed] Successfully seeded ${toSeed.length} items to hydromines_catalog.`);
+          }
+
           // Articles & Missing High-Frequency Maintenance Parts Auto-Injection System
           const articlesSnap = await getDocs(collection(db, 'articles'));
           const existingMap = new Set<string>();
