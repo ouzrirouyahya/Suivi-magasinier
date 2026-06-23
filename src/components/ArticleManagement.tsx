@@ -358,6 +358,16 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   const [catalogPriceFilter, setCatalogPriceFilter] = useState<'ALL' | 'BELOW_40K' | 'BELOW_50K' | 'EXPENSIVE_ONLY'>('BELOW_40K');
   const [selectedSort, setSelectedSort] = useState<string>('DEFAULT');
 
+  const availableCategories = React.useMemo(() => {
+    const cats = new Set<string>();
+    catalog.forEach(item => {
+      if (item.functionalCategory) {
+        cats.add(item.functionalCategory);
+      }
+    });
+    return Array.from(cats).sort();
+  }, [catalog]);
+
   // Reset limit whenever search parameters or filters of the catalog are altered for maximum page speed
   useEffect(() => {
     setVisibleCatalogLimit(30);
@@ -2071,19 +2081,9 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                      className="bg-white border border-slate-200 rounded-xl px-3 py-2 text-xs font-black uppercase text-slate-700 h-11 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer"
                   >
                      <option value="ALL">Systèmes (Tous)</option>
-                     <option value="Propulsion">Propulsion</option>
-                     <option value="Moteur">Moteur</option>
-                     <option value="Hydraulique">Hydraulique</option>
-                     <option value="Transmission">Transmission</option>
-                     <option value="Freinage">Freinage</option>
-                     <option value="Axe & Articulation">Axes/Châssis</option>
-                     <option value="Graissage">Graissage</option>
-                     <option value="Filtration">Filtration</option>
-                     <option value="Électricité">Électricité</option>
-                     <option value="Pneumatique">Pneumatique</option>
-                     <option value="Injection">Injection</option>
-                     <option value="Consommables">Consommables</option>
-                     <option value="PERFORATEUR">Perforateurs</option>
+                     {availableCategories.map(cat => (
+                       <option key={cat} value={cat}>{cat}</option>
+                     ))}
                   </select>
                 </div>
                 

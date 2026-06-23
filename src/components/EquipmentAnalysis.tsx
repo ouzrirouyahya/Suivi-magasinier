@@ -55,12 +55,12 @@ import { toast } from 'sonner';
 
 // Default target lists if DB has empty records for demo
 const LOCAL_ENGINS = [
-  { code: 'ST2G 1', label: 'Scooptram ST2G #01', type: 'ENGIN', performance: 88, cat: 'Chargement souterrain' },
-  { code: 'ST2G 3', label: 'Scooptram ST2G #03', type: 'ENGIN', performance: 74, cat: 'Chargement souterrain' },
-  { code: 'ST3G 4', label: 'Scooptram ST3G #04', type: 'ENGIN', performance: 91, cat: 'Chargement grande taille' },
-  { code: 'ST2G 5', label: 'Scooptram ST2G #05', type: 'ENGIN', performance: 85, cat: 'Chargement souterrain' },
-  { code: 'ST2G 6', label: 'Scooptram ST2G #06', type: 'ENGIN', performance: 62, cat: 'Disponibilité critique' },
-  { code: 'ST2D 7', label: 'Dux Dump Truck ST2D #07', type: 'ENGIN', performance: 80, cat: 'Roulage de stérile' },
+  { code: 'ST2G 1', label: 'Scooptram ST2G #01 (4 T.)', type: 'ENGIN', performance: 88, cat: 'Moteur Cummins QSB4.5 (Standard)' },
+  { code: 'ST2D 2', label: 'Scooptram ST2D #02 (3.6 T.)', type: 'ENGIN', performance: 74, cat: 'Moteur Deutz d\'Ancienne Génération' },
+  { code: 'ST2D 3', label: 'Scooptram ST2D #03 (3.6 T.)', type: 'ENGIN', performance: 80, cat: 'Moteur Deutz d\'Ancienne Génération' },
+  { code: 'ST2D 4', label: 'Scooptram ST2D #04 (3.6 T.)', type: 'ENGIN', performance: 85, cat: 'Moteur Deutz d\'Ancienne Génération' },
+  { code: 'ST2D 5', label: 'Scooptram ST2D #05 (3.6 T.)', type: 'ENGIN', performance: 62, cat: 'Moteur Deutz d\'Ancienne Génération' },
+  { code: 'ST2D 6', label: 'Scooptram ST2D #06 (3.6 T.)', type: 'ENGIN', performance: 68, cat: 'Moteur Deutz d\'Ancienne Génération' },
 ];
 
 const LOCAL_PERFOS = [
@@ -83,7 +83,7 @@ export function EquipmentAnalysis() {
   const [searchQuery, setSearchQuery] = useState('');
   
   // Drill-down machine states
-  const [selectedEngin, setSelectedEngin] = useState<string>('ST2G 3');
+  const [selectedEngin, setSelectedEngin] = useState<string>('ST2G 1');
   const [selectedPerfo, setSelectedPerfo] = useState<string>('T23 2');
   const [selectedConsommable, setSelectedConsommable] = useState<string>('Couronnes de forage 45mm');
   const [selectedEpi, setSelectedEpi] = useState<string>('Casque ventilé avec support lampe');
@@ -433,7 +433,7 @@ export function EquipmentAnalysis() {
 
   // Find most expensive machinery code
   const peakExpensiveEngin = useMemo(() => {
-    let topCode = 'ST2G 3';
+    let topCode = 'ST2G 1';
     let maxCost = 0;
     const entries = Object.entries(rawEnginCosts) as [string, { total: number }][];
     entries.forEach(([code, data]) => {
@@ -1126,7 +1126,7 @@ export function EquipmentAnalysis() {
                     <div className="p-2.5 bg-slate-800/60 rounded-xl border border-slate-700/40 flex items-start gap-2.5">
                       <AlertCircle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
                       <div className="space-y-0.5">
-                        <p className="text-[11px] font-black text-rose-450 uppercase">Remplacement de filtration prématuré (ST2G 3)</p>
+                        <p className="text-[11px] font-black text-rose-450 uppercase">Remplacement de filtration prématuré (ST2G 1)</p>
                         <p className="text-[10px] text-slate-350 leading-relaxed font-normal">
                           Les cartouches de filtration d'air externe sont changées tous les 12 jours au lieu de 40. Risque important de poussière abrasive dans la chambre à combustion. Inspecter le flexible d'admission d'air.
                         </p>

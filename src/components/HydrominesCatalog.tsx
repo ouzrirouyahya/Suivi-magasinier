@@ -58,7 +58,7 @@ export function HydrominesCatalog() {
 
   // States for the new technical catalog addition flow
   const [creationTab, setCreationTab] = useState<'catalog' | 'manual'>('catalog');
-  const [selectedTechCatalog, setSelectedTechCatalog] = useState<'ST2G' | 'ST2D' | 'T23'>('ST2G');
+  const [selectedTechCatalog, setSelectedTechCatalog] = useState<'ST2G' | 'ST2D' | 'T23' | 'T28'>('ST2G');
   const [selectedTechCategory, setSelectedTechCategory] = useState<string>('ALL');
   const [techSearchTerm, setTechSearchTerm] = useState('');
   const [techVisibleLimit, setTechVisibleLimit] = useState(30);
@@ -154,6 +154,7 @@ export function HydrominesCatalog() {
     const st2g = hydrominesCatalog.filter(x => x.equipmentFamily === 'ST2G').length;
     const st2d = hydrominesCatalog.filter(x => x.equipmentFamily === 'ST2D').length;
     const t23 = hydrominesCatalog.filter(x => x.equipmentFamily === 'T23').length;
+    const t28 = hydrominesCatalog.filter(x => x.equipmentFamily === 'T28').length;
 
     // Quality alerts lists
     const sansPrix: HydrominesCatalogItem[] = [];
@@ -252,6 +253,7 @@ export function HydrominesCatalog() {
       st2g,
       st2d,
       t23,
+      t28,
       sansPrix,
       sansCat,
       sansUnite,
@@ -489,7 +491,8 @@ export function HydrominesCatalog() {
       const comp = (it.compatibility || '').toLowerCase();
       if (selectedTechCatalog === 'ST2G') return comp.includes('st2g');
       if (selectedTechCatalog === 'ST2D') return comp.includes('st2d');
-      if (selectedTechCatalog === 'T23') return comp.includes('t23') || comp.includes('montabert');
+      if (selectedTechCatalog === 'T23') return comp.includes('t23');
+      if (selectedTechCatalog === 'T28') return comp.includes('t28');
       return false;
     });
     const uniq = new Set<string>();
@@ -500,7 +503,7 @@ export function HydrominesCatalog() {
   }, [selectedTechCatalog]);
 
   // Handle tech catalog tab clicks
-  const handleSelectTechCatalogChange = (cat: 'ST2G' | 'ST2D' | 'T23') => {
+  const handleSelectTechCatalogChange = (cat: 'ST2G' | 'ST2D' | 'T23' | 'T28') => {
     setSelectedTechCatalog(cat);
     setSelectedTechCategory('ALL');
     setTechSearchTerm('');
@@ -526,7 +529,8 @@ export function HydrominesCatalog() {
       const comp = (it.compatibility || '').toLowerCase();
       if (selectedTechCatalog === 'ST2G') return comp.includes('st2g');
       if (selectedTechCatalog === 'ST2D') return comp.includes('st2d');
-      if (selectedTechCatalog === 'T23') return comp.includes('t23') || comp.includes('montabert');
+      if (selectedTechCatalog === 'T23') return comp.includes('t23');
+      if (selectedTechCatalog === 'T28') return comp.includes('t28');
       return false;
     });
 
@@ -558,10 +562,11 @@ export function HydrominesCatalog() {
     }
 
     // Determine equipment family mappings
-    let family: 'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' = 'AUTRE';
+    let family: 'ST2G' | 'ST2D' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' = 'AUTRE';
     if (selectedTechCatalog === 'ST2G') family = 'ST2G';
     else if (selectedTechCatalog === 'ST2D') family = 'ST2D';
     else if (selectedTechCatalog === 'T23') family = 'T23';
+    else if (selectedTechCatalog === 'T28') family = 'T28';
 
     const newItem: HydrominesCatalogItem = {
       id: 'hm_' + generateId(),
@@ -668,8 +673,8 @@ export function HydrominesCatalog() {
         </div>
       </div>
 
-      {/* 7 KPI High-density Grid Cards representing the Pilotage Indicators */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+      {/* 8 KPI High-density Grid Cards representing the Pilotage Indicators */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         {/* Total References */}
         <div className="bg-white border border-slate-100 rounded-2xl p-4.5 shadow-sm flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center text-sky-600 shrink-0">
@@ -687,7 +692,7 @@ export function HydrominesCatalog() {
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Réf. ST2G</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Réf. ST2G (4 T.)</p>
             <h3 className="text-xl font-black text-slate-800 mt-1">{enhancedStats.st2g}</h3>
           </div>
         </div>
@@ -698,7 +703,7 @@ export function HydrominesCatalog() {
             <Layers className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Réf. ST2D</p>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Réf. ST2D (3.6 T.)</p>
             <h3 className="text-xl font-black text-slate-800 mt-1">{enhancedStats.st2d}</h3>
           </div>
         </div>
@@ -711,6 +716,17 @@ export function HydrominesCatalog() {
           <div>
             <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Réf. T23</p>
             <h3 className="text-xl font-black text-slate-800 mt-1">{enhancedStats.t23}</h3>
+          </div>
+        </div>
+
+        {/* T28 References */}
+        <div className="bg-white border border-slate-100 rounded-2xl p-4.5 shadow-sm flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-fuchsia-50 flex items-center justify-center text-fuchsia-600 shrink-0">
+            <Layers className="w-5 h-5" />
+          </div>
+          <div>
+            <p className="text-[9px] font-black text-slate-400 uppercase tracking-wider leading-none">Réf. T28</p>
+            <h3 className="text-xl font-black text-slate-800 mt-1">{enhancedStats.t28 || 0}</h3>
           </div>
         </div>
 
@@ -1171,8 +1187,8 @@ export function HydrominesCatalog() {
                     className="bg-slate-50 border border-slate-150 rounded-xl px-3 py-1.5 text-[11px] font-bold text-slate-705 focus:outline-none"
                   >
                     <option value="ALL">TOUTES</option>
-                    <option value="ST2G">ST2G (Scooptram)</option>
-                    <option value="ST2D">ST2D (Scooptram)</option>
+                    <option value="ST2G">ST2G (4 T. - Cummins)</option>
+                    <option value="ST2D">ST2D (3.6 T. - Deutz)</option>
                     <option value="T23">T23 (Foreuse)</option>
                     <option value="EPI">EPI (Sécurité)</option>
                     <option value="CONSOMMABLES">CONSOMMABLES</option>
@@ -1342,6 +1358,7 @@ export function HydrominesCatalog() {
                             item.equipmentFamily === 'ST2G' ? "bg-amber-50 text-amber-700 border border-amber-100" :
                             item.equipmentFamily === 'ST2D' ? "bg-orange-50 text-orange-700 border border-orange-100" :
                             item.equipmentFamily === 'T23' ? "bg-purple-50 text-purple-700 border border-purple-100" :
+                            item.equipmentFamily === 'T28' ? "bg-fuchsia-50 text-fuchsia-700 border border-fuchsia-100" :
                             item.equipmentFamily === 'EPI' ? "bg-blue-50 text-blue-700 border border-blue-100" :
                             item.equipmentFamily === 'CONSOMMABLES' ? "bg-indigo-50 text-indigo-700 border border-indigo-100" :
                             "bg-slate-50 text-slate-600 border border-slate-100"
@@ -1576,11 +1593,12 @@ export function HydrominesCatalog() {
                         <label className="text-[10px] font-black uppercase text-slate-400 tracking-wider mb-2 block">
                           1. Choisir le catalogue technique
                         </label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                           {[
-                            { id: 'ST2G', label: 'Epiroc ST2G', desc: 'Scooptram ST2G', color: 'from-amber-50 to-amber-100/50 hover:bg-amber-100 text-amber-800 border-amber-200' },
-                            { id: 'ST2D', label: 'Epiroc ST2D', desc: 'Scooptram ST2D', color: 'from-orange-50 to-orange-100/50 hover:bg-orange-100 text-orange-850 border-orange-200' },
-                            { id: 'T23', label: 'Montabert T23', desc: 'Foreuse T23', color: 'from-purple-50 to-purple-100/50 hover:bg-purple-100 text-purple-800 border-purple-200' }
+                            { id: 'ST2G', label: 'Epiroc ST2G (4 T.)', desc: 'Cummins standard', color: 'from-amber-50 to-amber-100/50 hover:bg-amber-100 text-amber-800 border-amber-200' },
+                            { id: 'ST2D', label: 'Epiroc ST2D (3.6 T.)', desc: 'Deutz classique', color: 'from-orange-50 to-orange-100/50 hover:bg-orange-100 text-orange-850 border-orange-200' },
+                            { id: 'T23', label: 'Montabert T23', desc: 'Marteau T23', color: 'from-purple-50 to-purple-100/50 hover:bg-purple-100 text-purple-800 border-purple-200' },
+                            { id: 'T28', label: 'Montabert T28', desc: 'Marteau T28 Lourd', color: 'from-fuchsia-50 to-fuchsia-100/50 hover:bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200' }
                           ].map(catOpt => (
                             <button
                               key={catOpt.id}

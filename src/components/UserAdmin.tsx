@@ -744,8 +744,8 @@ export const UserAdmin = React.memo(function UserAdmin({
                       onChange={(e) => setEnginType(e.target.value)}
                       className="w-full px-3 py-1.5 text-xs rounded-xl border border-slate-200 bg-slate-50 font-black focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500"
                     >
-                      <option value="EPIROC ST2G">EPIROC ST2G</option>
-                      <option value="EPIROC ST2D">EPIROC ST2D</option>
+                      <option value="EPIROC ST2G">EPIROC ST2G (4 T. - Cummins)</option>
+                      <option value="EPIROC ST2D">EPIROC ST2D (3.6 T. - Deutz)</option>
                       <option value="EPIROC ST7">EPIROC ST7</option>
                       <option value="EPIROC ST1030">EPIROC ST1030</option>
                       <option value="VÉHICULE LÉGER">VÉHICULE LÉGER</option>

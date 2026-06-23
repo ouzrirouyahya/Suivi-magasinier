@@ -76,7 +76,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   // Hydromines Catalog Selector States
   const [isSelectorModalOpen, setIsSelectorModalOpen] = useState(false);
-  const [selectorTab, setSelectorTab] = useState<'hm_select' | 'hm_enrich_st2g' | 'hm_enrich_st2d' | 'hm_enrich_t23' | 'hm_enrich_manual'>('hm_select');
+  const [selectorTab, setSelectorTab] = useState<'hm_select' | 'hm_enrich_st2g' | 'hm_enrich_st2d' | 'hm_enrich_t23' | 'hm_enrich_t28' | 'hm_enrich_manual'>('hm_select');
   
   // Selection States inside Active HM Catalog
   const [hmSearchTerm, setHmSearchTerm] = useState('');
@@ -100,7 +100,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [manualUnit, setManualUnit] = useState('Pcs');
   const [manualType, setManualType] = useState<StockType>('CONSOMMABLES');
   const [manualCat, setManualCat] = useState('');
-  const [manualFamily, setManualFamily] = useState<'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE'>('CONSOMMABLES');
+  const [manualFamily, setManualFamily] = useState<'ST2G' | 'ST2D' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE'>('CONSOMMABLES');
   const [manualIsCritical, setManualIsCritical] = useState(false);
 
   const [date, setDate] = useState(() => new Date().toISOString());
@@ -219,6 +219,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     if (selectorTab === 'hm_enrich_st2g') return 'ST2G';
     if (selectorTab === 'hm_enrich_st2d') return 'ST2D';
     if (selectorTab === 'hm_enrich_t23') return 'T23';
+    if (selectorTab === 'hm_enrich_t28') return 'T28';
     return null;
   }, [selectorTab]);
 
@@ -228,7 +229,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       const comp = (it.compatibility || '').toLowerCase();
       if (currentEnrichCatalog === 'ST2G') return comp.includes('st2g');
       if (currentEnrichCatalog === 'ST2D') return comp.includes('st2d');
-      if (currentEnrichCatalog === 'T23') return comp.includes('t23') || comp.includes('montabert');
+      if (currentEnrichCatalog === 'T23') return comp.includes('t23');
+      if (currentEnrichCatalog === 'T28') return comp.includes('t28');
       return false;
     });
     const uniq = new Set<string>();
@@ -244,7 +246,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       const comp = (it.compatibility || '').toLowerCase();
       if (currentEnrichCatalog === 'ST2G') return comp.includes('st2g');
       if (currentEnrichCatalog === 'ST2D') return comp.includes('st2d');
-      if (currentEnrichCatalog === 'T23') return comp.includes('t23') || comp.includes('montabert');
+      if (currentEnrichCatalog === 'T23') return comp.includes('t23');
+      if (currentEnrichCatalog === 'T28') return comp.includes('t28');
       return false;
     });
 
@@ -548,10 +551,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       hmItem = existingHM;
       toast.info(`La référence "${selectedTechItem.reference}" est déjà présente dans le Catalogue Hydromines.`);
     } else {
-      let family: 'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' = 'AUTRE';
+      let family: 'ST2G' | 'ST2D' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' = 'AUTRE';
       if (currentEnrichCatalog === 'ST2G') family = 'ST2G';
       else if (currentEnrichCatalog === 'ST2D') family = 'ST2D';
       else if (currentEnrichCatalog === 'T23') family = 'T23';
+      else if (currentEnrichCatalog === 'T28') family = 'T28';
 
       hmItem = {
         id: 'hm_' + generateId(),
@@ -1594,11 +1598,87 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               </div>
 
               {/* Subheader / Mode description banner */}
-              <div className="bg-slate-50 border-b border-slate-150 py-3.5 px-6 flex items-center justify-between">
-                <span className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+              <div className="bg-slate-50 border-b border-slate-150 py-3.5 px-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 select-none no-print">
+                <span className="text-xs font-black text-slate-800 uppercase tracking-widest flex items-center gap-2 shrink-0">
                   <span className="inline-block w-2.5 h-2.5 rounded-full bg-indigo-500 animate-pulse" />
                   Catalogue Maître Officiel Hydromines ({activeHMCatalogItems.length} fiches homologuées disponibles)
                 </span>
+                
+                {/* Mode Selector Tabs Bar */}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => { setSelectorTab('hm_select'); setSelectedTechItem(null); }}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border transition-all cursor-pointer",
+                      selectorTab === 'hm_select'
+                        ? "bg-sky-600 text-white border-sky-600 shadow-sm shadow-sky-500/15"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    📦 Stock local / HM
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectorTab('hm_enrich_st2g'); setSelectedTechItem(null); }}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border transition-all cursor-pointer",
+                      selectorTab === 'hm_enrich_st2g'
+                        ? "bg-amber-600 text-white border-amber-600 shadow-xs"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    ⭐ ST2G (4 T)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectorTab('hm_enrich_st2d'); setSelectedTechItem(null); }}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border transition-all cursor-pointer",
+                      selectorTab === 'hm_enrich_st2d'
+                        ? "bg-orange-600 text-white border-orange-600 shadow-xs"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    ⭐ ST2D (3.6 T)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectorTab('hm_enrich_t23'); setSelectedTechItem(null); }}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border transition-all cursor-pointer",
+                      selectorTab === 'hm_enrich_t23'
+                        ? "bg-purple-600 text-white border-purple-600 shadow-xs"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    ⭐ T23
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectorTab('hm_enrich_t28'); setSelectedTechItem(null); }}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border transition-all cursor-pointer",
+                      selectorTab === 'hm_enrich_t28'
+                        ? "bg-fuchsia-600 text-white border-fuchsia-600 shadow-xs"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    ⭐ T28
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setSelectorTab('hm_enrich_manual'); setSelectedTechItem(null); }}
+                    className={cn(
+                      "px-3 py-1.5 text-[10px] font-black uppercase tracking-wider rounded-lg border transition-all cursor-pointer",
+                      selectorTab === 'hm_enrich_manual'
+                        ? "bg-slate-800 text-white border-slate-800 shadow-xs"
+                        : "bg-white text-slate-500 border-slate-200 hover:bg-slate-50"
+                    )}
+                  >
+                    ✍️ Saisie Manuelle
+                  </button>
+                </div>
               </div>
 
               {/* MODES CONTENT */}
@@ -1729,7 +1809,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                 )}
 
                 {/* LEFT COLUMN: ENRICH FROM SOURCED CATALOGUES */}
-                {['hm_enrich_st2g', 'hm_enrich_st2d', 'hm_enrich_t23'].includes(selectorTab) && (
+                {['hm_enrich_st2g', 'hm_enrich_st2d', 'hm_enrich_t23', 'hm_enrich_t28'].includes(selectorTab) && (
                   <div className="flex-1 overflow-y-auto p-6 space-y-4 flex flex-col min-h-0 border-r border-slate-150">
                     <div className="bg-gradient-to-r from-sky-50 to-indigo-50 p-4 rounded-2xl border border-sky-100 flex items-center gap-3 text-left">
                       <Sparkles className="w-5 h-5 text-sky-600 shrink-0" />
@@ -1889,7 +1969,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                         >
                           <option value="ST2G">ST2G (Epiroc Scooptram)</option>
                           <option value="ST2D">ST2D (Epiroc Scooptram)</option>
-                          <option value="T23">T23 (Foreuse)</option>
+                          <option value="T23">T23 (Foreuse T23)</option>
+                          <option value="T28">T28 (Perforateur T28)</option>
                           <option value="CONSOMMABLES">CONSOMMABLES</option>
                           <option value="EPI">EPI</option>
                           <option value="AUTRE">AUTRE / GÉNÉRAL</option>
@@ -2082,7 +2163,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                       >
                         ⭐ Importer & Sélectionner
                       </button>
-                    ) : ['hm_enrich_st2g', 'hm_enrich_st2d', 'hm_enrich_t23'].includes(selectorTab) && selectedTechItem ? (
+                    ) : ['hm_enrich_st2g', 'hm_enrich_st2d', 'hm_enrich_t23', 'hm_enrich_t28'].includes(selectorTab) && selectedTechItem ? (
                       <button
                         type="button"
                         onClick={handleAddAndInstantiateTechItem}

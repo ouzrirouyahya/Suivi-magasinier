@@ -362,7 +362,7 @@ export interface HydrominesCatalogItem {
   functionalCategory: string;
   unit: string;
   sourceCatalog: string; // e.g. "ST2G", "ST2D", "T23", etc.
-  equipmentFamily: 'ST2G' | 'ST2D' | 'T23' | 'EPI' | 'CONSOMMABLES' | 'AUTRE';
+  equipmentFamily: 'ST2G' | 'ST2D' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE';
   status: 'ACTIF' | 'INACTIF';
   isHydrominesCritical?: boolean;
   createdAt: string;
