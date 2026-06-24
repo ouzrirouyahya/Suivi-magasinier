@@ -536,6 +536,37 @@ export function ReportPage() {
       .sort((a, b) => b.totalValue - a.totalValue)
       .slice(0, 5);
 
+    // 1. Consumption by Service & Engin
+    const serviceConsumptionMap: Record<string, number> = {};
+    const enginConsumptionMap: Record<string, number> = {};
+    
+    filteredMouvements.filter(m => m.type === 'SORTIE').forEach(m => {
+      const val = m.items.reduce((sum, i) => sum + ((i.quantity || 0) * (i.price || 0)), 0);
+      
+      const srv = (m.service || 'MAINTENANCE').toUpperCase();
+      serviceConsumptionMap[srv] = (serviceConsumptionMap[srv] || 0) + val;
+      
+      if (m.engin || m.referenceEngin) {
+        const eng = (m.engin || m.referenceEngin || 'EX-01').toUpperCase();
+        enginConsumptionMap[eng] = (enginConsumptionMap[eng] || 0) + val;
+      }
+    });
+
+    const serviceConsumptionData = Object.entries(serviceConsumptionMap).map(([name, value]) => ({
+      name,
+      value: isNaN(value) ? 0 : value
+    })).sort((a, b) => b.value - a.value);
+
+    const enginConsumptionData = Object.entries(enginConsumptionMap).map(([name, value]) => ({
+      name,
+      value: isNaN(value) ? 0 : value
+    })).sort((a, b) => b.value - a.value);
+
+    // 2. Turnover Ratio (Taux de rotation du stock)
+    const totalSortieValue = flowAnalysis.SORTIE.value;
+    const avgStockValue = totalStockValue || 1;
+    const stockTurnoverRatio = totalSortieValue / avgStockValue;
+
     return {
       totalArticles: articles.length,
       totalStockValue: isNaN(totalStockValue) ? 0 : totalStockValue,
@@ -552,7 +583,10 @@ export function ReportPage() {
       inTransitValue: isNaN(inTransitValue) ? 0 : inTransitValue,
       lowStockItems: sortedLowStock,
       flowAnalysis,
-      largestTransactions
+      largestTransactions,
+      serviceConsumptionData,
+      enginConsumptionData,
+      stockTurnoverRatio
     };
   }, [articles, mouvements, transferts, currentUser?.role, selectedMonth, dateStart, dateEnd, searchTerm, selectedSite]);
 
@@ -822,7 +856,7 @@ export function ReportPage() {
               <div className="lg:col-span-8 card glass p-8 shadow-2xl relative overflow-hidden backdrop-blur-none bg-white/70">
                  <div className="flex items-center justify-between mb-10">
                    <h3 className="text-base font-black text-slate-900 uppercase tracking-tighter flex items-center gap-3">
-                     <Activity className="w-5 h-5 text-sky-500" /> Flux de Valeurs pour {new Date(`${selectedMonth}-01`).toLocaleDateString('fr-MA', { month: 'long' })}
+                     <Activity className="w-5 h-5 text-sky-500" /> Flux de Valeurs pour {selectedMonth ? new Date(`${selectedMonth}-01`).toLocaleDateString('fr-MA', { month: 'long', year: 'numeric' }) : (dateStart || dateEnd ? 'Période Sélectionnée' : 'Tout le Stock')}
                    </h3>
                    <div className="flex items-center gap-6 no-print">
                      <div className="flex items-center gap-2">
@@ -1174,6 +1208,118 @@ export function ReportPage() {
                 <span className="text-[10px] font-black text-amber-600 uppercase tracking-widest block mb-2">Retours Réceptionnés</span>
                 <p className="text-3xl font-black text-slate-900">{analytics.flowAnalysis.RETOUR.count}</p>
                 <p className="text-xs font-bold text-slate-500 mt-1 uppercase">Saisie atelier : <span className="font-black text-amber-600">{formatCurrency(analytics.flowAnalysis.RETOUR.value)}</span></p>
+              </div>
+            </div>
+
+            {/* ADVANCED BUSINESS ANALYTICS METRICS */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 no-print">
+              {/* Card 1: Logistics KPIs & Turnover */}
+              <div className="card glass p-6 shadow-xl border border-slate-100 bg-white rounded-3xl">
+                <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <TrendingUp className="w-4 h-4 text-sky-500" /> Taux de Rotation & Efficacité
+                </h4>
+                <div className="space-y-6">
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <span className="text-[10px] font-black text-slate-400 uppercase">Taux de rotation</span>
+                      <span className="text-xs font-black text-sky-600 uppercase">Ratio : {(analytics.stockTurnoverRatio || 0).toFixed(3)}</span>
+                    </div>
+                    <p className="text-3xl font-black text-slate-900">{(analytics.stockTurnoverRatio * 100).toFixed(1)}%</p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase mt-1 leading-tight">
+                      Vitesse de rotation du capital stocké sur la période sélectionnée.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div className="flex justify-between items-baseline mb-1">
+                      <span className="text-[10px] font-black text-slate-400 uppercase">Rétention Moyenne</span>
+                      <span className="text-xs font-black text-amber-600 uppercase">DSI</span>
+                    </div>
+                    <p className="text-3xl font-black text-slate-900">
+                      {analytics.stockTurnoverRatio === 0 ? '∞' : `${Math.round(30 / (analytics.stockTurnoverRatio || 1))} Jours`}
+                    </p>
+                    <p className="text-[10px] font-bold text-slate-500 uppercase mt-1 leading-tight">
+                      Durée moyenne de stockage d'un article avant consommation terrain.
+                    </p>
+                  </div>
+
+                  <div className="p-4 bg-sky-50/40 rounded-2xl border border-sky-100 flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-sky-500 flex items-center justify-center text-white font-black text-xs">i</div>
+                    <div>
+                      <p className="text-[10px] font-black text-sky-950 uppercase leading-tight">Optimisation du BFR</p>
+                      <p className="text-[9px] font-bold text-sky-700 leading-tight">
+                        Un taux de rotation plus élevé réduit le besoin en fonds de roulement de l'exploitation.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Card 2: Consommation par Service */}
+              <div className="card glass p-6 shadow-xl border border-slate-100 bg-white rounded-3xl">
+                <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <Activity className="w-4 h-4 text-sky-500" /> Centres de Coûts (Services)
+                </h4>
+                <div className="space-y-4 max-h-[340px] overflow-y-auto pr-1">
+                  {analytics.serviceConsumptionData.map((item, index) => {
+                    const totalValue = analytics.flowAnalysis.SORTIE.value || 1;
+                    const pct = ((item.value / totalValue) * 100).toFixed(1);
+                    return (
+                      <div key={item.name} className="space-y-1.5">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">{item.name}</span>
+                          <span className="text-xs font-black text-slate-900">{formatCurrency(item.value)} <span className="text-[10px] font-bold text-slate-400 ml-1">({pct}%)</span></span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                          <div 
+                            className="h-full rounded-full transition-all duration-500" 
+                            style={{ 
+                              width: `${pct}%`,
+                              backgroundColor: COLORS[index % COLORS.length] 
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {analytics.serviceConsumptionData.length === 0 && (
+                    <div className="py-12 text-center text-xs font-bold text-slate-400 italic">
+                      Aucun mouvement de sortie pour calculer les centres de coûts.
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Card 3: Consommation par Engin/Matériel */}
+              <div className="card glass p-6 shadow-xl border border-slate-100 bg-white rounded-3xl">
+                <h4 className="text-xs font-black text-slate-900 uppercase tracking-widest mb-6 flex items-center gap-2">
+                  <Truck className="w-4 h-4 text-sky-500" /> Maintenance Engins Souterrains
+                </h4>
+                <div className="space-y-4 max-h-[340px] overflow-y-auto pr-1">
+                  {analytics.enginConsumptionData.map((item, index) => {
+                    const totalValue = analytics.enginConsumptionData.reduce((sum, i) => sum + i.value, 0) || 1;
+                    const pct = ((item.value / totalValue) * 100).toFixed(1);
+                    return (
+                      <div key={item.name} className="space-y-1.5">
+                        <div className="flex justify-between items-baseline">
+                          <span className="text-[11px] font-black text-slate-700 uppercase tracking-wider">ENGIN : {item.name}</span>
+                          <span className="text-xs font-black text-slate-900">{formatCurrency(item.value)} <span className="text-[10px] font-bold text-slate-400 ml-1">({pct}%)</span></span>
+                        </div>
+                        <div className="h-2 w-full bg-slate-50 rounded-full overflow-hidden border border-slate-100">
+                          <div 
+                            className="h-full bg-slate-900 rounded-full transition-all duration-500" 
+                            style={{ width: `${pct}%` }} 
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                  {analytics.enginConsumptionData.length === 0 && (
+                    <div className="py-12 text-center text-xs font-bold text-slate-400 italic">
+                      Aucune sortie imputée sur des engins/matériels spécifiques.
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
