@@ -513,38 +513,102 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       (hydrominesCatalog || []).map(h => h.reference.trim().toUpperCase())
     );
 
+    // 1. Index articles by normalized reference
+    const articlesByRef = new Map<string, Article[]>();
+    for (let i = 0; i < rawArticles.length; i++) {
+      const a = rawArticles[i];
+      if (!a.ref) continue;
+      const refNorm = a.ref.trim().toUpperCase();
+      let list = articlesByRef.get(refNorm);
+      if (!list) {
+        list = [];
+        articlesByRef.set(refNorm, list);
+      }
+      list.push(a);
+    }
+
+    // 2. Index movements by articleId
+    const movementsByArticleId = new Map<string, any[]>();
+    for (let i = 0; i < rawMouvements.length; i++) {
+      const m = rawMouvements[i];
+      if (!m.items) continue;
+      for (let j = 0; j < m.items.length; j++) {
+        const item = m.items[j];
+        if (!item.articleId) continue;
+        let list = movementsByArticleId.get(item.articleId);
+        if (!list) {
+          list = [];
+          movementsByArticleId.set(item.articleId, list);
+        }
+        list.push(m);
+      }
+    }
+
+    // 3. Map MASTER_CATALOG efficiently
     return MASTER_CATALOG.map(catalogItem => {
       const refNorm = catalogItem.reference.trim().toUpperCase();
-      const matchingArticles = rawArticles.filter(
-        a => a.ref.trim().toUpperCase() === refNorm
-      );
-      const matchingArticleIds = new Set(matchingArticles.map(a => a.id));
+      const matchingArticles = articlesByRef.get(refNorm) || [];
+      
+      // Collect unique movements for these matching articles
+      const relevantMovementsSet = new Set<any>();
+      for (let i = 0; i < matchingArticles.length; i++) {
+        const art = matchingArticles[i];
+        const movs = movementsByArticleId.get(art.id);
+        if (movs) {
+          for (let j = 0; j < movs.length; j++) {
+            relevantMovementsSet.add(movs[j]);
+          }
+        }
+      }
+      const relevantMovements = Array.from(relevantMovementsSet);
 
-      const relevantMovements = rawMouvements.filter(m =>
-        m.items.some(item => matchingArticleIds.has(item.articleId))
-      );
+      // Fast check set for matching article ids
+      const matchingArticleIds = new Set<string>();
+      for (let i = 0; i < matchingArticles.length; i++) {
+        matchingArticleIds.add(matchingArticles[i].id);
+      }
 
-      const totalQuantityOut = relevantMovements
-        .filter(m => m.type === 'SORTIE')
-        .reduce((sum, m) => {
-          const item = m.items.find(i => matchingArticleIds.has(i.articleId));
-          return sum + (item?.quantity || 0);
-        }, 0);
+      let totalQuantityOut = 0;
+      const sitesUsingSet = new Set<string>();
+      let maxTime = 0;
+      let lastUsedDate: string | null = null;
 
-      const sitesUsing = Array.from(new Set(relevantMovements.map(m => m.site)));
+      for (let i = 0; i < relevantMovements.length; i++) {
+        const m = relevantMovements[i];
+        
+        // sites
+        if (m.site) {
+          sitesUsingSet.add(m.site);
+        }
 
-      const sortedDates = relevantMovements
-        .map(m => m.date)
-        .sort((a, b) => new Date(b).getTime() - new Date(a).getTime());
+        // max date
+        if (m.date) {
+          const time = new Date(m.date).getTime();
+          if (time > maxTime) {
+            maxTime = time;
+            lastUsedDate = m.date;
+          }
+        }
+
+        // quantity out
+        if (m.type === 'SORTIE' && m.items) {
+          for (let j = 0; j < m.items.length; j++) {
+            const item = m.items[j];
+            if (matchingArticleIds.has(item.articleId)) {
+              totalQuantityOut += item.quantity || 0;
+            }
+          }
+        }
+      }
 
       return {
         catalogItem,
         isUsed: relevantMovements.length > 0,
         movementCount: relevantMovements.length,
         totalQuantityOut,
-        sitesUsing,
+        sitesUsing: Array.from(sitesUsingSet),
         isInHydrominesCatalog: hydrominesRefs.has(refNorm),
-        lastUsedDate: sortedDates[0] || null
+        lastUsedDate
       };
     });
   }, [rawArticles, rawMouvements, hydrominesCatalog]);
@@ -909,23 +973,110 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoaded, authStateReady]);
 
-  // Window online automatic trigger listener
+  // Window online automatic trigger listener & Active Connection Monitor
+  // This actively runs HEAD requests to measure exact connection quality and auto-reconcile
   useEffect(() => {
-    const handleOnline = async () => {
-      addTechLog('INFO', 'Connexion réseau rétablie détectée. Lancement de la synchronisation...');
-      toast.success("Connexion réseau rétablie. Lancement de la synchronisation de vos opérations...");
+    let lastKnownOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+    
+    const checkNetworkLatency = async () => {
+      if (typeof window === 'undefined' || !isLoaded) return;
+      
+      if (!navigator.onLine) {
+        if (lastKnownOnline) {
+          lastKnownOnline = false;
+          addTechLog('WARN', 'Perte de connexion réseau détectée par le navigateur (Navigator Offline).');
+        }
+        return;
+      }
+
+      const startTime = performance.now();
+      try {
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 2000); // 2 secondes de timeout
+        
+        const resp = await fetch('/favicon.ico?_cb=' + Date.now(), {
+          method: 'HEAD',
+          signal: controller.signal,
+          cache: 'no-store'
+        });
+        clearTimeout(timeoutId);
+        
+        if (!resp.ok && resp.status !== 404) {
+          throw new Error('Ping non résolu');
+        }
+
+        const duration = performance.now() - startTime;
+        
+        if (!lastKnownOnline) {
+          lastKnownOnline = true;
+          addTechLog('INFO', `Réseau rétabli ! Latence de chantier mesurée : ${Math.round(duration)}ms.`);
+          toast.success("Réseau de chantier reconnecté ! Synchronisation en cours...");
+          try {
+            await RetryQueueFSM.reconcilePendingQueueWithAuthority(db);
+            await RetryQueueFSM.triggerProcessing();
+            refreshFSMStates();
+            
+            // Notification via Service Worker si supporté
+            if ('serviceWorker' in navigator && navigator.serviceWorker.controller) {
+              navigator.serviceWorker.controller.postMessage({
+                type: 'SHOW_SYNC_NOTIFICATION',
+                message: 'Toutes vos saisies de chantier ont été synchronisées avec succès !'
+              });
+            }
+          } catch (err) {
+            console.warn("Error running sync during connection restore: ", err);
+          }
+        }
+
+        if (duration > 1200) {
+          if (!isDegradedNetwork) {
+            setDegradedNetwork(true);
+            addTechLog('WARN', `Réseau dégradé détecté : latence de chantier élevée (${Math.round(duration)}ms).`);
+          }
+        } else {
+          if (isDegradedNetwork) {
+            setDegradedNetwork(false);
+            addTechLog('INFO', `Réseau stabilisé : latence faible (${Math.round(duration)}ms).`);
+          }
+        }
+      } catch (err) {
+        if (!isDegradedNetwork) {
+          setDegradedNetwork(true);
+          addTechLog('WARN', 'Échec du ping réseau (saut de connexion ou réseau saturé).');
+        }
+      }
+    };
+
+    // Exécuter immédiatement puis toutes les 12 secondes
+    checkNetworkLatency();
+    const interval = setInterval(checkNetworkLatency, 12000);
+    return () => clearInterval(interval);
+  }, [isDegradedNetwork, isLoaded]);
+
+  // Service Worker custom event trigger receiver & window online trigger
+  useEffect(() => {
+    const triggerGlobalSync = async () => {
+      addTechLog('INFO', 'Signal de synchronisation globale reçu (Réseau/Service Worker).');
       try {
         await RetryQueueFSM.reconcilePendingQueueWithAuthority(db);
         await RetryQueueFSM.triggerProcessing();
         refreshFSMStates();
       } catch (err) {
-        console.warn("Error reconciling on online event: ", err);
+        console.warn("Error processing queue on sync event: ", err);
       }
     };
 
-    window.addEventListener('online', handleOnline);
+    const handleOnlineEvent = () => {
+      toast.success("Réseau détecté. Lancement de la synchronisation...");
+      triggerGlobalSync();
+    };
+
+    window.addEventListener('online', handleOnlineEvent);
+    window.addEventListener('sw-sync-triggered', triggerGlobalSync);
+    
     return () => {
-      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('online', handleOnlineEvent);
+      window.removeEventListener('sw-sync-triggered', triggerGlobalSync);
     };
   }, [isLoaded]);
 
@@ -940,6 +1091,8 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   });
 
   const activePromisesRef = useRef<Record<string, Promise<any>>>({});
+  const hasRunMigrationsRef = useRef(false);
+  const hasLoadedStaticDataRef = useRef(false);
 
   const registerPendingOp = (id: string) => {
     setPendingOperations(prev => {
@@ -966,7 +1119,20 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     if (mouvements.length > 0) IndexedDBStorage.saveCollection('mouvements', mouvements);
     if (maintenanceLogs.length > 0) IndexedDBStorage.saveCollection('maintenanceLogs', maintenanceLogs);
     if (transferts.length > 0) IndexedDBStorage.saveCollection('transferts', transferts);
-  }, [articles, catalog, hydrominesCatalog, mouvements, maintenanceLogs, transferts]);
+    if (inventaires.length > 0) IndexedDBStorage.saveCollection('inventaires', inventaires);
+    if (auditLogs.length > 0) IndexedDBStorage.saveCollection('auditLogs', auditLogs);
+    if (notifications.length > 0) IndexedDBStorage.saveCollection('notifications', notifications);
+    if (distributions.length > 0) IndexedDBStorage.saveCollection('distributions', distributions);
+    if (purchaseRequests.length > 0) IndexedDBStorage.saveCollection('purchaseRequests', purchaseRequests);
+    if (anomalyReports.length > 0) IndexedDBStorage.saveCollection('anomalyReports', anomalyReports);
+    if (engins.length > 0) IndexedDBStorage.saveCollection('engins', engins);
+    if (perfos.length > 0) IndexedDBStorage.saveCollection('perfos', perfos);
+    if (agents.length > 0) IndexedDBStorage.saveCollection('agents', agents);
+  }, [
+    articles, catalog, hydrominesCatalog, mouvements, maintenanceLogs, transferts,
+    inventaires, auditLogs, notifications, distributions, purchaseRequests,
+    anomalyReports, engins, perfos, agents
+  ]);
 
   // Load cache if offline or slow
   useEffect(() => {
@@ -989,6 +1155,35 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
 
         const transfertsCached = await IndexedDBStorage.getCollection<Transfert>('transferts');
         if (transfertsCached.length > 0 && rawTransferts.length === 0) setRawTransferts(transfertsCached);
+
+        const inventairesCached = await IndexedDBStorage.getCollection<any>('inventaires');
+        if (inventairesCached.length > 0 && inventaires.length === 0) setInventaires(inventairesCached);
+
+        const auditLogsCached = await IndexedDBStorage.getCollection<any>('auditLogs');
+        if (auditLogsCached.length > 0 && auditLogs.length === 0) setAuditLogs(auditLogsCached);
+
+        const notificationsCached = await IndexedDBStorage.getCollection<any>('notifications');
+        if (notificationsCached.length > 0 && notifications.length === 0) setNotifications(notificationsCached);
+
+        const distributionsCached = await IndexedDBStorage.getCollection<any>('distributions');
+        if (distributionsCached.length > 0 && distributions.length === 0) setDistributions(distributionsCached);
+
+        const purchaseRequestsCached = await IndexedDBStorage.getCollection<any>('purchaseRequests');
+        if (purchaseRequestsCached.length > 0 && purchaseRequests.length === 0) setPurchaseRequests(purchaseRequestsCached);
+
+        const anomalyReportsCached = await IndexedDBStorage.getCollection<any>('anomalyReports');
+        if (anomalyReportsCached.length > 0 && anomalyReports.length === 0) setAnomalyReports(anomalyReportsCached);
+
+        const enginsCached = await IndexedDBStorage.getCollection<any>('engins');
+        if (enginsCached.length > 0 && engins.length === 0) setEngins(enginsCached);
+
+        const perfosCached = await IndexedDBStorage.getCollection<any>('perfos');
+        if (perfosCached.length > 0 && perfos.length === 0) setPerfos(perfosCached);
+
+        const agentsCached = await IndexedDBStorage.getCollection<any>('agents');
+        if (agentsCached.length > 0 && agents.length === 0) setAgents(agentsCached);
+
+        addTechLog('INFO', 'Base de données locale IndexedDB chargée en mémoire de chantier avec succès.');
       } catch (err) {
         addTechLog('WARN', 'Échec du chargement initial de la base de stockage endurcie.');
       }
@@ -1113,98 +1308,104 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
     }
   }, [isLoaded, articles.length, authStateReady, currentUser]);
 
+  const loadStaticCollection = React.useCallback(async (
+    colName: string, 
+    setter: (data: any[]) => void
+  ) => {
+    try {
+      const cached = await IndexedDBStorage.getCollection<any>(colName);
+      if (cached && cached.length > 0) {
+        setter(cached);
+      }
+      const snap = await getDocs(collection(db, colName));
+      const data = snap.docs.map(doc => ({
+        id: doc.id,
+        ...serializeFirestoreData(doc.data())
+      })).filter((item: any) => !item.deleted);
+      setter(data);
+      await IndexedDBStorage.saveCollection(colName, data);
+    } catch (err: any) {
+      console.error(`Error loading static collection ${colName}:`, err);
+      if (err.code !== 'permission-denied') {
+        handleFirestoreError(err, OperationType.LIST, colName);
+      }
+    }
+  }, []);
+
+  const safeOnSnapshot = React.useCallback((ref: any, setter: any, path: string) => {
+    return onSnapshot(ref, (snapshot: any) => {
+      const data = snapshot.docs.map((doc: any) => {
+        const raw = { id: doc.id, ...doc.data() };
+        const serialized = serializeFirestoreData(raw);
+        if (path === 'notifications') {
+          return {
+            ...serialized,
+            severity: serialized.severity || serialized.type || 'INFO',
+            status: serialized.status || (serialized.isRead ? 'read' : 'unread')
+          };
+        }
+        return serialized;
+      });
+      
+      setter((prev: any[]) => {
+        const merged = data.filter((item: any) => !item.deleted);
+        
+        // Handle specific sorting if needed:
+        if (path === 'mouvements' || path === 'maintenanceLogs' || path === 'auditLogs' || path === 'notifications') {
+          const dateField = path === 'auditLogs' || path === 'notifications' ? 'timestamp' : 'date';
+          const getSafeTime = (val: any): number => {
+            if (!val) return Date.now();
+            if (typeof val === 'string') {
+              const parsed = Date.parse(val);
+              return isNaN(parsed) ? 0 : parsed;
+            }
+            if (val && typeof val === 'object') {
+              if (typeof val.toDate === 'function') {
+                try {
+                  return val.toDate().getTime();
+                } catch (e) {}
+              }
+              if (typeof val.seconds === 'number') {
+                return val.seconds * 1000;
+              }
+              if (val.toDateString) {
+                try {
+                  return new Date(val).getTime();
+                } catch (e) {}
+              }
+            }
+            try {
+              const t = new Date(val).getTime();
+              return isNaN(t) ? 0 : t;
+            } catch (e) {
+              return 0;
+            }
+          };
+          return merged.sort((a, b) => getSafeTime(b[dateField]) - getSafeTime(a[dateField]));
+        }
+        return merged;
+      });
+
+      setLastSnapshotTimestamp(Date.now());
+    }, (err) => {
+      if (err.code !== 'permission-denied') handleFirestoreError(err, OperationType.LIST, path);
+    });
+  }, []);
+
   useEffect(() => {
     if (!isLoaded || !currentUser || !currentUser.active || !auth.currentUser) return;
+    // Only administrators with full write access (SUPER_ADMIN, or ADMIN with canWrite: true) have permissions to run database-wide seeding and migrations.
+    // If an ADMIN without write permissions or a MAGASINIER logs in, we skip seeding to avoid "Missing or insufficient permissions" errors.
+    const isSuperAdmin = currentUser.role === 'SUPER_ADMIN';
+    const isAdminWithWrite = currentUser.role === 'ADMIN' && currentUser.canWrite === true;
+    if (!isSuperAdmin && !isAdminWithWrite) {
+      console.log("[Catalog Migration] Skipping database seeding & migration: user does not have administrative write permissions.");
+      return;
+    }
+    if (hasRunMigrationsRef.current) return;
+    hasRunMigrationsRef.current = true;
 
-    const unsubs: (() => void)[] = [];
-
-    const setupDataListeners = async () => {
-      const loadStaticCollection = async (
-        colName: string, 
-        setter: (data: any[]) => void
-      ) => {
-        try {
-          const cached = await IndexedDBStorage.getCollection<any>(colName);
-          if (cached && cached.length > 0) {
-            setter(cached);
-          }
-          const snap = await getDocs(collection(db, colName));
-          const data = snap.docs.map(doc => ({
-            id: doc.id,
-            ...serializeFirestoreData(doc.data())
-          })).filter((item: any) => !item.deleted);
-          setter(data);
-          await IndexedDBStorage.saveCollection(colName, data);
-        } catch (err: any) {
-          console.error(`Error loading static collection ${colName}:`, err);
-          if (err.code !== 'permission-denied') {
-            handleFirestoreError(err, OperationType.LIST, colName);
-          }
-        }
-      };
-
-      const safeOnSnapshot = (ref: any, setter: any, path: string) => {
-        return onSnapshot(ref, (snapshot: any) => {
-          const data = snapshot.docs.map((doc: any) => {
-            const raw = { id: doc.id, ...doc.data() };
-            const serialized = serializeFirestoreData(raw);
-            if (path === 'notifications') {
-              return {
-                ...serialized,
-                severity: serialized.severity || serialized.type || 'INFO',
-                status: serialized.status || (serialized.isRead ? 'read' : 'unread')
-              };
-            }
-            return serialized;
-          });
-          
-          setter((prev: any[]) => {
-            const merged = data.filter((item: any) => !item.deleted);
-            
-            // Handle specific sorting if needed:
-            if (path === 'mouvements' || path === 'maintenanceLogs' || path === 'auditLogs' || path === 'notifications') {
-              const dateField = path === 'auditLogs' || path === 'notifications' ? 'timestamp' : 'date';
-              const getSafeTime = (val: any): number => {
-                if (!val) return Date.now();
-                if (typeof val === 'string') {
-                  const parsed = Date.parse(val);
-                  return isNaN(parsed) ? 0 : parsed;
-                }
-                if (val && typeof val === 'object') {
-                  if (typeof val.toDate === 'function') {
-                    try {
-                      return val.toDate().getTime();
-                    } catch (e) {}
-                  }
-                  if (typeof val.seconds === 'number') {
-                    return val.seconds * 1000;
-                  }
-                  if (val.toDateString) {
-                    try {
-                      return new Date(val).getTime();
-                    } catch (e) {}
-                  }
-                }
-                try {
-                  const t = new Date(val).getTime();
-                  return isNaN(t) ? 0 : t;
-                } catch (e) {
-                  return 0;
-                }
-              };
-              return merged.sort((a, b) => getSafeTime(b[dateField]) - getSafeTime(a[dateField]));
-            }
-            return merged;
-          });
-
-          setLastSnapshotTimestamp(Date.now());
-        }, (err) => {
-          if (err.code !== 'permission-denied') handleFirestoreError(err, OperationType.LIST, path);
-        });
-      };
-
-      // Seeding & Version-based migration logic (Articles, Catalog, Engins, etc.)
-      const runSeedingAndMigrations = async () => {
+    const runSeedingAndMigrations = async () => {
         try {
           // Check Catalog Version
           const metaRef = doc(db, 'metadata', 'catalog_version');
@@ -1455,55 +1656,76 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
       };
 
       runSeedingAndMigrations();
+  }, [isLoaded, currentUser?.id, currentUser?.active]);
 
-      const articlesRef = collection(db, 'articles');
-      let articlesQuery;
-      if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
-        articlesQuery = articlesRef;
+  // Effect 2: Static data loading (runs EXACTLY ONCE on login)
+  useEffect(() => {
+    if (!isLoaded || !currentUser || !currentUser.active || !auth.currentUser) return;
+    if (hasLoadedStaticDataRef.current) return;
+    hasLoadedStaticDataRef.current = true;
+
+    loadStaticCollection('catalog', setCatalog);
+    loadStaticCollection('engins', setEngins);
+    loadStaticCollection('perfos', setPerfos);
+    loadStaticCollection('agents', setAgents);
+  }, [isLoaded, currentUser?.id, currentUser?.active, loadStaticCollection]);
+
+  // Effect 3: Global real-time subscriptions (runs EXACTLY ONCE on login, stable across site changes)
+  useEffect(() => {
+    if (!isLoaded || !currentUser || !currentUser.active || !auth.currentUser) return;
+
+    const unsubs: (() => void)[] = [];
+
+    unsubs.push(safeOnSnapshot(query(collection(db, 'mouvements'), orderBy('date', 'desc'), limit(1000)), setRawMouvements, 'mouvements'));
+    unsubs.push(safeOnSnapshot(query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(200)), setAuditLogs, 'auditLogs'));
+    unsubs.push(safeOnSnapshot(collection(db, 'transferts'), setRawTransferts, 'transferts'));
+    unsubs.push(safeOnSnapshot(collection(db, 'inventaires'), setInventaires, 'inventaires'));
+    unsubs.push(safeOnSnapshot(collection(db, 'hydromines_catalog'), setHydrominesCatalog, 'hydromines_catalog'));
+    unsubs.push(safeOnSnapshot(collection(db, 'distributions'), setDistributions, 'distributions'));
+    unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
+    unsubs.push(safeOnSnapshot(query(collection(db, 'anomalyReports')), setAnomalyReports, 'anomalyReports'));
+    unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc'), limit(1000)), setRawMaintenanceLogs, 'maintenanceLogs'));
+    unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), setNotifications, 'notifications'));
+    unsubs.push(safeOnSnapshot(collection(db, 'deletionRequests'), setDeletionRequests, 'deletionRequests'));
+
+    if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
+      unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));
+    }
+
+    // Live subscription to global system locks
+    unsubs.push(onSnapshot(doc(db, 'metadata', 'system_config'), (snap) => {
+      if (snap.exists()) {
+        const data = snap.data();
+        setMaintenanceMode(data.maintenanceMode === true);
+        setMaintenanceReason(data.lockReason || '');
       } else {
-        articlesQuery = query(articlesRef, where('site', '==', currentSite));
+        setMaintenanceMode(false);
+        setMaintenanceReason('');
       }
-      unsubs.push(safeOnSnapshot(articlesQuery, setRawArticles, 'articles'));
+    }, (err) => {
+      console.warn("Telemetry lock read restrictions active or document uninitialized:", err.message);
+    }));
 
-      unsubs.push(safeOnSnapshot(query(collection(db, 'mouvements'), orderBy('date', 'desc'), limit(1000)), setRawMouvements, 'mouvements'));
-      unsubs.push(safeOnSnapshot(query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(200)), setAuditLogs, 'auditLogs'));
-      unsubs.push(safeOnSnapshot(collection(db, 'transferts'), setRawTransferts, 'transferts'));
-      unsubs.push(safeOnSnapshot(collection(db, 'inventaires'), setInventaires, 'inventaires'));
-      unsubs.push(safeOnSnapshot(collection(db, 'hydromines_catalog'), setHydrominesCatalog, 'hydromines_catalog'));
-
-      loadStaticCollection('catalog', setCatalog);
-      loadStaticCollection('engins', setEngins);
-      loadStaticCollection('perfos', setPerfos);
-      loadStaticCollection('agents', setAgents);
-      unsubs.push(safeOnSnapshot(collection(db, 'distributions'), setDistributions, 'distributions'));
-      unsubs.push(safeOnSnapshot(collection(db, 'purchaseRequests'), setPurchaseRequests, 'purchaseRequests'));
-      unsubs.push(safeOnSnapshot(query(collection(db, 'anomalyReports')), setAnomalyReports, 'anomalyReports'));
-      unsubs.push(safeOnSnapshot(query(collection(db, 'maintenanceLogs'), orderBy('date', 'desc'), limit(1000)), setRawMaintenanceLogs, 'maintenanceLogs'));
-      unsubs.push(safeOnSnapshot(query(collection(db, 'notifications'), orderBy('timestamp', 'desc'), limit(150)), setNotifications, 'notifications'));
-      unsubs.push(safeOnSnapshot(collection(db, 'deletionRequests'), setDeletionRequests, 'deletionRequests'));
-
-      if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
-        unsubs.push(safeOnSnapshot(collection(db, 'accounts'), setAccounts, 'accounts'));
-      }
-
-      // Live subscription to global system locks
-      unsubs.push(onSnapshot(doc(db, 'metadata', 'system_config'), (snap) => {
-        if (snap.exists()) {
-          const data = snap.data();
-          setMaintenanceMode(data.maintenanceMode === true);
-          setMaintenanceReason(data.lockReason || '');
-        } else {
-          setMaintenanceMode(false);
-          setMaintenanceReason('');
-        }
-      }, (err) => {
-        console.warn("Telemetry lock read restrictions active or document uninitialized:", err.message);
-      }));
-    };
-
-    setupDataListeners();
     return () => unsubs.forEach(u => u());
-  }, [isLoaded, currentUser, currentSite]);
+  }, [isLoaded, currentUser?.id, currentUser?.role, currentUser?.active, safeOnSnapshot]);
+
+  // Effect 4: Site-specific real-time subscriptions (runs only when the site actually changes)
+  useEffect(() => {
+    if (!isLoaded || !currentUser || !currentUser.active || !auth.currentUser) return;
+
+    const unsubs: (() => void)[] = [];
+
+    const articlesRef = collection(db, 'articles');
+    let articlesQuery;
+    if (currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN') {
+      articlesQuery = articlesRef;
+    } else {
+      articlesQuery = query(articlesRef, where('site', '==', currentSite));
+    }
+    unsubs.push(safeOnSnapshot(articlesQuery, setRawArticles, 'articles'));
+
+    return () => unsubs.forEach(u => u());
+  }, [isLoaded, currentUser?.id, currentUser?.role, currentUser?.active, currentSite, safeOnSnapshot]);
 
   // Handlers (Simplified and wrapped in promises)
   const logAction = React.useCallback(async (action: string, details: string, site: any, amount: number = 0) => {

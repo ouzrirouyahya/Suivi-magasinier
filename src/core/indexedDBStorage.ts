@@ -4,8 +4,13 @@
  */
 
 const DB_NAME = 'hydromines_secure_warehouse_v9';
-const DB_VERSION = 4;
-const STORES = ['articles', 'catalog', 'mouvements', 'maintenanceLogs', 'transferts', 'agents', 'engins', 'perfos', 'hydromines_catalog'];
+const DB_VERSION = 5;
+const STORES = [
+  'articles', 'catalog', 'mouvements', 'maintenanceLogs', 'transferts', 
+  'agents', 'engins', 'perfos', 'hydromines_catalog',
+  'inventaires', 'auditLogs', 'notifications', 'distributions', 
+  'purchaseRequests', 'anomalyReports'
+];
 
 class IndexedDBStorageClass {
   private db: IDBDatabase | null = null;
@@ -18,21 +23,39 @@ class IndexedDBStorageClass {
     });
   }
 
-  private initDatabase(): Promise<IDBDatabase> {
+  private initDatabase(forcedVersion?: number): Promise<IDBDatabase> {
     return new Promise((resolve, reject) => {
       if (typeof window === 'undefined' || !window.indexedDB) {
         reject(new Error('IndexedDB is not supported in this runtime environment.'));
         return;
       }
 
-      const request = indexedDB.open(DB_NAME, DB_VERSION);
+      const versionToOpen = forcedVersion || DB_VERSION;
+      const request = indexedDB.open(DB_NAME, versionToOpen);
 
       request.onerror = (e) => {
         reject(request.error || new Error('Database opening request blocked.'));
       };
 
-      request.onsuccess = (e) => {
-        this.db = request.result;
+      request.onsuccess = async (e) => {
+        const db = request.result;
+        
+        // Self-healing check: Do we have all required stores?
+        const missingStores = STORES.filter(store => !db.objectStoreNames.contains(store));
+        if (missingStores.length > 0) {
+          console.warn(`[STORAGE_HARDENING] Missing stores detected: ${missingStores.join(', ')}. Triggering self-healing upgrade...`);
+          db.close();
+          try {
+            // Reopen with an incremented version to force onupgradeneeded
+            const upgradedDb = await this.initDatabase(db.version + 1);
+            resolve(upgradedDb);
+          } catch (upgradeErr) {
+            reject(upgradeErr);
+          }
+          return;
+        }
+
+        this.db = db;
         resolve(request.result);
       };
 

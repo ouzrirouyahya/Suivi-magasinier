@@ -36,7 +36,7 @@ import hydrominesLogo from './assets/images/hydromines_logo.png';
 // Context & Types
 import { useInventory } from './context/InventoryContext';
 import { Article, SiteCode, PurchaseRequest } from './types';
-import { Loader2, ShieldAlert, Lock, LayoutDashboard, ArrowDownLeft, ArrowUpRight, ShoppingCart, Menu, Database } from 'lucide-react';
+import { Loader2, ShieldAlert, Lock, LayoutDashboard, ArrowDownLeft, ArrowUpRight, ShoppingCart, Menu, Database, Wifi, WifiOff, RefreshCw } from 'lucide-react';
 import { onAuthStateChanged, signOut, User } from 'firebase/auth';
 import { auth } from './lib/firebase';
 import { toast } from 'sonner';
@@ -187,7 +187,9 @@ export default function App() {
     isSafeMode, rcglResult,
     maintenanceMode, maintenanceReason,
     currentSite, setCurrentSite,
-    currentUser
+    currentUser,
+    networkQuality,
+    retryQueue = []
   } = useInventory();
 
   useEffect(() => {
@@ -711,6 +713,70 @@ export default function App() {
             isDesktopViewport={isDesktopViewport}
             onToggleViewportMode={() => setIsDesktopViewport(p => !p)}
           />
+
+          <AnimatePresence>
+            {/* OFFLINE STATUS BANNER & SMART SYNC LAYER NOTICE */}
+            {networkQuality === 'OFFLINE' && (
+              <motion.div 
+                initial={{ opacity: 0, y: -15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-4 mb-4 flex items-start gap-4 shadow-sm"
+              >
+                <div className="p-3 bg-amber-500/15 text-amber-600 rounded-lg shrink-0">
+                  <WifiOff className="w-6 h-6 animate-pulse" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-amber-500 text-amber-950 rounded flex items-center gap-1">
+                      <WifiOff className="w-3 h-3" /> MODE HORS-LIGNE ACTIF
+                    </span>
+                    {retryQueue.length > 0 && (
+                      <span className="text-xs text-amber-700 font-extrabold uppercase tracking-wide">
+                        {retryQueue.length} opération{retryQueue.length > 1 ? 's' : ''} en attente de synchronisation
+                      </span>
+                    )}
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                    Connexion réseau absente ou instable sur le chantier
+                  </h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    L'application est configurée en mode **Offline-First**. Toutes vos actions (saisies d'articles, bons de mouvement, inventaires, transferts) sont enregistrées en toute sécurité dans la base de données locale de votre appareil (IndexedDB) et se synchroniseront automatiquement avec le cloud dès que le réseau sera rétabli. Vous pouvez continuer à travailler normalement !
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {/* SYNC RECOVERING BANNER */}
+            {networkQuality === 'RECOVERING' && (
+              <motion.div 
+                initial={{ opacity: 0, y: -15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                className="bg-emerald-500/10 border border-emerald-500/20 rounded-xl p-4 mb-4 flex items-start gap-4 shadow-sm"
+              >
+                <div className="p-3 bg-emerald-500/15 text-emerald-600 rounded-lg shrink-0">
+                  <RefreshCw className="w-6 h-6 animate-spin" />
+                </div>
+                <div className="flex-1 space-y-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-mono text-[9px] font-black uppercase tracking-wider px-2 py-0.5 bg-emerald-500 text-emerald-950 rounded flex items-center gap-1">
+                      <RefreshCw className="w-3 h-3" /> SYNCHRONISATION INTELLIGENTE
+                    </span>
+                    <span className="text-xs text-emerald-700 font-extrabold uppercase tracking-wide">
+                      Envoi de {retryQueue.length} opération{retryQueue.length > 1 ? 's' : ''} au cloud...
+                    </span>
+                  </div>
+                  <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                    Réseau rétabli — Synchronisation des données en cours
+                  </h3>
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    Le système est en train de réconcilier vos saisies locales effectuées hors-ligne avec la base de données principale sécurisée. Vos données de chantier sont en cours de consolidation.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {maintenanceMode && (
             <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-5 mb-8 flex items-start gap-4 shadow-sm">

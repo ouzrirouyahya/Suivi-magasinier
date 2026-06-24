@@ -25,7 +25,7 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && isEmailVerified() && (
-        request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
+        (request.auth.token.email != null && request.auth.token.email.lower() in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com']) ||
         (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && (get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'ADMIN' || get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'SUPER_ADMIN'))
       );
     }
@@ -35,7 +35,7 @@ service cloud.firestore {
     // élevé (gestion des droits des autres admins notamment)
     function isSuperAdmin() {
       return isSignedIn() && isEmailVerified() && (
-        request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com'] ||
+        (request.auth.token.email != null && request.auth.token.email.lower() in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com']) ||
         (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'SUPER_ADMIN')
       );
     }
@@ -53,7 +53,7 @@ service cloud.firestore {
 
     function isActive() {
       return isEmailVerified() && (
-        (request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com']) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com']) ||
         (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.active == true)
       );
     }
@@ -292,7 +292,7 @@ service cloud.firestore {
         && data.functionalCategory is string && data.functionalCategory.size() > 0
         && data.unit is string && data.unit.size() > 0
         && data.sourceCatalog is string && data.sourceCatalog.size() > 0
-        && data.equipmentFamily is string && data.equipmentFamily in ['ST2G', 'ST2D', 'T23', 'EPI', 'CONSOMMABLES', 'AUTRE']
+        && data.equipmentFamily is string && data.equipmentFamily in ['ST2G', 'ST2D', 'T23', 'T28', 'EPI', 'CONSOMMABLES', 'AUTRE']
         && data.status is string && data.status in ['ACTIF', 'INACTIF']
         && data.createdAt is string
         && data.updatedAt is string
@@ -344,7 +344,7 @@ service cloud.firestore {
       allow create: if isSignedIn() && isValidId(userId) && isOwner(userId) && isValidAccount(incoming()) && (
         isSuperAdmin() || 
         // Cas particulier des comptes administrateurs racine créés directement actifs
-        (incoming().active == true && request.auth.token.email in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com']) ||
+        (incoming().active == true && request.auth.token.email != null && request.auth.token.email.lower() in ['ouzrirouyahya@gmail.com', 'hydro.magasinier@gmail.com']) ||
         // Tout utilisateur connecté peut créer sa demande d'accès en attente d'approbation
         (incoming().active == false && incoming().status == 'PENDING')
       );
