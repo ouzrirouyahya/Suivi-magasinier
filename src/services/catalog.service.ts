@@ -1,4 +1,4 @@
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, getDocs, collection, deleteDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { CatalogItem, HydrominesCatalogItem, PurchaseRequest } from '../types';
 import { generateId, cleanObject } from '../lib/utils';
@@ -14,6 +14,19 @@ export const catalogService = {
 
   async saveHydrominesCatalogItem(item: HydrominesCatalogItem): Promise<void> {
     await setDoc(doc(db, 'hydromines_catalog', item.id), cleanObject(item), { merge: true });
+  },
+
+  async saveHydrominesItem(item: HydrominesCatalogItem): Promise<void> {
+    await setDoc(doc(db, 'hydromines_catalog', item.id), cleanObject(item), { merge: true });
+  },
+
+  async getHydrominesCatalog(): Promise<HydrominesCatalogItem[]> {
+    const snap = await getDocs(collection(db, 'hydromines_catalog'));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() }) as HydrominesCatalogItem);
+  },
+
+  async deleteHydrominesItem(id: string): Promise<void> {
+    await deleteDoc(doc(db, 'hydromines_catalog', id));
   },
 
   async addPurchaseRequest(pr: PurchaseRequest): Promise<void> {

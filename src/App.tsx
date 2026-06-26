@@ -102,18 +102,6 @@ function AuthenticatedLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, [isDesktopViewport]);
 
-  const getPageFromPath = (path: string): string => {
-    const match = Object.entries(pageRouteMap).find(([_, route]) => route === path);
-    return match ? match[0] : 'COCKPIT';
-  };
-
-  const currentPage = getPageFromPath(location.pathname);
-
-  const setCurrentPage = (page: string) => {
-    const route = pageRouteMap[page];
-    if (route) navigate(route);
-  };
-
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const isAdmin = currentUser?.role === 'ADMIN' || isSuperAdmin;
 
@@ -126,8 +114,6 @@ function AuthenticatedLayout() {
   return (
     <div className="min-h-screen bg-white flex relative overflow-hidden" data-density={density}>
       <Sidebar 
-        currentPage={currentPage} 
-        setPage={setCurrentPage} 
         currentSite={currentSite}
         setSite={(site) => { if (isAdmin) setCurrentSite(site); }} 
         user={auth.currentUser}
@@ -163,7 +149,7 @@ function AuthenticatedLayout() {
               if (isAdmin) navigate('/traceability');
               else toast.error("Le cockpit de télémétrie et de forensic système est réservé aux administrateurs.");
             }}
-            onNavigateTo={(page) => setCurrentPage(page)}
+            onNavigateTo={(page) => { const r = pageRouteMap[page]; if (r) navigate(r); }}
             density={density}
             onChangeDensity={handleDensityChange}
             isDarkMode={isDarkMode}

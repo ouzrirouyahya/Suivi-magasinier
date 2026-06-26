@@ -1,9 +1,11 @@
 import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { StockTable } from '../components/StockTable';
 import { useInventory } from '../context/InventoryContext';
 
 export const StockPerforatorsPage: React.FC = () => {
-  const { currentSite, articles, mouvements, globalSearch, navigateToMouvement, setSelectedArticle, setCurrentPage } = useInventory();
+  const navigate = useNavigate();
+  const { currentSite, articles, mouvements, globalSearch, navigateToMouvement, setSelectedArticle } = useInventory();
 
   return (
     <StockTable 
@@ -14,7 +16,7 @@ export const StockPerforatorsPage: React.FC = () => {
       initialSearch={globalSearch}
       onAction={navigateToMouvement}
       onViewDetail={setSelectedArticle}
-      onManageCatalog={() => setCurrentPage('GESTION_ARTICLES')}
+      onManageCatalog={() => navigate('/catalog/master')}
     />
   );
 };

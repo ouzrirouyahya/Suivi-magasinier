@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, CheckCircle2, XCircle, Mail, Clock, Search, Truck, Drill, LayoutGrid, Plus, Trash2, Tag, Hash, Eye, Globe, Languages, Monitor, Cpu, History, Compass, Activity, MapPin, Smartphone, Laptop, Tablet, ChevronRight, AlertTriangle, Filter, Calendar, X } from 'lucide-react';
+import { Users, Shield, CheckCircle2, XCircle, Mail, Clock, Search, Truck, Drill, LayoutGrid, Plus, Trash2, Tag, Hash, Eye, Globe, Languages, Monitor, Cpu, History, Compass, Activity, MapPin, Smartphone, Laptop, Tablet, ChevronRight, AlertTriangle, Filter, Calendar, X, Wrench } from 'lucide-react';
 import { UserAccount, EnginMaster, AgentMaster, PerfoMaster, SiteCode } from '../types';
 import { cn, generateId } from '../lib/utils';
 import { SITES, SERVICES } from '../demoData';
@@ -95,6 +95,18 @@ export const UserAdmin = React.memo(function UserAdmin({
 
   const [activeTab, setActiveTab] = useState<AdminTab>('EFFECTIF');
   const [search, setSearch] = useState('');
+  const [replacementRequests, setReplacementRequests] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isAdminUser) return;
+    const q = collection(db, 'replacementRequests');
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as any);
+      list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
+      setReplacementRequests(list);
+    });
+    return unsub;
+  }, [isAdminUser]);
 
   // Form visibility states
   const [showAddEngin, setShowAddEngin] = useState(false);
@@ -325,13 +337,14 @@ export const UserAdmin = React.memo(function UserAdmin({
   const handleApproveUser = async (user: UserAccount) => {
     try {
       const userRef = doc(db, 'accounts', user.id);
-      const isNewAdmin = (user.requestedRole || 'MAGASINIER') === 'ADMIN';
+      const targetRole = user.requestedRole || 'MAGASINIER';
+      const isReadOnlyByDefault = targetRole === 'ADMIN' || targetRole === 'RESPONSABLE_CHANTIER';
       await updateDoc(userRef, {
         status: 'APPROVED',
         active: true,
-        role: user.requestedRole || 'MAGASINIER',
+        role: targetRole,
         assignedSite: user.assignedSite || null,
-        ...(isNewAdmin ? { canWrite: false } : {})
+        ...(isReadOnlyByDefault ? { canWrite: false } : { canWrite: true })
       });
       toast.success(`Accès approuvé pour ${user.name}`);
     } catch (err: any) {
@@ -353,6 +366,54 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.success(`Accès refusé pour ${user.name}`);
     } catch (err: any) {
       console.error("[UserAdmin] Erreur lors du rejet :", err);
+      toast.error(`Erreur lors du rejet : ${err.message || err}`);
+    }
+  };
+
+  const handleApproveReplacement = async (req: any) => {
+    try {
+      const reqRef = doc(db, 'replacementRequests', req.id);
+      await updateDoc(reqRef, {
+        status: 'APPROVED',
+        approvedBy: currentUser?.email || 'System',
+        approvedAt: new Date().toISOString()
+      });
+
+      const userRef = doc(db, 'accounts', req.userId);
+      await updateDoc(userRef, {
+        isReplacingMagasinier: true,
+        canWrite: true,
+        replacementRequestStatus: 'APPROVED',
+        replacementStartDate: req.startDate,
+        replacementEndDate: req.endDate,
+        updatedAt: new Date().toISOString()
+      });
+
+      toast.success(`Remplacement approuvé pour ${req.userName}`);
+    } catch (err: any) {
+      console.error("[UserAdmin] Erreur lors de l'approbation du remplacement :", err);
+      toast.error(`Erreur lors de l'approbation : ${err.message || err}`);
+    }
+  };
+
+  const handleRejectReplacement = async (req: any) => {
+    try {
+      const reqRef = doc(db, 'replacementRequests', req.id);
+      await updateDoc(reqRef, {
+        status: 'REJECTED',
+        rejectedBy: currentUser?.email || 'System',
+        rejectedAt: new Date().toISOString()
+      });
+
+      const userRef = doc(db, 'accounts', req.userId);
+      await updateDoc(userRef, {
+        replacementRequestStatus: 'REJECTED',
+        updatedAt: new Date().toISOString()
+      });
+
+      toast.success(`Remplacement refusé pour ${req.userName}`);
+    } catch (err: any) {
+      console.error("[UserAdmin] Erreur lors du rejet du remplacement :", err);
       toast.error(`Erreur lors du rejet : ${err.message || err}`);
     }
   };
@@ -461,6 +522,69 @@ export const UserAdmin = React.memo(function UserAdmin({
               />
             </div>
 
+            {/* SECTION: Demandes de Remplacement */}
+            {replacementRequests.length > 0 && (
+              <div className="space-y-3 bg-amber-50/5 border border-amber-500/10 p-4 rounded-2xl">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <Wrench className="w-4 h-4 text-amber-500" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">
+                    Demandes de Remplacement ({replacementRequests.filter(r => r.status === 'PENDING').length} en attente)
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {replacementRequests.map((req) => (
+                    <div key={req.id} className={cn(
+                      "card p-4 border rounded-2xl flex flex-col justify-between gap-3 shadow-xs",
+                      req.status === 'PENDING' ? "border-amber-200 bg-amber-50/20" :
+                      req.status === 'APPROVED' ? "border-emerald-100 bg-emerald-50/10" :
+                      "border-slate-100 bg-slate-50/50"
+                    )}>
+                      <div>
+                        <div className="flex justify-between items-start mb-2">
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                            {req.site}
+                          </span>
+                          <span className={cn(
+                            "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full font-sans",
+                            req.status === 'PENDING' ? "bg-amber-100 text-amber-850" :
+                            req.status === 'APPROVED' ? "bg-emerald-100 text-emerald-800" :
+                            "bg-slate-100 text-slate-500"
+                          )}>
+                            {req.status}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-black text-slate-900">{req.userName}</h4>
+                        <p className="text-[10px] text-slate-400 font-mono font-bold leading-tight mb-2">{req.userEmail}</p>
+                        
+                        <div className="space-y-1 text-xs text-slate-600 border-t border-slate-100/50 pt-2 font-medium">
+                          <p><span className="text-slate-400 text-[9px] uppercase font-black tracking-widest">Motif :</span> {req.reason}</p>
+                          <p><span className="text-slate-400 text-[9px] uppercase font-black tracking-widest">Période :</span> {new Date(req.startDate).toLocaleDateString('fr-FR')} au {new Date(req.endDate).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                      </div>
+
+                      {req.status === 'PENDING' && (
+                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100/50">
+                          <button
+                            onClick={() => handleRejectReplacement(req)}
+                            className="flex-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg font-black text-[9px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all"
+                          >
+                            Rejeter
+                          </button>
+                          <button
+                            onClick={() => handleApproveReplacement(req)}
+                            className="flex-1 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-lg font-black text-[9px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all shadow-xs"
+                          >
+                            Approuver
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* SECTION 1 - Demandes d'accès à valider */}
             <div className="space-y-3">
               <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
@@ -490,9 +614,13 @@ export const UserAdmin = React.memo(function UserAdmin({
                         <div className="bg-white/80 p-3 rounded-xl border border-amber-200/40 text-xs font-bold text-slate-600 space-y-1.5 shadow-[inset_0_1px_3px_rgba(0,0,0,0.01)] font-sans">
                           <p className="flex justify-between">
                             <span className="text-slate-400 text-[10px] uppercase font-black tracking-widest">Rôle requis :</span>
-                            <span className="text-slate-800 font-black">{user.requestedRole === 'ADMIN' ? 'ADMINISTRATEUR' : 'MAGASINIER'}</span>
+                            <span className="text-slate-800 font-black">
+                              {user.requestedRole === 'ADMIN' ? 'ADMINISTRATEUR' : 
+                               user.requestedRole === 'RESPONSABLE_CHANTIER' ? 'RESPONSABLE CHANTIER' : 
+                               'MAGASINIER'}
+                            </span>
                           </p>
-                          {user.requestedRole === 'MAGASINIER' && (
+                          {(user.requestedRole === 'MAGASINIER' || user.requestedRole === 'RESPONSABLE_CHANTIER') && (
                             <p className="flex justify-between">
                               <span className="text-slate-400 text-[10px] uppercase font-black tracking-widest">Chantier :</span>
                               <span className="text-slate-800 font-black">{user.assignedSite || 'Non défini'}</span>
@@ -583,7 +711,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                               <select
                                 value={user.role}
                                 onChange={(e) => {
-                                  const roleVal = e.target.value as 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER';
+                                  const roleVal = e.target.value as 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
                                   setUserRole(user.id, roleVal)
                                     .then(() => toast.success(`Rôle mis à jour`))
                                     .catch((err: any) => toast.error(`Erreur: ${err.message || err}`));
@@ -593,6 +721,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                                 <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                                 <option value="ADMIN">ADMIN</option>
                                 <option value="MAGASINIER">MAGASINIER</option>
+                                <option value="RESPONSABLE_CHANTIER">RESPONSABLE_CHANTIER</option>
                               </select>
                             )}
                           </div>

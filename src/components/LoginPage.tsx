@@ -4,7 +4,7 @@ import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, db } from '../lib/firebase';
 import { getDoc, setDoc, doc } from 'firebase/firestore';
 import { toast } from 'sonner';
-import { Package, Shield, ArrowRight } from 'lucide-react';
+import { Package, Shield, ArrowRight, Briefcase } from 'lucide-react';
 import { SITES } from '../demoData';
 import { SiteCode, UserAccount } from '../types';
 import loginImage from '../assets/images/hydromines_login_banner_clean.png';
@@ -14,7 +14,7 @@ const LoginPage: React.FC = () => {
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [showRoleSelection, setShowRoleSelection] = React.useState(false);
   const [pendingUser, setPendingUser] = React.useState<any>(null);
-  const [selectedRequestedRole, setSelectedRequestedRole] = React.useState<'ADMIN' | 'MAGASINIER' | ''>('');
+  const [selectedRequestedRole, setSelectedRequestedRole] = React.useState<'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' | ''>('');
   const [requestedSite, setRequestedSite] = React.useState<SiteCode | ''>('');
 
   const handleLogin = async () => {
@@ -61,7 +61,7 @@ const LoginPage: React.FC = () => {
       role: 'ADMIN',
       canWrite: false,
       requestedRole: selectedRequestedRole as any,
-      assignedSite: selectedRequestedRole === 'MAGASINIER' ? requestedSite || undefined : undefined,
+      assignedSite: (selectedRequestedRole === 'MAGASINIER' || selectedRequestedRole === 'RESPONSABLE_CHANTIER') ? requestedSite || undefined : undefined,
       active: false,
       status: 'PENDING',
       createdAt: new Date().toISOString()
@@ -332,10 +332,37 @@ const LoginPage: React.FC = () => {
                       </p>
                     </div>
                   </button>
+
+                  {/* Option 3: Responsable de Chantier */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedRequestedRole('RESPONSABLE_CHANTIER');
+                    }}
+                    className={`w-full p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 outline-none ${
+                      selectedRequestedRole === 'RESPONSABLE_CHANTIER'
+                        ? 'border-sky-500 bg-sky-50/30 ring-1 ring-sky-500'
+                        : 'border-slate-200 bg-white hover:bg-slate-50/50'
+                    }`}
+                  >
+                    <div className={`p-2 rounded-lg ${
+                      selectedRequestedRole === 'RESPONSABLE_CHANTIER' ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-500'
+                    }`}>
+                      <Briefcase className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <p className="font-black text-xs text-slate-900 uppercase tracking-wider">
+                        Responsable de Chantier
+                      </p>
+                      <p className="text-[11px] text-slate-400 font-medium mt-0.5">
+                        Gestion de la production et consultations logistiques de chantier.
+                      </p>
+                    </div>
+                  </button>
                 </div>
 
                 {/* Conditional Site Select */}
-                {selectedRequestedRole === 'MAGASINIER' && (
+                {(selectedRequestedRole === 'MAGASINIER' || selectedRequestedRole === 'RESPONSABLE_CHANTIER') && (
                   <div className="space-y-1.5 mb-6 animate-fade-in">
                     <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest pl-1">
                       Chantier souhaité
@@ -360,7 +387,7 @@ const LoginPage: React.FC = () => {
                   type="button"
                   disabled={
                     !selectedRequestedRole ||
-                    (selectedRequestedRole === 'MAGASINIER' && !requestedSite)
+                    ((selectedRequestedRole === 'MAGASINIER' || selectedRequestedRole === 'RESPONSABLE_CHANTIER') && !requestedSite)
                   }
                   onClick={handleSubmitRequest}
                   className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:-translate-y-0.5 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.1)]"

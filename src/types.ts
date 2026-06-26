@@ -22,17 +22,24 @@ export interface Perforateur {
   site: SiteCode;
 }
 
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
+
 export interface UserAccount {
   id: string;
   email: string;
   name: string;
-  role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER';
+  role: UserRole;
   active: boolean;
   createdAt: FirestoreDate;
   assignedSite?: SiteCode;
   status?: 'PENDING' | 'APPROVED' | 'REJECTED';
-  requestedRole?: 'ADMIN' | 'MAGASINIER';
+  requestedRole?: 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
   canWrite?: boolean;
+  isReplacingMagasinier?: boolean;
+  replacementStartDate?: string;
+  replacementEndDate?: string;
+  replacementReason?: string;
+  replacementRequestStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
 }
 
 export interface Article {
@@ -352,6 +359,21 @@ export interface DeletionRequest {
   requestedBy: string;
   requestedAt: string;
   status: 'PENDING_APPROVAL' | 'APPROVED' | 'REJECTED';
+}
+
+export interface ReplacementRequest {
+  id: string;
+  userId: string;           // ID du responsable
+  userEmail: string;
+  userName: string;
+  site: SiteCode;
+  startDate: string;        // ISO date
+  endDate: string;          // ISO date (startDate + days)
+  reason: string;           // Motif d'absence du magasinier
+  requestedAt: string;      // ISO date
+  status: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  approvedBy?: string;     // ID du SUPER_ADMIN qui a approuvé
+  approvedAt?: string;     // ISO date
 }
 
 export interface HydrominesCatalogItem {

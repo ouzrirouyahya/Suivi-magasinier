@@ -1,5 +1,5 @@
 import React, { Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 import LoadingScreen from '../components/LoadingScreen';
 
@@ -28,10 +28,22 @@ const PendingPage = lazy(() => import('../pages/PendingPage'));
 const RejectedPage = lazy(() => import('../pages/RejectedPage'));
 const DisabledPage = lazy(() => import('../pages/DisabledPage'));
 
+const RESPONSABLE_READONLY_PAGES = [
+  '/', '/stock/engins', '/stock/perforateurs', '/stock/consommables', 
+  '/stock/epi', '/catalog/master', '/catalog/hydromines', 
+  '/traceability', '/alerts'
+];
+
+const RESPONSABLE_REPLACEMENT_PAGES = [
+  ...RESPONSABLE_READONLY_PAGES,
+  '/movement/entree', '/movement/sortie', '/transfers', '/returns',
+  '/inventaire', '/articles', '/restock'
+];
+
 // Role helper
 export const canAccessPage = (
-  requiredRole: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER',
-  userRole: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER',
+  requiredRole: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER',
+  userRole: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER',
   canWrite?: boolean
 ): boolean => {
   if (userRole === 'SUPER_ADMIN') return true;
@@ -41,7 +53,10 @@ export const canAccessPage = (
     return true;
   }
   if (userRole === 'MAGASINIER') {
-    return requiredRole === 'MAGASINIER';
+    return requiredRole === 'MAGASINIER' || requiredRole === 'RESPONSABLE_CHANTIER';
+  }
+  if (userRole === 'RESPONSABLE_CHANTIER') {
+    return requiredRole === 'RESPONSABLE_CHANTIER';
   }
   return false;
 };
@@ -52,9 +67,10 @@ const ProtectedRoute = ({
   requiredRole 
 }: { 
   children: React.ReactNode; 
-  requiredRole?: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' 
+  requiredRole?: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' 
 }) => {
   const { currentUser } = useAuthStore();
+  const location = useLocation();
   
   if (!currentUser) return <Navigate to="/login" replace />;
   
@@ -63,7 +79,18 @@ const ProtectedRoute = ({
   if (currentUser.status === 'REJECTED') return <Navigate to="/rejected" replace />;
   if (currentUser.active === false && currentUser.status === 'APPROVED') return <Navigate to="/disabled" replace />;
   
-  // Guard for role
+  // Responsable de Chantier specific route checks
+  if (currentUser.role === 'RESPONSABLE_CHANTIER') {
+    const allowedPages = currentUser.isReplacingMagasinier && currentUser.canWrite
+      ? RESPONSABLE_REPLACEMENT_PAGES
+      : RESPONSABLE_READONLY_PAGES;
+      
+    if (!allowedPages.includes(location.pathname)) {
+      return <Navigate to="/" replace />;
+    }
+  }
+
+  // Guard for other roles
   if (requiredRole && !canAccessPage(requiredRole, currentUser.role, currentUser.canWrite)) {
     return <Navigate to="/" replace />;
   }

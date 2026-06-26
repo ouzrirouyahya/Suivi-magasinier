@@ -30,11 +30,16 @@ import {
   Moon,
   Database
 } from 'lucide-react';
-import { cn } from '../lib/utils';
+import { cn, generateSecureUUID } from '../lib/utils';
 import { SITES } from '../demoData';
 import { SiteCode } from '../types';
 import { User } from 'firebase/auth';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useInventory } from '../context/InventoryContext';
+import { toast } from 'sonner';
+import { db } from '../lib/firebase';
+import { doc, setDoc } from 'firebase/firestore';
+import { useNotifications } from '../hooks/useNotifications';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 export type Page = 
@@ -61,8 +66,6 @@ export type Page =
   | 'ANALYSE_EQUIPEMENTS';
 
 interface SidebarProps {
-  currentPage: Page;
-  setPage: (page: Page) => void;
   currentSite: SiteCode;
   setSite: (site: SiteCode) => void;
   user: User | null;
@@ -75,9 +78,29 @@ interface SidebarProps {
   onToggleDarkMode?: () => void;
 }
 
+const pageRouteMap: Record<string, string> = {
+  'COCKPIT': '/',
+  'STOCK_ENGINS': '/stock/engins',
+  'STOCK_PERFORATEURS': '/stock/perforateurs',
+  'STOCK_CONSOMMABLES': '/stock/consommables',
+  'STOCK_EPI': '/stock/epi',
+  'BON_ENTREE': '/movement/entree',
+  'BON_SORTIE': '/movement/sortie',
+  'INVENTAIRE': '/inventaire',
+  'TRACEABILITY': '/traceability',
+  'TRANSFERS': '/transfers',
+  'RETURNS': '/returns',
+  'MAINTENANCE': '/maintenance',
+  'RESTOCK_MGMT': '/restock',
+  'GESTION_ARTICLES': '/catalog/master',
+  'CATALOGUE_HYDROMINES': '/catalog/hydromines',
+  'ANALYSE_EQUIPEMENTS': '/reports',
+  'USER_MGMT': '/users',
+  'AUDIT_LOGS': '/audit',
+  'FINANCE': '/finance',
+};
+
 export const Sidebar = React.memo(function Sidebar({ 
-  currentPage, 
-  setPage, 
   currentSite, 
   setSite, 
   user, 
@@ -89,9 +112,85 @@ export const Sidebar = React.memo(function Sidebar({
   isDarkMode = false, 
   onToggleDarkMode
 }: SidebarProps) {
+  const navigate = useNavigate();
+  const location = useLocation();
   const { currentUser } = useInventory();
+  const { addNotification } = useNotifications();
+
+  const [showReplacementModal, setShowReplacementModal] = React.useState(false);
+  const [reason, setReason] = React.useState('');
+  const [days, setDays] = React.useState(1);
+
+  const handleSubmitReplacement = async () => {
+    if (!currentUser || !reason.trim()) return;
+    
+    const requestUuid = generateSecureUUID();
+    const startDate = new Date().toISOString();
+    const endDate = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+    
+    const reqData = {
+      id: requestUuid,
+      userId: currentUser.id,
+      userEmail: currentUser.email,
+      userName: currentUser.name,
+      site: currentSite,
+      startDate,
+      endDate,
+      reason,
+      requestedAt: new Date().toISOString(),
+      status: 'PENDING'
+    };
+
+    try {
+      await setDoc(doc(db, 'replacementRequests', requestUuid), reqData);
+      
+      await setDoc(doc(db, 'accounts', currentUser.id), {
+        replacementRequestStatus: 'PENDING',
+        replacementReason: reason,
+        replacementStartDate: startDate,
+        replacementEndDate: endDate,
+        updatedAt: new Date().toISOString()
+      }, { merge: true });
+
+      await addNotification({
+        siteId: currentSite,
+        type: 'WARNING',
+        category: 'SYSTEM',
+        message: `🔧 Demande de remplacement : ${currentUser.name} veut remplacer le magasinier (${days} jours). Motif: ${reason}`,
+        actionRoute: 'USER_MGMT',
+        severity: 'WARNING',
+        status: 'unread',
+        isRead: false,
+        timestamp: new Date().toISOString()
+      });
+
+      toast.success("🚀 Demande de remplacement envoyée !");
+      setShowReplacementModal(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Erreur : ${err.message || err}`);
+    }
+  };
+  
   const criticalCount = notifications.filter(n => n.type === 'CRITICAL').length;
   const warningCount = notifications.filter(n => n.type === 'WARNING').length;
+
+  // Determine active item based on route
+  const getCurrentPage = (): string => {
+    const path = location.pathname;
+    if (path === '/') return 'COCKPIT';
+    if (path.startsWith('/stock/')) {
+      if (path === '/stock/engins') return 'STOCK_ENGINS';
+      if (path === '/stock/perforateurs') return 'STOCK_PERFORATEURS';
+      if (path === '/stock/consommables') return 'STOCK_CONSOMMABLES';
+      if (path === '/stock/epi') return 'STOCK_EPI';
+      return 'STOCK_ENGINS';
+    }
+    const match = Object.entries(pageRouteMap).find(([_, route]) => route === path);
+    return match ? match[0] : 'COCKPIT';
+  };
+
+  const currentPage = getCurrentPage();
 
   // Memoized menuItems with precise dependencies
   const menuItems = React.useMemo(() => {
@@ -138,6 +237,11 @@ export const Sidebar = React.memo(function Sidebar({
     } else if (userRole === 'MAGASINIER') {
       const allowed = ['COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
       allowed.forEach(id => allowedPageIds.add(id));
+    } else if (userRole === 'RESPONSABLE_CHANTIER') {
+      const allowed = currentUser?.isReplacingMagasinier && currentUser?.canWrite
+        ? ['COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES']
+        : ['COCKPIT', 'STOCK_ENGINS', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'TRACEABILITY', 'RESTOCK_MGMT'];
+      allowed.forEach(id => allowedPageIds.add(id));
     }
 
     const filteredItems = itemTemplates.filter(item => allowedPageIds.has(item.id));
@@ -159,13 +263,16 @@ export const Sidebar = React.memo(function Sidebar({
     });
 
     return finalMenuItems;
-  }, [currentUser?.role, criticalCount, warningCount]);
+  }, [currentUser?.role, currentUser?.isReplacingMagasinier, currentUser?.canWrite, criticalCount, warningCount]);
 
   // Memoized navigation handler
   const handlePageSelect = React.useCallback((pageId: Page) => {
-    setPage(pageId);
+    const route = pageRouteMap[pageId];
+    if (route) {
+      navigate(route);
+    }
     if (onClose) onClose();
-  }, [setPage, onClose]);
+  }, [navigate, onClose]);
 
   return (
     <>
@@ -289,6 +396,54 @@ export const Sidebar = React.memo(function Sidebar({
         </nav>
         
         <div className="p-4 border-t border-slate-50 relative z-10 flex flex-col gap-4">
+          {/* Remplacement Magasinier for RESPONSABLE_CHANTIER */}
+          {currentUser?.role === 'RESPONSABLE_CHANTIER' && (
+            <div className="space-y-2">
+              {currentUser?.isReplacingMagasinier ? (
+                <div className="p-3 bg-emerald-50 border border-emerald-200 rounded-xl text-xs space-y-1">
+                  <div className="flex items-center gap-1.5 text-emerald-800 font-extrabold uppercase tracking-wide">
+                    <span>🔧</span>
+                    <span>Remplacement Actif</span>
+                  </div>
+                  <p className="text-slate-500 font-medium leading-normal">
+                    Jusqu'au {new Date(currentUser.replacementEndDate!).toLocaleDateString('fr-FR')}
+                  </p>
+                  <button 
+                    onClick={() => {
+                      setReason("Prolongation de remplacement");
+                      setDays(5);
+                      setShowReplacementModal(true);
+                    }} 
+                    className="text-[10px] text-emerald-600 font-black uppercase hover:underline block pt-1"
+                  >
+                    Prolonger la période
+                  </button>
+                </div>
+              ) : currentUser?.replacementRequestStatus === 'PENDING' ? (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-xl text-xs">
+                  <div className="flex items-center gap-1.5 text-amber-800 font-extrabold uppercase tracking-wide">
+                    <span>⏳</span>
+                    <span>Demande en attente</span>
+                  </div>
+                  <p className="text-slate-500 font-medium leading-normal mt-0.5">
+                    Votre demande de remplacement est en cours d'examen.
+                  </p>
+                </div>
+              ) : (
+                <button
+                  onClick={() => {
+                    setReason('');
+                    setDays(1);
+                    setShowReplacementModal(true);
+                  }}
+                  className="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(245,158,11,0.2)] active:scale-95"
+                >
+                  <span>🔧</span> Remplacer Magasinier
+                </button>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -321,7 +476,7 @@ export const Sidebar = React.memo(function Sidebar({
                 {user?.displayName || (user?.email?.split('@')[0]) || 'User'}
               </p>
               <p className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-widest mt-0.5">
-                {isAdmin ? 'ADMIN' : 'OPÉRATEUR'}
+                {currentUser?.role || (isAdmin ? 'ADMIN' : 'OPÉRATEUR')}
               </p>
             </div>
             <button 
@@ -334,6 +489,65 @@ export const Sidebar = React.memo(function Sidebar({
           </div>
         </div>
       </aside>
+
+      {/* Popup modal for Replacement Request */}
+      {showReplacementModal && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-xs flex items-center justify-center z-[100] animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-100 space-y-4 animate-in zoom-in-95 duration-200 text-left">
+            <div className="flex items-center gap-2 border-b border-slate-100 pb-3">
+              <span className="text-xl">🔧</span>
+              <h3 className="text-sm font-black text-slate-800 uppercase tracking-wider">
+                Demande de Remplacement Temporaire
+              </h3>
+            </div>
+            
+            <div className="space-y-3">
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  Motif d'absence du magasinier :
+                </label>
+                <textarea
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  placeholder="Ex: Maladie, congé, formation, absence imprévue..."
+                  rows={3}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-400 transition-all placeholder:text-slate-400 font-bold"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">
+                  Durée (jours) :
+                </label>
+                <input
+                  type="number"
+                  min={1}
+                  max={30}
+                  value={days}
+                  onChange={(e) => setDays(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                  className="w-full p-2.5 bg-slate-50 border border-slate-200 text-slate-800 text-xs rounded-xl outline-none focus:ring-2 focus:ring-amber-500/40 focus:border-amber-400 transition-all font-bold"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-slate-100">
+              <button
+                onClick={() => setShowReplacementModal(false)}
+                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors uppercase tracking-wider"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleSubmitReplacement}
+                disabled={!reason.trim()}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 disabled:opacity-50 text-white text-xs font-black rounded-lg transition-colors uppercase tracking-wider"
+              >
+                Envoyer la Demande
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 });

@@ -7,6 +7,7 @@ import { authService } from '../services/auth.service';
 import { UserAccount, SiteCode } from '../types';
 import { serializeFirestoreData, cleanObject } from '../lib/utils';
 import { setDoc } from 'firebase/firestore';
+import { toast } from 'sonner';
 
 export function useAuth() {
   const {
@@ -78,6 +79,31 @@ export function useAuth() {
 
     return () => unsubAccounts();
   }, [currentUser, setAccounts]);
+
+  // Expiration automatique du remplacement de magasinier
+  useEffect(() => {
+    const checkReplacementExpiration = async () => {
+      if (currentUser?.isReplacingMagasinier && currentUser.replacementEndDate) {
+        if (new Date(currentUser.replacementEndDate) <= new Date()) {
+          try {
+            await setDoc(doc(db, 'accounts', currentUser.id), {
+              isReplacingMagasinier: false,
+              replacementRequestStatus: 'EXPIRED',
+              canWrite: false,
+              updatedAt: new Date().toISOString()
+            }, { merge: true });
+            toast.info("⏰ Votre période de remplacement a expiré. Retour en mode lecture seule.");
+          } catch (err) {
+            console.error("Error checking replacement expiration:", err);
+          }
+        }
+      }
+    };
+
+    checkReplacementExpiration();
+    const interval = setInterval(checkReplacementExpiration, 60000);
+    return () => clearInterval(interval);
+  }, [currentUser]);
 
   return {
     currentUser,
