@@ -3,6 +3,7 @@ import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestor
 import { db } from '../lib/firebase';
 import { useMovementsStore } from '../stores/movement.store';
 import { movementsService } from '../services/movement.service';
+import { offlineService } from '../services/offline.service';
 import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article } from '../types';
 import { serializeFirestoreData } from '../lib/utils';
 import { calculatePriceUpdates } from '../context/InventoryContext';
@@ -19,12 +20,30 @@ export function useMovements() {
     setAnomalyReports,
   } = useMovementsStore();
 
+  // Hydrate from IndexedDB on load/offline
+  useEffect(() => {
+    const hydrate = async () => {
+      try {
+        const cachedMouvements = await offlineService.getCollection<Mouvement>('mouvements');
+        if (cachedMouvements && cachedMouvements.length > 0 && mouvements.length === 0) {
+          setMouvements(cachedMouvements);
+        }
+      } catch (err) {
+        console.warn('Error hydrating movements from IndexedDB:', err);
+      }
+    };
+    hydrate();
+  }, [setMouvements]);
+
   // Subscribe to movements (limit to last 500 for low network payload)
   useEffect(() => {
     const q = query(collection(db, 'mouvements'), orderBy('date', 'desc'), limit(500));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Mouvement);
       setMouvements(list);
+      offlineService.saveCollection('mouvements', list).catch(err => {
+        console.warn('Error saving movements to IndexedDB:', err);
+      });
     });
     return unsub;
   }, [setMouvements]);

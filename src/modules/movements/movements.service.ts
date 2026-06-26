@@ -55,7 +55,13 @@ export class MovementsService {
       }
 
       let totalValue = 0;
-      const articleUpdates: { ref: any, newQty: number }[] = [];
+      const articleUpdates: { 
+        ref: any; 
+        newQty: number; 
+        newPMP: number; 
+        lastPurchasePrice: number; 
+        priceHistory: any[] 
+      }[] = [];
 
       for (const item of mouvement.items) {
         const articleRef = doc(db, 'articles', item.articleId);
@@ -68,17 +74,66 @@ export class MovementsService {
         totalValue += item.quantity * (article.price || 0);
         
         const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
-        const newQty = isAddition ? article.quantity + item.quantity : article.quantity - item.quantity;
+        const newQty = isAddition ? (article.quantity || 0) + item.quantity : (article.quantity || 0) - item.quantity;
         
         if (newQty < 0) {
           throw new Error("STOCK_INSUFFISANT");
         }
-        articleUpdates.push({ ref: articleRef, newQty });
+
+        // PMP Calculation
+        let newPMP = article.price || 0;
+        let lastPurchasePrice = article.lastPurchasePrice || 0;
+        const existingHistory = article.priceHistory || [];
+        const updatedHistory = [...existingHistory];
+
+        if (isAddition) {
+          const itemPrice = item.price || 0;
+          if (itemPrice > 0) {
+            lastPurchasePrice = itemPrice;
+            const currentQty = article.quantity || 0;
+            const currentPMP = article.price || 0;
+            const totalQty = currentQty + item.quantity;
+            newPMP = totalQty > 0 ? ((currentQty * currentPMP) + (item.quantity * itemPrice)) / totalQty : itemPrice;
+            newPMP = Math.round(newPMP * 100) / 100;
+          }
+
+          // Traçabilité des variations de prix
+          updatedHistory.push({
+            date: mouvement.date || new Date().toISOString(),
+            price: item.price || 0,
+            type: 'ACHAT',
+            quantityAttached: item.quantity,
+            mouvementId: movementId,
+            userEmail: mouvement.createdBy || 'system'
+          });
+
+          updatedHistory.push({
+            date: mouvement.date || new Date().toISOString(),
+            price: newPMP,
+            type: 'PMP',
+            quantityAttached: newQty,
+            mouvementId: movementId,
+            userEmail: mouvement.createdBy || 'system'
+          });
+        }
+
+        articleUpdates.push({ 
+          ref: articleRef, 
+          newQty, 
+          newPMP, 
+          lastPurchasePrice, 
+          priceHistory: updatedHistory.slice(-100) 
+        });
       }
 
-      // Update articles quantities
+      // Update articles fields
       for (const update of articleUpdates) {
-        transaction.update(update.ref, { quantity: update.newQty });
+        transaction.update(update.ref, { 
+          quantity: update.newQty,
+          price: update.newPMP,
+          lastPurchasePrice: update.lastPurchasePrice,
+          priceHistory: update.priceHistory
+        });
       }
 
       // Record movement
@@ -94,7 +149,7 @@ export class MovementsService {
       transaction.set(auditLogRef, cleanObject({
         id: logId,
         timestamp: new Date().toISOString(),
-        userEmail: mouvement.vendeur || 'system_service_account',
+        userEmail: mouvement.createdBy || 'system_service_account',
         site: mouvement.site,
         action: mouvement.type,
         details: `Réf: ${mouvement.reference || 'Aucune'}`,

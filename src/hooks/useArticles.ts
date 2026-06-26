@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 import { useArticlesStore } from '../stores/article.store';
 import { useMovementsStore } from '../stores/movement.store';
 import { articleService } from '../services/article.service';
+import { offlineService } from '../services/offline.service';
 import { Article, CatalogItem, DeletionRequest, HydrominesCatalogItem, SiteCode } from '../types';
 import { CatalogUsageStats } from '../context/InventoryContext';
 import { MASTER_CATALOG } from '../catalogData';
@@ -24,6 +25,21 @@ export function useArticles() {
 
   const movements = useMovementsStore(s => s.mouvements);
 
+  // Hydrate from IndexedDB if offline or first load
+  useEffect(() => {
+    const hydrate = async () => {
+      try {
+        const cachedArticles = await offlineService.getCollection<Article>('articles');
+        if (cachedArticles && cachedArticles.length > 0 && rawArticles.length === 0) {
+          setArticles(cachedArticles);
+        }
+      } catch (err) {
+        console.warn('Error hydrating articles from IndexedDB:', err);
+      }
+    };
+    hydrate();
+  }, [setArticles]);
+
   // Subscribe to articles
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'articles'), (snap) => {
@@ -31,6 +47,9 @@ export function useArticles() {
         .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Article)
         .filter(a => !(a as any).deleted);
       setArticles(list);
+      offlineService.saveCollection('articles', list).catch(err => {
+        console.warn('Error saving articles to IndexedDB:', err);
+      });
     });
     return unsub;
   }, [setArticles]);
