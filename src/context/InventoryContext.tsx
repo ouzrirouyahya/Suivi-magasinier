@@ -730,8 +730,38 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
         }
       }
     }
-    return Array.from(mergedMap.values());
-  }, [rawArticles, recentlyCreatedArticles, retryQueue, dlq]);
+    const allArticlesList = Array.from(mergedMap.values());
+    
+    // Filter out latent, unused auto-injected master catalog articles that have never had stock, 
+    // never had movements, are not in INITIAL_ARTICLES, and were not explicitly imported.
+    return allArticlesList.filter(art => {
+      // 1. If it has quantity > 0, it is actively tracked in stock
+      if ((art.quantity || 0) > 0) return true;
+      
+      // 2. If it was part of INITIAL_ARTICLES (the real pre-loaded inventory)
+      const isInitial = INITIAL_ARTICLES.some(init => 
+        init.id === art.id || (init.site === art.site && init.ref === art.ref)
+      );
+      if (isInitial) return true;
+
+      // 3. If it has any movements associated with it
+      const hasMovements = rawMouvements.some(m => 
+        m.site === art.site && m.items && m.items.some(item => item.articleId === art.id)
+      );
+      if (hasMovements) return true;
+
+      // 4. If it was explicitly imported by the user (has hydrominesCatalogRefId set)
+      if (art.hydrominesCatalogRefId) return true;
+
+      // 5. If it was recently created/modified by the user (is in recentlyCreatedArticles)
+      const isRecent = recentlyCreatedArticles.some(r => r.id === art.id);
+      if (isRecent) return true;
+
+      // Otherwise, it's a latent placeholder auto-injected with 0 quantity and 2 minStock, 
+      // we filter it out to keep the stock and KPIs clean.
+      return false;
+    });
+  }, [rawArticles, recentlyCreatedArticles, retryQueue, dlq, rawMouvements]);
 
   // Clean up recentlyCreatedArticles once they appear in rawArticles
   useEffect(() => {
