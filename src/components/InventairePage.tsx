@@ -39,7 +39,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   const [compteur, setCompteur] = useState(currentUser?.name || currentUser?.email || '');
   const [viewingInventaire, setViewingInventaire] = useState<Inventaire | null>(null);
 
-  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+  const isReadOnly = currentUser?.role === 'Administrateur' && !currentUser?.canWrite;
 
   useEffect(() => {
     if (currentUser && !compteur) {

@@ -1,6 +1,6 @@
 import { doc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { SiteCode, UserAccount } from '../types';
+import { SiteCode, UserAccount, UserRole } from '../types';
 
 export const authService = {
   async approveUser(userId: string): Promise<void> {
@@ -26,7 +26,7 @@ export const authService = {
     });
   },
 
-  async setUserRole(userId: string, role: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER'): Promise<void> {
+  async setUserRole(userId: string, role: UserRole): Promise<void> {
     await updateDoc(doc(db, 'accounts', userId), {
       role,
       updatedAt: new Date().toISOString()

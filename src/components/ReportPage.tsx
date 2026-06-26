@@ -19,7 +19,8 @@ import {
   Brain,
   X,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  GitCompare
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -34,6 +35,7 @@ import {
   Cell
 } from 'recharts';
 import { useInventory } from '../context/InventoryContext';
+import { useRadar } from '../hooks/useRadar';
 import { SiteCode } from '../types';
 import { SITES } from '../demoData';
 import { formatCurrency, cn } from '../lib/utils';
@@ -41,22 +43,38 @@ import type { Article, Mouvement } from '../types';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
+import { SiteComparator } from '../core/siteComparator';
+import { RadarAnalyzer } from '../core/radarAnalyzer';
 
 const TABS = [
   { id: 'OVERVIEW', label: '📈 Vue Générale', icon: BarChart3 },
   { id: 'AI', label: '🤖 IA Analyse', icon: Brain },
   { id: 'SITES', label: '🏭 Sites', icon: MapPin },
+  { id: 'COMPARISON', label: '📊 Comparaison', icon: GitCompare },
   { id: 'DETAILS', label: '📋 Détails', icon: FileText }
 ];
 
 const COLORS = ['#d4af37', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export function ReportPage() {
-  const { articles, mouvements, transferts, currentUser } = useInventory();
+  const { articles, mouvements, transferts, maintenanceLogs = [], currentUser } = useInventory();
   const printRef = useRef<HTMLDivElement>(null);
   
+  const {
+    isAnalyzing,
+    currentReport,
+    selectedSite: radarSite,
+    setSelectedSite: setRadarSite,
+    activeAnomalies: radarAnomalies,
+    runAnalysis,
+    ignoreAnomaly,
+    restoreAnomaly,
+    generatePDF: generateRadarPDF,
+    ignoredCount
+  } = useRadar();
+  
   // States
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'AI' | 'SITES' | 'DETAILS'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'AI' | 'SITES' | 'COMPARISON' | 'DETAILS'>('OVERVIEW');
   const [selectedSite, setSelectedSite] = useState<SiteCode | 'ALL'>('ALL');
   const [dateStart, setDateStart] = useState<string>('');
   const [dateEnd, setDateEnd] = useState<string>('');
@@ -69,15 +87,10 @@ export function ReportPage() {
   const [sortKey, setSortKey] = useState<'date' | 'valeur'>('date');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('desc');
 
-  // AI & Modals States
-  const [ignoredAnomalies, setIgnoredAnomalies] = useState<string[]>([]);
+  // Modals States
   const [selectedAnomaly, setSelectedAnomaly] = useState<any | null>(null);
   const [selectedSiteDetails, setSelectedSiteDetails] = useState<any | null>(null);
-  
-  const [isGeneratingAI, setIsGeneratingAI] = useState(false);
-  const [aiLoadingStep, setAiLoadingStep] = useState(0);
-  const [aiReport, setAiReport] = useState<string | null>(null);
-  const [showAiReportModal, setShowAiReportModal] = useState(false);
+  const [showIgnored, setShowIgnored] = useState(false);
 
   // PDF Export State
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
@@ -99,6 +112,19 @@ export function ReportPage() {
     }, 0);
     return value > 0 ? value : 45000; // Elegant default fallback
   }, [mouvements]);
+
+  const siteMetrics = useMemo(() => {
+    const validSites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+    const reports = validSites.map(site => {
+      return RadarAnalyzer.generateReport(
+        site,
+        mouvements || [],
+        articles || [],
+        maintenanceLogs || []
+      );
+    });
+    return SiteComparator.compareSites(reports, articles || [], mouvements || []);
+  }, [mouvements, articles, maintenanceLogs]);
 
   const criticalAlertsCount = useMemo(() => {
     return articles.filter(a => (Number(a.quantity) || 0) <= (Number(a.minStock) || 0)).length;
@@ -146,59 +172,6 @@ export function ReportPage() {
       .sort((a, b) => (Number(a.quantity) || 0) - (Number(b.quantity) || 0))
       .slice(0, 5);
   }, [articles]);
-
-  // Anomalies list for Tab AI
-  const anomaliesTemplates = [
-    {
-      id: 'ANOMALY_1',
-      type: '🔴 Consommation Anormale',
-      icon: Zap,
-      description: 'Le Simba-4 a consommé flexible hydraulique 3x en 7 jours',
-      metric: '3 remplacements',
-      severity: 'CRITICAL',
-      details: 'Le Simba-4 présente une consommation anormalement récurrente de flexibles haute pression (Réf: FLEX-HP-12). Ce pattern suggère une surtension mécanique ou un dysfonctionnement de valve lors du forage.'
-    },
-    {
-      id: 'ANOMALY_2',
-      type: '🔴 Comportement Mécanicien',
-      icon: User,
-      description: 'Ahmed Alami a prélevé 5x le même filtre moteur ce mois-ci',
-      metric: '5 pièces',
-      severity: 'CRITICAL',
-      details: 'Ahmed Alami a enregistré 5 sorties pour Filtre gasoil (Réf: FLT-G-22) sur la chargeuse LH517 en moins de 18 jours. Risque élevé d\'erreur de diagnostic répété ou de stockage sauvage hors magasin.'
-    },
-    {
-      id: 'ANOMALY_3',
-      type: '🟡 Pattern de Sortie',
-      icon: Repeat,
-      description: 'Sorties de 1 unité de lubrifiant répétées (vampirisme?)',
-      metric: '8 fois / semaine',
-      severity: 'HIGH',
-      details: 'Plusieurs retraits successifs d\'une unité de lubrifiant ont été saisis à intervalles courts. Cette pratique contourne souvent les seuils d\'approbation hiérarchique mais fausse la justesse de l\'inventaire physique.'
-    },
-    {
-      id: 'ANOMALY_4',
-      type: '🟡 Stock Critique',
-      icon: AlertCircle,
-      description: `${criticalAlertsCount} références majeures sont sous le seuil minimum de sécurité`,
-      metric: `${criticalAlertsCount} alertes`,
-      severity: 'MEDIUM',
-      details: 'Le stock de sécurité est sérieusement entamé sur plusieurs consommables critiques nécessaires à la SMI et à ONA. Risque élevé d\'arrêt technique temporaire si aucune commande n\'est passée sous 48h.'
-    },
-    {
-      id: 'ANOMALY_5',
-      type: '🟢 Rotation Nulle',
-      icon: Package,
-      description: '15 articles de rechange n\'ont enregistré aucun mouvement depuis 6 mois',
-      metric: '125 000 MAD dormants',
-      severity: 'LOW',
-      details: 'Ces pièces détachées spécifiques (notamment pour JUMB-2) représentent un capital immobilisé important sans intérêt opérationnel à court terme. Une réattribution inter-sites ou un retour fournisseur est recommandé.'
-    }
-  ];
-
-  const activeAnomalies = useMemo(() => {
-    return anomaliesTemplates.filter(item => !ignoredAnomalies.includes(item.id));
-  }, [ignoredAnomalies, criticalAlertsCount]);
 
   // Sites stock comparison calculation
   const siteStockStats = useMemo(() => {
@@ -291,77 +264,7 @@ export function ReportPage() {
     }
   };
 
-  // AI Generation triggers server-side Gemini API (/api/ai/analyze)
-  const handleGenerateAIReport = async () => {
-    setIsGeneratingAI(true);
-    setAiLoadingStep(0);
-    
-    // Cycle loading status text
-    const timer1 = setTimeout(() => setAiLoadingStep(1), 1000);
-    const timer2 = setTimeout(() => setAiLoadingStep(2), 2200);
-    const timer3 = setTimeout(() => setAiLoadingStep(3), 3500);
 
-    try {
-      const response = await fetch('/api/ai/analyze', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          promptType: 'FINANCIAL_REPORT', // Where we lose money / optimisation
-          data: {
-            articles: articles.slice(0, 15).map(a => ({ ref: a.ref, name: a.designation, qty: a.quantity, price: a.price, min: a.minStock })),
-            mouvements: mouvements.slice(0, 25).map(m => ({ date: m.date, type: m.type, site: m.site, user: m.beneficiaire, val: getMovementValue(m) }))
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`Erreur API: Code ${response.status}`);
-      }
-
-      const rawJson = await response.json();
-      
-      // Let's generate a beautiful styled markdown text summary from JSON response
-      let reportMarkdown = `# 🤖 RAPPORT INTELLIGENT DE SYNTHÈSE HYDROMINES\n\n`;
-      reportMarkdown += `*Généré par l'IA le ${new Date().toLocaleDateString('fr-FR')}*\n\n`;
-      
-      if (rawJson.healthScore !== undefined) {
-        reportMarkdown += `## 📊 Score Global de Santé Financière : **${rawJson.healthScore}/100**\n`;
-        if (rawJson.healthScore > 75) {
-          reportMarkdown += `*Statut : Stable.* La gestion globale est saine mais présente des opportunités d'amélioration.\n\n`;
-        } else {
-          reportMarkdown += `*Statut : Attention Requise.* Des anomalies significatives de dépenses ont été détectées.\n\n`;
-        }
-      }
-
-      reportMarkdown += `## 🔍 Fuites Financières Détectées :\n\n`;
-      if (Array.isArray(rawJson.financialLeaks)) {
-        rawJson.financialLeaks.forEach((leak: any, i: number) => {
-          reportMarkdown += `### ${i+1}. ${leak.title} (${leak.impact === 'CRITICAL' ? '🔴 Critique' : leak.impact === 'HIGH' ? '🟠 Haute' : '🔵 Moyenne'})\n`;
-          reportMarkdown += `- **Perte estimée :** \`${leak.estimatedLoss || 'Non quantifiable'}\`\n`;
-          reportMarkdown += `- **Description :** ${leak.description}\n`;
-          reportMarkdown += `- **Recommandation :** ${leak.recommendation}\n\n`;
-        });
-      } else {
-        reportMarkdown += `Aucun schéma de perte majeure détecté par le modèle sur les échantillons analysés. Rigueur de saisie correcte.\n\n`;
-      }
-
-      reportMarkdown += `## 🚀 Recommandations de Rationalisation des Coûts :\n`;
-      reportMarkdown += `1. **Ajustement des stocks de sécurité :** Réduire les seuils minimums sur les articles à rotation nulle de plus de 180 jours pour libérer du besoin en fonds de roulement.\n`;
-      reportMarkdown += `2. **Alerte de surconsommation machine :** Planifier un audit mécanique direct pour l'engin Simba-4 afin d'endiguer la casse de flexibles.\n`;
-      reportMarkdown += `3. **Consolidation inter-sites :** Transférer les surplus inutilisés de SMI vers ONA au lieu d'acheter du stock neuf.\n`;
-
-      setAiReport(reportMarkdown);
-      setShowAiReportModal(true);
-    } catch (err: any) {
-      console.error(err);
-      toast.error(`Erreur d'analyse IA : ${err.message || err}`);
-    } finally {
-      clearTimeout(timer1);
-      clearTimeout(timer2);
-      clearTimeout(timer3);
-      setIsGeneratingAI(false);
-    }
-  };
 
   // CSV Export Method
   const handleExportCSV = () => {
@@ -392,12 +295,138 @@ export function ReportPage() {
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     try {
-      const canvas = await html2canvas(printRef.current, {
+      const replaceUnsupportedColors = (cssText: string): string => {
+        if (!cssText) return '';
+        try {
+          return cssText.replace(/(oklch|oklab)\([^)]*\)/gi, (match) => {
+            try {
+              const isOklch = match.toLowerCase().startsWith('oklch');
+              const numbers = match.match(/[0-9.]+/g);
+              if (numbers && numbers.length >= 3) {
+                const lightness = parseFloat(numbers[0]);
+                const l = match.includes('%') ? lightness : lightness * 100;
+                
+                let hue = 0;
+                if (isOklch) {
+                  hue = parseFloat(numbers[2]);
+                } else {
+                  const a = parseFloat(numbers[1]);
+                  const b = parseFloat(numbers[2]);
+                  hue = (Math.atan2(b, a) * 180) / Math.PI;
+                  if (hue < 0) hue += 360;
+                }
+                
+                const chroma = parseFloat(numbers[1]);
+                if (chroma < 0.01) return `hsl(0, 0%, ${l.toFixed(1)}%)`;
+                return `hsl(${hue.toFixed(1)}, 75%, ${l.toFixed(1)}%)`;
+              }
+              return 'rgb(148, 163, 184)';
+            } catch (e) {
+              return 'rgb(148, 163, 184)';
+            }
+          });
+        } catch (e) {
+          return cssText;
+        }
+      };
+
+      const originalGetComputedStyle = window.getComputedStyle;
+      const originalStyleshots: { element: HTMLStyleElement; originalText: string }[] = [];
+      const linkBkup: { link: HTMLLinkElement; tempStyle: HTMLStyleElement }[] = [];
+      const originalInlineStyles: { element: HTMLElement; originalStyle: string }[] = [];
+
+      window.getComputedStyle = function (elt: Element, pseudoElt?: string | null) {
+        const style = originalGetComputedStyle.call(window, elt, pseudoElt);
+        return new Proxy(style, {
+          get(target, prop, receiver) {
+            if (prop === 'getPropertyValue') {
+              return function (this: any, propertyName: string) {
+                const val = target.getPropertyValue(propertyName);
+                if (val && (val.toLowerCase().includes('oklch') || val.toLowerCase().includes('oklab'))) {
+                  return replaceUnsupportedColors(val);
+                }
+                return val;
+              }.bind(target);
+            }
+            
+            const value = Reflect.get(target, prop, target);
+            if (typeof value === 'function') {
+              return value.bind(target);
+            }
+            if (typeof value === 'string' && (value.toLowerCase().includes('oklch') || value.toLowerCase().includes('oklab'))) {
+              return replaceUnsupportedColors(value);
+            }
+            return value;
+          }
+        }) as any;
+      };
+
+      const element = printRef.current;
+      const elementsWithInlineStyles = element.querySelectorAll('[style]');
+      elementsWithInlineStyles.forEach((el) => {
+        const htmlEl = el as HTMLElement;
+        const oStyle = htmlEl.getAttribute('style');
+        if (oStyle && (oStyle.toLowerCase().includes('oklch') || oStyle.toLowerCase().includes('oklab'))) {
+          originalInlineStyles.push({ element: htmlEl, originalStyle: oStyle });
+          htmlEl.setAttribute('style', replaceUnsupportedColors(oStyle));
+        }
+      });
+
+      const styleElements = Array.from(document.querySelectorAll('style'));
+      for (const styleEl of styleElements) {
+        if (styleEl.textContent && (styleEl.textContent.toLowerCase().includes('oklch') || styleEl.textContent.toLowerCase().includes('oklab'))) {
+          originalStyleshots.push({ element: styleEl, originalText: styleEl.textContent });
+          styleEl.textContent = replaceUnsupportedColors(styleEl.textContent);
+        }
+      }
+
+      const linkElements = Array.from(document.querySelectorAll('link[rel="stylesheet"]')) as HTMLLinkElement[];
+      for (const linkEl of linkElements) {
+        if (linkEl.href) {
+          try {
+            const url = new URL(linkEl.href, window.location.origin);
+            if (url.origin === window.location.origin) {
+              const response = await fetch(linkEl.href);
+              if (response.ok) {
+                const rawCss = await response.text();
+                if (rawCss.toLowerCase().includes('oklch') || rawCss.toLowerCase().includes('oklab')) {
+                  const sanitizedCss = replaceUnsupportedColors(rawCss);
+                  const tempStyle = document.createElement('style');
+                  tempStyle.className = 'temp-pdf-style';
+                  tempStyle.textContent = sanitizedCss;
+                  document.head.appendChild(tempStyle);
+                  linkEl.disabled = true;
+                  linkBkup.push({ link: linkEl, tempStyle });
+                }
+              }
+            }
+          } catch (e) {
+            console.warn('CSS fetch bypass skipped:', e);
+          }
+        }
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      const canvas = await html2canvas(element, {
         scale: 2,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
       } as any);
+
+      // Restore styling settings overridden for print capture
+      window.getComputedStyle = originalGetComputedStyle;
+      originalInlineStyles.forEach(({ element, originalStyle }) => {
+        element.setAttribute('style', originalStyle);
+      });
+      originalStyleshots.forEach(({ element, originalText }) => {
+        element.textContent = originalText;
+      });
+      linkBkup.forEach(({ link, tempStyle }) => {
+        link.disabled = false;
+        tempStyle.remove();
+      });
 
       const imgData = canvas.toDataURL('image/jpeg', 0.95);
       const pdf = new jsPDF({
@@ -432,8 +461,8 @@ export function ReportPage() {
     }
   };
 
-  // Access restriction guard (Magasinier can't view reports, only Admin or Super Admin)
-  const isAuthorized = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  // Access restriction guard (Magasinier can't view reports, only Administrateur or Super Admin)
+  const isAuthorized = currentUser?.role === 'Administrateur' || currentUser?.role === 'SUPER_ADMIN';
   if (!isAuthorized) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white rounded-3xl border border-slate-100 italic">
@@ -643,142 +672,180 @@ export function ReportPage() {
         )}
 
         {/* ========================================== */}
-        {/* TABS 2: AI ANALYSE                         */}
+        {/* TABS 2: RADAR AI ANALYSIS                  */}
         {/* ========================================== */}
         {activeTab === 'AI' && (
           <div className="space-y-8 animate-in fade-in duration-300">
-            
-            {/* EN-TÊTE INTÉLLIGENT */}
-            <div className="border border-slate-200 rounded-xl p-5 bg-white shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-amber-100 text-amber-700 rounded-xl flex items-center justify-center font-bold text-xl">
-                  🤖
-                </div>
+            <div className="ai-tab-content border border-slate-200 rounded-xl bg-white shadow-xs">
+              {/* Header */}
+              <div className="ai-header">
                 <div>
-                  <h3 className="text-sm font-black uppercase tracking-wider text-slate-900">
-                    ANALYSE INTELLIGENTE — HYDROMINES
-                  </h3>
+                  <h2 className="text-slate-900 font-extrabold text-lg flex items-center gap-2">
+                    🤖 RADAR — Système d'Analyse Intelligente
+                  </h2>
                   <p className="text-slate-500 text-xs mt-0.5">
-                    Détection automatique des anomalies et patterns suspects de vols ou déviances logistiques.
+                    Moteur d'intelligence logistique locale d'Hydromines. Analyse des pièces, consommation machine et détection des fraudes.
                   </p>
                 </div>
-              </div>
-
-              {/* ACTION IA CONTROL */}
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={handleGenerateAIReport}
-                  disabled={isGeneratingAI}
-                  className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white font-extrabold rounded-xl text-xs uppercase tracking-wider transition-all flex items-center gap-2 active:scale-95 shadow-sm"
-                >
-                  {isGeneratingAI ? (
-                    <>
-                      <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      <span>Analyse en cours...</span>
-                    </>
-                  ) : (
-                    <>
-                      <span>🔍 Lancer l'analyse</span>
-                    </>
-                  )}
-                </button>
-                <span className="px-3 py-2 bg-slate-100 text-slate-600 font-bold rounded-xl text-[10px] uppercase tracking-wider">
-                  📅 Période : 30 derniers jours
-                </span>
-              </div>
-            </div>
-
-            {/* AI LOADING PROGRESS INDICATOR */}
-            {isGeneratingAI && (
-              <div className="p-6 border border-amber-200 bg-amber-50/20 rounded-xl flex flex-col items-center justify-center space-y-3 text-center">
-                <Brain className="w-10 h-10 text-amber-500 animate-pulse" />
-                <div className="space-y-1">
-                  <p className="text-xs font-black text-slate-900 uppercase">
-                    {aiLoadingStep === 0 && "1/4 Scan de la base de données..."}
-                    {aiLoadingStep === 1 && "2/4 Analyse des corrélations de rotation..."}
-                    {aiLoadingStep === 2 && "3/4 Détection des anomalies et fuites de pièces..."}
-                    {aiLoadingStep === 3 && "4/4 Synthèse des recommandations stratégiques..."}
-                  </p>
-                  <p className="text-[10px] text-slate-400">Le modèle Gemini analyse vos flux logistiques en temps réel.</p>
-                </div>
-                <div className="w-48 bg-slate-100 h-1.5 rounded-full overflow-hidden">
-                  <div className="bg-amber-500 h-full animate-infinite-loading rounded-full" style={{ width: `${(aiLoadingStep + 1) * 25}%` }} />
+                <div className="ai-controls">
+                  <select 
+                    value={radarSite} 
+                    onChange={(e) => setRadarSite(e.target.value as SiteCode | 'GLOBAL')}
+                    className="site-selector font-bold text-xs"
+                  >
+                    <option value="GLOBAL">🌍 Tous les sites</option>
+                    <option value="SMI">🏭 SMI</option>
+                    <option value="OUMEJRANE">🏭 OUMEJRANE</option>
+                    <option value="BOU_AZZER">🏭 BOU-AZZER</option>
+                    <option value="OUANSIMI">🏭 OUANSIMI</option>
+                    <option value="KOUDIA">🏭 KOUDIA</option>
+                  </select>
+                  <button 
+                    onClick={() => runAnalysis(radarSite)}
+                    disabled={isAnalyzing}
+                    className="analyze-btn text-white text-xs uppercase font-extrabold tracking-wider"
+                  >
+                    {isAnalyzing ? '⏳ Analyse...' : '🔍 Lancer l\'analyse'}
+                  </button>
                 </div>
               </div>
-            )}
-
-            {/* GRID OF TEMPLATE ANOMALIES */}
-            <div className="space-y-4">
-              <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest border-b border-slate-100 pb-2">
-                ⚠️ Anomalies Opérationnelles Potentielles Détectées ({activeAnomalies.length})
-              </h4>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {activeAnomalies.length > 0 ? (
-                  activeAnomalies.map((item) => {
-                    const CardIcon = item.icon;
-                    return (
-                      <div
-                        key={item.id}
-                        className={cn(
-                          "anomaly-card flex flex-col justify-between gap-3 shadow-xs",
-                          item.severity === 'CRITICAL' ? "anomaly-critical bg-red-50/5" :
-                          item.severity === 'HIGH' ? "anomaly-high bg-amber-50/5" :
-                          item.severity === 'MEDIUM' ? "anomaly-medium bg-blue-50/5" :
-                          "anomaly-low bg-green-50/5"
-                        )}
-                      >
-                        <div>
-                          <div className="flex justify-between items-start mb-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                              <CardIcon className="w-3.5 h-3.5" />
-                              {item.type}
-                            </span>
-                            <span className={cn(
-                              "text-[8px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full font-sans",
-                              item.severity === 'CRITICAL' ? "bg-red-100 text-red-800" :
-                              item.severity === 'HIGH' ? "bg-amber-100 text-amber-800" :
-                              item.severity === 'MEDIUM' ? "bg-blue-100 text-blue-800" :
-                              "bg-green-100 text-green-800"
-                            )}>
-                              {item.severity}
-                            </span>
-                          </div>
-                          
-                          <h4 className="text-xs font-extrabold text-slate-900 leading-snug">{item.description}</h4>
-                          <p className="text-[11px] font-mono font-bold text-slate-500 mt-1">Métrique: {item.metric}</p>
-                        </div>
-
-                        <div className="flex items-center gap-2 pt-2 border-t border-slate-100">
-                          <button
-                            onClick={() => {
-                              setIgnoredAnomalies(prev => [...prev, item.id]);
-                              toast.info("Anomalie marquée comme traitée.");
-                            }}
-                            className="text-[10px] text-slate-400 hover:text-slate-600 font-extrabold uppercase tracking-wider"
-                          >
-                            Ignorer
-                          </button>
-                          <div className="flex-1 text-right">
-                            <button
-                              onClick={() => setSelectedAnomaly(item)}
-                              className="px-2.5 py-1 bg-slate-900 text-white text-[9px] font-black uppercase tracking-wider rounded-lg hover:bg-slate-800 transition-colors"
-                            >
-                              Voir détails
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="col-span-2 p-8 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 italic font-medium">
-                    Toutes les anomalies ont été traitées ou ignorées.
+              
+              {/* Loading Spinner */}
+              {isAnalyzing && (
+                <div className="ai-loading text-center p-12 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <div className="radar-spinner"></div>
+                  <p className="font-extrabold text-slate-800 text-sm">Calculs des corrélations logistiques en cours...</p>
+                  <p className="text-xs text-slate-400 mt-1">Vérification de l'obsolescence • Analyse de consommation engin • Détection de vols</p>
+                </div>
+              )}
+              
+              {/* Report Results */}
+              {currentReport && !isAnalyzing && (
+                <div className="space-y-8 mt-6">
+                  {/* Summary Cards */}
+                  <div className="radar-summary">
+                    <div className="summary-card critical">
+                      <span className="number text-red-600">{currentReport.summary.criticalCount}</span>
+                      <span className="label text-slate-500 font-bold">Critiques</span>
+                    </div>
+                    <div className="summary-card high">
+                      <span className="number text-amber-500">{currentReport.summary.highCount}</span>
+                      <span className="label text-slate-500 font-bold">Hautes</span>
+                    </div>
+                    <div className="summary-card medium">
+                      <span className="number text-sky-500">{currentReport.summary.mediumCount}</span>
+                      <span className="label text-slate-500 font-bold">Moyennes</span>
+                    </div>
+                    <div className="summary-card low">
+                      <span className="number text-emerald-500">{currentReport.summary.lowCount}</span>
+                      <span className="label text-slate-500 font-bold">Faibles</span>
+                    </div>
                   </div>
-                )}
-              </div>
+                  
+                  {/* Anomalies List */}
+                  <div>
+                    <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4 border-b border-slate-100 pb-2">
+                      ⚠️ Anomalies Opérationnelles Détectées ({radarAnomalies.length})
+                    </h3>
+                    
+                    <div className="anomalies-grid">
+                      {radarAnomalies.length > 0 ? (
+                        radarAnomalies.map(anomaly => (
+                          <div key={anomaly.id} className={`anomaly-card ${anomaly.severity.toLowerCase()}`}>
+                            <div className="anomaly-header flex justify-between items-center mb-3">
+                              <span className={`severity-badge ${anomaly.severity.toLowerCase()}`}>
+                                {anomaly.severity}
+                              </span>
+                              <span className="confidence text-[10px] text-slate-400 font-mono font-bold">
+                                {anomaly.confidence}% confiance
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-black text-slate-800 mb-1 leading-tight">{anomaly.title}</h4>
+                            <p className="description text-xs text-slate-500 mb-3 leading-normal">{anomaly.description}</p>
+                            
+                            <div className="metric flex justify-between text-[11px] font-mono bg-slate-50 p-2.5 rounded-lg mb-3">
+                              <span className="value font-bold text-slate-700">Valeur: {anomaly.metric}</span>
+                              <span className="threshold text-slate-400">Seuil: {anomaly.threshold}</span>
+                            </div>
+                            
+                            <p className="action text-xs text-amber-600 font-semibold mb-3">💡 {anomaly.suggestedAction}</p>
+                            
+                            <div className="anomaly-actions border-t border-slate-100 pt-2 flex justify-between items-center">
+                              <span className="px-1.5 py-0.5 bg-slate-100 text-slate-500 text-[9px] font-bold font-mono uppercase rounded">
+                                {anomaly.site}
+                              </span>
+                              <button 
+                                onClick={() => ignoreAnomaly(anomaly.id)}
+                                className="text-[10px] text-slate-400 hover:text-slate-600 font-extrabold uppercase tracking-wider"
+                              >
+                                Ignorer
+                              </button>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="col-span-full p-8 text-center border border-dashed border-slate-200 rounded-xl text-slate-400 italic font-medium">
+                          Aucune anomalie active trouvée pour ce site ou tous les rapports sont archivés.
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  {/* Ignored Toggle list */}
+                  {ignoredCount > 0 && (
+                    <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
+                      <button 
+                        onClick={() => setShowIgnored(!showIgnored)}
+                        className="text-xs text-slate-500 hover:text-slate-700 font-extrabold underline decoration-dashed"
+                      >
+                        {showIgnored ? 'Masquer' : 'Afficher'} les {ignoredCount} anomalie(s) ignorée(s)
+                      </button>
+                      {showIgnored && (
+                        <div className="mt-3 divide-y divide-slate-100 max-h-40 overflow-y-auto">
+                          {currentReport.anomalies
+                            .filter(a => !radarAnomalies.some(active => active.id === a.id))
+                            .map(a => (
+                              <div key={a.id} className="flex justify-between items-center py-2 text-xs font-medium">
+                                <span className="text-slate-600">{a.title} ({a.type})</span>
+                                <button 
+                                  onClick={() => restoreAnomaly(a.id)}
+                                  className="text-[10px] text-amber-500 hover:text-amber-600 font-extrabold uppercase"
+                                >
+                                  Restaurer
+                                </button>
+                              </div>
+                            ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                  
+                  {/* Strategic Recommendations */}
+                  {currentReport.recommendations.length > 0 && (
+                    <div className="recommendations border border-slate-200 bg-slate-50/50 rounded-xl p-5 text-left">
+                      <h3 className="text-xs font-black uppercase text-slate-800 mb-3 flex items-center gap-1.5">
+                        📋 Recommandations Stratégiques de Sûreté
+                      </h3>
+                      <ul className="list-disc pl-5 space-y-1.5 text-xs text-slate-600 font-medium">
+                        {currentReport.recommendations.map((rec, i) => (
+                          <li key={i}>{rec}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  
+                  {/* Export PDF Button */}
+                  <div className="pt-4 border-t border-slate-100 flex justify-end">
+                    <button 
+                      onClick={() => generateRadarPDF(currentReport)}
+                      className="pdf-btn text-white text-xs uppercase font-extrabold tracking-wider"
+                    >
+                      📄 Exporter Rapport PDF RADAR
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
-
           </div>
         )}
 
@@ -854,6 +921,73 @@ export function ReportPage() {
               ))}
             </div>
 
+          </div>
+        )}
+
+        {/* ========================================== */}
+        {/* TABS 3.5: COMPARISON                       */}
+        {/* ========================================== */}
+        {activeTab === 'COMPARISON' && (
+          <div className="comparison-tab p-6 bg-white border border-slate-100 rounded-2xl shadow-xs animate-in fade-in duration-300">
+            <h2 className="text-xl font-black uppercase tracking-wider text-slate-900 flex items-center gap-2 mb-1">
+              📊 Comparaison Inter-Chantiers
+            </h2>
+            <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-6">
+              Analyse normalisée par nombre d'engins et perforateurs
+            </p>
+            
+            <div className="comparison-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 my-6">
+              {siteMetrics.map(metric => (
+                <div key={metric.site} className={`site-card rank-${metric.efficiencyRank} bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm transition-all duration-300 hover:shadow-md border-t-4`}>
+                  <div className="site-header flex justify-between items-center mb-4 pb-2 border-b border-slate-50">
+                    <h3 className="text-sm font-black uppercase text-slate-800 tracking-wider">
+                      {metric.site === 'BOU-AZZER' ? 'Bou-Azzer' : metric.site}
+                    </h3>
+                    <span className={`rank-badge rank-${metric.efficiencyRank} px-3 py-1 rounded-full font-black text-xs uppercase tracking-wider`}>
+                      #{metric.efficiencyRank}
+                    </span>
+                  </div>
+                  
+                  <div className="equipment-info flex gap-4 text-xs font-bold text-slate-500 mb-4 pb-3 border-b border-slate-100/50">
+                    <span className="flex items-center gap-1">🔧 {metric.enginCount} engins</span>
+                    <span className="flex items-center gap-1">⛏️ {metric.perforateurCount} perforateurs</span>
+                  </div>
+                  
+                  <div className="metrics grid grid-cols-2 gap-4">
+                    <div className="metric">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Conso/engin (30j)</label>
+                      <span className="value block text-sm font-extrabold text-slate-800">{metric.consumptionPerEngin.toFixed(1)}</span>
+                    </div>
+                    <div className="metric">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Coût maintenance/engin</label>
+                      <span className="value block text-sm font-extrabold text-slate-800">{formatCurrency(metric.maintenanceCostPerEngin)}</span>
+                    </div>
+                    <div className="metric">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Valeur stock/engin</label>
+                      <span className="value block text-sm font-extrabold text-slate-800">{formatCurrency(metric.stockValuePerEngin)}</span>
+                    </div>
+                    <div className="metric">
+                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Score anomalie</label>
+                      <span className={cn("value block text-sm font-black", metric.anomalyScore > 50 ? "text-red-500" : "text-emerald-500")}>
+                        {metric.anomalyScore}/100
+                      </span>
+                    </div>
+                  </div>
+                  
+                  <div className="alerts-bar flex h-1.5 rounded-full overflow-hidden mt-5 bg-slate-100">
+                    <div className="alert critical bg-red-500 transition-all duration-500" style={{width: `${Math.min(metric.criticalAlerts * 15, 50)}%`}}></div>
+                    <div className="alert high bg-amber-500 transition-all duration-500" style={{width: `${Math.min(metric.anomalyScore, 50)}%`}}></div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            
+            <button 
+              onClick={() => SiteComparator.generateComparisonPDF(siteMetrics)} 
+              className="pdf-btn mt-4 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-wider cursor-pointer font-sans"
+            >
+              📄 PDF Comparaison
+            </button>
           </div>
         )}
 
@@ -1159,54 +1293,6 @@ export function ReportPage() {
             <div className="flex justify-end pt-2 border-t border-slate-100">
               <button
                 onClick={() => setSelectedSiteDetails(null)}
-                className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white text-xs font-black rounded-lg transition-colors uppercase tracking-wider"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* 3. AI REPORT FULL MODAL */}
-      {showAiReportModal && aiReport && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-[150] animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl p-6 w-full max-w-2xl shadow-2xl border border-slate-100 flex flex-col max-h-[85vh] text-left">
-            <div className="flex justify-between items-center border-b border-slate-100 pb-3 mb-4">
-              <div className="flex items-center gap-2 text-amber-600 font-extrabold">
-                <Brain className="w-5 h-5 text-amber-500" />
-                <h3 className="text-sm font-black uppercase tracking-wider text-slate-800">
-                  Rapport d'Analyse des Coûts IA
-                </h3>
-              </div>
-              <button onClick={() => setShowAiReportModal(false)} className="text-slate-400 hover:text-slate-600">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 overflow-y-auto pr-2 space-y-4 text-xs font-medium text-slate-700 leading-relaxed scrollbar-thin">
-              {/* Custom styled markdown report renderer */}
-              <div className="prose max-w-none whitespace-pre-line">
-                {aiReport}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-2 pt-4 mt-4 border-t border-slate-100">
-              <button
-                onClick={() => {
-                  const blob = new Blob([aiReport], { type: 'text/plain;charset=utf-8;' });
-                  const url = URL.createObjectURL(blob);
-                  const link = document.createElement("a");
-                  link.setAttribute("href", url);
-                  link.setAttribute("download", `rapport_ia_couts.txt`);
-                  link.click();
-                }}
-                className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg transition-colors uppercase tracking-wider"
-              >
-                💾 Enregistrer Texte
-              </button>
-              <button
-                onClick={() => setShowAiReportModal(false)}
                 className="px-4 py-2 bg-slate-950 hover:bg-slate-800 text-white text-xs font-black rounded-lg transition-colors uppercase tracking-wider"
               >
                 Fermer

@@ -68,7 +68,7 @@ export function HydrominesCatalog() {
   const [techItemUnit, setTechItemUnit] = useState('Pcs');
   const [techItemIsCritical, setTechItemIsCritical] = useState(false);
 
-  const isAdminOrMagasinier = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'MAGASINIER';
+  const isAdminOrMagasinier = currentUser?.role === 'Administrateur' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'MAGASINIER';
 
   // 1. Map physical article IDs to references for O(1) lookups in movements
   const articleIdToRefMap = useMemo(() => {

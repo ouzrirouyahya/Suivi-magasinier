@@ -225,12 +225,12 @@ export const Sidebar = React.memo(function Sidebar({
       DIRECTION: { id: 'SEP_DIRECTION', label: '6. Direction', isSeparator: true }
     };
 
-    const userRole = currentUser?.role || 'ADMIN';
+    const userRole = currentUser?.role || 'Administrateur';
     const allowedPageIds = new Set<string>();
 
     if (userRole === 'SUPER_ADMIN') {
       itemTemplates.forEach(item => allowedPageIds.add(item.id));
-    } else if (userRole === 'ADMIN') {
+    } else if (userRole === 'Administrateur') {
       itemTemplates.forEach(item => {
         if (item.id !== 'FINANCE') allowedPageIds.add(item.id);
       });
@@ -476,7 +476,7 @@ export const Sidebar = React.memo(function Sidebar({
                 {user?.displayName || (user?.email?.split('@')[0]) || 'User'}
               </p>
               <p className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-widest mt-0.5">
-                {currentUser?.role || (isAdmin ? 'ADMIN' : 'OPÉRATEUR')}
+                {currentUser?.role || (isAdmin ? 'Administrateur' : 'OPÉRATEUR')}
               </p>
             </div>
             <button 

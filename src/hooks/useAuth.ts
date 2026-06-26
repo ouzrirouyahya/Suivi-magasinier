@@ -69,7 +69,7 @@ export function useAuth() {
   // Subscribe to all accounts for Admin+
   useEffect(() => {
     if (!currentUser) return;
-    const isUserAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
+    const isUserAdmin = currentUser.role === 'Administrateur' || currentUser.role === 'SUPER_ADMIN';
     if (!isUserAdmin) return;
 
     const unsubAccounts = onSnapshot(collection(db, 'accounts'), (snap) => {

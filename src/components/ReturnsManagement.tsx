@@ -26,7 +26,7 @@ import { toast } from 'sonner';
 export function ReturnsManagement() {
   const { mouvements, articles, addMouvement, agents, currentSite, currentUser } = useInventory();
   
-  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+  const isReadOnly = currentUser?.role === 'Administrateur' && !currentUser?.canWrite;
 
   // Articles search states for predictive auto-complete bar
   const [articleSearchQuery, setArticleSearchQuery] = useState('');

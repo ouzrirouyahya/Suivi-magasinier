@@ -1008,7 +1008,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     }
   };
 
-  const isReadOnly = currentUser?.role === 'MAGASINIER' || (currentUser?.role === 'ADMIN' && !currentUser?.canWrite);
+  const isReadOnly = currentUser?.role === 'MAGASINIER' || (currentUser?.role === 'Administrateur' && !currentUser?.canWrite);
 
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-8 duration-700">
@@ -1216,7 +1216,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       </div>
 
       {/* Demande de suppression administratives en attente */}
-      {(currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN') && deletionRequests.filter(r => r.status === 'PENDING_APPROVAL').length > 0 && (
+      {(currentUser?.role === 'Administrateur' || currentUser?.role === 'SUPER_ADMIN') && deletionRequests.filter(r => r.status === 'PENDING_APPROVAL').length > 0 && (
         <div className="bg-amber-50/50 border border-amber-200/60 rounded-[2rem] p-6 mb-6 shadow-xl relative overflow-hidden backdrop-blur-xl animate-in fade-in slide-in-from-top-4 duration-300">
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-2xl bg-amber-500/10 flex items-center justify-center text-amber-600">
@@ -1281,7 +1281,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
               className="bg-rose-600/[0.93] hover:bg-rose-700 text-white px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest transition-colors flex items-center gap-1.5 active:scale-95 cursor-pointer shadow-lg shadow-rose-600/20"
             >
               <Trash2 className="w-3.5 h-3.5" /> 
-              {currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' ? "Supprimer définitivement" : "Demander la suppression"}
+              {currentUser?.role === 'Administrateur' || currentUser?.role === 'SUPER_ADMIN' ? "Supprimer définitivement" : "Demander la suppression"}
             </button>
             <button 
               onClick={() => setSelectedArticleIds([])}

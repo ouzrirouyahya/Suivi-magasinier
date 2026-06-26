@@ -38,7 +38,7 @@ interface TransfertPageProps {
 }
 
 export function TransfertPage({ currentSite, articles, transferts, onAddTransfert, onCompleteTransfert, currentUser }: TransfertPageProps) {
-  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+  const isReadOnly = currentUser?.role === 'Administrateur' && !currentUser?.canWrite;
 
   const {
     approveTransfert,
@@ -647,7 +647,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                           </span>
                           
                           {/* Recommended Action Badge */}
-                          {t.status === 'DEMANDE' && currentUser?.role === 'ADMIN' && (
+                          {t.status === 'DEMANDE' && currentUser?.role === 'Administrateur' && (
                             <span className="text-[8px] font-bold bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded uppercase tracking-widest border border-violet-100 animate-pulse">
                               Validation superviseur requise
                             </span>

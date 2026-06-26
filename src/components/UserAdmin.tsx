@@ -91,7 +91,7 @@ export const UserAdmin = React.memo(function UserAdmin({
   const siteEngins = engins.filter(e => e.site === currentSite);
   const sitePerfos = perfos.filter(p => p.site === currentSite);
 
-  const isAdminUser = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  const isAdminUser = currentUser?.role === 'Administrateur' || currentUser?.role === 'SUPER_ADMIN';
 
   const [activeTab, setActiveTab] = useState<AdminTab>('EFFECTIF');
   const [search, setSearch] = useState('');
@@ -338,7 +338,7 @@ export const UserAdmin = React.memo(function UserAdmin({
     try {
       const userRef = doc(db, 'accounts', user.id);
       const targetRole = user.requestedRole || 'MAGASINIER';
-      const isReadOnlyByDefault = targetRole === 'ADMIN' || targetRole === 'RESPONSABLE_CHANTIER';
+      const isReadOnlyByDefault = targetRole === 'Administrateur' || targetRole === 'RESPONSABLE_CHANTIER';
       await updateDoc(userRef, {
         status: 'APPROVED',
         active: true,
@@ -359,7 +359,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       await updateDoc(userRef, {
         status: 'REJECTED',
         active: false,
-        role: 'ADMIN',
+        role: 'Administrateur',
         assignedSite: null,
         canWrite: false
       });
@@ -615,7 +615,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                           <p className="flex justify-between">
                             <span className="text-slate-400 text-[10px] uppercase font-black tracking-widest">Rôle requis :</span>
                             <span className="text-slate-800 font-black">
-                              {user.requestedRole === 'ADMIN' ? 'ADMINISTRATEUR' : 
+                              {user.requestedRole === 'Administrateur' ? 'ADMINISTRATEUR' : 
                                user.requestedRole === 'RESPONSABLE_CHANTIER' ? 'RESPONSABLE CHANTIER' : 
                                'MAGASINIER'}
                             </span>
@@ -711,7 +711,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                               <select
                                 value={user.role}
                                 onChange={(e) => {
-                                  const roleVal = e.target.value as 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
+                                  const roleVal = e.target.value as 'SUPER_ADMIN' | 'Administrateur' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
                                   setUserRole(user.id, roleVal)
                                     .then(() => toast.success(`Rôle mis à jour`))
                                     .catch((err: any) => toast.error(`Erreur: ${err.message || err}`));
@@ -719,7 +719,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                                 className="text-[9px] font-black uppercase tracking-widest text-slate-700 bg-slate-50 border border-slate-200 rounded px-1.5 py-0.5 focus:outline-none focus:ring-1 focus:ring-sky-500 cursor-pointer"
                               >
                                 <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-                                <option value="ADMIN">ADMIN</option>
+                                <option value="Administrateur">Administrateur</option>
                                 <option value="MAGASINIER">MAGASINIER</option>
                                 <option value="RESPONSABLE_CHANTIER">RESPONSABLE_CHANTIER</option>
                               </select>
@@ -727,7 +727,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                           </div>
 
                           {/* Toggle canWrite for ADMINs */}
-                          {user.role === 'ADMIN' && currentUser?.role === 'SUPER_ADMIN' && (
+                          {user.role === 'Administrateur' && currentUser?.role === 'SUPER_ADMIN' && (
                             <div className="flex items-center justify-between gap-2">
                               <label className="text-[8px] font-black uppercase tracking-widest text-slate-400 block whitespace-nowrap">
                                 Droits d'écriture

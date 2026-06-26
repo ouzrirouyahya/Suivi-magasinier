@@ -42,7 +42,7 @@ export function useSystem() {
 
   const toggleMaintenanceLock = useCallback(async (enabled: boolean, reason?: string) => {
     try {
-      if (currentUser?.role !== 'ADMIN' && currentUser?.role !== 'SUPER_ADMIN') {
+      if (currentUser?.role !== 'Administrateur' && currentUser?.role !== 'SUPER_ADMIN') {
         throw new Error("PRIVILEGE_ESCALATION_BLOCKED: Only administrators can alter global maintenance locks.");
       }
       await setDoc(doc(db, 'metadata', 'system_config'), {
