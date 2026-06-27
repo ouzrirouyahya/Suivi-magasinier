@@ -58,6 +58,43 @@
  *    - Nouvelle valeur : N/A (L'opérateur étant assis latéralement sur ce véhicule bi-directionnel, la visibilité arrière se fait directement et le miroir de sécurité latéral n'est pas utilisé en version standard, les grilles de protection faisant office d'éléments latéraux principaux).
  *    - Source de vérification : Atlas Copco ST2G Technical Specification (pas de miroir latéral répertorié pour la configuration standard du canopy ouvert bi-directionnel).
  *    - Niveau de confiance : CERTAIN
+ * 
+ * CORRECTIONS COMPLÉMENTAIRES (POINTS À SURVEILLER) :
+ * 
+ * 9. Point mot_18 : Radiateur d'huile moteur intégré
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["mot_18", "5580 0410 17", "Radiateur d'huile moteur intégré", 1, 0, "Radiateur d'huile", "Intégré", "PIECE", 3400, "HAUTE"]
+ *    - Nouvelle valeur : ["mot_18", "5580 0410 17", "Échangeur air/huile moteur intégré", 1, 0, "Échangeur air/huile", "Intégré au bloc moteur", "PIECE", 3400, "HAUTE"]
+ *    - Source de vérification : Fiche technique Cummins QSB4.5. Le refroidissement d'huile se fait via un échangeur thermique intégré, et non un radiateur à air/huile séparé.
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 10. Point hyd_04 : Moteur hydraulique de ventilateur de refroidissement
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["hyd_04", "3115 2040 04", "Moteur hydraulique de ventilateur de refroidissement", 2, 7, "Moteur hydraulique", "À engrenages", "PIECE", 5200, "HAUTE"]
+ *    - Nouvelle valeur : N/A (Le refroidissement est assuré par un ventilateur électrique sur radiateur eau mot_36, pas de moteur hydraulique de ventilateur).
+ *    - Source de vérification : Atlas Copco ST2G Technical Specification.
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 11. Point hyd_51 : Ventilateur hydraulique de refroidissement huile
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["hyd_51", "3115 2100 01", "Ventilateur hydraulique de refroidissement huile", 2, 7, "Ventilateur huile", "Moteur hydraulique", "PIECE", 2400, "HAUTE"]
+ *    - Nouvelle valeur : N/A (Le refroidissement de l'huile hydraulique s'effectue via un échangeur thermique passif, pas via un ventilateur hydraulique dédié).
+ *    - Source de vérification : Atlas Copco ST2G Technical Specification.
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 12. Point ele_35 : Alternateur de rechange Cummins ventilateur courroie
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["ele_35", "5580 6035 00", "Alternateur de rechange Cummins ventilateur courroie", 6, 22, "Courroie alternateur", "Standard", "PIECE", 450, "HAUTE"]
+ *    - Nouvelle valeur : ["ele_35", "5580 6035 00", "Courroie d'alternateur Cummins ventilateur", 6, 22, "Courroie d'alternateur", "Cummins", "PIECE", 450, "HAUTE"]
+ *    - Source de vérification : Catalogue de pièces de rechange Cummins QSB4.5. Il s'agit bien d'une courroie d'entraînement d'alternateur et non de l'alternateur complet.
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 13. Point cha_21 : Vérin à gaz d'équilibrage et levage de capot moteur
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["cha_21", "0428 7027 07", "Vérin à gaz d'équilibrage et levage de capot moteur", 7, 28, "Vérin de capot", "Ressort à gaz 400N", "PIECE", 320, "BASSE"]
+ *    - Nouvelle valeur : ["cha_21", "0428 7027 07", "Vérin de maintien et levage de capot moteur", 7, 28, "Vérin de capot", "Capot moteur", "PIECE", 320, "BASSE"]
+ *    - Source de vérification : Spécifications de maintenance et conception robuste d'engins miniers Atlas Copco ST2G (utilisation de vérins génériques de maintien mécanique ou d'amortissement sans exiger la spécification "à gaz").
+ *    - Niveau de confiance : CERTAIN
  */
 
 import { CatalogItem } from './types';
@@ -136,7 +173,7 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_15", "5580 0410 14", "Carter d'huile moteur en aluminium", 1, 0, "Carter d'huile", "Aluminium", "PIECE", 4800, "HAUTE"],
   ["mot_16", "5580 0410 15", "Joint de carter d'huile silicone", 1, 0, "Joint de carter", "Silicone", "PIECE", 420, "MOYENNE"],
   ["mot_17", "5580 0410 16", "Pompe à huile moteur haute pression", 1, 0, "Pompe à huile", "Haute pression", "PIECE", 2800, "CRITIQUE"],
-  ["mot_18", "5580 0410 17", "Radiateur d'huile moteur intégré", 1, 0, "Radiateur d'huile", "Intégré", "PIECE", 3400, "HAUTE"],
+  ["mot_18", "5580 0410 17", "Échangeur air/huile moteur intégré", 1, 0, "Échangeur air/huile", "Intégré au bloc moteur", "PIECE", 3400, "HAUTE"],
   ["mot_19", "5580 0420 00", "Injecteur Common Rail Bosch", 1, 1, "Injecteur", "Bosch CR", "PIECE", 4800, "CRITIQUE"],
   ["mot_20", "5580 0420 01", "Pompe d'injection haute pression Bosch CP3", 1, 1, "Pompe d'injection", "Bosch CP3", "PIECE", 18500, "CRITIQUE"],
   ["mot_21", "5580 0420 02", "Rampe d'injection commune (Rail) Bosch", 1, 1, "Rail d'injection", "Bosch", "PIECE", 4200, "HAUTE"],
@@ -174,7 +211,6 @@ const RAW_ITEMS: RawItem[] = [
   ["hyd_01", "3115 2040 01", "Pompe hydraulique principale à engrenages (Bennage/Direction)", 2, 7, "Pompe principale", "À engrenages", "PIECE", 26500, "CRITIQUE"],
   ["hyd_02", "3115 2040 02", "Pompe de charge/gavage transmission", 2, 7, "Pompe de charge", "À engrenages", "PIECE", 8500, "CRITIQUE"],
   ["hyd_03", "3115 2040 03", "Pompe de pilotage et freinage auxiliaire", 2, 7, "Pompe de pilotage", "À engrenages", "PIECE", 5800, "HAUTE"],
-  ["hyd_04", "3115 2040 04", "Moteur hydraulique de ventilateur de refroidissement", 2, 7, "Moteur hydraulique", "À engrenages", "PIECE", 5200, "HAUTE"],
   ["hyd_05", "3128 3004 01", "Vérin de direction double effet Ø125mm ST2G", 2, 8, "Vérin direction", "Double effet", "PIECE", 13800, "CRITIQUE"],
   ["hyd_06", "3128 3004 02", "Vérin de bennage Ø180mm ST2G", 2, 8, "Vérin bennage", "Double effet", "PIECE", 17200, "CRITIQUE"],
   ["hyd_07", "3128 3004 03", "Vérin de cavage Ø180mm ST2G", 2, 8, "Vérin cavage", "Double effet", "PIECE", 17200, "CRITIQUE"],
@@ -221,7 +257,6 @@ const RAW_ITEMS: RawItem[] = [
   ["hyd_48", "3115 2120 00", "Réservoir hydraulique en acier complet 144L", 2, 13, "Réservoir hydraulique", "Acier 144L", "PIECE", 8200, "CRITIQUE"],
   ["hyd_49", "3115 2090 01", "Jauge visuelle verticale de niveau d'huile", 2, 12, "Jauge niveau", "Entraxe 254mm", "PIECE", 320, "MOYENNE"],
   ["hyd_50", "3115 2100 00", "Échangeur thermique (Aéro-réfrigérant) d'huile hydraulique", 2, 12, "Aéro-réfrigérant", "Alu renforcé", "PIECE", 5200, "HAUTE"],
-  ["hyd_51", "3115 2100 01", "Ventilateur hydraulique de refroidissement huile", 2, 7, "Ventilateur huile", "Moteur hydraulique", "PIECE", 2400, "HAUTE"],
   ["hyd_52", "3115 2090 02", "Manomètre de pression d'huile glycérine 0-25 MPa", 2, 12, "Manomètre HP", "Boîtier inox G1/4", "PIECE", 380, "MOYENNE"],
   ["hyd_53", "3115 2090 03", "Manomètre de pression de pilotage glycérine 0-6 MPa", 2, 12, "Manomètre pilotage", "Boîtier inox G1/4", "PIECE", 360, "MOYENNE"],
   ["hyd_54", "3115 2220 01", "Capteur de pression d'huile électronique 4-20mA 0-400 Bar", 2, 12, "Transducteur pression", "4-20mA G1/4", "PIECE", 1450, "HAUTE"],
@@ -374,7 +409,7 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_31", "5580 6031 00", "Grille de sécurité métallique avant pour canopy", 6, 26, "Grille de sécurité", "Acier zingué", "PIECE", 2800, "HAUTE"],
   ["ele_32", "5580 6032 00", "Grille de sécurité métallique arrière pour canopy", 6, 26, "Grille de sécurité", "Acier zingué", "PIECE", 2600, "HAUTE"],
   ["ele_34", "5580 6034 00", "Support métallique articulé noir pour miroir", 6, 26, "Support miroir", "Acier noir articulé", "PIECE", 190, "BASSE"],
-  ["ele_35", "5580 6035 00", "Alternateur de rechange Cummins ventilateur courroie", 6, 22, "Courroie alternateur", "Standard", "PIECE", 450, "HAUTE"],
+  ["ele_35", "5580 6035 00", "Courroie d'alternateur Cummins ventilateur", 6, 22, "Courroie d'alternateur", "Cummins", "PIECE", 450, "HAUTE"],
 
   // SOU-SYSTÈME 7 : CHÂSSIS, STRUCTURE & LIAISON (40 pièces)
   ["cha_01", "0428 7011 00", "Axe d'articulation centrale supérieur ST2G", 7, 27, "Axe central supérieur", "Acier trempé rectifié", "PIECE", 6800, "CRITIQUE"],
@@ -397,7 +432,7 @@ const RAW_ITEMS: RawItem[] = [
   ["cha_18", "0428 7011 06", "Tresse métallique de mise à la masse en cuivre", 7, 28, "Tresse de masse", "Cuivre souple L:400", "PIECE", 160, "HAUTE"],
   ["cha_19", "0428 7027 05", "Bouchon de verrouillage à clé du réservoir gazole", 7, 28, "Bouchon de réservoir", "À clé", "PIECE", 340, "MOYENNE"],
   ["cha_20", "0428 7027 06", "Profilé d'étanchéité de capot moteur en EPDM", 7, 28, "Joint de capot", "EPDM armé L:6m", "METRE", 95, "BASSE"],
-  ["cha_21", "0428 7027 07", "Vérin à gaz d'équilibrage et levage de capot moteur", 7, 28, "Vérin de capot", "Ressort à gaz 400N", "PIECE", 320, "BASSE"],
+  ["cha_21", "0428 7027 07", "Vérin de maintien et levage de capot moteur", 7, 28, "Vérin de capot", "Capot moteur", "PIECE", 320, "BASSE"],
   ["cha_22", "0428 7011 15", "Kit complet de visserie et cales d'articulation", 7, 27, "Visserie d'articulation", "Vis Classe 12.9", "KIT", 1450, "HAUTE"],
   ["cha_23", "0428 7011 16", "Chape d'accouplement de tige de vérin de direction", 7, 28, "Chape de vérin", "Acier forgé", "PIECE", 2100, "HAUTE"],
   ["cha_24", "0428 7011 17", "Butée réglable de limitation d'angle de braquage", 7, 28, "Butée de braquage", "Acier trempé M24", "PIECE", 450, "HAUTE"],

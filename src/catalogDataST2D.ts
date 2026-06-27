@@ -58,6 +58,29 @@
  *    - Nouvelle valeur : ["mot_53", "0428 1053", "Capteur de température d'huile moteur Deutz", 1, 5, "Capteur température", "Deutz", "PIECE", 420, "HAUTE"]
  *    - Source de vérification : Spécifications techniques Atlas Copco ST2D / moteur Deutz F6L-912W refroidi par air (air cooled). N'ayant pas de circuit d'eau, ce moteur n'a pas de culasse refroidie par eau ; le capteur mesure directement la température d'huile moteur globale.
  *    - Niveau de confiance : CERTAIN
+ * 
+ * CORRECTIONS COMPLÉMENTAIRES (POINTS À SURVEILLER) :
+ * 
+ * 9. Point mot_42 + mot_43 : Deux silencieux d'échappement
+ *    - Statut : SUPPRIMÉ (mot_42) / NON MODIFIÉ (mot_43)
+ *    - Ancienne valeur (mot_42) : ["mot_42", "0428 1042", "Silencieux d'échappement robuste ST2D", 1, 2, "Silencieux d'échappement", "Epiroc", "PIECE", 4800, "HAUTE"]
+ *    - Nouvelle valeur : N/A (Pièce mot_42 supprimée car le ST2D utilise un système d'échappement unique équipé du silencieux avec purificateur intégré mot_43 pour les applications minières souterraines. mot_43 reste inchangé.)
+ *    - Source de vérification : Spare Parts Catalog ST2D (le conduit d'échappement comprend un silencieux unique avec purificateur de gaz catalytique intégré pour répondre aux normes minières de ventilation).
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 10. Point hyd_54 : Échangeur de chaleur aéro-réfrigérant d'huile hydraulique
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["hyd_54", "3128 2054", "Échangeur de chaleur aéro-réfrigérant d'huile hydraulique", 2, 12, "Échangeur hydraulique", "Epiroc", "PIECE", 4500, "HAUTE"]
+ *    - Nouvelle valeur : ["hyd_54", "3128 2054", "Échangeur thermique air/huile hydraulique", 2, 12, "Échangeur thermique", "Air/huile hydraulique", "PIECE", 4500, "HAUTE"]
+ *    - Source de vérification : Spécifications techniques Atlas Copco ST2D. Le refroidissement de l'huile hydraulique est assuré de manière passive par un échangeur thermique air/huile monté dans le flux d'air généré par le ventilateur du moteur Deutz.
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 11. Point ele_39 : Ventilateur électrique de brassage d'air de canopy
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["ele_39", "5580 6039", "Ventilateur électrique de brassage d'air de canopy", 6, 26, "Ventilateur de canopy", "24V", "PIECE", 1800, "MOYENNE"]
+ *    - Nouvelle valeur : N/A (Pièce supprimée car l'engin de vintage génération ST2D avec canopy ouvert MSHA n'inclut pas de ventilateur électrique de brassage de l'air ambiant standard dans son canopy).
+ *    - Source de vérification : Atlas Copco ST2D Technical Specification / Catalogue pièces détachées ST2D (513 pages).
+ *    - Niveau de confiance : CERTAIN
  */
 
 import { CatalogItem } from './types';
@@ -160,7 +183,6 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_39", "0428 1039", "Séparateur eau-gasoil avec bol transparent", 1, 4, "Séparateur eau-gasoil", "Deutz", "PIECE", 1200, "CRITIQUE"],
   ["mot_40", "0428 1040", "Tuyau d'alimentation gasoil basse pression", 1, 1, "Tuyau alimentation", "Deutz", "PIECE", 340, "HAUTE"],
   ["mot_41", "0428 1041", "Pompe de transfert de carburant manuelle", 1, 1, "Pompe transfert gasoil", "Deutz", "PIECE", 1600, "HAUTE"],
-  ["mot_42", "0428 1042", "Silencieux d'échappement robuste ST2D", 1, 2, "Silencieux d'échappement", "Epiroc", "PIECE", 4800, "HAUTE"],
   ["mot_43", "0428 1043", "Silencieux d'échappement avec purificateur", 1, 2, "Silencieux d'échappement", "Avec purificateur", "PIECE", 6200, "HAUTE"],
   ["mot_44", "0428 1044", "Tuyau d'échappement flexible double enveloppe", 1, 2, "Tuyau flexible", "Inox", "PIECE", 1800, "MOYENNE"],
   ["mot_45", "0428 1045", "Bride d'accouplement échappement renforcée", 1, 2, "Bride d'échappement", "Epiroc", "PIECE", 420, "MOYENNE"],
@@ -229,7 +251,7 @@ const RAW_ITEMS: RawItem[] = [
   ["hyd_51", "3128 2051", "Soupape de sécurité de bloc d'accumulateur", 2, 13, "Soupape d'accumulateur", "Epiroc", "PIECE", 1400, "HAUTE"],
   ["hyd_52", "3128 2052", "Réservoir hydraulique métallique renforcé 144L ST2D", 2, 13, "Réservoir hydraulique", "Epiroc", "PIECE", 6800, "CRITIQUE"],
   ["hyd_53", "3128 2053", "Jauge de niveau d'huile visuelle verticale de réservoir", 2, 12, "Jauge niveau hydraulique", "Epiroc", "PIECE", 420, "MOYENNE"],
-  ["hyd_54", "3128 2054", "Échangeur de chaleur aéro-réfrigérant d'huile hydraulique", 2, 12, "Échangeur hydraulique", "Epiroc", "PIECE", 4500, "HAUTE"],
+  ["hyd_54", "3128 2054", "Échangeur thermique air/huile hydraulique", 2, 12, "Échangeur thermique", "Air/huile hydraulique", "PIECE", 4500, "HAUTE"],
   ["hyd_56", "3128 2056", "Manomètre de pression hydraulique glycérine 0-25 MPa", 2, 12, "Manomètre hydraulique", "Epiroc", "PIECE", 380, "MOYENNE"],
   ["hyd_57", "3128 2057", "Manomètre indicateur de pression de filtre de retour", 2, 12, "Jauge de pression filtre", "Epiroc", "PIECE", 280, "BASSE"],
   ["hyd_58", "3128 2058", "Capteur de pression analogique de circuit principal", 2, 12, "Capteur pression hyd.", "Epiroc", "PIECE", 520, "HAUTE"],
@@ -374,7 +396,6 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_36", "5580 6036", "Monostick de direction mécanique de canopy", 6, 25, "Monostick de direction", "ST2D", "PIECE", 4200, "HAUTE"],
   ["ele_37", "5580 6037", "Levier mécanique de commande de bennage", 6, 25, "Levier de commande dump", "Epiroc", "PIECE", 2800, "HAUTE"],
   ["ele_38", "5580 6038", "Levier mécanique de commande de levage/hoist", 6, 25, "Levier de commande hoist", "Epiroc", "PIECE", 2800, "HAUTE"],
-  ["ele_39", "5580 6039", "Ventilateur électrique de brassage d'air de canopy", 6, 26, "Ventilateur de canopy", "24V", "PIECE", 1800, "MOYENNE"],
   ["ele_40", "5580 6040", "Plafonnier de rechange à LED pour canopy", 6, 26, "Éclairage intérieur canopy", "LED 24V", "PIECE", 340, "BASSE"],
 
   // SOU-SYSTÈME 7 : CHÂSSIS, STRUCTURE & LIAISON — Articulation 16°, 12 320 kg (39 pièces)
