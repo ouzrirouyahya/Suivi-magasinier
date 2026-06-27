@@ -19,6 +19,7 @@ const CATALOG_OPTIONS: (CatalogSelectorConfig & { desc: string })[] = [
   { id: 'ST7', label: 'Epiroc ST7 (6.8 T.)', description: 'Cummins QSB6.7', desc: 'Cummins QSB6.7', color: 'from-emerald-50 to-emerald-100/50 hover:bg-emerald-100 text-emerald-800 border-emerald-200' },
   { id: 'T23', label: 'Montabert T23', description: 'Marteau 23kg', desc: 'Marteau 23kg', color: 'from-purple-50 to-purple-100/50 hover:bg-purple-100 text-purple-800 border-purple-200' },
   { id: 'T28', label: 'Montabert T28', description: 'Marteau 28kg', desc: 'Marteau 28kg', color: 'from-fuchsia-50 to-fuchsia-100/50 hover:bg-fuchsia-100 text-fuchsia-800 border-fuchsia-200' },
+  { id: 'CONSOMMABLES', label: 'Consommables de Forage', description: 'Barres, taillants, accessoires', desc: 'Barres, taillants, accessoires', color: 'from-slate-50 to-slate-100/50 hover:bg-slate-100 text-slate-800 border-slate-200' },
 ];
 
 const CATALOG_COUNTS: Record<string, number> = {
@@ -26,7 +27,65 @@ const CATALOG_COUNTS: Record<string, number> = {
   ST2D: 284,
   ST7: 315,
   T23: 155,
-  T28: 155
+  T28: 155,
+  CONSOMMABLES: 9
+};
+
+const CATEGORY_ORDER: Record<string, string[]> = {
+  'ST2G': [
+    'Moteur Diesel & Filtration',
+    'Système Hydraulique & Vérins',
+    'Transmission & Convertisseur',
+    'Ponts, Essieux & Roues',
+    'Freinage & Sécurité',
+    'Électricité & Canopy',
+    'Châssis, Structure & Liaison',
+  ],
+  'ST2D': [
+    'Moteur Diesel & Filtration',
+    'Système Hydraulique & Vérins',
+    'Transmission & Convertisseur',
+    'Ponts, Essieux & Roues',
+    'Freinage & Sécurité',
+    'Électricité & Canopy',
+    'Châssis, Structure & Liaison',
+  ],
+  'ST7': [
+    'Moteur Diesel & Filtration',
+    'Système Hydraulique & Vérins',
+    'Transmission & Convertisseur',
+    'Ponts, Essieux & Roues',
+    'Freinage & Sécurité',
+    'Électricité & Poste Opérateur',
+    'Châssis, Structure & Liaison',
+  ],
+  'T23': [
+    'Tête Arrière T23',
+    'Distribution T23',
+    'Cylindre T23',
+    'Piston & Frappe T23',
+    'Écrou Rochet & Buse T23',
+    'Outils & Accessoires T23',
+    'Poussoir (Jack Leg) & Fixation T23',
+    'Consommables & Pièces d\'Usure T23',
+  ],
+  'T28': [
+    'Tête Arrière T28',
+    'Distribution T28',
+    'Cylindre T28',
+    'Piston & Frappe T28',
+    'Écrou Rochet & Buse T28',
+    'Outils & Accessoires T28',
+    'Poussoir (Jack Leg) & Fixation T28',
+    'Consommables & Pièces d\'Usure T28',
+  ],
+  'CONSOMMABLES': [
+    'Barres de Forage',
+    'Taillants & Boutons',
+    'Mèches & Tiges',
+    'Adaptateurs & Raccords',
+    'Accessoires de Forage',
+  ],
 };
 
 export function HydrominesCatalog() {
@@ -178,6 +237,7 @@ export function HydrominesCatalog() {
     const st7 = hydrominesCatalog.filter(x => x.equipmentFamily === 'ST7').length;
     const t23 = hydrominesCatalog.filter(x => x.equipmentFamily === 'T23').length;
     const t28 = hydrominesCatalog.filter(x => x.equipmentFamily === 'T28').length;
+    const consommables = hydrominesCatalog.filter(x => x.equipmentFamily === 'CONSOMMABLES').length;
 
     // Quality alerts lists
     const sansPrix: HydrominesCatalogItem[] = [];
@@ -278,6 +338,7 @@ export function HydrominesCatalog() {
       st7,
       t23,
       t28,
+      consommables,
       sansPrix,
       sansCat,
       sansUnite,
@@ -525,7 +586,26 @@ export function HydrominesCatalog() {
     matched.forEach(it => {
       if (it.functionalCategory) uniq.add(it.functionalCategory);
     });
-    return Array.from(uniq).sort();
+    
+    const categories = Array.from(uniq);
+    if (categories.length === 0) {
+      console.warn(`[HydrominesCatalog] No categories found for ${selectedFamily}`);
+    } else {
+      console.log(`[HydrominesCatalog] Found ${categories.length} categories for ${selectedFamily}:`, categories);
+    }
+    
+    // Sort by predefined order instead of alphabetical
+    const order = CATEGORY_ORDER[selectedFamily] || [];
+    categories.sort((a, b) => {
+      const idxA = order.indexOf(a);
+      const idxB = order.indexOf(b);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.localeCompare(b); // fallback alphabetical
+    });
+    
+    return categories;
   }, [selectedFamily]);
 
   // Handle tech catalog tab clicks
@@ -576,6 +656,7 @@ export function HydrominesCatalog() {
     else if (selectedFamily === 'ST7') family = 'ST7';
     else if (selectedFamily === 'T23') family = 'T23';
     else if (selectedFamily === 'T28') family = 'T28';
+    else if (selectedFamily === 'CONSOMMABLES') family = 'CONSOMMABLES';
 
     const newItem: HydrominesCatalogItem = {
       id: 'hm_' + generateId(),

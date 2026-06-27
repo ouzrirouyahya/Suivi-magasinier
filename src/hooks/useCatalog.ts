@@ -20,16 +20,37 @@ import { T28_CATALOG } from '../catalogDataT28';
  * Filters the master catalog based on the selected family.
  */
 export const getCatalogByFamily = (family: string): CatalogItem[] => {
+  if (family === 'CONSOMMABLES') {
+    const results = MASTER_CATALOG.filter(item => 
+      item.id.startsWith('for_') || 
+      item.suggestedType === 'CONSOMMABLES' || 
+      (item.compatibility && (
+        item.compatibility.toLowerCase().includes('tous perforateurs') || 
+        item.compatibility.toLowerCase().includes('consommables')
+      ))
+    );
+    console.log(`[getCatalogByFamily] family: CONSOMMABLES, items matching count: ${results.length}`);
+    return results;
+  }
+
   const familyMap: Record<string, string> = {
-    'ST2G': 'Epiroc ST2G',
-    'ST2D': 'Epiroc ST2D',
-    'ST7': 'Epiroc ST7',
+    'ST2G': 'Epiroc Scooptram ST2G',
+    'ST2D': 'Epiroc Scooptram ST2D',
+    'ST7': 'Epiroc Scooptram ST7',
     'T23': 'Montabert T23',
     'T28': 'Montabert T28',
   };
-  const compatibility = familyMap[family];
-  if (!compatibility) return [];
-  return MASTER_CATALOG.filter(item => item.compatibility === compatibility);
+  const targetCompatibility = familyMap[family];
+  if (!targetCompatibility) {
+    console.warn(`[getCatalogByFamily] No compatibility mapping found for family: ${family}`);
+    return [];
+  }
+  const results = MASTER_CATALOG.filter(item => {
+    const itemComp = (item.compatibility || '').toLowerCase();
+    return itemComp === targetCompatibility.toLowerCase() || itemComp.includes(family.toLowerCase());
+  });
+  console.log(`[getCatalogByFamily] family: ${family}, targetCompatibility: ${targetCompatibility}, items matching count: ${results.length}`);
+  return results;
 };
 
 /**
@@ -41,9 +62,11 @@ export function useCatalogFilter() {
   const [searchQuery, setSearchQuery] = useState('');
   
   const filteredItems = useMemo(() => {
+    console.log('[useCatalogFilter] selectedFamily:', selectedFamily);
     let items = MASTER_CATALOG;
     if (selectedFamily) {
       items = getCatalogByFamily(selectedFamily);
+      console.log('[useCatalogFilter] filtered count by family:', items.length);
     }
     if (searchQuery.length >= 2) {
       const q = searchQuery.toLowerCase();
@@ -52,6 +75,7 @@ export function useCatalogFilter() {
         item.reference?.toLowerCase().includes(q) ||
         item.component?.toLowerCase().includes(q)
       );
+      console.log('[useCatalogFilter] filtered count with searchQuery:', items.length);
     }
     return items;
   }, [selectedFamily, searchQuery]);
