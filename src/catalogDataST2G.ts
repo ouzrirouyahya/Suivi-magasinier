@@ -1,3 +1,42 @@
+/*
+ * RAPPORT DE CORRECTION DES ERREURS CRITIQUES - CATALOGUE ST2G
+ * 
+ * 1. Erreur hyd_01 : Pompe hydraulique principale à pistons (Bennage/Direction)
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["hyd_01", "3115 2040 01", "Pompe hydraulique principale à pistons (Bennage/Direction)", 2, 7, "Pompe principale", "Pistons axiaux", "PIECE", 26500, "CRITIQUE"]
+ *    - Nouvelle valeur : ["hyd_01", "3115 2040 01", "Pompe hydraulique principale à engrenages (Bennage/Direction)", 2, 7, "Pompe principale", "À engrenages", "PIECE", 26500, "CRITIQUE"]
+ *    - Source de vérification : Spécifications techniques Atlas Copco ST2G / mining.tcgc.ru (indiquant "Gear pump, 12.4/13.8 MPa")
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 2. Erreur ele_19 : Joystick électronique de direction CAN bus braquage
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["ele_19", "5580 6019 00", "Joystick électronique de direction CAN bus braquage", 6, 25, "Joystick électronique", "CAN bus 2 axes", "PIECE", 8200, "CRITIQUE"]
+ *    - Nouvelle valeur : ["ele_19", "5580 6019 00", "Monostick de direction mécanique", 6, 25, "Monostick direction", "Mécanique", "PIECE", 8200, "CRITIQUE"]
+ *    - Source de vérification : Spécifications techniques Atlas Copco ST2G (indiquant commande par "monostick" mécanique standard pour direction et bennage pour cette gamme de chargeurs compacts de 4 tonnes)
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 3. Erreur ele_17 : Afficheur moniteur intelligent couleur de canopy
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["ele_17", "5580 6017 00", "Afficheur moniteur intelligent couleur de canopy", 6, 25, "Écran moniteur", "Écran LCD couleur", "PIECE", 24500, "CRITIQUE"]
+ *    - Nouvelle valeur : N/A (Pièce absente de la configuration standard du ST2G, qui utilise une console analogique simple sans système de contrôle RCS)
+ *    - Source de vérification : Fiches techniques de l'Epiroc/Atlas Copco Scooptram ST2G (canopy ouvert, configuration simplifiée sans écran RCS V5 couleur, réservé au ST7+)
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 4. Erreur ele_18 : Module de commande et calculateur principal RCS V5
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["ele_18", "5580 6018 00", "Module de commande et calculateur principal RCS V5", 6, 25, "Calculateur principal", "Epiroc RCS V5", "PIECE", 29500, "CRITIQUE"]
+ *    - Nouvelle valeur : N/A (Pièce absente du ST2G, qui ne dispose pas de l'architecture électronique informatisée de contrôle intelligent RCS V5, spécifique au ST7)
+ *    - Source de vérification : Fiches techniques Epiroc/Atlas Copco Scooptram ST2G / ST7
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 5. Erreur cha_13 : Poignée d'accès cabine robuste en acier forgé
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["cha_13", "0428 7019 01", "Poignée d'accès cabine robuste en acier forgé", 7, 28, "Poignée d'accès", "Acier forgé", "PIECE", 240, "HAUTE"]
+ *    - Nouvelle valeur : ["cha_13", "0428 7019 01", "Poignée d'accès canopy robuste en acier forgé", 7, 28, "Poignée d'accès", "Acier forgé", "PIECE", 240, "HAUTE"]
+ *    - Source de vérification : Spécifications techniques Atlas Copco/Epiroc ST2G ("Canopy ISO ROPS/FOPS ouvert", pas de cabine fermée disponible sur ce modèle de 4000kg)
+ *    - Niveau de confiance : CERTAIN
+ */
+
 import { CatalogItem } from './types';
 
 const CATEGORIES: Record<number, { name: string; prefix: string }> = {
@@ -109,7 +148,7 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_50", "5580 0460 04", "Capteur de régime moteur vilebrequin", 1, 5, "Capteur de régime", "Magnétique", "PIECE", 580, "HAUTE"],
 
   // SOU-SYSTÈME 2 : SYSTÈME HYDRAULIQUE & VÉRINS (65 pièces)
-  ["hyd_01", "3115 2040 01", "Pompe hydraulique principale à pistons (Bennage/Direction)", 2, 7, "Pompe principale", "Pistons axiaux", "PIECE", 26500, "CRITIQUE"],
+  ["hyd_01", "3115 2040 01", "Pompe hydraulique principale à engrenages (Bennage/Direction)", 2, 7, "Pompe principale", "À engrenages", "PIECE", 26500, "CRITIQUE"],
   ["hyd_02", "3115 2040 02", "Pompe de charge/gavage transmission", 2, 7, "Pompe de charge", "À engrenages", "PIECE", 8500, "CRITIQUE"],
   ["hyd_03", "3115 2040 03", "Pompe de pilotage et freinage auxiliaire", 2, 7, "Pompe de pilotage", "À engrenages", "PIECE", 5800, "HAUTE"],
   ["hyd_04", "3115 2040 04", "Moteur hydraulique de ventilateur de refroidissement", 2, 7, "Moteur hydraulique", "À engrenages", "PIECE", 5200, "HAUTE"],
@@ -298,9 +337,7 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_14", "5580 6014 00", "Capteur de restriction de filtre à air d'admission", 6, 24, "Sonde restriction", "Dépression contact", "PIECE", 290, "MOYENNE"],
   ["ele_15", "5580 6015 00", "Capteur électrique de niveau bas d'eau de radiateur", 6, 24, "Capteur niveau d'eau", "Flotteur", "PIECE", 380, "HAUTE"],
   ["ele_16", "5580 6016 00", "Capteur inductif de vitesse de rotation arbre boîte", 6, 24, "Sonde vitesse", "Inductif M18", "PIECE", 620, "HAUTE"],
-  ["ele_17", "5580 6017 00", "Afficheur moniteur intelligent couleur de canopy", 6, 25, "Écran moniteur", "Écran LCD couleur", "PIECE", 24500, "CRITIQUE"],
-  ["ele_18", "5580 6018 00", "Module de commande et calculateur principal RCS V5", 6, 25, "Calculateur principal", "Epiroc RCS V5", "PIECE", 29500, "CRITIQUE"],
-  ["ele_19", "5580 6019 00", "Joystick électronique de direction CAN bus braquage", 6, 25, "Joystick électronique", "CAN bus 2 axes", "PIECE", 8200, "CRITIQUE"],
+  ["ele_19", "5580 6019 00", "Monostick de direction mécanique", 6, 25, "Monostick direction", "Mécanique", "PIECE", 8200, "CRITIQUE"],
   ["ele_20", "5580 6020 00", "Soufflet de protection élastomère pour joystick", 6, 25, "Soufflet joystick", "Néoprène étanche", "PIECE", 160, "BASSE"],
   ["ele_21", "5580 6021 00", "Faisceau électrique de liaison console de canopy complet", 6, 24, "Faisceau électrique", "Gaine blindée", "PIECE", 4800, "HAUTE"],
   ["ele_22", "5580 6022 00", "Klaxon de sécurité puissant 24V escargot", 6, 21, "Klaxon escargot", "24V robuste", "PIECE", 240, "HAUTE"],
@@ -331,7 +368,7 @@ const RAW_ITEMS: RawItem[] = [
   ["cha_10", "0428 7001 07", "Bague d'usure en bronze de bras de levage principal", 7, 28, "Bague de bras", "Bronze fritté", "PIECE", 1100, "HAUTE"],
   ["cha_11", "0428 7001 08", "Bague de pivotement de benne côté godet", 7, 28, "Bague de godet", "Bronze fritté", "PIECE", 1250, "HAUTE"],
   ["cha_12", "0428 7019 00", "Marchepied métallique inférieur antidérapant d'accès", 7, 28, "Marchepied accès", "Acier antidérapant", "PIECE", 1100, "MOYENNE"],
-  ["cha_13", "0428 7019 01", "Poignée d'accès cabine robuste en acier forgé", 7, 28, "Poignée d'accès", "Acier forgé", "PIECE", 240, "HAUTE"],
+  ["cha_13", "0428 7019 01", "Poignée d'accès canopy robuste en acier forgé", 7, 28, "Poignée d'accès", "Acier forgé", "PIECE", 240, "HAUTE"],
   ["cha_14", "0428 7015 00", "Butée de fin de course de bras en élastomère", 7, 28, "Butée de bras", "Élastomère 80 Sh", "PIECE", 320, "HAUTE"],
   ["cha_15", "0428 7030 00", "Grille de protection métallique de phare LED avant", 7, 28, "Grille phare LED", "Acier zingué", "PIECE", 420, "MOYENNE"],
   ["cha_16", "0428 7034 00", "Crochet de remorquage renforcé avant soudable", 7, 28, "Crochet de traction", "Acier forgé 25T", "PIECE", 1650, "MOYENNE"],

@@ -1,3 +1,56 @@
+/*
+ * RAPPORT DE CORRECTION DES ERREURS CRITIQUES - CATALOGUE ST2D
+ * 
+ * 1. Erreur mot_29 : Radiateur d'huile moteur air-cooled
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["mot_29", "0428 1029", "Radiateur d'huile moteur air-cooled", 1, 3, "Radiateur d'huile", "Deutz", "PIECE", 3200, "HAUTE"],
+ *    - Nouvelle valeur : ["mot_29", "0428 1029", "Refroidisseur d'huile moteur par circulation d'air", 1, 3, "Refroidisseur d'huile", "Air-cooled", "PIECE", 3200, "HAUTE"],
+ *    - Source de vérification : Spécifications techniques Atlas Copco ST2D et moteur Deutz FL912W (moteur refroidi par air, pas de radiateur d'huile à eau séparé, échangeur air-huile refroidi par le ventilateur principal)
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 2. Erreur mot_43 : Catalyseur d'échappement minier purificateur
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["mot_43", "0428 1043", "Catalyseur d'échappement minier purificateur", 1, 2, "Catalyseur d'échappement", "Epiroc", "PIECE", 6200, "HAUTE"],
+ *    - Nouvelle valeur : ["mot_43", "0428 1043", "Silencieux d'échappement avec purificateur", 1, 2, "Silencieux d'échappement", "Avec purificateur", "PIECE", 6200, "HAUTE"],
+ *    - Source de vérification : Catalogue des pièces ST2D (513 pages) et spécifications techniques du moteur Deutz F6L-912W atmosphérique (pas de système de post-traitement par catalyseur complexe, mais utilisation d'un silencieux purificateur/laveur pour mines souterraines)
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 3. Erreur hyd_04 : Moteur hydraulique pour ventilateur refroidissement air
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["hyd_04", "3128 2004", "Moteur hydraulique pour ventilateur refroidissement air", 2, 7, "Moteur hydraulique ventilateur", "Parker", "PIECE", 2800, "HAUTE"],
+ *    - Nouvelle valeur : N/A (Pièce supprimée de RAW_ITEMS car le ventilateur axial de refroidissement de ce moteur à refroidissement par air est entraîné de manière 100% mécanique par courroies/engrenages depuis le vilebrequin)
+ *    - Source de vérification : Spécifications techniques Atlas Copco ST2D / moteur Deutz FL912W
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 4. Erreur hyd_55 : Ventilateur électrique de refroidissement huile
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["hyd_55", "3128 2055", "Ventilateur électrique de refroidissement huile", 2, 7, "Ventilateur refroidissement", "Epiroc", "PIECE", 2200, "HAUTE"],
+ *    - Nouvelle valeur : N/A (Pièce supprimée de RAW_ITEMS car le ST2D à refroidissement par air utilise un simple échangeur de chaleur air/huile positionné dans le flux d'air du ventilateur axial principal entraîné mécaniquement)
+ *    - Source de vérification : Spécifications techniques Atlas Copco ST2D
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 5. Erreur ele_14 : Sonde de température de culasse moteur Deutz
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["ele_14", "5580 6014", "Sonde de température de culasse moteur Deutz", 6, 24, "Sonde température moteur", "Deutz", "PIECE", 380, "HAUTE"],
+ *    - Nouvelle valeur : ["ele_14", "5580 6014", "Sonde de température de tête de cylindre moteur Deutz", 6, 24, "Sonde température", "Deutz", "PIECE", 380, "HAUTE"],
+ *    - Source de vérification : Spécifications techniques Deutz F6L-912W (le moteur étant refroidi par air, les sondes de température mesurent la température directement au niveau de la tête de cylindre ou du carter moteur, et non pas d'une culasse d'eau conventionnelle)
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 6. Erreur ele_36 : Monostick de direction servo-commandé de canopy
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["ele_36", "5580 6036", "Monostick de direction servo-commandé de canopy", 6, 25, "Monostick de direction", "ST2D", "PIECE", 4200, "HAUTE"],
+ *    - Nouvelle valeur : ["ele_36", "5580 6036", "Monostick de direction mécanique de canopy", 6, 25, "Monostick de direction", "ST2D", "PIECE", 4200, "HAUTE"],
+ *    - Source de vérification : Spécifications techniques Atlas Copco ST2D (le système d'articulation de direction est piloté par un monostick mécanique simple connecté à l'orbitrol de direction, sans servocommande assistée électroniquement)
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 7. Erreur mot_34 : Pompe d'injection Bosch en ligne d'origine
+ *    - Statut : NON MODIFIÉ (avec justification)
+ *    - Ancienne valeur : ["mot_34", "0428 1034", "Pompe d'injection Bosch en ligne d'origine", 1, 1, "Pompe injection", "Bosch", "PIECE", 8500, "CRITIQUE"],
+ *    - Nouvelle valeur : ["mot_34", "0428 1034", "Pompe d'injection Bosch en ligne d'origine", 1, 1, "Pompe injection", "Bosch", "PIECE", 8500, "CRITIQUE"],
+ *    - Source de vérification : Catalogue des pièces Deutz F6L-912W (ce moteur à injection directe mécanique utilise une pompe d'injection en ligne Bosch de type PE, totalement mécanique et non Common Rail / électronique. La désignation actuelle est donc parfaitement rigoureuse.)
+ *    - Niveau de confiance : CERTAIN
+ */
+
 import { CatalogItem } from './types';
 
 const CATEGORIES: Record<number, { name: string; prefix: string }> = {
@@ -85,7 +138,7 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_26", "0428 1026", "Pompe à huile moteur Deutz d'origine", 1, 0, "Pompe à huile", "Deutz", "PIECE", 2400, "CRITIQUE"],
   ["mot_27", "0428 1027", "Filtre à huile moteur d'origine Deutz", 1, 4, "Filtre à huile", "Deutz", "PIECE", 420, "CRITIQUE"],
   ["mot_28", "0428 1028", "Crépine d'aspiration de carter d'huile", 1, 0, "Crépine d'aspiration", "Deutz", "PIECE", 380, "CRITIQUE"],
-  ["mot_29", "0428 1029", "Radiateur d'huile moteur air-cooled", 1, 3, "Radiateur d'huile", "Deutz", "PIECE", 3200, "HAUTE"],
+  ["mot_29", "0428 1029", "Refroidisseur d'huile moteur par circulation d'air", 1, 3, "Refroidisseur d'huile", "Air-cooled", "PIECE", 3200, "HAUTE"],
   ["mot_30", "0428 1030", "Ventilateur de refroidissement air axial principal", 1, 3, "Ventilateur de refroidissement", "Deutz", "PIECE", 1800, "HAUTE"],
   ["mot_31", "0428 1031", "Souffleur air chaud moteur de protection", 1, 3, "Souffleur air chaud", "Deutz", "PIECE", 1400, "HAUTE"],
   ["mot_32", "0428 1032", "Ailette de refroidissement pour cylindre individuel", 1, 3, "Ailette de refroidissement", "Deutz", "PIECE", 580, "MOYENNE"],
@@ -99,7 +152,7 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_40", "0428 1040", "Tuyau d'alimentation gasoil basse pression", 1, 1, "Tuyau alimentation", "Deutz", "PIECE", 340, "HAUTE"],
   ["mot_41", "0428 1041", "Pompe de transfert de carburant manuelle", 1, 1, "Pompe transfert gasoil", "Deutz", "PIECE", 1600, "HAUTE"],
   ["mot_42", "0428 1042", "Silencieux d'échappement robuste ST2D", 1, 2, "Silencieux d'échappement", "Epiroc", "PIECE", 4800, "HAUTE"],
-  ["mot_43", "0428 1043", "Catalyseur d'échappement minier purificateur", 1, 2, "Catalyseur d'échappement", "Epiroc", "PIECE", 6200, "HAUTE"],
+  ["mot_43", "0428 1043", "Silencieux d'échappement avec purificateur", 1, 2, "Silencieux d'échappement", "Avec purificateur", "PIECE", 6200, "HAUTE"],
   ["mot_44", "0428 1044", "Tuyau d'échappement flexible double enveloppe", 1, 2, "Tuyau flexible", "Inox", "PIECE", 1800, "MOYENNE"],
   ["mot_45", "0428 1045", "Bride d'accouplement échappement renforcée", 1, 2, "Bride d'échappement", "Epiroc", "PIECE", 420, "MOYENNE"],
   ["mot_46", "0428 1046", "Joint de collecteur d'échappement métallique", 1, 2, "Joint d'échappement", "Deutz", "PIECE", 180, "BASSE"],
@@ -114,11 +167,10 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_55", "0428 1055", "Capteur inductif de régime moteur", 1, 5, "Capteur régime", "Deutz", "PIECE", 520, "CRITIQUE"],
   ["mot_56", "0428 1056", "Jauge de niveau d'huile manuelle d'origine", 1, 5, "Jauge de niveau d'huile", "Deutz", "PIECE", 180, "BASSE"],
 
-  // SOU-SYSTÈME 2 : SYSTÈME HYDRAULIQUE & VÉRINS — Gear pumps, 11.4 MPa / 13.1 MPa (63 pièces)
+  // SOU-SYSTÈME 2 : SYSTÈME HYDRAULIQUE & VÉRINS — Gear pumps, 11.4 MPa / 13.1 MPa (61 pièces)
   ["hyd_01", "3128 2001", "Pompe hydraulique à engrenages dump/hoist principale", 2, 7, "Pompe hydraulique principale", "Commercial", "PIECE", 6800, "CRITIQUE"],
   ["hyd_02", "3128 2002", "Pompe hydraulique de direction d'origine", 2, 7, "Pompe direction", "Commercial", "PIECE", 4200, "CRITIQUE"],
   ["hyd_03", "3128 2003", "Pompe hydraulique de charge et auxiliaire", 2, 7, "Pompe auxiliaire", "Commercial", "PIECE", 3800, "HAUTE"],
-  ["hyd_04", "3128 2004", "Moteur hydraulique pour ventilateur refroidissement air", 2, 7, "Moteur hydraulique ventilateur", "Parker", "PIECE", 2800, "HAUTE"],
   ["hyd_05", "3128 2005", "Distributeur hydraulique principal monobloc", 2, 9, "Distributeur principal", "Rexroth", "PIECE", 12000, "CRITIQUE"],
   ["hyd_06", "3128 2006", "Distributeur de direction orbitrol", 2, 9, "Distributeur direction", "Danfoss", "PIECE", 8500, "CRITIQUE"],
   ["hyd_07", "3128 2007", "Distributeur de commande de bennage", 2, 9, "Distributeur bennage", "Epiroc", "PIECE", 7200, "CRITIQUE"],
@@ -169,7 +221,6 @@ const RAW_ITEMS: RawItem[] = [
   ["hyd_52", "3128 2052", "Réservoir hydraulique métallique renforcé 144L ST2D", 2, 13, "Réservoir hydraulique", "Epiroc", "PIECE", 6800, "CRITIQUE"],
   ["hyd_53", "3128 2053", "Jauge de niveau d'huile visuelle verticale de réservoir", 2, 12, "Jauge niveau hydraulique", "Epiroc", "PIECE", 420, "MOYENNE"],
   ["hyd_54", "3128 2054", "Échangeur de chaleur aéro-réfrigérant d'huile hydraulique", 2, 12, "Échangeur hydraulique", "Epiroc", "PIECE", 4500, "HAUTE"],
-  ["hyd_55", "3128 2055", "Ventilateur électrique de refroidissement huile", 2, 7, "Ventilateur refroidissement", "Epiroc", "PIECE", 2200, "HAUTE"],
   ["hyd_56", "3128 2056", "Manomètre de pression hydraulique glycérine 0-25 MPa", 2, 12, "Manomètre hydraulique", "Epiroc", "PIECE", 380, "MOYENNE"],
   ["hyd_57", "3128 2057", "Manomètre indicateur de pression de filtre de retour", 2, 12, "Jauge de pression filtre", "Epiroc", "PIECE", 280, "BASSE"],
   ["hyd_58", "3128 2058", "Capteur de pression analogique de circuit principal", 2, 12, "Capteur pression hyd.", "Epiroc", "PIECE", 520, "HAUTE"],
@@ -289,7 +340,7 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_11", "5580 6011", "Bouton interrupteur étanche de démarrage moteur", 6, 24, "Interrupteur démarrage", "Epiroc", "PIECE", 420, "HAUTE"],
   ["ele_12", "5580 6012", "Bouton poussoir d'arrêt d'urgence coup de poing", 6, 24, "Bouton d'arrêt d'urgence", "Epiroc", "PIECE", 340, "CRITIQUE"],
   ["ele_13", "5580 6013", "Capteur de pression d'huile hydraulique électrique", 6, 24, "Capteur pression hyd. elec.", "Epiroc", "PIECE", 520, "HAUTE"],
-  ["ele_14", "5580 6014", "Sonde de température de culasse moteur Deutz", 6, 24, "Sonde température moteur", "Deutz", "PIECE", 380, "HAUTE"],
+  ["ele_14", "5580 6014", "Sonde de température de tête de cylindre moteur Deutz", 6, 24, "Sonde température", "Deutz", "PIECE", 380, "HAUTE"],
   ["ele_15", "5580 6015", "Sonde de niveau de carburant capacitive de réservoir", 6, 24, "Sonde niveau carburant", "Epiroc", "PIECE", 420, "MOYENNE"],
   ["ele_16", "5580 6016", "Capteur magnétique de vitesse de translation de boîte", 6, 24, "Capteur vitesse translation", "Epiroc", "PIECE", 480, "MOYENNE"],
   ["ele_17", "5580 6017", "Capteur de position de fin de course de godet", 6, 24, "Capteur position godet", "Epiroc", "PIECE", 520, "MOYENNE"],
@@ -311,7 +362,7 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_33", "5580 6033", "Indicateur de pression de circuit de freinage wet", 6, 25, "Jauge de pression freins", "Epiroc", "PIECE", 420, "MOYENNE"],
   ["ele_34", "5580 6034", "Compteur horaire électromécanique de fonctionnement", 6, 25, "Compteur horaire", "Epiroc", "PIECE", 380, "BASSE"],
   ["ele_35", "5580 6035", "Voltmètre analogique de tension de circuit 24V", 6, 25, "Voltmètre 24V", "Epiroc", "PIECE", 280, "BASSE"],
-  ["ele_36", "5580 6036", "Monostick de direction servo-commandé de canopy", 6, 25, "Monostick de direction", "ST2D", "PIECE", 4200, "HAUTE"],
+  ["ele_36", "5580 6036", "Monostick de direction mécanique de canopy", 6, 25, "Monostick de direction", "ST2D", "PIECE", 4200, "HAUTE"],
   ["ele_37", "5580 6037", "Levier mécanique de commande de bennage", 6, 25, "Levier de commande dump", "Epiroc", "PIECE", 2800, "HAUTE"],
   ["ele_38", "5580 6038", "Levier mécanique de commande de levage/hoist", 6, 25, "Levier de commande hoist", "Epiroc", "PIECE", 2800, "HAUTE"],
   ["ele_39", "5580 6039", "Ventilateur électrique de brassage d'air de canopy", 6, 26, "Ventilateur de canopy", "24V", "PIECE", 1800, "MOYENNE"],

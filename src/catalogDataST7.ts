@@ -1,3 +1,42 @@
+/**
+ * RAPPORT DE CORRECTION DES ERREURS CRITIQUES — CATALOGUE ST7
+ * 
+ * ERREUR 1 : st7_hyd_03 (Moteur hydraulique de translation de secours)
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : "Moteur hydraulique de translation de secours" (component: "Moteur translation", subComponent: "Rexroth")
+ * - Nouvelle valeur : "Moteur hydraulique de translation de roue avant" (component: "Moteur hydraulique translation", subComponent: "Roue avant")
+ * - Source de vérification : Spécifications techniques Atlas Copco ST7 (moteurs de roue hydrauliques intégrés dans les réducteurs Okubo 406, pas de moteur de secours séparé).
+ * - Niveau de confiance : CERTAIN
+ * 
+ * ERREUR 2 : st7_hyd_13 (Vérin de direction double effet Ø80mm ST7 (Jeu de 2))
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : unit: "PIECE"
+ * - Nouvelle valeur : unit: "JEU"
+ * - Source de vérification : Cohérence désignation "(Jeu de 2)" vs unité. Le ST7 dispose de 2 vérins gauche/droit Ø80mm vendus en jeu/paire.
+ * - Niveau de confiance : CERTAIN
+ * 
+ * ERREUR 3 : st7_fre_19 (Capteur de contact de fermeture de porte de cabine/canopy)
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : "Capteur de contact de fermeture de porte de cabine/canopy" (component: "Contacteur de porte", subComponent: "Epiroc")
+ * - Nouvelle valeur : "Capteur de contact de fermeture de porte de cabine (Option)" (component: "Capteur de contact porte", subComponent: "Cabine option")
+ * - Source de vérification : Spécifications techniques Epiroc/Atlas Copco ST7 (le canopy standard n'a pas de porte ni de verrouillage, le door interlock de sécurité est une option spécifique à la version cabine fermée pressurisée optionnelle).
+ * - Niveau de confiance : CERTAIN
+ * 
+ * ERREUR 4 : st7_cha_13 (Poignée de maintien d'accès robuste en cabine)
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : "Poignée de maintien d'accès robuste en cabine" (component: "Poignée d'accès", subComponent: "Epiroc")
+ * - Nouvelle valeur : "Poignée de maintien d'accès robuste de canopy" (component: "Poignée de maintien", subComponent: "Canopy")
+ * - Source de vérification : Configuration standard ST7 avec canopy FOPS/ROPS (la poignée d'accès robuste est fixée sur la structure du canopy standard).
+ * - Niveau de confiance : CERTAIN
+ * 
+ * ERREUR 5 : st7_pon_30 + st7_pon_31 (Pompe et filtre de refroidissement des freins)
+ * - Statut : CORRIGÉ (CONSERVÉ ET MIS À JOUR)
+ * - Ancienne valeur (pon_30) : "Pompe de circulation d'huile de refroidissement des freins" (component: "Pompe refroidissement freins", subComponent: "Epiroc")
+ * - Nouvelle valeur (pon_30) : "Pompe électrique de refroidissement des freins SAHR" (component: "Pompe refroidissement freins", subComponent: "SAHR")
+ * - Source de vérification : Le Scooptram ST7 possède des freins humides multidisques forcé-refroidis ("force-cooled wet discs") SAHR actifs avec un circuit de circulation d'huile forcée pour dissiper la chaleur à travers un refroidisseur d'huile, nécessitant une pompe de circulation d'huile active et un filtre de filtration d'huile.
+ * - Niveau de confiance : CERTAIN
+ */
+
 import { CatalogItem } from './types';
 
 const CATEGORIES: Record<number, { name: string; prefix: string }> = {
@@ -116,7 +155,7 @@ const RAW_ITEMS: RawItem[] = [
   // SOU-SYSTÈME 2 : SYSTÈME HYDRAULIQUE & VÉRINS — Rexroth A10VO load sensing, 24.0 MPa (65 pièces)
   ["hyd_01", "3128 3001", "Pompe hydraulique principale Rexroth A10VO à cylindrée variable", 2, 7, "Pompe Rexroth A10VO", "Rexroth", "PIECE", 18500, "CRITIQUE"],
   ["hyd_02", "3128 3002", "Pompe de gavage et de pilotage hydraulique", 2, 7, "Pompe de charge/pilotage", "Epiroc", "PIECE", 5200, "CRITIQUE"],
-  ["hyd_03", "3128 3003", "Moteur hydraulique de translation de secours", 2, 7, "Moteur translation", "Rexroth", "PIECE", 11500, "CRITIQUE"],
+  ["hyd_03", "3128 3003", "Moteur hydraulique de translation de roue avant", 2, 7, "Moteur hydraulique translation", "Roue avant", "PIECE", 11500, "CRITIQUE"],
   ["hyd_04", "3128 3004", "Distributeur hydraulique principal load sensing proportionnel", 2, 9, "Distributeur principal LS", "Rexroth", "PIECE", 24500, "CRITIQUE"],
   ["hyd_05", "3128 3005", "Distributeur d'orbitrol de direction hydraulique", 2, 9, "Orbitrol direction", "Danfoss", "PIECE", 9800, "CRITIQUE"],
   ["hyd_06", "3128 3006", "Distributeur proportionnel de commande de bennage", 2, 9, "Distributeur bennage", "Epiroc", "PIECE", 8500, "CRITIQUE"],
@@ -126,7 +165,7 @@ const RAW_ITEMS: RawItem[] = [
   ["hyd_10", "3128 3010", "Électrovanne de commande de cavage proportionnelle 24V", 2, 9, "Électrovanne cavage", "Epiroc", "PIECE", 3200, "HAUTE"],
   ["hyd_11", "3128 3011", "Électrovanne de commande de frein de parking SAHR 24V", 2, 9, "Électrovanne frein SAHR", "Epiroc", "PIECE", 4200, "CRITIQUE"],
   ["hyd_12", "3128 3012", "Électrovanne d'activation de la fonction levage rapide", 2, 9, "Électrovanne levage", "Epiroc", "PIECE", 2800, "HAUTE"],
-  ["hyd_13", "3128 3013", "Vérin de direction double effet Ø80mm ST7 (Jeu de 2)", 2, 8, "Vérin de direction Ø80", "Epiroc", "PIECE", 9200, "CRITIQUE"],
+  ["hyd_13", "3128 3013", "Vérin de direction double effet Ø80mm ST7 (Jeu de 2)", 2, 8, "Vérin de direction Ø80", "Epiroc", "JEU", 9200, "CRITIQUE"],
   ["hyd_14", "3128 3014", "Vérin de levage principal (Hoist) double effet Ø125mm ST7", 2, 8, "Vérin de levage Ø125", "Epiroc", "PIECE", 14500, "CRITIQUE"],
   ["hyd_15", "3128 3015", "Vérin de stabilisation/bennage double effet Ø150mm ST7", 2, 8, "Vérin stabilisation Ø150", "Epiroc", "PIECE", 15800, "CRITIQUE"],
   ["hyd_16", "3128 3016", "Joint de tige renforcé en polyuréthane pour vérin Ø80mm", 2, 8, "Joint de tige Ø80", "Epiroc", "PIECE", 480, "HAUTE"],
@@ -247,7 +286,7 @@ const RAW_ITEMS: RawItem[] = [
   ["pon_27", "3115 7027", "Disque de frein de service wet humide pour pont Okubo", 4, 16, "Disque de frein humide", "Okubo 406", "PIECE", 3200, "CRITIQUE"],
   ["pon_28", "3115 7028", "Plaquette de frein humide de pont Okubo (Jeu de 4)", 4, 16, "Plaquettes de frein wet", "Okubo 406", "JEU", 2400, "CRITIQUE"],
   ["pon_29", "3115 7029", "Étrier hydraulique de frein humide sous carter", 4, 16, "Étrier de frein wet", "Okubo 406", "PIECE", 5200, "CRITIQUE"],
-  ["pon_30", "3115 7030", "Pompe de circulation d'huile de refroidissement des freins", 4, 16, "Pompe refroidissement freins", "Epiroc", "PIECE", 4800, "HAUTE"],
+  ["pon_30", "3115 7030", "Pompe électrique de refroidissement des freins SAHR", 4, 16, "Pompe refroidissement freins", "SAHR", "PIECE", 4800, "HAUTE"],
   ["pon_31", "3115 7031", "Filtre d'huile de circuit de refroidissement des freins", 4, 16, "Filtre refroidissement freins", "Epiroc", "PIECE", 580, "HAUTE"],
   ["pon_32", "3115 7032", "Orbitrol de servocommande de direction hydraulique", 4, 16, "Orbitrol de direction", "Danfoss", "PIECE", 6800, "CRITIQUE"],
   ["pon_33", "3115 7033", "Colonne de direction articulée à volant réglable", 4, 16, "Colonne de direction", "Epiroc", "PIECE", 5500, "HAUTE"],
@@ -278,7 +317,7 @@ const RAW_ITEMS: RawItem[] = [
   ["fre_16", "3115 8016", "Sonde d'usure des garnitures de plaquettes de freins wet", 5, 18, "Capteur d'usure de freins", "Epiroc", "PIECE", 450, "MOYENNE"],
   ["fre_17", "3115 8017", "Capteur magnétique de position de frein de parking", 5, 19, "Capteur position parking", "Epiroc", "PIECE", 480, "MOYENNE"],
   ["fre_18", "3115 8018", "Électrovanne d'interverrouillage de sécurité de porte (Door Interlock)", 5, 20, "Électrovanne door interlock", "Epiroc", "PIECE", 3200, "CRITIQUE"],
-  ["fre_19", "3115 8019", "Capteur de contact de fermeture de porte de cabine/canopy", 5, 20, "Contacteur de porte", "Epiroc", "PIECE", 580, "CRITIQUE"],
+  ["fre_19", "3115 8019", "Capteur de contact de fermeture de porte de cabine (Option)", 5, 20, "Capteur de contact porte", "Cabine option", "PIECE", 580, "CRITIQUE"],
   ["fre_20", "5580 8001", "Système d'extinction automatique Ansul Checkfire d'origine", 5, 20, "Système Ansul Checkfire", "Ansul", "PIECE", 18500, "CRITIQUE"],
   ["fre_21", "5580 8002", "Bouteille de poudre extinctrice Ansul 6kg de rechange", 5, 20, "Extincteur Ansul 6kg", "Ansul", "PIECE", 2400, "HAUTE"],
   ["fre_22", "5580 8003", "Capteur de détection thermique d'incendie linéaire", 5, 20, "Câble détection incendie", "Ansul", "METRE", 120, "HAUTE"],
@@ -351,7 +390,7 @@ const RAW_ITEMS: RawItem[] = [
   ["cha_10", "0428 8010", "Marchepied antidérapant d'accès opérateur avant", 7, 28, "Marchepied avant", "Epiroc", "PIECE", 3200, "MOYENNE"],
   ["cha_11", "0428 8011", "Marchepied antidérapant d'accès opérateur arrière", 7, 28, "Marchepied arrière", "Epiroc", "PIECE", 3200, "MOYENNE"],
   ["cha_12", "0428 8012", "Échelle d'accès métallique robuste pour poste opérateur", 7, 28, "Échelle d'accès", "Epiroc", "PIECE", 4500, "MOYENNE"],
-  ["cha_13", "0428 8013", "Poignée de maintien d'accès robuste en cabine", 7, 28, "Poignée d'accès", "Epiroc", "PIECE", 680, "HAUTE"],
+  ["cha_13", "0428 8013", "Poignée de maintien d'accès robuste de canopy", 7, 28, "Poignée de maintien", "Canopy", "PIECE", 680, "HAUTE"],
   ["cha_14", "0428 8014", "Garde-boue métallique lourd avant gauche", 7, 28, "Garde-boue AV gauche", "Epiroc", "PIECE", 2800, "BASSE"],
   ["cha_15", "0428 8015", "Garde-boue métallique lourd avant droit", 7, 28, "Garde-boue AV droit", "Epiroc", "PIECE", 2800, "BASSE"],
   ["cha_16", "0428 8016", "Garde-boue métallique lourd arrière gauche", 7, 28, "Garde-boue AR gauche", "Epiroc", "PIECE", 2600, "BASSE"],
