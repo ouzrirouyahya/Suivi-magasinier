@@ -1,13 +1,69 @@
-import { useEffect, useCallback } from 'react';
+import { useEffect, useCallback, useState, useMemo } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useArticlesStore } from '../stores/article.store';
 import { catalogService } from '../services/catalog.service';
-import { CatalogItem, HydrominesCatalogItem } from '../types';
+import { CatalogItem, HydrominesCatalogItem, EquipmentFamily } from '../types';
 import { serializeFirestoreData, generateId } from '../lib/utils';
 import { toast } from 'sonner';
 
-export function buildHierarchy(catalog: CatalogItem[]) {
+// Import verified sub-catalogs and master catalog hub
+import { MASTER_CATALOG } from '../catalogData';
+import { ST2G_CATALOG } from '../catalogDataST2G';
+import { ST2D_CATALOG } from '../catalogDataST2D';
+import { ST7_CATALOG } from '../catalogDataST7';
+import { T23_CATALOG } from '../catalogDataT23';
+import { T28_CATALOG } from '../catalogDataT28';
+
+/**
+ * Helper to retrieve catalog items by equipment family.
+ * Filters the master catalog based on the selected family.
+ */
+export const getCatalogByFamily = (family: string): CatalogItem[] => {
+  const familyMap: Record<string, string> = {
+    'ST2G': 'Epiroc ST2G',
+    'ST2D': 'Epiroc ST2D',
+    'ST7': 'Epiroc ST7',
+    'T23': 'Montabert T23',
+    'T28': 'Montabert T28',
+  };
+  const compatibility = familyMap[family];
+  if (!compatibility) return [];
+  return MASTER_CATALOG.filter(item => item.compatibility === compatibility);
+};
+
+/**
+ * Hook to manage reactive filtering, searching, and family selection
+ * over the entire master catalog.
+ */
+export function useCatalogFilter() {
+  const [selectedFamily, setSelectedFamily] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const filteredItems = useMemo(() => {
+    let items = MASTER_CATALOG;
+    if (selectedFamily) {
+      items = getCatalogByFamily(selectedFamily);
+    }
+    if (searchQuery.length >= 2) {
+      const q = searchQuery.toLowerCase();
+      items = items.filter(item => 
+        item.designation?.toLowerCase().includes(q) ||
+        item.reference?.toLowerCase().includes(q) ||
+        item.component?.toLowerCase().includes(q)
+      );
+    }
+    return items;
+  }, [selectedFamily, searchQuery]);
+  
+  return { selectedFamily, setSelectedFamily, searchQuery, setSearchQuery, filteredItems };
+}
+
+/**
+ * Builds a nested category/component hierarchy for the catalog.
+ * Defaults to the complete MASTER_CATALOG if no catalog is specified.
+ */
+export function buildHierarchy(catalog: CatalogItem[] = MASTER_CATALOG) {
   const hierarchy: Record<string, any> = {};
   
   for (const item of catalog) {
@@ -87,7 +143,7 @@ export function useCatalog() {
       return;
     }
 
-    const determineEquipmentFamily = (type: string): 'ST2G' | 'ST2D' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE' => {
+    const determineEquipmentFamily = (type: string): EquipmentFamily => {
       if (type === 'ENGINS') return 'ST2G';
       if (type === 'PERFORATEURS') return 'T23';
       if (type === 'CONSOMMABLES') return 'CONSOMMABLES';

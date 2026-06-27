@@ -376,6 +376,38 @@ export interface ReplacementRequest {
   approvedAt?: string;     // ISO date
 }
 
+/**
+ * =========================================================================
+ * AJOUTS ET MODIFICATIONS - ÉTAPE 2 : NOUVEAUX TYPES CATALOGUE & ST7
+ * =========================================================================
+ */
+
+/**
+ * Familles d'équipements gérées par la plateforme Hydromines.
+ */
+export type EquipmentFamily = 'ST2G' | 'ST2D' | 'ST7' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE';
+
+/**
+ * Filtre de recherche et de navigation pour le catalogue principal.
+ */
+export interface CatalogFilter {
+  equipmentFamily: EquipmentFamily;
+  searchQuery?: string;
+  category?: string;
+  subCategory?: string;
+}
+
+/**
+ * Configuration visuelle pour le sélecteur graphique d'équipements/modèles dans l'UI.
+ */
+export interface CatalogSelectorConfig {
+  id: EquipmentFamily;
+  label: string;
+  description: string;
+  color: string; // Classes de gradients Tailwind (ex: from-blue-500 to-indigo-600)
+  icon?: string;
+}
+
 export interface HydrominesCatalogItem {
   id: string;
   reference: string;
@@ -384,7 +416,7 @@ export interface HydrominesCatalogItem {
   functionalCategory: string;
   unit: string;
   sourceCatalog: string; // e.g. "ST2G", "ST2D", "T23", etc.
-  equipmentFamily: 'ST2G' | 'ST2D' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE';
+  equipmentFamily: EquipmentFamily; // Modifié pour utiliser le nouveau type consolidé avec ST7
   status: 'ACTIF' | 'INACTIF';
   isHydrominesCritical?: boolean;
   createdAt: string;
