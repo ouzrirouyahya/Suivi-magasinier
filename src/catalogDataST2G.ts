@@ -35,6 +35,29 @@
  *    - Nouvelle valeur : ["cha_13", "0428 7019 01", "Poignée d'accès canopy robuste en acier forgé", 7, 28, "Poignée d'accès", "Acier forgé", "PIECE", 240, "HAUTE"]
  *    - Source de vérification : Spécifications techniques Atlas Copco/Epiroc ST2G ("Canopy ISO ROPS/FOPS ouvert", pas de cabine fermée disponible sur ce modèle de 4000kg)
  *    - Niveau de confiance : CERTAIN
+ * 
+ * CORRECTIONS COMPLÉMENTAIRES (POINTS MINEURS) :
+ * 
+ * 6. Point ele_20 : Soufflet de protection élastomère pour joystick
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["ele_20", "5580 6020 00", "Soufflet de protection élastomère pour joystick", 6, 25, "Soufflet joystick", "Néoprène étanche", "PIECE", 160, "BASSE"]
+ *    - Nouvelle valeur : ["ele_20", "5580 6020 00", "Soufflet de protection élastomère pour monostick de direction", 6, 25, "Soufflet monostick", "Néoprène étanche", "PIECE", 160, "BASSE"]
+ *    - Source de vérification : Spécifications techniques Atlas Copco/Epiroc ST2G (le véhicule dispose d'un monostick mécanique pour la direction, pas d'un joystick électronique).
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 7. Point ele_23 : Antenne AM/FM de toit de canopy flexible
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["ele_23", "5580 6023 00", "Antenne AM/FM de toit de canopy flexible", 6, 26, "Antenne canopy", "Fibre de verre flexible", "PIECE", 180, "BASSE"]
+ *    - Nouvelle valeur : N/A (Pièce absente de la configuration standard pour travaux miniers souterrains sur canopy ouvert).
+ *    - Source de vérification : Fiches techniques et spécifications officielles de l'Atlas Copco ST2G (pas de radio ou d'antenne AM/FM intégrée en version standard canopy ouvert).
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 8. Point ele_33 : Miroir de sécurité latéral canopy convexe incassable
+ *    - Statut : SUPPRIMÉ
+ *    - Ancienne valeur : ["ele_33", "5580 6033 00", "Miroir de sécurité latéral canopy convexe incassable", 6, 26, "Miroir latéral", "Convexe incassable", "PIECE", 380, "HAUTE"]
+ *    - Nouvelle valeur : N/A (L'opérateur étant assis latéralement sur ce véhicule bi-directionnel, la visibilité arrière se fait directement et le miroir de sécurité latéral n'est pas utilisé en version standard, les grilles de protection faisant office d'éléments latéraux principaux).
+ *    - Source de vérification : Atlas Copco ST2G Technical Specification (pas de miroir latéral répertorié pour la configuration standard du canopy ouvert bi-directionnel).
+ *    - Niveau de confiance : CERTAIN
  */
 
 import { CatalogItem } from './types';
@@ -338,10 +361,9 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_15", "5580 6015 00", "Capteur électrique de niveau bas d'eau de radiateur", 6, 24, "Capteur niveau d'eau", "Flotteur", "PIECE", 380, "HAUTE"],
   ["ele_16", "5580 6016 00", "Capteur inductif de vitesse de rotation arbre boîte", 6, 24, "Sonde vitesse", "Inductif M18", "PIECE", 620, "HAUTE"],
   ["ele_19", "5580 6019 00", "Monostick de direction mécanique", 6, 25, "Monostick direction", "Mécanique", "PIECE", 8200, "CRITIQUE"],
-  ["ele_20", "5580 6020 00", "Soufflet de protection élastomère pour joystick", 6, 25, "Soufflet joystick", "Néoprène étanche", "PIECE", 160, "BASSE"],
+  ["ele_20", "5580 6020 00", "Soufflet de protection élastomère pour monostick de direction", 6, 25, "Soufflet monostick", "Néoprène étanche", "PIECE", 160, "BASSE"],
   ["ele_21", "5580 6021 00", "Faisceau électrique de liaison console de canopy complet", 6, 24, "Faisceau électrique", "Gaine blindée", "PIECE", 4800, "HAUTE"],
   ["ele_22", "5580 6022 00", "Klaxon de sécurité puissant 24V escargot", 6, 21, "Klaxon escargot", "24V robuste", "PIECE", 240, "HAUTE"],
-  ["ele_23", "5580 6023 00", "Antenne AM/FM de toit de canopy flexible", 6, 26, "Antenne canopy", "Fibre de verre flexible", "PIECE", 180, "BASSE"],
   ["ele_24", "5580 6024 00", "Éclairage intérieur de canopy à LED étanche IP66", 6, 26, "Plafonnier LED", "IP66 24V", "PIECE", 340, "BASSE"],
   ["ele_25", "5580 6025 00", "Siège conducteur latéral simple fixe avec ceinture", 6, 26, "Siège simple", "Latéral standard", "PIECE", 8500, "HAUTE"],
   ["ele_26", "5580 6026 00", "Toit de protection métallique supérieur canopy ROPS/FOPS", 6, 26, "Toit canopy", "ROPS/FOPS", "PIECE", 12000, "CRITIQUE"],
@@ -351,7 +373,6 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_30", "5580 6030 00", "Montant d'arceau de structure de canopy arrière droit", 6, 26, "Montant canopy AR D", "Acier profilé", "PIECE", 4200, "CRITIQUE"],
   ["ele_31", "5580 6031 00", "Grille de sécurité métallique avant pour canopy", 6, 26, "Grille de sécurité", "Acier zingué", "PIECE", 2800, "HAUTE"],
   ["ele_32", "5580 6032 00", "Grille de sécurité métallique arrière pour canopy", 6, 26, "Grille de sécurité", "Acier zingué", "PIECE", 2600, "HAUTE"],
-  ["ele_33", "5580 6033 00", "Miroir de sécurité latéral canopy convexe incassable", 6, 26, "Miroir latéral", "Convexe incassable", "PIECE", 380, "HAUTE"],
   ["ele_34", "5580 6034 00", "Support métallique articulé noir pour miroir", 6, 26, "Support miroir", "Acier noir articulé", "PIECE", 190, "BASSE"],
   ["ele_35", "5580 6035 00", "Alternateur de rechange Cummins ventilateur courroie", 6, 22, "Courroie alternateur", "Standard", "PIECE", 450, "HAUTE"],
 

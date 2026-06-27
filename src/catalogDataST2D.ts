@@ -49,6 +49,15 @@
  *    - Nouvelle valeur : ["mot_34", "0428 1034", "Pompe d'injection Bosch en ligne d'origine", 1, 1, "Pompe injection", "Bosch", "PIECE", 8500, "CRITIQUE"],
  *    - Source de vérification : Catalogue des pièces Deutz F6L-912W (ce moteur à injection directe mécanique utilise une pompe d'injection en ligne Bosch de type PE, totalement mécanique et non Common Rail / électronique. La désignation actuelle est donc parfaitement rigoureuse.)
  *    - Niveau de confiance : CERTAIN
+ * 
+ * CORRECTIONS COMPLÉMENTAIRES (POINTS MINEURS) :
+ * 
+ * 8. Point mot_53 : Capteur de température d'huile culasse
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["mot_53", "0428 1053", "Capteur de température d'huile culasse", 1, 5, "Capteur température", "Deutz", "PIECE", 420, "HAUTE"]
+ *    - Nouvelle valeur : ["mot_53", "0428 1053", "Capteur de température d'huile moteur Deutz", 1, 5, "Capteur température", "Deutz", "PIECE", 420, "HAUTE"]
+ *    - Source de vérification : Spécifications techniques Atlas Copco ST2D / moteur Deutz F6L-912W refroidi par air (air cooled). N'ayant pas de circuit d'eau, ce moteur n'a pas de culasse refroidie par eau ; le capteur mesure directement la température d'huile moteur globale.
+ *    - Niveau de confiance : CERTAIN
  */
 
 import { CatalogItem } from './types';
@@ -162,7 +171,7 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_50", "0428 1050", "Support de montage moteur avant", 1, 6, "Support moteur AV", "Deutz", "PIECE", 1200, "HAUTE"],
   ["mot_51", "0428 1051", "Support de montage moteur arrière", 1, 6, "Support moteur AR", "Deutz", "PIECE", 1200, "HAUTE"],
   ["mot_52", "0428 1052", "Silentbloc amortisseur moteur en élastomère", 1, 6, "Silentbloc moteur", "Epiroc", "PIECE", 580, "MOYENNE"],
-  ["mot_53", "0428 1053", "Capteur de température d'huile culasse", 1, 5, "Capteur température", "Deutz", "PIECE", 420, "HAUTE"],
+  ["mot_53", "0428 1053", "Capteur de température d'huile moteur Deutz", 1, 5, "Capteur température", "Deutz", "PIECE", 420, "HAUTE"],
   ["mot_54", "0428 1054", "Capteur de pression d'huile bloc moteur", 1, 5, "Capteur pression", "Deutz", "PIECE", 380, "CRITIQUE"],
   ["mot_55", "0428 1055", "Capteur inductif de régime moteur", 1, 5, "Capteur régime", "Deutz", "PIECE", 520, "CRITIQUE"],
   ["mot_56", "0428 1056", "Jauge de niveau d'huile manuelle d'origine", 1, 5, "Jauge de niveau d'huile", "Deutz", "PIECE", 180, "BASSE"],

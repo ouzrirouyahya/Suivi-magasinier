@@ -21,6 +21,22 @@
  * - Nouvelle valeur : designation: "Chaîne de sécurité anti-fouettement 2m fixe", unit: "PIECE", price: 220
  * - Source de vérification : Catalogue général d'équipements Montabert. La chaîne anti-fouettement est une élingue de sécurité de longueur fixe de 2m vendue à l'unité (PIECE) avec ses boucles d'ancrage pour sécuriser les liaisons de flexibles, et non pas un produit vendu au mètre linéaire de manière continue.
  * - Niveau de confiance : CERTAIN
+ * 
+ * CORRECTIONS COMPLÉMENTAIRES (POINTS MINEURS) :
+ * 
+ * 4. Point cyl_12 : Joint de culasse métallique de cylindre
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : designation: "Joint de culasse métallique de cylindre", component: "Joint de culasse", subComponent: "Joint de compression métallique expansé"
+ * - Nouvelle valeur : designation: "Joint de compression métallique de cylindre", component: "Joint de cylindre", subComponent: "Joint de compression métallique expansé"
+ * - Source de vérification : Catalogue Montabert Marteaux Perforateurs (PNE-03-2011). Le perforateur étant un outil pneumatique sans chambre de combustion, il ne comporte pas de culasse. C'est un joint métallique assurant l'étanchéité de la compression entre le cylindre et la distribution.
+ * - Niveau de confiance : CERTAIN
+ * 
+ * 5. Point con_10 : Joint torique de culasse de cylindre Viton
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : designation: "Joint torique de culasse de cylindre Viton", component: "Joint torique", subComponent: "Joint torique haute température de culasse FKM"
+ * - Nouvelle valeur : designation: "Joint torique de compression de cylindre Viton", component: "Joint torique", subComponent: "Joint torique haute température de compression FKM"
+ * - Source de vérification : Catalogue Montabert PNE-03-2011 (le terme "culasse" est inexistant dans le schéma éclaté du perforateur pneumatique T23).
+ * - Niveau de confiance : CERTAIN
  */
 
 import { CatalogItem } from './types';
@@ -98,7 +114,7 @@ const RAW_ITEMS: RawItemT23[] = [
   ["cyl_09", "T23-3009", "Vis de fixation (tirant long) cylindre", "Cylindre T23", "Fixations & Chapes", "Vis de fixation", "Tirant d'assemblage long fileté M16 classe 12.9", "PIECE", 95, "CRITIQUE", "Tirants principaux assurant l'assemblage rigide du perforateur sous précontrainte.", 3],
   ["cyl_10", "T23-3010", "Écrou de fixation de tirant de cylindre", "Cylindre T23", "Fixations & Chapes", "Écrou de fixation", "Écrou hexagonal lourd à filetage fin classe 10", "PIECE", 40, "HAUTE", "Écrou lourd supportant la contrainte axiale élevée générée par la percussion.", 3],
   ["cyl_11", "T23-3011", "Rondelle plate épaisse de tirant", "Cylindre T23", "Fixations & Chapes", "Rondelle de fixation", "Rondelle plate épaisse trempée 300HV", "PIECE", 15, "MOYENNE", "Rondelle d'appui répartissant l'effort de serrage sur les oreilles de fixation du cylindre.", 3],
-  ["cyl_12", "T23-3012", "Joint de culasse métallique de cylindre", "Cylindre T23", "Joints Cylindre", "Joint de culasse", "Joint de compression métallique expansé", "PIECE", 120, "HAUTE", "Joint métallique étanchant la chambre de combustion/percussion haute pression face à la distribution.", 3],
+  ["cyl_12", "T23-3012", "Joint de compression métallique de cylindre", "Cylindre T23", "Joints Cylindre", "Joint de cylindre", "Joint de compression métallique expansé", "PIECE", 120, "HAUTE", "Joint métallique étanchant la chambre de compression/percussion haute pression face à la distribution.", 3],
   ["cyl_13", "T23-3013", "Bouchon de canal interne de cylindre", "Cylindre T23", "Bloc Cylindre & Échappement", "Bouchon", "Bouchon fileté à tête hexagonale creuse", "PIECE", 60, "BASSE", "Bouchon étanchant les conduits d'air latéraux forés dans la masse du cylindre.", 3],
   ["cyl_14", "T23-3014", "Raccord d'orientation d'échappement d'air", "Cylindre T23", "Bloc Cylindre & Échappement", "Raccord d'échappement", "Collet d'orientation des gaz d'échappement en tôle", "PIECE", 150, "MOYENNE", "Déflecteur orientant l'échappement d'air lubrifié loin de la vue de l'opérateur.", 3],
   ["cyl_15", "T23-3015", "Tuyau souple d'échappement", "Cylindre T23", "Bloc Cylindre & Échappement", "Tuyau d'échappement", "Manchon souple d'échappement en caoutchouc armé", "PIECE", 220, "MOYENNE", "Gaine d'échappement canalisant l'air froid détendu vers la zone inférieure.", 3],
@@ -216,7 +232,7 @@ const RAW_ITEMS: RawItemT23[] = [
   ["con_07", "T23-8007", "Bague d'étanchéité haute température Viton", "Consommables & Pièces d'Usure T23", "Garnitures Statiques", "Bague d'étanchéité", "Bague d'étanchéité Viton haute température", "PIECE", 95, "HAUTE", "Bague d'étanchéité FKM Viton garantissant le scellage sous contraintes thermiques intenses.", 3],
   ["con_08", "T23-8008", "Bague d'étanchéité nitrile dureté 80 Shore", "Consommables & Pièces d'Usure T23", "Garnitures Statiques", "Bague d'étanchéité", "Bague d'étanchéité NBR 80 Shore haute dureté", "PIECE", 40, "HAUTE", "Garniture d'étanchéité dure pour montage sans extrusion en conduits à 6 bar.", 3],
   ["con_09", "T23-8009", "Joint torique de tiroir de distributeur", "Consommables & Pièces d'Usure T23", "Garnitures Statiques", "Joint torique", "Joint torique d'étanchéité NBR 70 Shore", "PIECE", 20, "HAUTE", "Joint de étanchéité statique d'origine pour tiroir d'inversion.", 3],
-  ["con_10", "T23-8010", "Joint torique de culasse de cylindre Viton", "Consommables & Pièces d'Usure T23", "Garnitures Statiques", "Joint torique", "Joint torique haute température de culasse FKM", "PIECE", 55, "HAUTE", "Joint torique d'origine résistant aux pics thermiques de foration sèche accidentelle.", 3],
+  ["con_10", "T23-8010", "Joint torique de compression de cylindre Viton", "Consommables & Pièces d'Usure T23", "Garnitures Statiques", "Joint torique", "Joint torique haute température de compression FKM", "PIECE", 55, "HAUTE", "Joint torique d'origine résistant aux pics thermiques de foration sèche accidentelle.", 3],
   ["con_11", "T23-8011", "Joint torique EPDM spécial eau de mine acide", "Consommables & Pièces d'Usure T23", "Garnitures Statiques", "Joint torique", "Joint torique étanchéité EPDM circuit eau acide", "PIECE", 35, "HAUTE", "Joint en EPDM résistant aux attaques corrosives de l'eau de nappe minière acide.", 3],
   ["con_12", "T23-8012", "Rondelle cuivre d'étanchéité d'origine 1/2\"", "Consommables & Pièces d'Usure T23", "Garnitures Statiques", "Rondelle cuivre", "Rondelle d'étanchéité plate cuivre recuit 1/2\"", "PIECE", 10, "MOYENNE", "Rondelle d'écrasement cuivre pour raccord rapide d'eau de tête arrière.", 3],
   ["con_13", "T23-8013", "Rondelle plate inox d'appui de tirant M12", "Consommables & Pièces d'Usure T23", "Boulonnerie d'Usure", "Rondelle", "Rondelle plate inox d'appui de tirant M12", "PIECE", 12, "MOYENNE", "Rondelle d'appui inox évitant la corrosion par l'humidité constante du front.", 3],

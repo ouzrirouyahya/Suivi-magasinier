@@ -35,6 +35,22 @@
  * - Nouvelle valeur (pon_30) : "Pompe électrique de refroidissement des freins SAHR" (component: "Pompe refroidissement freins", subComponent: "SAHR")
  * - Source de vérification : Le Scooptram ST7 possède des freins humides multidisques forcé-refroidis ("force-cooled wet discs") SAHR actifs avec un circuit de circulation d'huile forcée pour dissiper la chaleur à travers un refroidisseur d'huile, nécessitant une pompe de circulation d'huile active et un filtre de filtration d'huile.
  * - Niveau de confiance : CERTAIN
+ * 
+ * CORRECTIONS COMPLÉMENTAIRES (POINTS MINEURS) :
+ * 
+ * 6. Point tra_31 : Sélecteur de vitesses électronique de cabine 24V
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["tra_31", "3115 6031", "Sélecteur de vitesses électronique de cabine 24V", 3, 15, "Sélecteur de rapport", "Epiroc", "PIECE", 4800, "HAUTE"]
+ *    - Nouvelle valeur : ["tra_31", "3115 6031", "Sélecteur de vitesses électronique de poste opérateur 24V", 3, 15, "Sélecteur de rapport", "Epiroc", "PIECE", 4800, "HAUTE"]
+ *    - Source de vérification : Atlas Copco ST7 Technical Specification (le sélecteur de vitesses est situé au poste opérateur, qui peut être équipé soit d'un canopy standard, soit d'une cabine climatisée optionnelle ; le terme "de cabine" est donc indûment restrictif).
+ *    - Niveau de confiance : CERTAIN
+ * 
+ * 7. Point ele_40 : Radio MP3 étanche industrielle pour cabine (Option)
+ *    - Statut : CORRIGÉ
+ *    - Ancienne valeur : ["ele_40", "5580 9040", "Radio MP3 étanche industrielle pour cabine (Option)", 6, 26, "Radio MP3 industrielle", "Epiroc", "PIECE", 1800, "BASSE"]
+ *    - Nouvelle valeur : ["ele_40", "5580 9040", "Radio MP3 étanche industrielle pour poste opérateur (Option)", 6, 26, "Radio MP3 industrielle", "Epiroc", "PIECE", 1800, "BASSE"]
+ *    - Source de vérification : Spécifications techniques Epiroc ST7. La radio étanche est une option disponible pour l'ensemble du poste opérateur, qu'il soit équipé du canopy ou de la cabine fermée.
+ *    - Niveau de confiance : CERTAIN
  */
 
 import { CatalogItem } from './types';
@@ -250,7 +266,7 @@ const RAW_ITEMS: RawItem[] = [
   ["tra_28", "3115 6028", "Croisillon de cardan universel avec graisseur", 3, 15, "Croisillon de cardan", "Epiroc", "PIECE", 1900, "HAUTE"],
   ["tra_29", "3115 6029", "Roulement d'appui intermédiaire d'arbre de transmission", 3, 15, "Roulement de palier cardan", "Epiroc", "PIECE", 1100, "MOYENNE"],
   ["tra_30", "3115 6030", "Cale d'ajustement d'épaisseur pour engrenage différentiel", 3, 15, "Cale de calage", "Epiroc", "PIECE", 380, "BASSE"],
-  ["tra_31", "3115 6031", "Sélecteur de vitesses électronique de cabine 24V", 3, 15, "Sélecteur de rapport", "Epiroc", "PIECE", 4800, "HAUTE"],
+  ["tra_31", "3115 6031", "Sélecteur de vitesses électronique de poste opérateur 24V", 3, 15, "Sélecteur de rapport", "Epiroc", "PIECE", 4800, "HAUTE"],
   ["tra_32", "3115 6032", "Bloc d'électrovannes de commande de boîte Funk", 3, 15, "Bloc d'électrovannes boîte", "Funk", "PIECE", 8500, "CRITIQUE"],
   ["tra_33", "3115 6033", "Pignon de liaison à chaîne d'arbre de renvoi", 3, 15, "Pignon à chaîne", "Epiroc", "PIECE", 2800, "MOYENNE"],
   ["tra_34", "3115 6034", "Chaîne de transmission de rechange renforcée", 3, 15, "Chaîne de boîte", "Epiroc", "PIECE", 3500, "HAUTE"],
@@ -370,7 +386,7 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_37", "5580 9037", "Calculateur d'assistance Ride Control antibalancement (Option)", 6, 25, "Calculateur Ride Control", "Epiroc", "PIECE", 12500, "HAUTE"],
   ["ele_38", "5580 9038", "Caméra de recul étanche couleur grand angle (Option)", 6, 25, "Caméra de recul étanche", "Epiroc", "PIECE", 3200, "HAUTE"],
   ["ele_39", "5580 9039", "Écran de visualisation de caméra en cabine (Option)", 6, 25, "Écran caméra cabine", "Epiroc", "PIECE", 2800, "HAUTE"],
-  ["ele_40", "5580 9040", "Radio MP3 étanche industrielle pour cabine (Option)", 6, 26, "Radio MP3 industrielle", "Epiroc", "PIECE", 1800, "BASSE"],
+  ["ele_40", "5580 9040", "Radio MP3 étanche industrielle pour poste opérateur (Option)", 6, 26, "Radio MP3 industrielle", "Epiroc", "PIECE", 1800, "BASSE"],
   ["ele_41", "5580 9041", "Compteur horaire numérique de tableau de bord d'origine", 6, 25, "Compteur horaire digital", "Epiroc", "PIECE", 580, "BASSE"],
   ["ele_42", "5580 9042", "Porte de cabine complète vitrée avec serrure (Option cabine)", 6, 26, "Porte cabine vitrée", "Epiroc", "PIECE", 16500, "HAUTE"],
   ["ele_43", "5580 9043", "Vitre latérale en verre feuilleté sécurisé (Option cabine)", 6, 26, "Vitre cabine latérale", "Epiroc", "PIECE", 4200, "MOYENNE"],
