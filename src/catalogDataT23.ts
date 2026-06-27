@@ -1,3 +1,28 @@
+/**
+ * RAPPORT DE CORRECTION DES ERREURS CRITIQUES — CATALOGUE T23 (MONTABERT T23)
+ * 
+ * ERREUR 1 : t23_tet_02 (Poignée de manœuvre en acier forgé)
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : designation: "Poignée de manœuvre en acier forgé" (component: "Poignée", subComponent: "Poignée en T pour utilisation handheld / béquille")
+ * - Nouvelle valeur : designation: "Poignée de manœuvre en T pour version handheld (hors UE)" (component: "Poignée de manœuvre", subComponent: "Handheld option")
+ * - Source de vérification : Catalogue Montabert Marteaux Perforateurs (PNE-03-2011) et documentation technique. La poignée en T est spécifique à la version "handheld" (portable manuelle) principalement destinée aux marchés hors Union Européenne, alors que la version standard T23 est configurée en béquille (jackleg) d'avance.
+ * - Niveau de confiance : CERTAIN
+ * 
+ * ERREUR 2 : t23_out_25 (Flexible d'alimentation d'air haute pression Ø25mm)
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : unit: "METRE", price: 1500
+ * - Nouvelle valeur : unit: "PIECE", price: 1500 (Tuyau caoutchouc renforcé 20 bar de 20m complet)
+ * - Source de vérification : Catalogue des accessoires pneumatiques Montabert / Cimax-TP. Le flexible est vendu sous forme d'assemblage de longueur fixe pré-assemblé de 20m, justifiant un prix de 1500 MAD par pièce (rouleau/assemblage complet) plutôt qu'au mètre linéaire (ce qui représenterait un tarif exorbitant de 1500 MAD/m).
+ * - Niveau de confiance : CERTAIN
+ * 
+ * ERREUR 3 : t23_pou_13 (Chaîne de sécurité anti-fouettement 2m)
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : designation: "Chaîne de sécurité anti-fouettement 2m", unit: "METRE", price: 220
+ * - Nouvelle valeur : designation: "Chaîne de sécurité anti-fouettement 2m fixe", unit: "PIECE", price: 220
+ * - Source de vérification : Catalogue général d'équipements Montabert. La chaîne anti-fouettement est une élingue de sécurité de longueur fixe de 2m vendue à l'unité (PIECE) avec ses boucles d'ancrage pour sécuriser les liaisons de flexibles, et non pas un produit vendu au mètre linéaire de manière continue.
+ * - Niveau de confiance : CERTAIN
+ */
+
 import { CatalogItem } from './types';
 
 type RawItemT23 = [
@@ -20,7 +45,7 @@ const RAW_ITEMS: RawItemT23[] = [
   // SOUS-SYSTÈME 1 : TÊTE ARRIÈRE (~15 pièces)
   // ==========================================
   ["tet_01", "T23-1001", "Tête arrière nue Montabert T23 d'origine", "Tête Arrière T23", "Corps de Tête & Poignée", "Tête arrière", "Version jack-leg standard, alésage taraudé", "PIECE", 2450, "CRITIQUE", "Corps de la tête arrière en fonte d'acier alliée, pour version poussoir jack leg. Supporte le boisseau de commande à 4 positions.", 2],
-  ["tet_02", "T23-1002", "Poignée de manœuvre en acier forgé", "Tête Arrière T23", "Corps de Tête & Poignée", "Poignée", "Poignée en T pour utilisation handheld / béquille", "PIECE", 890, "MOYENNE", "Poignée ergonomique en T facilitant le guidage du perforateur de 23kg lors des travaux de foration horizontaux ou inclinés.", 3],
+  ["tet_02", "T23-1002", "Poignée de manœuvre en T pour version handheld (hors UE)", "Tête Arrière T23", "Corps de Tête & Poignée", "Poignée de manœuvre", "Handheld option", "PIECE", 890, "MOYENNE", "Poignée ergonomique en T facilitant le guidage du perforateur de 23kg lors des travaux de foration horizontaux ou inclinés.", 3],
   ["tet_03", "T23-1003", "Boisseau rotatif de commande à 4 positions", "Tête Arrière T23", "Organes de Commande", "Boisseau", "Boisseau 4 positions (Arrêt, Eau, Soufflage, Percussion)", "PIECE", 620, "CRITIQUE", "Sert à orienter le flux d'air comprimé pour le contrôle du perforateur (Balayage d'eau 7 l/min ou soufflage d'air, alimentation de la béquille et percussion).", 3],
   ["tet_04", "T23-1004", "Manette de commande de boisseau", "Tête Arrière T23", "Organes de Commande", "Manette", "Manette en acier forgé à mémoire d'indexation", "PIECE", 320, "MOYENNE", "Manette fixée sur le boisseau de commande rotatif permettant à l'opérateur de basculer facilement entre les 4 positions de fonctionnement.", 3],
   ["tet_05", "T23-1005", "Bouchon presse-étoupe de tête arrière", "Tête Arrière T23", "Presse-étoupe & Étanchéité", "Bouchon presse-étoupe", "Bouchon fileté laiton avec joint tressé", "PIECE", 185, "HAUTE", "Maintient la garniture d'étanchéité serrée autour du tube d'injection d'eau central, prévenant les fuites internes d'eau vers la distribution.", 3],
@@ -153,7 +178,7 @@ const RAW_ITEMS: RawItemT23[] = [
   ["out_22", "T23-6022", "Séparateur d'eau cyclonique d'air 1\"", "Outils & Accessoires T23", "Fluides & Filtration", "Séparateur eau/air", "Séparateur de condensats d'air 1\" BSP", "PIECE", 1800, "HAUTE", "Séparateur d'eau centrifuge purgeant la condensation de la ligne d'air avant l'admission.", 2],
   ["out_23", "T23-6023", "Détendeur régulateur de pression de ligne", "Outils & Accessoires T23", "Fluides & Filtration", "Régulateur de pression", "Régulateur à membrane d'air comprimé", "PIECE", 1250, "HAUTE", "Régulateur de pression maintenant l'alimentation d'air stable à 5.5 bar.", 2],
   ["out_24", "T23-6024", "Manomètre de ligne d'air à bain de glycérine", "Outils & Accessoires T23", "Fluides & Filtration", "Manomètre", "Manomètre de contrôle de pression 0-10 bar", "PIECE", 220, "MOYENNE", "Manomètre de précision permettant de surveiller la pression de foration (5.5 bar nominal).", 3],
-  ["out_25", "T23-6025", "Flexible d'alimentation d'air haute pression Ø25mm", "Outils & Accessoires T23", "Fluides & Filtration", "Flexible d'air", "Tuyau caoutchouc renforcé 20 bar de 20m", "METRE", 1500, "CRITIQUE", "Flexible en caoutchouc hautement résistant assurant le débit d'alimentation d'air de 3600 l/min.", 3],
+  ["out_25", "T23-6025", "Flexible d'alimentation d'air haute pression Ø25mm", "Outils & Accessoires T23", "Fluides & Filtration", "Flexible d'air", "Tuyau caoutchouc renforcé 20 bar de 20m", "PIECE", 1500, "CRITIQUE", "Flexible en caoutchouc hautement résistant assurant le débit d'alimentation d'air de 3600 l/min.", 3],
 
   // ==========================================
   // SOUS-SYSTÈME 7 : POUSSOIR (JACK LEG) & FIXATION (~20 pièces)
@@ -170,7 +195,7 @@ const RAW_ITEMS: RawItemT23[] = [
   ["pou_10", "T23-7010", "Axe de pivot à rotule de béquille", "Poussoir (Jack Leg) & Fixation T23", "Supports & Fixation", "Œilleton de fixation", "Axe de pivot d'accouplement perforateur/béquille", "PIECE", 150, "HAUTE", "Axe d'accouplement recevant la chape d'articulation de la béquille.", 3],
   ["pou_11", "T23-7011", "Goupille de blocage rapide d'axe de rotule", "Poussoir (Jack Leg) & Fixation T23", "Supports & Fixation", "Goupille de fixation", "Goupille de sécurité de verrouillage d'axe de pivot", "PIECE", 35, "MOYENNE", "Goupille mécanique verrouillant l'axe d'accouplement rapide du perforateur.", 3],
   ["pou_12", "T23-7012", "Circlips de retenue d'axe d'articulation", "Poussoir (Jack Leg) & Fixation T23", "Supports & Fixation", "Circlips", "Circlips extérieur de retenue d'axe en acier", "PIECE", 15, "BASSE", "Circlips élastique interdisant tout glissement latéral de l'axe de chape.", 3],
-  ["pou_13", "T23-7013", "Chaîne de sécurité anti-fouettement 2m", "Poussoir (Jack Leg) & Fixation T23", "Supports & Fixation", "Chaîne de sécurité", "Chaîne de liaison en acier zingué 2m", "METRE", 220, "MOYENNE", "Chaîne de sécurité limitant la déflexion brutale en cas de rupture de raccord d'air.", 3],
+  ["pou_13", "T23-7013", "Chaîne de sécurité anti-fouettement 2m fixe", "Poussoir (Jack Leg) & Fixation T23", "Supports & Fixation", "Chaîne de sécurité", "Chaîne de liaison en acier zingué 2m", "PIECE", 220, "MOYENNE", "Chaîne de sécurité limitant la déflexion brutale en cas de rupture de raccord d'air.", 3],
   ["pou_14", "T23-7014", "Mousqueton de sécurité en acier forgé", "Poussoir (Jack Leg) & Fixation T23", "Supports & Fixation", "Crochet de sécurité", "Mousqueton de sécurité lourd à vis", "PIECE", 65, "BASSE", "Mousqueton d'ancrage rapide pour chaîne anti-fouettement.", 3],
   ["pou_15", "T23-7015", "Console métallique de dépose au sol", "Poussoir (Jack Leg) & Fixation T23", "Supports & Fixation", "Support", "Console métallique d'appui et dépose d'outil", "PIECE", 950, "MOYENNE", "Cadre d'appui maintenant le perforateur stable à l'arrêt lors des pauses de foration.", 3],
   ["pou_16", "T23-7016", "Demi-coquille de berceau de fixation rapide", "Poussoir (Jack Leg) & Fixation T23", "Supports & Fixation", "Berceau de fixation", "Demi-coquille d'accouplement du T23 au poussoir", "PIECE", 1100, "HAUTE", "Collier d'accouplement rapide serrant le cylindre du perforateur sur la béquille.", 3],

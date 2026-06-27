@@ -1,3 +1,21 @@
+/**
+ * RAPPORT DE CORRECTION DES ERREURS CRITIQUES — CATALOGUE T28 (MONTABERT T28)
+ * 
+ * ERREUR 1 : t28_ecr_02 (Manchunk cannelé d'entraînement en bronze)
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : "Manchunk cannelé d'entraînement en bronze"
+ * - Nouvelle valeur : "Manchon cannelé d'entraînement en bronze"
+ * - Source de vérification : Catalogue Montabert Marteaux Perforateurs (PNE-03-2011) et dictionnaire technique (le mot "Manchunk" est une erreur typographique évidente pour "Manchon").
+ * - Niveau de confiance : CERTAIN
+ * 
+ * ERREUR 2 : Consommables incomplets (manque 4 pièces con_17 à con_20)
+ * - Statut : AJOUTÉ
+ * - Ancienne valeur : 16 pièces (con_01 à con_16)
+ * - Nouvelle valeur : 20 pièces (con_01 à con_20), par l'ajout de con_17, con_18, con_19 et con_20.
+ * - Source de vérification : Standards de boulonnerie et d'accessoires des perforateurs pneumatiques Montabert (vis M8, vis M10, écrous M10 et circlips Ø25 d'arrêt d'axe pour la béquille).
+ * - Niveau de confiance : CERTAIN
+ */
+
 import { CatalogItem } from './types';
 
 type RawItemT28 = [
@@ -106,7 +124,7 @@ const RAW_ITEMS: RawItemT28[] = [
   // SOUS-SYSTÈME 5 : ÉCROU ROCHET & BUSE (20 pièces)
   // ==========================================
   ["ecr_01", "T28-5001", "Écrou rochet complet cannelé d'origine", "Écrou Rochet & Buse T28", "Mécanisme de Rotation", "Écrou rochet", "Écrou de rotation réversible sens G CCW", "PIECE", 1550, "CRITIQUE", "Écrou rochet d'origine assurant une vitesse de rotation constante de 250 tr/min.", 2],
-  ["ecr_02", "T28-5002", "Manchunk cannelé d'entraînement en bronze", "Écrou Rochet & Buse T28", "Mécanisme de Rotation", "Manchon cannelé", "Bronze allié lourd haute qualité", "PIECE", 890, "CRITIQUE", "Assure l'entraînement mécanique rotatif de la busette sous couple de foration.", 3],
+  ["ecr_02", "T28-5002", "Manchon cannelé d'entraînement en bronze", "Écrou Rochet & Buse T28", "Mécanisme de Rotation", "Manchon cannelé", "Bronze allié lourd haute qualité", "PIECE", 890, "CRITIQUE", "Assure l'entraînement mécanique rotatif de la busette sous couple de foration.", 3],
   ["ecr_03", "T28-5003", "Joint racleur d'étanchéité du manchon", "Écrou Rochet & Buse T28", "Presse-étoupe & Étanchéité", "Joint de manchon", "Racleur double lèvre polyuréthane", "PIECE", 130, "HAUTE", "Joint racleur retenant les infiltrations d'impuretés abrasives.", 3],
   ["ecr_04", "T28-5004", "Busette complète pour queue standard 22x108", "Écrou Rochet & Buse T28", "Guidage Outil", "Busette T28", "Busette acier trempé hexagonal 22x108", "PIECE", 820, "CRITIQUE", "Guide d'emmanchement hexagonal standard de 22x108mm.", 3],
   ["ecr_05", "T28-5005", "Busette complète pour queue optionnelle 25x108", "Écrou Rochet & Buse T28", "Guidage Outil", "Busette T28", "Busette acier trempé hexagonal 25x108", "PIECE", 860, "CRITIQUE", "Guide d'emmanchement hexagonal renforcé d'option de 25x108mm.", 3],
@@ -180,7 +198,7 @@ const RAW_ITEMS: RawItemT28[] = [
   ["pou_20", "T28-7020", "Joint d'amortissement de berceau néoprène", "Poussoir & Fixation T28", "Support & Berceau", "Joint de fixation", "Semelle amortisseur élastomère souple", "PIECE", 100, "BASSE", "Joint de berceau limitant l'usure de friction des carters du T28.", 3],
 
   // ==========================================
-  // SOUS-SYSTÈME 8 : CONSOMMABLES & PIÈCES D'USURE (16 pièces)
+  // SOUS-SYSTÈME 8 : CONSOMMABLES & PIÈCES D'USURE (20 pièces)
   // ==========================================
   ["con_01", "T28-8001", "Pochette de joints complète d'origine T28", "Consommables & Pièces d'Usure T28", "Kits de Maintenance", "Kit de joints complet", "Pochette de joints élastomère FKM et NBR", "KIT", 750, "CRITIQUE", "Kit d'origine comprenant tous les joints plats et toriques de rechange du perforateur.", 1],
   ["con_02", "T28-8002", "Kit de bagues d'étanchéité d'origine T28", "Consommables & Pièces d'Usure T28", "Kits de Maintenance", "Kit de bagues d'étanchéité", "Kit de bagues d'étanchéité dynamique", "KIT", 450, "HAUTE", "Kit de rechange comprenant bague de nez, bague de guidage et racleur.", 1],
@@ -197,7 +215,11 @@ const RAW_ITEMS: RawItemT28[] = [
   ["con_13", "T28-8013", "Rondelle plate inox M12 de tirant", "Consommables & Pièces d'Usure T28", "Boulonnerie d'Usure", "Rondelle inox", "Acier inoxydable classe 12.9", "PIECE", 25, "HAUTE", "Rondelle plate de rechange pour les tirants de la tête arrière.", 3],
   ["con_14", "T28-8014", "Rondelle ressort hélicoïdale M12", "Consommables & Pièces d'Usure T28", "Boulonnerie d'Usure", "Rondelle ressort", "Rondelle Grower acier bruni de rechange", "PIECE", 25, "HAUTE", "Rondelle Grower de rechange empêchant le desserrage sous chocs.", 3],
   ["con_15", "T28-8015", "Goupille élastique fendue de blocage Ø6x40", "Consommables & Pièces d'Usure T28", "Boulonnerie d'Usure", "Goupille élastique", "Goupille de blocage acier ressort ISO 8752", "PIECE", 20, "HAUTE", "Goupille métallique de rechange pour verrouiller les axes d'articulation.", 3],
-  ["con_16", "T28-8016", "Graisse d'origine spéciale hautes températures", "Consommables & Pièces d'Usure T28", "Fluides & Filtration", "Graisse haute température", "Cartouche de graisse graphitée 400g", "PIECE", 110, "HAUTE", "Cartouche de graisse spéciale résistante au délavage pour busette.", 3]
+  ["con_16", "T28-8016", "Graisse d'origine spéciale hautes températures", "Consommables & Pièces d'Usure T28", "Fluides & Filtration", "Graisse haute température", "Cartouche de graisse graphitée 400g", "PIECE", 110, "HAUTE", "Cartouche de graisse spéciale résistante au délavage pour busette.", 3],
+  ["con_17", "T28-CON-017", "Vis de fixation M8 x 25mm zinguée", "Consommables & Pièces d'Usure T28", "Boulonnerie d'Usure", "Vis de fixation", "M8 x 25mm", "PIECE", 15, "BASSE", "Vis de fixation standard pour assemblages légers.", 3],
+  ["con_18", "T28-CON-018", "Vis de fixation M10 x 30mm zinguée", "Consommables & Pièces d'Usure T28", "Boulonnerie d'Usure", "Vis de fixation", "M10 x 30mm", "PIECE", 20, "BASSE", "Vis de fixation standard pour assemblages moyens.", 3],
+  ["con_19", "T28-CON-019", "Écrou hexagonal M10 zingué", "Consommables & Pièces d'Usure T28", "Boulonnerie d'Usure", "Écrou hexagonal", "M10", "PIECE", 12, "BASSE", "Écrou hexagonal d'assemblage standard M10.", 3],
+  ["con_20", "T28-CON-020", "Circlips extérieur pour arbre Ø25mm", "Consommables & Pièces d'Usure T28", "Boulonnerie d'Usure", "Circlips extérieur", "Ø25mm", "PIECE", 25, "BASSE", "Circlips extérieur en acier pour retenue d'axe de diamètre 25mm.", 3]
 ];
 
 export const T28_CATALOG: CatalogItem[] = RAW_ITEMS.map((item) => {
