@@ -14,6 +14,15 @@
  * - Nouvelle valeur : 20 pièces (con_01 à con_20), par l'ajout de con_17, con_18, con_19 et con_20.
  * - Source de vérification : Standards de boulonnerie et d'accessoires des perforateurs pneumatiques Montabert (vis M8, vis M10, écrous M10 et circlips Ø25 d'arrêt d'axe pour la béquille).
  * - Niveau de confiance : CERTAIN
+ * 
+ * CORRECTIONS COMPLÉMENTAIRES (POINTS MINEURS) :
+ * 
+ * 3. Point cyl_12 : Joint de culasse intermédiaire cylindre
+ * - Statut : CORRIGÉ
+ * - Ancienne valeur : ["cyl_12", "T28-3012", "Joint de culasse intermédiaire cylindre", "Cylindre T28", "Presse-étoupe & Étanchéité", "Joint de culasse", "Joint d'étanchéité métallique multicouche", "PIECE", 140, "HAUTE", "Joint de culasse d'origine supportant les pointes d'inversion pneumatique.", 3]
+ * - Nouvelle valeur : ["cyl_12", "T28-3012", "Joint de compression intermédiaire cylindre", "Cylindre T28", "Presse-étoupe & Étanchéité", "Joint de cylindre", "Joint de compression intermédiaire expansé", "PIECE", 140, "HAUTE", "Joint de compression d'origine supportant les pointes d'inversion pneumatique.", 3]
+ * - Source de vérification : Catalogue Montabert Marteaux Perforateurs (PNE-03-2011). Le perforateur pneumatique fonctionnant par percussion d'air, il ne comporte pas de culasse de moteur thermique. Le terme exact est un joint de compression de cylindre.
+ * - Niveau de confiance : CERTAIN
  */
 
 import { CatalogItem } from './types';
@@ -91,7 +100,7 @@ const RAW_ITEMS: RawItemT28[] = [
   ["cyl_09", "T28-3009", "Vis épaulée de fixation cylindre d'origine", "Cylindre T28", "Boulonnerie & Tirants", "Vis de fixation", "Vis spéciale de guidage classe 12.9", "PIECE", 135, "HAUTE", "Vis de liaison du cylindre au carter avant de busette.", 3],
   ["cyl_10", "T28-3010", "Écrou freiné de fixation de corps cylindre", "Cylindre T28", "Boulonnerie & Tirants", "Écrou de fixation", "Écrou hexagonal freiné à pas fin UNF", "PIECE", 60, "HAUTE", "Écrou de sécurité autobloquant pour la visserie d'assemblage du cylindre.", 3],
   ["cyl_11", "T28-3011", "Rondelle élastique conique de cylindre", "Cylindre T28", "Boulonnerie & Tirants", "Rondelle de fixation", "Rondelle élastique en acier trempé", "PIECE", 30, "MOYENNE", "Rondelle de ressort conique maintenant la tension axiale sous chocs.", 3],
-  ["cyl_12", "T28-3012", "Joint de culasse intermédiaire cylindre", "Cylindre T28", "Presse-étoupe & Étanchéité", "Joint de culasse", "Joint d'étanchéité métallique multicouche", "PIECE", 140, "HAUTE", "Joint de culasse d'origine supportant les pointes d'inversion pneumatique.", 3],
+  ["cyl_12", "T28-3012", "Joint de compression intermédiaire cylindre", "Cylindre T28", "Presse-étoupe & Étanchéité", "Joint de cylindre", "Joint de compression intermédiaire expansé", "PIECE", 140, "HAUTE", "Joint de compression d'origine supportant les pointes d'inversion pneumatique.", 3],
   ["cyl_13", "T28-3013", "Bouchon d'orifice de purge de cylindre", "Cylindre T28", "Corps de Cylindre", "Bouchon de cylindre", "Bouchon fileté laiton M10 tête bombée", "PIECE", 90, "BASSE", "Bouchon d'étanchéité de purge d'eau accumulée dans les chambres.", 3],
   ["cyl_14", "T28-3014", "Raccord d'échappement d'air direct 1-1/4\"", "Cylindre T28", "Échappement", "Raccord d'échappement", "Raccord union droit en acier zingué", "PIECE", 240, "MOYENNE", "Raccord permettant le couplage direct du tuyau d'échappement.", 3],
   ["cyl_15", "T28-3015", "Tuyau d'échappement flexible armé (1.5m)", "Cylindre T28", "Échappement", "Tuyau d'échappement", "Flexible haute température armé caoutchouc", "PIECE", 480, "MOYENNE", "Canalise l'air de détente à l'écart du poste opérateur de la mine.", 3],
