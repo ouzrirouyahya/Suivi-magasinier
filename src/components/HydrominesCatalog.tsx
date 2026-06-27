@@ -28,7 +28,7 @@ const CATALOG_COUNTS: Record<string, number> = {
   ST7: 315,
   T23: 155,
   T28: 155,
-  CONSOMMABLES: 9
+  CONSOMMABLES: 6
 };
 
 const CATEGORY_ORDER: Record<string, string[]> = {

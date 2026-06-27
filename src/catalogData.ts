@@ -25,6 +25,8 @@ import { ST7_CATALOG } from './catalogDataST7';
 import { T23_CATALOG } from './catalogDataT23';
 import { T28_CATALOG } from './catalogDataT28';
 import { CONSOMMABLES_FORAGE_CATALOG } from './catalogDataConsommablesForage';
+import { EPI_CATALOG } from './catalogDataEPI';
+import { OUTILS_CATALOG } from './catalogDataOutilsTravaux';
 
 // Master catalog version
 export const CATALOG_VERSION = '15.2';
@@ -37,6 +39,8 @@ export const MASTER_CATALOG: CatalogItem[] = [
   ...T23_CATALOG,
   ...T28_CATALOG,
   ...CONSOMMABLES_FORAGE_CATALOG,
+  ...EPI_CATALOG,
+  ...OUTILS_CATALOG,
 ];
 
 // Helper: total count

@@ -7,62 +7,134 @@ import { Search, ChevronLeft, Award } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const EQUIPMENT_TYPES = [
-  { id: 'ST2G', label: 'ST2G', icon: '🔧' },
-  { id: 'ST2D', label: 'ST2D', icon: '🔧' },
-  { id: 'T23', label: 'MONTABERT T23', icon: '⛏️' },
-  { id: 'T28', label: 'MONTABERT T28', icon: '⛏️' },
-  { id: 'CONSOMMABLES_EPI_OUTILS', label: 'CONSOM. & EPI & OUTILS', icon: '📦' }
+  { id: 'ST2G', label: 'ST2G', icon: '🚧' },
+  { id: 'ST2D', label: 'ST2D', icon: '🚧' },
+  { id: 'ST7', label: 'ST7', icon: '🚧' },
+  { id: 'T23', label: 'MONTABERT T23', icon: '🔨' },
+  { id: 'T28', label: 'MONTABERT T28', icon: '🔨' },
+  { id: 'CONSOMMABLES', label: 'CONSOMMABLES FORAGE', icon: '⛏️' },
+  { id: 'EPI', label: 'EPI', icon: '🦺' },
+  { id: 'OUTILS_TRAVAUX', label: 'OUTILS TRAVAUX', icon: '🛠️' },
 ];
 
 const getItemTabs = (item: CatalogItem): string[] => {
   const tabs: string[] = [];
   const suggestedType = (item.suggestedType || '') as string;
-  
-  if (suggestedType === 'CONSOMMABLES' || suggestedType === 'EPI' || suggestedType === 'OUTILS_TRAVAUX' || suggestedType === 'OUTILS') {
-    tabs.push('CONSOMMABLES_EPI_OUTILS');
-    return tabs;
-  }
-  
   const compat = (item.compatibility || '').toUpperCase();
+  const designation = (item.designation || '').toUpperCase();
+  const id = (item.id || '').toUpperCase();
+  const ref = (item.reference || '').toUpperCase();
   
+  // PRIORITÉ 1 : Détecter par compatibility (engins et perforateurs)
   const hasST2G = compat.includes('ST2G');
   const hasST2D = compat.includes('ST2D');
+  const hasST7 = compat.includes('ST7');
   const hasT23 = compat.includes('T23');
   const hasT28 = compat.includes('T28');
-
+  
   if (hasST2G) tabs.push('ST2G');
   if (hasST2D) tabs.push('ST2D');
+  if (hasST7) tabs.push('ST7');
   if (hasT23) tabs.push('T23');
   if (hasT28) tabs.push('T28');
-
-  // Fallback checks if compatibility doesn't match standard patterns but item belongs elsewhere
-  if (tabs.length === 0) {
-    const desig = (item.designation || '').toUpperCase();
-    const id = (item.id || '').toUpperCase();
-    const ref = (item.reference || '').toUpperCase();
-    const hasST2GAlt = desig.includes('ST2G') || id.includes('ST2G') || ref.includes('ST2G');
-    const hasST2DAlt = desig.includes('ST2D') || id.includes('ST2D') || ref.includes('ST2D');
-    const hasT23Alt = desig.includes('T23') || id.includes('T23') || ref.includes('T23') || desig.includes('T-23');
-    const hasT28Alt = desig.includes('T28') || id.includes('T28') || ref.includes('T28') || desig.includes('T-28');
-
-    if (hasST2GAlt) tabs.push('ST2G');
-    if (hasST2DAlt) tabs.push('ST2D');
-    if (hasT23Alt) tabs.push('T23');
-    if (hasT28Alt) tabs.push('T28');
+  
+  // Si déjà assigné à un engin/perforateur, ne PAS rediriger vers consommables
+  if (tabs.length > 0) return tabs;
+  
+  // Fallback par designation/id/reference pour T23/T28
+  const hasT23Alt = designation.includes('T23') || id.includes('T23') || ref.includes('T23') || designation.includes('T-23');
+  const hasT28Alt = designation.includes('T28') || id.includes('T28') || ref.includes('T28') || designation.includes('T-28');
+  const hasST2GAlt = designation.includes('ST2G') || id.includes('ST2G') || ref.includes('ST2G');
+  const hasST2DAlt = designation.includes('ST2D') || id.includes('ST2D') || ref.includes('ST2D');
+  const hasST7Alt = designation.includes('ST7') || id.includes('ST7') || ref.includes('ST7');
+  
+  if (hasST2GAlt) tabs.push('ST2G');
+  if (hasST2DAlt) tabs.push('ST2D');
+  if (hasST7Alt) tabs.push('ST7');
+  if (hasT23Alt) tabs.push('T23');
+  if (hasT28Alt) tabs.push('T28');
+  
+  if (tabs.length > 0) return tabs;
+  
+  // PRIORITÉ 2 : Consommables / EPI / Outils par suggestedType
+  if (suggestedType === 'CONSOMMABLES') {
+    tabs.push('CONSOMMABLES');
+  } else if (suggestedType === 'EPI') {
+    tabs.push('EPI');
+  } else if (suggestedType === 'OUTILS_TRAVAUX') {
+    tabs.push('OUTILS_TRAVAUX');
+  } else if (suggestedType === 'OUTILS') {
+    // Les pièces avec suggestedType 'OUTILS' qui ne sont pas T23/T28
+    // sont des outils de forage → consommables
+    tabs.push('CONSOMMABLES');
+  } else if (suggestedType === 'ENGINS') {
+    tabs.push('ST2G');
+  } else if (suggestedType === 'PERFORATEURS') {
+    tabs.push('T23');
+  } else {
+    tabs.push('ST2G'); // Fallback absolu
   }
-
-  // Absolute fallback based on suggestedType if still completely empty
-  if (tabs.length === 0) {
-    if (suggestedType === 'ENGINS') {
-      tabs.push('ST2G');
-    } else if (suggestedType === 'PERFORATEURS') {
-      tabs.push('T23');
-    } else {
-      tabs.push('ST2G'); // Absolute fallback
-    }
-  }
-
+  
   return tabs;
+};
+
+const CATEGORY_ORDER: Record<string, string[]> = {
+  'ST2G': [
+    'Moteur Diesel & Filtration',
+    'Système Hydraulique & Vérins',
+    'Transmission & Convertisseur',
+    'Ponts, Essieux & Roues',
+    'Freinage & Sécurité',
+    'Électricité & Canopy',
+    'Châssis, Structure & Liaison',
+  ],
+  'ST2D': [
+    'Moteur Diesel & Filtration',
+    'Système Hydraulique & Vérins',
+    'Transmission & Convertisseur',
+    'Ponts, Essieux & Roues',
+    'Freinage & Sécurité',
+    'Électricité & Canopy',
+    'Châssis, Structure & Liaison',
+  ],
+  'ST7': [
+    'Moteur Diesel & Filtration',
+    'Système Hydraulique & Vérins',
+    'Transmission & Convertisseur',
+    'Ponts, Essieux & Roues',
+    'Freinage & Sécurité',
+    'Électricité & Poste Opérateur',
+    'Châssis, Structure & Liaison',
+  ],
+  'T23': [
+    'Tête Arrière T23',
+    'Distribution T23',
+    'Cylindre T23',
+    'Piston & Frappe T23',
+    'Écrou Rochet & Buse T23',
+    'Outils & Accessoires T23',
+    'Poussoir (Jack Leg) & Fixation T23',
+    'Consommables & Pièces d\'Usure T23',
+  ],
+  'T28': [
+    'Tête Arrière T28',
+    'Distribution T28',
+    'Cylindre T28',
+    'Piston & Frappe T28',
+    'Écrou Rochet & Buse T28',
+    'Outils & Accessoires T28',
+    'Poussoir (Jack Leg) & Fixation T28',
+    'Consommables & Pièces d\'Usure T28',
+  ],
+  'CONSOMMABLES': [
+    'Barres de Forage',
+    'Taillants & Boutons',
+    'Mèches & Tiges',
+    'Adaptateurs & Raccords',
+    'Accessoires de Forage',
+  ],
+  'EPI': [],
+  'OUTILS_TRAVAUX': [],
 };
 
 export const MasterCatalogPage: React.FC = () => {
@@ -152,7 +224,15 @@ export const MasterCatalogPage: React.FC = () => {
     const typeData = hierarchy[selectedType] || { categories: {} };
     const cats = Object.keys(typeData.categories);
     if (cats.length > 0) {
-      cats.sort();
+      cats.sort((a, b) => {
+        const order = CATEGORY_ORDER[selectedType] || [];
+        const idxA = order.indexOf(a);
+        const idxB = order.indexOf(b);
+        if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+        if (idxA !== -1) return -1;
+        if (idxB !== -1) return 1;
+        return a.localeCompare(b);
+      });
       const firstCat = cats[0];
       setSelectedCategory(firstCat);
       
@@ -205,20 +285,21 @@ export const MasterCatalogPage: React.FC = () => {
       return;
     }
 
-    // Determine target stock type
     let targetType: string = 'ENGINS';
     const itemSuggestedType = item.suggestedType as string;
     
-    if (itemSuggestedType === 'CONSOMMABLES' || itemSuggestedType === 'EPI' || itemSuggestedType === 'OUTILS_TRAVAUX' || itemSuggestedType === 'OUTILS') {
-      targetType = itemSuggestedType === 'OUTILS' ? 'OUTILS_TRAVAUX' : itemSuggestedType;
+    if (itemSuggestedType === 'CONSOMMABLES') {
+      targetType = 'CONSOMMABLES';
+    } else if (itemSuggestedType === 'EPI') {
+      targetType = 'EPI';
+    } else if (itemSuggestedType === 'OUTILS_TRAVAUX' || itemSuggestedType === 'OUTILS') {
+      targetType = 'OUTILS_TRAVAUX';
+    } else if (selectedType === 'T23' || selectedType === 'T28') {
+      targetType = 'PERFORATEURS';
+    } else if (selectedType === 'ST2G' || selectedType === 'ST2D' || selectedType === 'ST7') {
+      targetType = 'ENGINS';
     } else {
-      if (selectedType === 'ST2G' || selectedType === 'ST2D') {
-        targetType = 'ENGINS';
-      } else if (selectedType === 'T23' || selectedType === 'T28') {
-        targetType = 'PERFORATEURS';
-      } else {
-        targetType = 'ENGINS';
-      }
+      targetType = 'ENGINS';
     }
 
     try {
@@ -235,7 +316,15 @@ export const MasterCatalogPage: React.FC = () => {
       id: catId,
       name: typeData.categories[catId].name,
       ...typeData.categories[catId]
-    })).sort((a, b) => a.name.localeCompare(b.name));
+    })).sort((a, b) => {
+      const order = CATEGORY_ORDER[selectedType] || [];
+      const idxA = order.indexOf(a.name);
+      const idxB = order.indexOf(b.name);
+      if (idxA !== -1 && idxB !== -1) return idxA - idxB;
+      if (idxA !== -1) return -1;
+      if (idxB !== -1) return 1;
+      return a.name.localeCompare(b.name);
+    });
   }, [typeData, selectedType]);
 
   const subCategoriesList = useMemo(() => {

@@ -1,12 +1,91 @@
 import { CatalogItem } from './types';
 
+export interface ConsommablePriceConfig {
+  id: string;
+  reference: string;
+  designation: string;
+  basePrice: number;      // Prix d'achat standard (modifiable)
+  sellingPrice: number;   // Prix de vente / utilisation (modifiable)
+  currency: string;       // 'MAD' par défaut
+  lastUpdated: string;    // Date de dernière modification
+  updatedBy: string;      // Qui a modifié le prix
+}
+
+export const CONSOMMABLES_PRICES: ConsommablePriceConfig[] = [
+  {
+    id: 'for_bar_01',
+    reference: 'FOR-BAR-180',
+    designation: 'Barre conique H22 Longueur 1.8m',
+    basePrice: 1200,
+    sellingPrice: 1200,
+    currency: 'MAD',
+    lastUpdated: new Date().toISOString(),
+    updatedBy: 'system',
+  },
+  {
+    id: 'for_bar_02',
+    reference: 'FOR-BAR-240',
+    designation: 'Barre conique H22 Longueur 2.4m',
+    basePrice: 1600,
+    sellingPrice: 1600,
+    currency: 'MAD',
+    lastUpdated: new Date().toISOString(),
+    updatedBy: 'system',
+  },
+  {
+    id: 'for_tai_01',
+    reference: 'FOR-TAI-038',
+    designation: 'Taillant bouton 38mm',
+    basePrice: 380,
+    sellingPrice: 380,
+    currency: 'MAD',
+    lastUpdated: new Date().toISOString(),
+    updatedBy: 'system',
+  },
+  {
+    id: 'for_tai_02',
+    reference: 'FOR-TAI-041',
+    designation: 'Taillant bouton 41mm',
+    basePrice: 450,
+    sellingPrice: 450,
+    currency: 'MAD',
+    lastUpdated: new Date().toISOString(),
+    updatedBy: 'system',
+  },
+  {
+    id: 'for_tai_03',
+    reference: 'FOR-TAI-045',
+    designation: 'Taillant bouton 45mm',
+    basePrice: 1200,
+    sellingPrice: 1200,
+    currency: 'MAD',
+    lastUpdated: new Date().toISOString(),
+    updatedBy: 'system',
+  },
+  {
+    id: 'for_ada_01',
+    reference: 'FOR-ADA-2245',
+    designation: 'Adaptateur queue 22x108 / T45',
+    basePrice: 2800,
+    sellingPrice: 2800,
+    currency: 'MAD',
+    lastUpdated: new Date().toISOString(),
+    updatedBy: 'system',
+  },
+];
+
+const getPrice = (id: string): number => {
+  const config = CONSOMMABLES_PRICES.find(p => p.id === id);
+  return config?.sellingPrice || 0;
+};
+
 const RAW_ITEMS: Array<Record<string, any>> = [
   {
     id: 'for_bar_01',
     reference: 'FOR-BAR-180',
     designation: 'Barre conique H22 Longueur 1.8m',
     unit: 'PIECE',
-    price: 2800,
+    price: getPrice('for_bar_01'),
     functionalCategory: 'Barres de Forage',
     component: 'Barre conique',
     subComponent: 'Acier allié chrome-molybdène',
@@ -22,10 +101,10 @@ const RAW_ITEMS: Array<Record<string, any>> = [
   },
   {
     id: 'for_bar_02',
-    reference: 'FOR-BAR-280',
-    designation: 'Barre conique H22 Longueur 2.8m',
+    reference: 'FOR-BAR-240',
+    designation: 'Barre conique H22 Longueur 2.4m',
     unit: 'PIECE',
-    price: 4200,
+    price: getPrice('for_bar_02'),
     functionalCategory: 'Barres de Forage',
     component: 'Barre conique',
     subComponent: 'Acier allié chrome-molybdène',
@@ -35,18 +114,18 @@ const RAW_ITEMS: Array<Record<string, any>> = [
     minStock: 15,
     criticalStock: 8,
     leadTimeDays: 14,
-    commonName: 'Barre 2m80',
-    searchTags: ['barre', 'forage', 'conique', 'h22', '2.8m'],
+    commonName: 'Barre 2m40',
+    searchTags: ['barre', 'forage', 'conique', 'h22', '2.4m'],
     notes: 'Queue 22x108mm, acier allié traité',
   },
   {
     id: 'for_tai_01',
     reference: 'FOR-TAI-038',
-    designation: 'Taillant conique 38mm',
+    designation: 'Taillant bouton 38mm',
     unit: 'PIECE',
-    price: 850,
+    price: getPrice('for_tai_01'),
     functionalCategory: 'Taillants & Boutons',
-    component: 'Taillant conique',
+    component: 'Taillant bouton',
     subComponent: 'Carbure de tungstène',
     compatibility: 'Tous perforateurs 22x108',
     suggestedType: 'CONSOMMABLES',
@@ -55,17 +134,17 @@ const RAW_ITEMS: Array<Record<string, any>> = [
     criticalStock: 20,
     leadTimeDays: 7,
     commonName: 'Taillant 38mm',
-    searchTags: ['taillant', 'conique', '38mm', 'carbure'],
+    searchTags: ['taillant', 'bouton', '38mm', 'carbure'],
     notes: 'Diamètre 38mm, angle 110°',
   },
   {
     id: 'for_tai_02',
     reference: 'FOR-TAI-041',
-    designation: 'Taillant conique 41mm',
+    designation: 'Taillant bouton 41mm',
     unit: 'PIECE',
-    price: 950,
+    price: getPrice('for_tai_02'),
     functionalCategory: 'Taillants & Boutons',
-    component: 'Taillant conique',
+    component: 'Taillant bouton',
     subComponent: 'Carbure de tungstène',
     compatibility: 'Tous perforateurs 22x108',
     suggestedType: 'CONSOMMABLES',
@@ -74,7 +153,7 @@ const RAW_ITEMS: Array<Record<string, any>> = [
     criticalStock: 15,
     leadTimeDays: 7,
     commonName: 'Taillant 41mm',
-    searchTags: ['taillant', 'conique', '41mm', 'carbure'],
+    searchTags: ['taillant', 'bouton', '41mm', 'carbure'],
     notes: 'Diamètre 41mm, angle 110°',
   },
   {
@@ -82,7 +161,7 @@ const RAW_ITEMS: Array<Record<string, any>> = [
     reference: 'FOR-TAI-045',
     designation: 'Taillant bouton 45mm',
     unit: 'PIECE',
-    price: 1200,
+    price: getPrice('for_tai_03'),
     functionalCategory: 'Taillants & Boutons',
     component: 'Taillant bouton',
     subComponent: 'Carbure de tungstène',
@@ -97,30 +176,11 @@ const RAW_ITEMS: Array<Record<string, any>> = [
     notes: 'Diamètre 45mm, 7 boutons',
   },
   {
-    id: 'for_mec_01',
-    reference: 'FOR-MEC-120',
-    designation: 'Mèche de forage H22 Longueur 1.2m',
-    unit: 'PIECE',
-    price: 3200,
-    functionalCategory: 'Mèches & Tiges',
-    component: 'Mèche de forage',
-    subComponent: 'Acier allié traité',
-    compatibility: 'Tous perforateurs 22x108',
-    suggestedType: 'CONSOMMABLES',
-    stockQty: 25,
-    minStock: 12,
-    criticalStock: 5,
-    leadTimeDays: 21,
-    commonName: 'Mèche 1m20',
-    searchTags: ['mèche', 'forage', 'h22', '1.2m'],
-    notes: 'Queue 22x108mm, tête cross X',
-  },
-  {
     id: 'for_ada_01',
     reference: 'FOR-ADA-2245',
     designation: 'Adaptateur queue 22x108 / T45',
     unit: 'PIECE',
-    price: 4500,
+    price: getPrice('for_ada_01'),
     functionalCategory: 'Adaptateurs & Raccords',
     component: 'Adaptateur',
     subComponent: 'Acier allié traité',
@@ -134,44 +194,6 @@ const RAW_ITEMS: Array<Record<string, any>> = [
     searchTags: ['adaptateur', '22x108', 't45', 'raccord'],
     notes: 'Connexion 22x108 vers T45',
   },
-  {
-    id: 'for_ron_01',
-    reference: 'FOR-RON-045',
-    designation: 'Rondelle de fond de trou',
-    unit: 'PIECE',
-    price: 350,
-    functionalCategory: 'Accessoires de Forage',
-    component: 'Rondelle fond de trou',
-    subComponent: 'Acier trempé',
-    compatibility: 'Tous perforateurs',
-    suggestedType: 'CONSOMMABLES',
-    stockQty: 200,
-    minStock: 100,
-    criticalStock: 40,
-    leadTimeDays: 7,
-    commonName: 'Rondelle fond',
-    searchTags: ['rondelle', 'fond de trou', 'acier'],
-    notes: 'Ø45mm, épaisseur 5mm',
-  },
-  {
-    id: 'for_tub_01',
-    reference: 'FOR-TUB-045',
-    designation: 'Tube guide de forage Ø45mm',
-    unit: 'PIECE',
-    price: 1800,
-    functionalCategory: 'Accessoires de Forage',
-    component: 'Tube guide',
-    subComponent: 'Acier allié',
-    compatibility: 'Tous perforateurs',
-    suggestedType: 'CONSOMMABLES',
-    stockQty: 40,
-    minStock: 20,
-    criticalStock: 8,
-    leadTimeDays: 14,
-    commonName: 'Tube guide 45',
-    searchTags: ['tube', 'guide', 'forage', '45mm'],
-    notes: 'Ø45mm, longueur 1m',
-  },
 ];
 
 export const CONSOMMABLES_FORAGE_CATALOG: CatalogItem[] = RAW_ITEMS.map(it => ({
@@ -179,7 +201,7 @@ export const CONSOMMABLES_FORAGE_CATALOG: CatalogItem[] = RAW_ITEMS.map(it => ({
   reference: it.reference,
   designation: it.designation,
   unit: it.unit,
-  price: it.price,
+  price: getPrice(it.id), // Dynamically bind price from CONSOMMABLES_PRICES
   functionalCategory: it.functionalCategory,
   component: it.component,
   subComponent: it.subComponent,
@@ -193,3 +215,27 @@ export const CONSOMMABLES_FORAGE_CATALOG: CatalogItem[] = RAW_ITEMS.map(it => ({
   searchTags: it.searchTags,
   notes: it.notes,
 })) as CatalogItem[];
+
+export function updateConsommablePrice(
+  id: string,
+  newPrice: number,
+  updatedBy: string = 'magasinier'
+): boolean {
+  const config = CONSOMMABLES_PRICES.find(p => p.id === id);
+  if (!config) return false;
+  config.basePrice = newPrice;
+  config.sellingPrice = newPrice;
+  config.lastUpdated = new Date().toISOString();
+  config.updatedBy = updatedBy;
+  
+  // Also update corresponding catalog item price inside CONSOMMABLES_FORAGE_CATALOG
+  const catalogItem = CONSOMMABLES_FORAGE_CATALOG.find(item => item.id === id);
+  if (catalogItem) {
+    catalogItem.price = newPrice;
+  }
+  return true;
+}
+
+export function getAllConsommablesPrices(): ConsommablePriceConfig[] {
+  return [...CONSOMMABLES_PRICES];
+}
