@@ -97,7 +97,7 @@ export interface CatalogItem {
   
   // Advanced Level 3 Intelligent BOM Parameters
   bomLevel?: 0 | 1 | 2 | 3;
-  unit?: 'PIECE' | 'KIT' | 'ASSEMBLY' | 'SET';
+  unit?: 'PIECE' | 'KIT' | 'ASSEMBLY' | 'SET' | 'JEU' | 'LITRE' | 'METRE';
   criticalityScore?: number;        // Score from 1 to 100
   mtbfHours?: number;               // Mean Time Between Failures in operational hours
   overhaulIntervalHours?: number;   // Recommended interval before rebuild
