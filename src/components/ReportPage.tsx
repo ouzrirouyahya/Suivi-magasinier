@@ -461,8 +461,8 @@ export function ReportPage() {
     }
   };
 
-  // Access restriction guard (Magasinier can't view reports, only Administrateur or Super Admin)
-  const isAuthorized = currentUser?.role === 'Administrateur' || currentUser?.role === 'SUPER_ADMIN';
+  // Access restriction guard (Magasinier can't view reports, only ADMIN or Super Admin)
+  const isAuthorized = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
   if (!isAuthorized) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white rounded-3xl border border-slate-100 italic">

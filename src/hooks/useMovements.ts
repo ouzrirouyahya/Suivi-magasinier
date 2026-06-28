@@ -1,7 +1,8 @@
 import { useEffect, useCallback } from 'react';
-import { collection, onSnapshot, query, orderBy, limit } from 'firebase/firestore';
+import { collection, onSnapshot, query, orderBy, where, Timestamp } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useMovementsStore } from '../stores/movement.store';
+import { useAuthStore } from '../stores/auth.store';
 import { movementsService } from '../services/movement.service';
 import { offlineService } from '../services/offline.service';
 import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article } from '../types';
@@ -9,6 +10,7 @@ import { serializeFirestoreData } from '../lib/utils';
 import { calculatePriceUpdates } from '../context/InventoryContext';
 
 export function useMovements() {
+  const currentSite = useAuthStore(s => s.currentSite);
   const {
     mouvements,
     distributions,
@@ -35,9 +37,21 @@ export function useMovements() {
     hydrate();
   }, [setMouvements]);
 
-  // Subscribe to movements (limit to last 500 for low network payload)
+  // Subscribe to movements (filter by site and last 90 days for better performance & accuracy)
   useEffect(() => {
-    const q = query(collection(db, 'mouvements'), orderBy('date', 'desc'), limit(500));
+    if (!currentSite) return;
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
+    // Note: This query requires a composite index in Firestore on the 'mouvements' collection:
+    // fields: site (Ascending), date (Descending)
+    const q = query(
+      collection(db, 'mouvements'),
+      where('site', '==', currentSite),
+      where('date', '>=', ninetyDaysAgo.toISOString()),
+      orderBy('date', 'desc')
+    );
+
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Mouvement);
       setMouvements(list);
@@ -46,34 +60,40 @@ export function useMovements() {
       });
     });
     return unsub;
-  }, [setMouvements]);
+  }, [setMouvements, currentSite]);
 
   // Subscribe to distributions
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'distributions'), (snap) => {
+    if (!currentSite) return;
+    const q = query(collection(db, 'distributions'), where('site', '==', currentSite));
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as DistributionEPI);
       setDistributions(list);
     });
     return unsub;
-  }, [setDistributions]);
+  }, [setDistributions, currentSite]);
 
   // Subscribe to purchase requests
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'purchaseRequests'), (snap) => {
+    if (!currentSite) return;
+    const q = query(collection(db, 'purchaseRequests'), where('site', '==', currentSite));
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as PurchaseRequest);
       setPurchaseRequests(list);
     });
     return unsub;
-  }, [setPurchaseRequests]);
+  }, [setPurchaseRequests, currentSite]);
 
   // Subscribe to anomaly reports
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'anomalyReports'), (snap) => {
+    if (!currentSite) return;
+    const q = query(collection(db, 'anomalyReports'), where('site', '==', currentSite));
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AnomalyReport);
       setAnomalyReports(list);
     });
     return unsub;
-  }, [setAnomalyReports]);
+  }, [setAnomalyReports, currentSite]);
 
   const addMouvement = useCallback(async (mouvement: Mouvement) => {
     const res = await movementsService.addMouvement(mouvement);

@@ -197,7 +197,7 @@ export function validateCompleteTransferInvariants(
     };
   }
 
-  if (currentTx.status === 'RECU') {
+  if (currentTx.status === 'RECU' || currentTx.status === 'RECEIVED' || currentTx.status === 'CLOSED' || currentTx.status === 'DISPUTED') {
     return {
       isValid: false,
       classification: 'TRANSACTION_CONFLICT',

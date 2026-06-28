@@ -176,7 +176,7 @@ service cloud.firestore {
 
     function isValidTransfert(data) {
       return data.keys().hasAll(['id', 'sourceSite', 'targetSite', 'dateEnvoi', 'reference', 'items', 'status'])
-        && data.keys().size() <= 25
+        && data.keys().size() <= 32
         && data.id is string && data.id.size() > 0 && data.id.size() <= 128
         && data.sourceSite is string && data.sourceSite.size() > 0 && data.sourceSite.size() <= 64
         && data.targetSite is string && data.targetSite.size() > 0 && data.targetSite.size() <= 64
@@ -184,9 +184,11 @@ service cloud.firestore {
         && data.reference is string && data.reference.size() > 0 && data.reference.size() <= 128
         && data.status is string && data.status in ['PENDING_APPROVAL', 'IN_TRANSIT', 'RECEIVED', 'DISPUTED', 'CLOSED', 'EN_TRANSIT', 'RECU', 'LITIGE']
         && data.items is list && data.items.size() > 0 && data.items.size() <= 100
-        && data.get('dateReception', '') is string && data.get('dateReception', '').size() <= 128
         && data.get('expediteur', '') is string && data.get('expediteur', '').size() <= 128
-        && data.get('recepteur', '') is string && data.get('recepteur', '').size() <= 128;
+        && (!data.keys().contains('dateReception') || data.dateReception is string)
+        && (!data.keys().contains('recepteur') || data.recepteur is string)
+        && (!data.keys().contains('receivedItems') || data.receivedItems is list)
+        && (!data.keys().contains('disputeReason') || data.disputeReason is string);
     }
 
     function isValidAccount(data) {
@@ -340,7 +342,8 @@ service cloud.firestore {
 
     // accounts Management (Zero self promotion RBAC gates)
     match /accounts/{userId} {
-      allow read, get, list: if true;
+      allow get: if isSignedIn();
+      allow list: if isActive();
       allow create: if isSignedIn() && isValidId(userId) && isOwner(userId) && isValidAccount(incoming()) && (
         isSuperAdmin() || 
         // Cas particulier des comptes administrateurs racine créés directement actifs

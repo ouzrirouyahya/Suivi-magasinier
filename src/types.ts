@@ -22,7 +22,7 @@ export interface Perforateur {
   site: SiteCode;
 }
 
-export type UserRole = 'SUPER_ADMIN' | 'Administrateur' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
+export type UserRole = 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
 
 export interface UserAccount {
   id: string;
@@ -33,7 +33,7 @@ export interface UserAccount {
   createdAt: FirestoreDate;
   assignedSite?: SiteCode;
   status?: 'PENDING' | 'APPROVED' | 'REJECTED';
-  requestedRole?: 'Administrateur' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
+  requestedRole?: 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
   canWrite?: boolean;
   isReplacingMagasinier?: boolean;
   replacementStartDate?: string;

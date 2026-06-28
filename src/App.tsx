@@ -104,7 +104,7 @@ function AuthenticatedLayout() {
   }, [isDesktopViewport]);
 
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
-  const isAdmin = currentUser?.role === 'Administrateur' || isSuperAdmin;
+  const isAdmin = currentUser?.role === 'ADMIN' || isSuperAdmin;
 
   const isAuthPage = ['/login', '/pending', '/rejected', '/disabled'].includes(location.pathname) || !currentUser;
 

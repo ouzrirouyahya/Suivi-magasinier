@@ -51,7 +51,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   } = useInventory();
 
   const currentUser = useAuthStore((state) => state.currentUser);
-  const isAuthorizedToExport = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'Administrateur';
+  const isAuthorizedToExport = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'ADMIN';
 
   const [notifOpen, setNotifOpen] = React.useState(false);
   const [exportOpen, setExportOpen] = React.useState(false);

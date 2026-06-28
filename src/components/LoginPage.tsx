@@ -14,7 +14,7 @@ const LoginPage: React.FC = () => {
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [showRoleSelection, setShowRoleSelection] = React.useState(false);
   const [pendingUser, setPendingUser] = React.useState<any>(null);
-  const [selectedRequestedRole, setSelectedRequestedRole] = React.useState<'Administrateur' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' | ''>('');
+  const [selectedRequestedRole, setSelectedRequestedRole] = React.useState<'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' | ''>('');
   const [requestedSite, setRequestedSite] = React.useState<SiteCode | ''>('');
 
   const handleLogin = async () => {
@@ -58,7 +58,7 @@ const LoginPage: React.FC = () => {
       id: pendingUser.uid,
       email: pendingUser.email || '',
       name: pendingUser.displayName || 'Utilisateur',
-      role: 'Administrateur',
+      role: 'ADMIN',
       canWrite: false,
       requestedRole: selectedRequestedRole as any,
       assignedSite: (selectedRequestedRole === 'MAGASINIER' || selectedRequestedRole === 'RESPONSABLE_CHANTIER') ? requestedSite || undefined : undefined,
@@ -309,17 +309,17 @@ const LoginPage: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => {
-                      setSelectedRequestedRole('Administrateur');
+                      setSelectedRequestedRole('ADMIN');
                       setRequestedSite('');
                     }}
                     className={`w-full p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 outline-none ${
-                      selectedRequestedRole === 'Administrateur'
+                      selectedRequestedRole === 'ADMIN'
                         ? 'border-sky-500 bg-sky-50/30 ring-1 ring-sky-500'
                         : 'border-slate-200 bg-white hover:bg-slate-50/50'
                     }`}
                   >
                     <div className={`p-2 rounded-lg ${
-                      selectedRequestedRole === 'Administrateur' ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-500'
+                      selectedRequestedRole === 'ADMIN' ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-500'
                     }`}>
                       <Shield className="w-5 h-5" />
                     </div>

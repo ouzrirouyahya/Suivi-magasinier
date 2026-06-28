@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useCallback } from 'react';
-import { collection, onSnapshot, doc, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, writeBatch, setDoc, runTransaction } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useArticlesStore } from '../stores/article.store';
+import { useAuthStore } from '../stores/auth.store';
 import { useMovementsStore } from '../stores/movement.store';
 import { articleService } from '../services/article.service';
 import { offlineService } from '../services/offline.service';
 import { Article, CatalogItem, DeletionRequest, HydrominesCatalogItem, SiteCode } from '../types';
 import { CatalogUsageStats } from '../context/InventoryContext';
 import { MASTER_CATALOG } from '../catalogData';
-import { serializeFirestoreData, generateId, cleanObject } from '../lib/utils';
+import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID } from '../lib/utils';
 import { toast } from 'sonner';
 
 export function useArticles() {
@@ -24,6 +25,7 @@ export function useArticles() {
   } = useArticlesStore();
 
   const movements = useMovementsStore(s => s.mouvements);
+  const currentUser = useAuthStore(s => s.currentUser);
 
   // Hydrate from IndexedDB if offline or first load
   useEffect(() => {
@@ -247,38 +249,44 @@ export function useArticles() {
       return { imported: 0, skipped: skippedCount };
     }
 
-    const batch = writeBatch(db);
+    const chunkSize = 400;
     let importedCount = 0;
 
-    for (const item of itemsToImport) {
-      const artId = generateId();
-      const art: Article = {
-        id: artId,
-        site: targetSite,
-        ref: item.reference,
-        designation: item.designation,
-        type: ((item as any).suggestedType || 'AUTRE') as any,
-        category: (item as any).functionalCategory || 'NON_CATEGORISE',
-        functionalCategory: (item as any).functionalCategory,
-        subCategory: (item as any).subCategory,
-        component: (item as any).component,
-        subComponent: (item as any).subComponent,
-        unit: item.unit || 'PIECE',
-        quantity: (item as any).quantity || 0,
-        minStock: (item as any).minStock || 5,
-        location: (item as any).location || 'Non assigné',
-        price: (item as any).price || 0,
-        active: true,
-        notes: (item as any).notes,
-        compatibility: (item as any).compatibility,
-        criticality: (item as any).criticality || 'MOYENNE',
-        hydrominesCatalogRefId: item.id
-      };
-      batch.set(doc(db, 'articles', artId), cleanObject(art));
-      importedCount++;
+    for (let i = 0; i < itemsToImport.length; i += chunkSize) {
+      const chunk = itemsToImport.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+
+      for (const item of chunk) {
+        const artId = generateId();
+        const art: Article = {
+          id: artId,
+          site: targetSite,
+          ref: item.reference,
+          designation: item.designation,
+          type: ((item as any).suggestedType || 'AUTRE') as any,
+          category: (item as any).functionalCategory || 'NON_CATEGORISE',
+          functionalCategory: (item as any).functionalCategory,
+          subCategory: (item as any).subCategory,
+          component: (item as any).component,
+          subComponent: (item as any).subComponent,
+          unit: item.unit || 'PIECE',
+          quantity: (item as any).quantity || 0,
+          minStock: (item as any).minStock || 5,
+          location: (item as any).location || 'Non assigné',
+          price: (item as any).price || 0,
+          active: true,
+          notes: (item as any).notes,
+          compatibility: (item as any).compatibility,
+          criticality: (item as any).criticality || 'MOYENNE',
+          hydrominesCatalogRefId: item.id
+        };
+        batch.set(doc(db, 'articles', artId), cleanObject(art));
+        importedCount++;
+      }
+
+      await batch.commit();
     }
 
-    await batch.commit();
     return { imported: importedCount, skipped: skippedCount };
   }, [rawArticles]);
 
@@ -289,14 +297,30 @@ export function useArticles() {
       return;
     }
 
-    const batch = writeBatch(db);
-    for (const id of req.articleIds) {
-      batch.delete(doc(db, 'articles', id));
+    try {
+      await runTransaction(db, async (transaction) => {
+        for (const id of req.articleIds) {
+          transaction.delete(doc(db, 'articles', id));
+        }
+        transaction.update(doc(db, 'deletionRequests', requestId), { status: 'APPROVED' });
+
+        const logId = generateSecureUUID();
+        const logRef = doc(db, 'auditLogs', logId);
+        transaction.set(logRef, {
+          id: logId,
+          timestamp: new Date().toISOString(),
+          userEmail: currentUser?.email || 'unknown',
+          site: req.site,
+          action: 'SUPPRESSION_APPROUVEE',
+          details: `Suppression de ${req.articleIds.length} articles : ${req.articleRefs?.join(', ')}`
+        });
+      });
+      toast.success("Demande de suppression approuvée.");
+    } catch (err: any) {
+      console.error(err);
+      toast.error(`Erreur lors de l'approbation : ${err.message || err}`);
     }
-    batch.update(doc(db, 'deletionRequests', requestId), { status: 'APPROVED' });
-    await batch.commit();
-    toast.success("Demande de suppression approuvée.");
-  }, [deletionRequests]);
+  }, [deletionRequests, currentUser]);
 
   const rejectDeletionRequest = useCallback(async (requestId: string) => {
     const req = deletionRequests.find(r => r.id === requestId);

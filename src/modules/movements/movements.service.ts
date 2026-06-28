@@ -6,6 +6,7 @@ import { useMovementsStore } from './movements.store';
 import { useArticlesStore } from '../articles/articles.store';
 import { validateMouvementInvariants } from '../../core/BusinessStateValidator';
 import { generateSecureUUID, cleanObject } from '../../lib/utils';
+import { calculatePriceUpdates } from '../../context/InventoryContext';
 
 export class MovementsService {
   /**
@@ -90,38 +91,20 @@ export class MovementsService {
           // PMP Calculation
           let newPMP = article.price || 0;
           let lastPurchasePrice = article.lastPurchasePrice || 0;
-          const existingHistory = article.priceHistory || [];
-          const updatedHistory = [...existingHistory];
+          let updatedHistory = article.priceHistory || [];
 
           if (isAddition) {
-            const itemPrice = item.price || 0;
-            if (itemPrice > 0) {
-              lastPurchasePrice = itemPrice;
-              const currentQty = article.quantity || 0;
-              const currentPMP = article.price || 0;
-              const totalQty = currentQty + item.quantity;
-              newPMP = totalQty > 0 ? ((currentQty * currentPMP) + (item.quantity * itemPrice)) / totalQty : itemPrice;
-              newPMP = Math.round(newPMP * 100) / 100;
-            }
-
-            // Traçabilité des variations de prix
-            updatedHistory.push({
-              date: mouvement.date || new Date().toISOString(),
-              price: item.price || 0,
-              type: 'ACHAT',
-              quantityAttached: item.quantity,
-              mouvementId: movementId,
-              userEmail: mouvement.createdBy || 'system'
-            });
-
-            updatedHistory.push({
-              date: mouvement.date || new Date().toISOString(),
-              price: newPMP,
-              type: 'PMP',
-              quantityAttached: newQty,
-              mouvementId: movementId,
-              userEmail: mouvement.createdBy || 'system'
-            });
+            const updates = calculatePriceUpdates(
+              article,
+              item.quantity,
+              item.price || 0,
+              movementId,
+              mouvement.createdBy,
+              mouvement.date
+            );
+            newPMP = updates.price;
+            lastPurchasePrice = updates.lastPurchasePrice;
+            updatedHistory = updates.priceHistory;
           }
 
           articleUpdates.push({ 

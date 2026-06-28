@@ -1,13 +1,15 @@
 import React, { createContext, useContext, ReactNode } from 'react';
-import { Article, PriceHistoryEntry } from '../types';
+import { Article, PriceHistoryEntry, CatalogItem } from '../types';
 import { useInventory as useInventoryMaster } from '../hooks/useInventory';
 
 export interface CatalogUsageStats {
-  hydrominesRef: string;
-  designation: string;
-  totalQuantityInStock: number;
-  totalMouvements: number;
-  lastUsedDate?: string;
+  catalogItem: CatalogItem;
+  isUsed: boolean;
+  movementCount: number;
+  totalQuantityOut: number;
+  sitesUsing: string[];
+  isInHydrominesCatalog: boolean;
+  lastUsedDate: string | null;
 }
 
 /**

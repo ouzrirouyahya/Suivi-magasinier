@@ -42,13 +42,13 @@ const RESPONSABLE_REPLACEMENT_PAGES = [
 
 // Role helper
 export const canAccessPage = (
-  requiredRole: 'SUPER_ADMIN' | 'Administrateur' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER',
-  userRole: 'SUPER_ADMIN' | 'Administrateur' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER',
+  requiredRole: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER',
+  userRole: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER',
   canWrite?: boolean
 ): boolean => {
   if (userRole === 'SUPER_ADMIN') return true;
-  if (userRole === 'Administrateur') {
-    if (requiredRole === 'Administrateur') return true;
+  if (userRole === 'ADMIN') {
+    if (requiredRole === 'ADMIN') return true;
     if (requiredRole === 'MAGASINIER') return !!canWrite; // Admin as Replacing Magasinier
     return true;
   }
@@ -67,7 +67,7 @@ const ProtectedRoute = ({
   requiredRole 
 }: { 
   children: React.ReactNode; 
-  requiredRole?: 'SUPER_ADMIN' | 'Administrateur' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' 
+  requiredRole?: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' 
 }) => {
   const { currentUser } = useAuthStore();
   const location = useLocation();
@@ -121,11 +121,11 @@ export const AppRoutes: React.FC = () => (
       <Route path="/catalog/master" element={<ProtectedRoute><MasterCatalogPage /></ProtectedRoute>} />
       <Route path="/catalog/hydromines" element={<ProtectedRoute><HydrominesCatalogPage /></ProtectedRoute>} />
       
-      <Route path="/maintenance" element={<ProtectedRoute requiredRole="Administrateur"><MaintenancePage /></ProtectedRoute>} />
+      <Route path="/maintenance" element={<ProtectedRoute requiredRole="ADMIN"><MaintenancePage /></ProtectedRoute>} />
       <Route path="/finance" element={<ProtectedRoute requiredRole="SUPER_ADMIN"><FinancialPage /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute requiredRole="Administrateur"><ReportsPage /></ProtectedRoute>} />
-      <Route path="/audit" element={<ProtectedRoute requiredRole="Administrateur"><AuditLogsPage /></ProtectedRoute>} />
-      <Route path="/users" element={<ProtectedRoute requiredRole="Administrateur"><UsersPage /></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute requiredRole="ADMIN"><ReportsPage /></ProtectedRoute>} />
+      <Route path="/audit" element={<ProtectedRoute requiredRole="ADMIN"><AuditLogsPage /></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute requiredRole="ADMIN"><UsersPage /></ProtectedRoute>} />
       <Route path="/restock" element={<ProtectedRoute requiredRole="MAGASINIER"><RestockPage /></ProtectedRoute>} />
       <Route path="/traceability" element={<ProtectedRoute><TraceabilityPage /></ProtectedRoute>} />
       

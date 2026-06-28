@@ -22,7 +22,14 @@ export function useAuth() {
   } = useAuthStore();
 
   useEffect(() => {
+    let unsubUser: (() => void) | null = null;
+
     const unsubAuth = onAuthStateChanged(auth, (user) => {
+      if (unsubUser) {
+        unsubUser();
+        unsubUser = null;
+      }
+
       if (!user) {
         setCurrentUser(null);
         setIsLoaded(true);
@@ -30,7 +37,7 @@ export function useAuth() {
       }
 
       const uid = user.uid;
-      const unsubUser = onSnapshot(doc(db, 'accounts', uid), async (snap) => {
+      unsubUser = onSnapshot(doc(db, 'accounts', uid), async (snap) => {
         if (snap.exists()) {
           const userData = serializeFirestoreData({ id: snap.id, ...snap.data() }) as UserAccount;
           if (user.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
@@ -59,17 +66,20 @@ export function useAuth() {
           }
         }
       }, () => setIsLoaded(true));
-
-      return () => unsubUser();
     });
 
-    return () => unsubAuth();
+    return () => {
+      unsubAuth();
+      if (unsubUser) {
+        unsubUser();
+      }
+    };
   }, [setCurrentUser, setIsLoaded]);
 
   // Subscribe to all accounts for Admin+
   useEffect(() => {
     if (!currentUser) return;
-    const isUserAdmin = currentUser.role === 'Administrateur' || currentUser.role === 'SUPER_ADMIN';
+    const isUserAdmin = currentUser.role === 'ADMIN' || currentUser.role === 'SUPER_ADMIN';
     if (!isUserAdmin) return;
 
     const unsubAccounts = onSnapshot(collection(db, 'accounts'), (snap) => {
