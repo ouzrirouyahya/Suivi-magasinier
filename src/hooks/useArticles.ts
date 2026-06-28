@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useCallback } from 'react';
-import { collection, onSnapshot, doc, writeBatch, setDoc, runTransaction } from 'firebase/firestore';
+import { collection, onSnapshot, doc, writeBatch, setDoc, runTransaction, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useArticlesStore } from '../stores/article.store';
 import { useAuthStore } from '../stores/auth.store';
@@ -26,6 +26,7 @@ export function useArticles() {
 
   const movements = useMovementsStore(s => s.mouvements);
   const currentUser = useAuthStore(s => s.currentUser);
+  const currentSite = useAuthStore(s => s.currentSite);
 
   // Hydrate from IndexedDB if offline or first load
   useEffect(() => {
@@ -44,7 +45,13 @@ export function useArticles() {
 
   // Subscribe to articles
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'articles'), (snap) => {
+    if (!currentSite) return;
+
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'articles'))
+      : query(collection(db, 'articles'), where('site', '==', currentSite));
+
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs
         .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Article)
         .filter(a => !(a as any).deleted);
@@ -54,7 +61,7 @@ export function useArticles() {
       });
     });
     return unsub;
-  }, [setArticles]);
+  }, [setArticles, currentSite]);
 
   // Subscribe to deletion requests
   useEffect(() => {

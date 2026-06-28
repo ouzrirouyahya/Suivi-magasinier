@@ -1,21 +1,35 @@
 import { useEffect, useCallback } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, or } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useTransfersStore } from '../stores/transfer.store';
+import { useAuthStore } from '../stores/auth.store';
 import { transfersService } from '../services/transfer.service';
 import { Transfert, MouvementItem } from '../types';
 import { serializeFirestoreData } from '../lib/utils';
 
 export function useTransfers() {
   const { transferts, setTransferts } = useTransfersStore();
+  const currentSite = useAuthStore(s => s.currentSite);
 
   useEffect(() => {
-    const unsub = onSnapshot(collection(db, 'transferts'), (snap) => {
+    if (!currentSite) return;
+
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'transferts'))
+      : query(
+          collection(db, 'transferts'),
+          or(
+            where('sourceSite', '==', currentSite),
+            where('targetSite', '==', currentSite)
+          )
+        );
+
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Transfert);
       setTransferts(list);
     });
     return unsub;
-  }, [setTransferts]);
+  }, [setTransferts, currentSite]);
 
   const addTransfert = useCallback(async (t: Transfert) => {
     const res = await transfersService.addTransfert(t);

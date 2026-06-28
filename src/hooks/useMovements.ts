@@ -45,12 +45,18 @@ export function useMovements() {
 
     // Note: This query requires a composite index in Firestore on the 'mouvements' collection:
     // fields: site (Ascending), date (Descending)
-    const q = query(
-      collection(db, 'mouvements'),
-      where('site', '==', currentSite),
-      where('date', '>=', ninetyDaysAgo.toISOString()),
-      orderBy('date', 'desc')
-    );
+    const q = currentSite === 'ALL'
+      ? query(
+          collection(db, 'mouvements'),
+          where('date', '>=', ninetyDaysAgo.toISOString()),
+          orderBy('date', 'desc')
+        )
+      : query(
+          collection(db, 'mouvements'),
+          where('site', '==', currentSite),
+          where('date', '>=', ninetyDaysAgo.toISOString()),
+          orderBy('date', 'desc')
+        );
 
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Mouvement);
@@ -65,7 +71,9 @@ export function useMovements() {
   // Subscribe to distributions
   useEffect(() => {
     if (!currentSite) return;
-    const q = query(collection(db, 'distributions'), where('site', '==', currentSite));
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'distributions'))
+      : query(collection(db, 'distributions'), where('site', '==', currentSite));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as DistributionEPI);
       setDistributions(list);
@@ -76,7 +84,9 @@ export function useMovements() {
   // Subscribe to purchase requests
   useEffect(() => {
     if (!currentSite) return;
-    const q = query(collection(db, 'purchaseRequests'), where('site', '==', currentSite));
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'purchaseRequests'))
+      : query(collection(db, 'purchaseRequests'), where('site', '==', currentSite));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as PurchaseRequest);
       setPurchaseRequests(list);
@@ -87,7 +97,9 @@ export function useMovements() {
   // Subscribe to anomaly reports
   useEffect(() => {
     if (!currentSite) return;
-    const q = query(collection(db, 'anomalyReports'), where('site', '==', currentSite));
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'anomalyReports'))
+      : query(collection(db, 'anomalyReports'), where('site', '==', currentSite));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AnomalyReport);
       setAnomalyReports(list);
