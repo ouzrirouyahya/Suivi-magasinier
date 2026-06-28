@@ -15,3 +15,4 @@ jobs:
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_HYDRO_SUIVI_MAGASINIER }}'
           channelId: live
           projectId: hydro-suivi-magasinier
+          firebaseToolsVersion: '15.22.1'
