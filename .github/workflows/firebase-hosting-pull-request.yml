@@ -11,3 +11,4 @@ jobs:
           repoToken: '${{ secrets.GITHUB_TOKEN }}'
           firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_HYDRO_SUIVI_MAGASINIER }}'
           projectId: hydro-suivi-magasinier
+          firebaseToolsVersion: '15.22.1'
