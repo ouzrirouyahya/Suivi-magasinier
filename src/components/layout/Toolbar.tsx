@@ -1,8 +1,10 @@
 import React from 'react';
-import { Search, Menu, Activity, Bell, Check, CheckSquare, AlertTriangle, Info, ShieldAlert, Clock, SlidersHorizontal, Sun, Moon, Monitor, Smartphone } from 'lucide-react';
+import { Search, Menu, Activity, Bell, Check, CheckSquare, AlertTriangle, Info, ShieldAlert, Clock, SlidersHorizontal, Sun, Moon, Monitor, Smartphone, Download } from 'lucide-react';
 import { formatCurrency, cn } from '../../lib/utils';
 import { Article, SiteCode, AppNotification } from '../../types';
 import { useInventory } from '../../context/InventoryContext';
+import { ExportDataModal } from '../ExportDataModal';
+import { useAuthStore } from '../../stores/auth.store';
 
 interface ToolbarProps {
   globalSearch: string;
@@ -48,7 +50,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     forceRunQueue
   } = useInventory();
 
+  const currentUser = useAuthStore((state) => state.currentUser);
+  const isAuthorizedToExport = currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'Administrateur';
+
   const [notifOpen, setNotifOpen] = React.useState(false);
+  const [exportOpen, setExportOpen] = React.useState(false);
   const [filterType, setFilterType] = React.useState<'ALL' | 'CRITICAL' | 'WARNING' | 'INFO'>('ALL');
 
   const siteNotifications = React.useMemo(() => {
@@ -239,6 +245,20 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
           <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
 
+          {/* EXPORT DATA BUTTON */}
+          {isAuthorizedToExport && (
+            <button
+              onClick={() => setExportOpen(true)}
+              className="relative px-3 py-1.5 h-8 rounded-xl bg-gradient-to-r from-cyan-500 to-sky-600 text-white font-black uppercase tracking-wider text-[9px] flex items-center gap-1.5 transition-all active:scale-95 shadow-[0_0_15px_#fff,0_0_5px_#0ea5e9] border border-white hover:shadow-[0_0_22px_#fff,0_0_10px_#38bdf8] hover:scale-105 cursor-pointer pointer-events-auto group animate-[pulse_1.8s_infinite]"
+              title="Exporter les données en Excel ou CSV"
+            >
+              <Download className="w-3.5 h-3.5 text-white animate-bounce" />
+              <span className="hidden sm:inline">Exporter</span>
+            </button>
+          )}
+
+          <div className="h-8 w-[1px] bg-slate-200 mx-1 hidden md:block" />
+
           {/* FACEBOOK STYLE NOTIFICATION BELL */}
           <div className="relative">
             <button
@@ -418,6 +438,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           </div>
         </div>
       </div>
+
+      <ExportDataModal 
+        open={exportOpen} 
+        onClose={() => setExportOpen(false)} 
+      />
     </div>
   );
 };
