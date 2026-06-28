@@ -22,6 +22,8 @@ import {
   formatMovementsConsolidated,
   formatTransfersForExport, 
   formatPriceHistoryForExport,
+  formatArticlesSummaryDashboard,
+  formatMovementsSummaryDashboard,
   SheetConfig
 } from '../utils/exportUtils';
 import { useArticlesStore } from '../stores/article.store';
@@ -29,6 +31,7 @@ import { useMovementsStore } from '../stores/movement.store';
 import { useTransfersStore } from '../stores/transfer.store';
 import { getPriceHistory } from '../services/priceHistory.service';
 import { PriceChangeRecord } from '../types/priceHistory';
+import { SiteCode } from '../types';
 import { toast } from 'sonner';
 
 interface ExportDataModalProps {
@@ -51,6 +54,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
   const [includeSummary, setIncludeSummary] = useState<boolean>(true);
   const [dailyGrouped, setDailyGrouped] = useState<boolean>(true);
   const [movementTypeFilter, setMovementTypeFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'RETOUR' | 'AJUSTEMENT'>('ALL');
+  const [siteFilter, setSiteFilter] = useState<'ALL' | 'SMI' | 'OUMEJRANE' | 'BOU-AZZER' | 'OUANSIMI' | 'KOUDIA'>('ALL');
 
   // States for fetching dynamic data
   const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
@@ -162,15 +166,45 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
   };
 
   // Live filtered subsets
+  const filteredArticles = useMemo(() => {
+    let list = articles;
+    if (siteFilter !== 'ALL') {
+      list = list.filter(a => a.site === siteFilter);
+    }
+    return list;
+  }, [articles, siteFilter]);
+
+  const physicalArticlesCount = useMemo(() => {
+    return filteredArticles.filter(a => (a.quantity || 0) > 0).length;
+  }, [filteredArticles]);
+
   const filteredMovements = useMemo(() => {
     let list = filterBySelectedPeriod(movements, 'date');
     if (movementTypeFilter !== 'ALL') {
       list = list.filter(m => m.type === movementTypeFilter);
     }
+    if (siteFilter !== 'ALL') {
+      list = list.filter(m => m.site === siteFilter || m.targetSite === siteFilter);
+    }
     return list;
-  }, [movements, dateFilterType, selectedSpecificMonth, customStartDate, customEndDate, movementTypeFilter]);
-  const filteredTransfers = useMemo(() => filterBySelectedPeriod(transfers, 'dateEnvoi'), [transfers, dateFilterType, selectedSpecificMonth, customStartDate, customEndDate]);
-  const filteredPriceHistory = useMemo(() => filterBySelectedPeriod(priceHistory, 'changedAt'), [priceHistory, dateFilterType, selectedSpecificMonth, customStartDate, customEndDate]);
+  }, [movements, dateFilterType, selectedSpecificMonth, customStartDate, customEndDate, movementTypeFilter, siteFilter]);
+
+  const filteredTransfers = useMemo(() => {
+    let list = filterBySelectedPeriod(transfers, 'dateEnvoi');
+    if (siteFilter !== 'ALL') {
+      list = list.filter(t => t.sourceSite === siteFilter || t.targetSite === siteFilter);
+    }
+    return list;
+  }, [transfers, dateFilterType, selectedSpecificMonth, customStartDate, customEndDate, siteFilter]);
+
+  const filteredPriceHistory = useMemo(() => {
+    let list = filterBySelectedPeriod<PriceChangeRecord>(priceHistory, 'changedAt');
+    if (siteFilter !== 'ALL') {
+      const siteArticlesIds = new Set(articles.filter(a => a.site === siteFilter).map(a => a.id));
+      list = list.filter(p => siteArticlesIds.has(p.itemId));
+    }
+    return list;
+  }, [priceHistory, dateFilterType, selectedSpecificMonth, customStartDate, customEndDate, siteFilter, articles]);
 
   // Execute export action
   const handleExport = async (
@@ -188,48 +222,106 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
 
       switch (type) {
         case 'articles': {
-          // Articles aren't strictly filterable by movement date but can represent the current snapshot
-          const data = formatArticlesForExport(articles);
-          sheets.push({
-            name: 'Inventaire',
-            data,
-            title: "Inventaire complet du Stock d'Articles"
-          });
-          filename = 'articles_inventaire';
+          if (siteFilter === 'ALL' && format === 'excel') {
+            const summaryData = formatArticlesSummaryDashboard(articles);
+            sheets.push({
+              name: '📊 Synthèse Générale',
+              data: summaryData,
+              title: "Tableau de Bord d'Inventaire Consolidé (Tous les Sites)"
+            });
+
+            const sitesList: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+            sitesList.forEach(siteName => {
+              const siteArts = articles.filter(a => a.site === siteName);
+              const data = formatArticlesForExport(siteArts);
+              sheets.push({
+                name: siteName,
+                data: data.length > 0 ? data : [{ 'Référence': 'Aucun article', 'Désignation': `Aucun enregistrement d'inventaire sur le site ${siteName}` }],
+                title: `Inventaire des Articles - Site ${siteName}`
+              });
+            });
+
+            filename = 'articles_inventaire_consolide';
+          } else {
+            const data = formatArticlesForExport(filteredArticles);
+            sheets.push({
+              name: siteFilter === 'ALL' ? 'Inventaire' : siteFilter,
+              data: data.length > 0 ? data : [{ 'Référence': 'Aucun article', 'Désignation': `Aucun enregistrement d'inventaire` }],
+              title: siteFilter === 'ALL' 
+                ? "Inventaire complet du Stock d'Articles" 
+                : `Inventaire des Stock d'Articles - Site ${siteFilter}`
+            });
+            filename = siteFilter === 'ALL' ? 'articles_inventaire' : `articles_inventaire_${siteFilter.toLowerCase()}`;
+          }
           break;
         }
           
         case 'movements': {
-          // Detail sheet
-          const detailedData = formatMovementsForExport(filteredMovements, articles, dailyGrouped);
-          sheets.push({
-            name: 'Mouvements',
-            data: detailedData,
-            title: `Registre des Mouvements de Stock (${getFilterLabel()})`
-          });
-
-          // Consolidated Summary Sheet (only in Excel mode)
-          if (includeSummary && format === 'excel') {
-            const consolidatedData = formatMovementsConsolidated(filteredMovements, articles);
+          if (siteFilter === 'ALL' && format === 'excel') {
+            const summaryData = formatMovementsSummaryDashboard(filteredMovements, articles);
             sheets.push({
-              name: 'Synthèse Consolidée',
-              data: consolidatedData,
-              title: `Synthèse mensuelle par article (${getFilterLabel()})`
+              name: '📊 Synthèse Générale',
+              data: summaryData,
+              title: `Tableau de Bord des Mouvements de Stock (${getFilterLabel()})`
             });
+
+            if (includeSummary) {
+              const consolidatedData = formatMovementsConsolidated(filteredMovements, articles);
+              sheets.push({
+                name: 'Synthèse Articles',
+                data: consolidatedData,
+                title: `Synthèse des flux par article (${getFilterLabel()})`
+              });
+            }
+
+            const sitesList: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+            sitesList.forEach(siteName => {
+              const siteMovs = filteredMovements.filter(m => m.site === siteName || m.targetSite === siteName);
+              const data = formatMovementsForExport(siteMovs, articles, dailyGrouped);
+              sheets.push({
+                name: siteName,
+                data: data.length > 0 ? data : [{ '🩵 Date Mouvement': 'Aucun mouvement', '🩵 Désignation Article': `Aucun mouvement enregistré pour le site ${siteName}` }],
+                title: `Registre des Mouvements de Stock - Site ${siteName} (${getFilterLabel()})`
+              });
+            });
+
+            filename = 'mouvements_stock_consolide';
+          } else {
+            const detailedData = formatMovementsForExport(filteredMovements, articles, dailyGrouped);
+            sheets.push({
+              name: siteFilter === 'ALL' ? 'Mouvements' : siteFilter,
+              data: detailedData.length > 0 ? detailedData : [{ '🩵 Date Mouvement': 'Aucun mouvement', '🩵 Désignation Article': 'Aucun mouvement enregistré' }],
+              title: siteFilter === 'ALL'
+                ? `Registre des Mouvements de Stock (${getFilterLabel()})`
+                : `Registre des Mouvements de Stock - Site ${siteFilter} (${getFilterLabel()})`
+            });
+
+            if (includeSummary && format === 'excel') {
+              const consolidatedData = formatMovementsConsolidated(filteredMovements, articles);
+              sheets.push({
+                name: 'Synthèse Articles',
+                data: consolidatedData,
+                title: siteFilter === 'ALL'
+                  ? `Synthèse mensuelle des flux par article (${getFilterLabel()})`
+                  : `Synthèse mensuelle par article - Site ${siteFilter} (${getFilterLabel()})`
+              });
+            }
+            
+            filename = siteFilter === 'ALL' ? 'mouvements_stock' : `mouvements_stock_${siteFilter.toLowerCase()}`;
           }
-          
-          filename = 'mouvements_stock';
           break;
         }
           
         case 'transfers': {
           const detailedData = formatTransfersForExport(filteredTransfers, articles);
           sheets.push({
-            name: 'Transferts',
-            data: detailedData,
-            title: `Registre des Transferts Inter-Chantiers (${getFilterLabel()})`
+            name: siteFilter === 'ALL' ? 'Transferts' : siteFilter,
+            data: detailedData.length > 0 ? detailedData : [{ 'Date Envoi': 'Aucun transfert', 'Référence Transfert': 'Aucun transfert enregistré' }],
+            title: siteFilter === 'ALL'
+              ? `Registre des Transferts Inter-Chantiers (${getFilterLabel()})`
+              : `Registre des Transferts - Site ${siteFilter} (${getFilterLabel()})`
           });
-          filename = 'transferts_inter_chantiers';
+          filename = siteFilter === 'ALL' ? 'transferts_inter_chantiers' : `transferts_inter_chantiers_${siteFilter.toLowerCase()}`;
           break;
         }
           
@@ -237,10 +329,12 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
           const detailedData = formatPriceHistoryForExport(filteredPriceHistory, dailyGrouped);
           sheets.push({
             name: 'Historique Prix',
-            data: detailedData,
-            title: `Historique des modifications de prix de vente (${getFilterLabel()})`
+            data: detailedData.length > 0 ? detailedData : [{ 'Date Changement': 'Aucune modification', 'Référence Article': 'Aucun historique de modification' }],
+            title: siteFilter === 'ALL'
+              ? `Historique des modifications de prix de vente (${getFilterLabel()})`
+              : `Historique des prix - Site ${siteFilter} (${getFilterLabel()})`
           });
-          filename = 'historique_prix';
+          filename = siteFilter === 'ALL' ? 'historique_prix' : `historique_prix_${siteFilter.toLowerCase()}`;
           break;
         }
         
@@ -248,19 +342,11 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
           throw new Error('Type d\'export non pris en charge');
       }
 
-      const hasData = sheets.some(s => s.data.length > 0 && String(s.data[0]?.[Object.keys(s.data[0])[0]] || '').indexOf('Aucune donnée') === -1);
       const firstSheetData = sheets[0]?.data || [];
-
-      if (firstSheetData.length === 0) {
-        toast.warning(`Aucun enregistrement trouvé pour la période sélectionnée.`);
-        setExportingType(null);
-        return;
-      }
 
       if (format === 'excel') {
         exportToExcel(sheets, filename);
       } else {
-        // CSV only supports single flat sheet, so we export the first main sheet
         exportToCSV(firstSheetData, filename);
       }
 
@@ -346,7 +432,27 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
                   </h4>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {/* Dropdown to choose site */}
+                  <div className="space-y-1.5">
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Chantier / Site</label>
+                    <div className="relative">
+                      <select
+                        value={siteFilter}
+                        onChange={(e) => setSiteFilter(e.target.value as any)}
+                        className="w-full h-10 pl-3 pr-10 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#b8860b] focus:ring-1 focus:ring-[#b8860b] transition-all cursor-pointer appearance-none animate-pulse-once"
+                      >
+                        <option value="ALL">🏢 Tous les sites (Consolidé)</option>
+                        <option value="SMI">SMI</option>
+                        <option value="OUMEJRANE">OUMEJRANE</option>
+                        <option value="BOU-AZZER">BOU-AZZER</option>
+                        <option value="OUANSIMI">OUANSIMI</option>
+                        <option value="KOUDIA">KOUDIA</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
+                    </div>
+                  </div>
+
                   {/* Dropdown to choose preset */}
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Période</label>
@@ -480,22 +586,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
                   Sélectionner les registres à télécharger
                 </h4>
 
-                {/* Card 1: Articles */}
-                <ExportDataCard
-                  title="Inventaire Général (Articles)"
-                  description="État actuel de tous les stocks, références, PMP, emplacements et seuils d'alertes."
-                  icon={FileBox}
-                  count={articles.length}
-                  unit="articles en stock"
-                  onExportExcel={() => handleExport('articles', 'excel')}
-                  onExportCSV={() => handleExport('articles', 'csv')}
-                  isLoadingExcel={exportingType === 'articles-excel'}
-                  isLoadingCsv={exportingType === 'articles-csv'}
-                  isAnyLoading={exportingType !== null}
-                  metaText="Snapshot d'inventaire"
-                />
-
-                {/* Card 2: Movements */}
+                {/* Card 1: Registre des Mouvements */}
                 <ExportDataCard
                   title="Registre des Mouvements"
                   description="Historique des entrées, sorties, ajustements, retours, demandeurs et motifs."
@@ -508,6 +599,21 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
                   isLoadingCsv={exportingType === 'movements-csv'}
                   isAnyLoading={exportingType !== null}
                   metaText={getFilterLabel()}
+                />
+
+                {/* Card 2: Inventaire Général (Articles) */}
+                <ExportDataCard
+                  title="Inventaire Général (Articles)"
+                  description="État actuel de tous les stocks, références, PMP, emplacements et seuils d'alertes."
+                  icon={FileBox}
+                  count={physicalArticlesCount}
+                  unit={siteFilter === 'ALL' ? "articles physiques en stock" : `articles physiques en stock (${siteFilter})`}
+                  onExportExcel={() => handleExport('articles', 'excel')}
+                  onExportCSV={() => handleExport('articles', 'csv')}
+                  isLoadingExcel={exportingType === 'articles-excel'}
+                  isLoadingCsv={exportingType === 'articles-csv'}
+                  isAnyLoading={exportingType !== null}
+                  metaText="Snapshot d'inventaire"
                 />
 
                 {/* Card 3: Transfers */}

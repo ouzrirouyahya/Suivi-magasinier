@@ -1,5 +1,5 @@
-import * as XLSX from 'xlsx';
-import { Article, Mouvement, Transfert } from '../types';
+import XLSX from 'xlsx-js-style';
+import { Article, Mouvement, Transfert, SiteCode } from '../types';
 import { PriceChangeRecord } from '../types/priceHistory';
 
 export interface SheetConfig {
@@ -37,6 +37,11 @@ function formatDateSimple(dateVal: any): string {
  * Leaves rows 1, 2, 3 empty for titles and Hydromines logo integration
  * Enables gridlines explicitly and auto-fits columns dynamically
  */
+/**
+ * Exports data to professional Excel format with customized styles
+ * Leaves rows 1, 2, 3 empty for titles and Hydromines logo integration
+ * Forces gridlines to be invisible and applies custom colors/borders
+ */
 export function exportToExcel(
   sheets: SheetConfig | SheetConfig[],
   filename: string
@@ -46,7 +51,6 @@ export function exportToExcel(
 
   sheetsArray.forEach(sheet => {
     // 1. Create a beautiful header header inside Excel (starting at Row 4, leaving Rows 1, 2, 3 empty)
-    // Row 4: Title with professional Hydromines touch
     const titleRow = [`🔵 HYDROMINES — ${sheet.title.toUpperCase()}`];
     const dateStrFr = new Date().toLocaleDateString('fr-FR', {
       day: 'numeric',
@@ -78,7 +82,152 @@ export function exportToExcel(
     // 3. Force Gridlines to be invisible for a clean, blank page look as requested
     ws['!views'] = [{ showGridLines: false }];
 
-    // 4. Auto-fit column widths dynamically to prevent ### and chopped texts
+    // 4. Style cells manually using xlsx-js-style properties
+    Object.keys(ws).forEach(key => {
+      if (key.startsWith('!')) return; // skip metadata keys like !ref, !cols
+      const cell = ws[key];
+      if (!cell) return;
+
+      // Default style for ALL cells:
+      // Background color: White (FFFFFF) to hide all gridlines, custom font: Arial, size: 10
+      const defaultStyle = {
+        fill: { fgColor: { rgb: "FFFFFF" } },
+        font: { name: "Calibri", sz: 10, color: { rgb: "334155" } }, // Slate-700
+        alignment: { vertical: "center", horizontal: "left" },
+        border: {
+          top: { style: "thin", color: { rgb: "E2E8F0" } }, // Slate-200 very subtle borders
+          bottom: { style: "thin", color: { rgb: "E2E8F0" } },
+          left: { style: "thin", color: { rgb: "E2E8F0" } },
+          right: { style: "thin", color: { rgb: "E2E8F0" } }
+        }
+      };
+      
+      const match = key.match(/^([A-Z]+)(\d+)$/);
+      if (match) {
+        const col = match[1];
+        const row = parseInt(match[2], 10);
+
+        if (row === 1) {
+          // Hydromines Main Title Logo banner
+          cell.s = {
+            fill: { fgColor: { rgb: "1E293B" } }, // Slate-800
+            font: { name: "Calibri", sz: 14, bold: true, color: { rgb: "38BDF8" } }, // Sky Blue logo text
+            alignment: { vertical: "center", horizontal: "center" }
+          };
+        } else if (row === 2) {
+          // Logo Subtitle
+          cell.s = {
+            fill: { fgColor: { rgb: "1E293B" } }, // Slate-800
+            font: { name: "Calibri", sz: 10, italic: true, color: { rgb: "E2E8F0" } },
+            alignment: { vertical: "center", horizontal: "center" }
+          };
+        } else if (row === 3) {
+          // Gold separator line
+          cell.s = {
+            fill: { fgColor: { rgb: "B8860B" } }, // Gold separator!
+            font: { name: "Calibri", sz: 8, color: { rgb: "FFFFFF" } },
+            alignment: { vertical: "center", horizontal: "center" }
+          };
+        } else if (row === 4) {
+          // Sheet Title
+          cell.s = {
+            fill: { fgColor: { rgb: "F8FAFC" } },
+            font: { name: "Calibri", sz: 12, bold: true, color: { rgb: "1B365D" } }, // Hydromines Dark Navy
+            alignment: { vertical: "center", horizontal: "left" },
+            border: {
+              top: { style: "thin", color: { rgb: "E2E8F0" } },
+              bottom: { style: "thin", color: { rgb: "E2E8F0" } }
+            }
+          };
+        } else if (row === 5) {
+          // Sheet Subtitle
+          cell.s = {
+            fill: { fgColor: { rgb: "F8FAFC" } },
+            font: { name: "Calibri", sz: 9, color: { rgb: "64748B" } },
+            alignment: { vertical: "center", horizontal: "left" }
+          };
+        } else if (row === 6) {
+          // Divider row
+          cell.s = {
+            fill: { fgColor: { rgb: "F1F5F9" } },
+            font: { name: "Calibri", sz: 8, color: { rgb: "CBD5E1" } },
+            alignment: { vertical: "center" }
+          };
+        } else if (row === 7) {
+          // Empty space row
+          cell.s = {
+            fill: { fgColor: { rgb: "FFFFFF" } },
+            border: {} // no border
+          };
+        } else if (row === 8) {
+          // PRIMARY TABLE HEADERS ("LIGNE PRINCIPALE DE DATE . ID . PIECE. REFERENCE ....")
+          // Style this with a beautiful deep Slate/Navy blue background, bold white text, and thin borders!
+          cell.s = {
+            fill: { fgColor: { rgb: "1B365D" } }, // Deep Navy Blue
+            font: { name: "Calibri", sz: 11, bold: true, color: { rgb: "FFFFFF" } },
+            alignment: { vertical: "center", horizontal: "center", wrapText: true },
+            border: {
+              top: { style: "medium", color: { rgb: "0F172A" } },
+              bottom: { style: "medium", color: { rgb: "0F172A" } },
+              left: { style: "thin", color: { rgb: "475569" } },
+              right: { style: "thin", color: { rgb: "475569" } }
+            }
+          };
+        } else {
+          // Regular Data Rows
+          cell.s = defaultStyle;
+
+          // Align numbers right
+          if (typeof cell.v === 'number') {
+            cell.s.alignment.horizontal = "right";
+            
+            // Format monetary values if header contains (MAD)
+            const headKey = Object.keys(sheet.data[0])[XLSX.utils.decode_col(col)];
+            if (headKey && (headKey.includes('MAD') || headKey.includes('Prix') || headKey.includes('Montant') || headKey.includes('Valeur'))) {
+              cell.z = '#,##0.00 "MAD"';
+            } else {
+              cell.z = '#,##0'; // Raw quantities formatted
+            }
+          }
+
+          // Custom highlight rules based on contents (for totals, daily separators, etc.)
+          const cellValStr = String(cell.v || '');
+          if (cellValStr.includes('📊 TOTAL') || cellValStr.includes('TOTAL GÉNÉRAL') || cellValStr.includes('SYNTHÈSE') || cellValStr.includes('SYNTHESE')) {
+            cell.s.fill = { fgColor: { rgb: "FEF3C7" } }; // Amber-100 Light Gold
+            cell.s.font.bold = true;
+            cell.s.font.color = { rgb: "78350F" }; // Amber-900 Dark Amber
+            cell.s.border = {
+              top: { style: "thin", color: { rgb: "F59E0B" } },
+              bottom: { style: "double", color: { rgb: "F59E0B" } },
+              left: { style: "thin", color: { rgb: "FEF3C7" } },
+              right: { style: "thin", color: { rgb: "FEF3C7" } }
+            };
+          } else if (cellValStr.includes('🩵 JOURNÉE DU') || cellValStr.includes('JOURNÉE DU')) {
+            cell.s.fill = { fgColor: { rgb: "E0F2FE" } }; // Sky-100 Light Blue
+            cell.s.font.bold = true;
+            cell.s.font.color = { rgb: "0369A1" }; // Sky-700 Blue
+            cell.s.alignment.horizontal = "left";
+            cell.s.border = {
+              top: { style: "medium", color: { rgb: "0284C7" } },
+              bottom: { style: "thin", color: { rgb: "0284C7" } },
+              left: { style: "thin", color: { rgb: "E0F2FE" } },
+              right: { style: "thin", color: { rgb: "E0F2FE" } }
+            };
+          } else if (cellValStr.includes('░░░░░')) {
+            cell.s.fill = { fgColor: { rgb: "F1F5F9" } }; // Slate-100
+            cell.s.font.color = { rgb: "94A3B8" }; // Slate-400
+            cell.s.border = {
+              top: { style: "none" },
+              bottom: { style: "none" },
+              left: { style: "none" },
+              right: { style: "none" }
+            };
+          }
+        }
+      }
+    });
+
+    // 5. Auto-fit column widths dynamically to prevent ### and chopped texts
     if (sheet.data.length > 0) {
       const keys = Object.keys(sheet.data[0]);
       const colWidths = keys.map(key => {
@@ -90,12 +239,12 @@ export function exportToExcel(
             if (len > maxLen) maxLen = len;
           }
         });
-        // Comfortable spacing + boundaries to prevent ### or text cropping
         return { wch: Math.min(75, Math.max(15, maxLen + 4)) };
       });
+      ws['cols'] = colWidths;
       ws['!cols'] = colWidths;
 
-      // 5. Add Excel AutoFilter dropdown selectors on column headers (Row 8 down to last row)
+      // 6. Add Excel AutoFilter dropdown selectors on column headers (Row 8 down to last row)
       const lastRow = 8 + sheet.data.length;
       const numCols = keys.length;
       const lastColLetter = XLSX.utils.encode_col(numCols - 1);
@@ -583,4 +732,136 @@ function buildRawPriceRow(r: PriceChangeRecord) {
     'Modifié Par': r.changedByName || r.changedBy || '',
     'Raison / Motif': r.reason || '',
   };
+}
+
+/**
+ * Creates a professional general stock inventory overview dashboard comparing all 5 sites
+ */
+export function formatArticlesSummaryDashboard(articles: Article[]): any[] {
+  const sites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+  
+  const siteKPIs = sites.map(site => {
+    const siteArts = articles.filter(a => a.site === site);
+    const activeRefs = siteArts.filter(a => (a.quantity || 0) > 0);
+    const totalQty = siteArts.reduce((acc, a) => acc + (a.quantity || 0), 0);
+    const totalVal = siteArts.reduce((acc, a) => acc + (a.quantity || 0) * (a.price || 0), 0);
+    const alertCount = siteArts.filter(a => (a.quantity || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0)).length;
+    const ruptureCount = siteArts.filter(a => (a.quantity || 0) === 0 && (a.minStock || 0) > 0).length;
+
+    return {
+      'Site / Chantier': `🏭 SITE ${site}`,
+      'Nombre de Références Actives': activeRefs.length,
+      'Quantité Totale en Stock': totalQty,
+      'Valeur Estimée du Stock (MAD)': totalVal,
+      'Articles en Alerte (Quantité Basse)': alertCount,
+      'Articles en Rupture Critique': ruptureCount,
+    };
+  });
+
+  // Calculate totals across all sites
+  const totalRefs = articles.filter(a => (a.quantity || 0) > 0).length;
+  const grandQty = articles.reduce((acc, a) => acc + (a.quantity || 0), 0);
+  const grandVal = articles.reduce((acc, a) => acc + (a.quantity || 0) * (a.price || 0), 0);
+  const totalAlerts = articles.filter(a => (a.quantity || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0)).length;
+  const totalRuptures = articles.filter(a => (a.quantity || 0) === 0 && (a.minStock || 0) > 0).length;
+
+  siteKPIs.push({
+    'Site / Chantier': '📊 TOTAL GÉNÉRAL CONSOLIDÉ',
+    'Nombre de Références Actives': totalRefs,
+    'Quantité Totale en Stock': grandQty,
+    'Valeur Estimée du Stock (MAD)': grandVal,
+    'Articles en Alerte (Quantité Basse)': totalAlerts,
+    'Articles en Rupture Critique': totalRuptures,
+  });
+
+  return siteKPIs;
+}
+
+/**
+ * Creates a professional stock movements overview dashboard comparing flow metrics for all 5 sites
+ */
+export function formatMovementsSummaryDashboard(movements: Mouvement[], articles: Article[]): any[] {
+  const sites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+  const articleMap = new Map(articles.map(a => [a.id, a]));
+
+  const siteKPIs = sites.map(site => {
+    // Filter movements where site source OR site target is the current site
+    const siteMovs = movements.filter(m => m.site === site || m.targetSite === site);
+    
+    let totalQtyIn = 0;
+    let totalValIn = 0;
+    let totalQtyOut = 0;
+    let totalValOut = 0;
+
+    siteMovs.forEach(m => {
+      const items = m.items || [];
+      items.forEach(item => {
+        const art = articleMap.get(item.articleId);
+        const price = item.price || (art ? art.price : 0) || 0;
+        const total = (item.quantity || 0) * price;
+
+        // Determine if it is IN or OUT from this site's perspective
+        if (m.site === site) {
+          if (m.type === 'ENTREE' || m.type === 'RETOUR' || m.type === 'TRANSFERT_IN') {
+            totalQtyIn += item.quantity || 0;
+            totalValIn += total;
+          } else {
+            totalQtyOut += item.quantity || 0;
+            totalValOut += total;
+          }
+        } else if (m.targetSite === site) {
+          totalQtyIn += item.quantity || 0;
+          totalValIn += total;
+        }
+      });
+    });
+
+    return {
+      'Site / Chantier': `🏭 SITE ${site}`,
+      'Nombre de Mouvements': siteMovs.length,
+      'Total Entrées (Quantité)': totalQtyIn,
+      'Valeur des Entrées (MAD)': totalValIn,
+      'Total Sorties (Quantité)': totalQtyOut,
+      'Valeur des Sorties (MAD)': totalValOut,
+      'Solde Net (Quantité)': totalQtyIn - totalQtyOut,
+      'Solde Net (Valeur MAD)': totalValIn - totalValOut,
+    };
+  });
+
+  // Grand totals
+  const totalMovs = movements.length;
+  let grandQtyIn = 0;
+  let grandValIn = 0;
+  let grandQtyOut = 0;
+  let grandValOut = 0;
+
+  movements.forEach(m => {
+    const items = m.items || [];
+    items.forEach(item => {
+      const art = articleMap.get(item.articleId);
+      const price = item.price || (art ? art.price : 0) || 0;
+      const total = (item.quantity || 0) * price;
+
+      if (m.type === 'ENTREE' || m.type === 'RETOUR' || m.type === 'TRANSFERT_IN') {
+        grandQtyIn += item.quantity || 0;
+        grandValIn += total;
+      } else {
+        grandQtyOut += item.quantity || 0;
+        grandValOut += total;
+      }
+    });
+  });
+
+  siteKPIs.push({
+    'Site / Chantier': '📊 TOTAL GÉNÉRAL CONSOLIDÉ',
+    'Nombre de Mouvements': totalMovs,
+    'Total Entrées (Quantité)': grandQtyIn,
+    'Valeur des Entrées (MAD)': grandValIn,
+    'Total Sorties (Quantité)': grandQtyOut,
+    'Valeur des Sorties (MAD)': grandValOut,
+    'Solde Net (Quantité)': grandQtyIn - grandQtyOut,
+    'Solde Net (Valeur MAD)': grandValIn - grandValOut,
+  });
+
+  return siteKPIs;
 }
