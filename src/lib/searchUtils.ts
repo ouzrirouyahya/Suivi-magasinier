@@ -32,13 +32,16 @@ export function matchArticleSearch(article: Article, queryText: string): boolean
   const searchableFields = [
     article.designation,
     article.ref,
+    (article as any).reference || '',
     article.category || '',
     article.functionalCategory || '',
     article.subCategory || '',
     article.component || '',
     article.subComponent || '',
     article.location || '',
-    article.notes || ''
+    article.notes || '',
+    (article as any).commonName || '',
+    ...((article as any).searchTags || [])
   ].map(normalizeSearchString);
 
   return terms.every(term => {

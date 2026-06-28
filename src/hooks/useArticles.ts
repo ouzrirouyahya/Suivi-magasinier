@@ -175,15 +175,24 @@ export function useArticles() {
   }, [rawArticles, movements, hydrominesCatalog]);
 
   const saveArticle = useCallback(async (article: Article) => {
-    await articleService.saveArticle(article);
+    const res = await articleService.saveArticle(article);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
   }, []);
 
   const deleteArticle = useCallback(async (id: string) => {
-    await articleService.deleteArticles([id]);
+    const res = await articleService.deleteArticles([id]);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
   }, []);
 
   const deleteArticles = useCallback(async (ids: string[]) => {
-    await articleService.deleteArticles(ids);
+    const res = await articleService.deleteArticles(ids);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
   }, []);
 
   const importSpecificCatalogItems = useCallback(async (targetSite: SiteCode, itemsToImport: CatalogItem[]) => {

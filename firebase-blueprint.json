@@ -95,9 +95,32 @@
         "updatedAt": { "type": "string" }
       },
       "required": ["id", "reference", "designation", "suggestedType", "functionalCategory", "unit", "sourceCatalog", "equipmentFamily", "status", "createdAt", "updatedAt"]
+    },
+    "PriceChangeRecord": {
+      "title": "Price Change Record",
+      "description": "Enregistrement historique d'un changement de prix",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "itemId": { "type": "string" },
+        "itemReference": { "type": "string" },
+        "itemDesignation": { "type": "string" },
+        "oldPrice": { "type": "number" },
+        "newPrice": { "type": "number" },
+        "changedBy": { "type": "string" },
+        "changedByName": { "type": "string" },
+        "changedAt": { "type": "string" },
+        "reason": { "type": "string" },
+        "category": { "type": "string" }
+      },
+      "required": ["id", "itemId", "itemReference", "itemDesignation", "oldPrice", "newPrice", "changedBy", "changedByName", "changedAt", "category"]
     }
   },
   "firestore": {
+    "/priceHistory/{recordId}": {
+      "schema": "PriceChangeRecord",
+      "description": "Historique complet des variations de prix"
+    },
     "/hydromines_catalog/{itemId}": {
       "schema": "HydrominesCatalogItem",
       "description": "Catalogue de pièces opérationnel et unifié d'Hydromines"

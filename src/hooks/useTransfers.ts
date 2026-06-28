@@ -18,7 +18,10 @@ export function useTransfers() {
   }, [setTransferts]);
 
   const addTransfert = useCallback(async (t: Transfert) => {
-    await transfersService.addTransfert(t);
+    const res = await transfersService.addTransfert(t);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
   }, []);
 
   const completeTransfert = useCallback(async (
@@ -27,15 +30,24 @@ export function useTransfers() {
     receivedItems?: MouvementItem[],
     disputeReason?: string
   ) => {
-    await transfersService.completeTransfert(id, recepteur, receivedItems, disputeReason);
+    const res = await transfersService.completeTransfert(id, recepteur, receivedItems, disputeReason);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
   }, []);
 
   const approveTransfert = useCallback(async (id: string, approver: string) => {
-    await transfersService.approveTransfert(id, approver);
+    const res = await transfersService.approveTransfert(id, approver);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
   }, []);
 
   const closeTransfert = useCallback(async (id: string, reason: string) => {
-    await transfersService.closeTransfert(id, reason);
+    const res = await transfersService.closeTransfert(id, reason);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
   }, []);
 
   return {

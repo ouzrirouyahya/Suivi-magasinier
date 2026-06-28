@@ -17,7 +17,8 @@ import {
   Wrench,
   Drill,
   Droplets,
-  Shield
+  Shield,
+  X
 } from 'lucide-react';
 import { Article, ArticleType, SiteCode, Mouvement } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
@@ -26,6 +27,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
 import { matchArticleSearch } from '../lib/searchUtils';
 import { CarnetsModal } from './CarnetsModal';
+import { PriceHistoryModal } from './PriceHistoryModal';
 
 interface StockTableProps {
   type: ArticleType | 'ALL';
@@ -44,10 +46,19 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('GRID');
   const [isCarnetsOpen, setIsCarnetsOpen] = useState(false);
+  const [selectedPriceHistoryArticle, setSelectedPriceHistoryArticle] = useState<{ id: string; designation: string } | null>(null);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'RUPTURE' | 'CRITIQUE' | 'OPTIMAL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('');
   const [stockAvailabilityTab, setStockAvailabilityTab] = useState<'AVAILABLE' | 'OUT_OF_STOCK'>('AVAILABLE');
   const [showCategoryDropdown, setShowCategoryDropdown] = useState(false);
+  
+  // Pagination State
+  const ITEMS_PER_PAGE = 25;
+  const [currentPage, setCurrentPage] = useState(1);
+  
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [search, selectedStockType, categoryFilter, statusFilter, locationFilter, stockAvailabilityTab, site]);
   
   useEffect(() => {
     setSearch(initialSearch);
@@ -164,6 +175,13 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
     });
     return list;
   }, [filteredArticles]);
+
+  const paginatedArticles = useMemo(() => {
+    const start = (currentPage - 1) * ITEMS_PER_PAGE;
+    return sortedAndFilteredArticles.slice(start, start + ITEMS_PER_PAGE);
+  }, [sortedAndFilteredArticles, currentPage]);
+
+  const totalPages = Math.max(1, Math.ceil(sortedAndFilteredArticles.length / ITEMS_PER_PAGE));
 
   const categories = useMemo(() => {
     return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (site === 'ALL' ? true : a.site === site)).map(a => a.category)));
@@ -431,10 +449,18 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
           <input 
             type="text" 
             placeholder="Rechercher par désignation ou référence..."
-            className="w-full pl-12 pr-4 h-11 text-sm font-bold bg-slate-50/50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#b8860b] focus:bg-white transition-all text-slate-800 placeholder-slate-400 uppercase"
+            className="w-full pl-12 pr-11 h-11 text-sm font-bold bg-slate-50/50 border border-slate-200 rounded-lg focus:outline-none focus:border-[#b8860b] focus:bg-white transition-all text-slate-800 placeholder-slate-400 uppercase"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          {search && (
+            <button 
+              onClick={() => setSearch('')}
+              className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <div className="w-full md:w-auto flex flex-wrap items-center gap-2">
           {/* Status Dropdown */}
@@ -598,7 +624,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
             exit={{ opacity: 0, scale: 0.95 }}
             className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"
           >
-            {sortedAndFilteredArticles.map((article, idx) => {
+            {paginatedArticles.map((article, idx) => {
               const status = getStockStatus(article);
               const totalValue = article.quantity * article.price;
               
@@ -663,9 +689,22 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                          <MapPin className="w-3.5 h-3.5 text-slate-450" />
                          <p className="text-xs font-bold text-slate-600">{article.location || '—'}</p>
                        </div>
-                       <div className="flex items-center gap-2 text-slate-400">
-                         <TrendingUp className="w-3.5 h-3.5 text-slate-450" />
-                         <p className="text-xs font-black text-emerald-600 uppercase tracking-wider">{formatCurrency(totalValue)}</p>
+                       <div className="flex items-center justify-between">
+                         <div className="flex items-center gap-2 text-slate-400">
+                           <TrendingUp className="w-3.5 h-3.5 text-slate-450" />
+                           <p className="text-xs font-black text-emerald-600 uppercase tracking-wider">{formatCurrency(totalValue)}</p>
+                         </div>
+                         <button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             setSelectedPriceHistoryArticle({ id: article.id, designation: article.designation });
+                           }}
+                           className="text-[10px] font-bold text-slate-400 hover:text-[#b8860b] hover:underline cursor-pointer flex items-center gap-1 transition-all"
+                           title="Historique des prix"
+                         >
+                           <HistoryIcon className="w-3 h-3 text-[#b8860b]/70" />
+                           {formatCurrency(article.price)}
+                         </button>
                        </div>
                     </div>
 
@@ -728,7 +767,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                 </tr>
               </thead>
               <tbody className="divide-y divide-amber-100/50 bg-white">
-                {sortedAndFilteredArticles.map((article) => {
+                {paginatedArticles.map((article) => {
                   const status = getStockStatus(article);
                   const isZero = article.quantity === 0;
                   const isCritical = article.quantity <= article.minStock;
@@ -793,7 +832,17 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                         </span>
                       </td>
                       <td className="px-4 py-3.5 text-right font-semibold text-slate-700 font-mono text-xs whitespace-nowrap">
-                        {formatCurrency(article.price)}
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedPriceHistoryArticle({ id: article.id, designation: article.designation });
+                          }}
+                          className="hover:text-[#b8860b] hover:underline cursor-pointer inline-flex items-center gap-1 focus:outline-none font-bold"
+                          title="Voir l'historique des prix"
+                        >
+                          <HistoryIcon className="w-3.5 h-3.5 text-[#b8860b]/70" />
+                          {formatCurrency(article.price)}
+                        </button>
                       </td>
                       <td className="px-4 py-3.5 text-right whitespace-nowrap no-print">
                         <div className="flex justify-end gap-1.5 opacity-60 group-hover:opacity-100 transition-all focus-within:opacity-100">
@@ -821,6 +870,44 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* PAGINATION CONTROLS */}
+      {sortedAndFilteredArticles.length > 0 && (
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 px-5 py-4 bg-white border border-slate-200 rounded-xl shadow-sm no-print">
+          <div className="text-xs font-black uppercase tracking-wider text-slate-500">
+            Affichage <span className="text-slate-900 font-mono font-black">{(currentPage - 1) * ITEMS_PER_PAGE + 1}</span> - <span className="text-slate-900 font-mono font-black">{Math.min(currentPage * ITEMS_PER_PAGE, sortedAndFilteredArticles.length)}</span> sur <span className="text-slate-900 font-mono font-black">{sortedAndFilteredArticles.length}</span> articles
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+              disabled={currentPage === 1}
+              className={cn(
+                "px-4 py-2 border rounded-lg text-[10px] font-black uppercase tracking-wider transition-all select-none",
+                currentPage === 1
+                  ? "bg-slate-50 text-slate-350 border-slate-150 cursor-not-allowed"
+                  : "bg-white hover:bg-slate-50 text-slate-750 border-slate-200 cursor-pointer"
+              )}
+            >
+              Précédent
+            </button>
+            <span className="px-3 py-2 text-[10px] font-mono font-black uppercase tracking-widest bg-slate-50 border border-slate-200 text-slate-600 rounded-lg select-none">
+              Page {currentPage} / {totalPages}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+              disabled={currentPage === totalPages}
+              className={cn(
+                "px-4 py-2 border rounded-lg text-[10px] font-black uppercase tracking-wider transition-all select-none",
+                currentPage === totalPages
+                  ? "bg-slate-50 text-slate-350 border-slate-150 cursor-not-allowed"
+                  : "bg-white hover:bg-slate-50 text-slate-750 border-slate-200 cursor-pointer"
+              )}
+            >
+              Suivant
+            </button>
+          </div>
+        </div>
+      )}
 
       {isSiteEmpty ? (
         <div className="card bg-white p-12 text-center flex flex-col items-center justify-center border-2 border-dashed border-slate-200/80 rounded-[2.5rem] max-w-2xl mx-auto shadow-sm my-8 animate-in fade-in duration-300">
@@ -862,6 +949,13 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
         onClose={() => setIsCarnetsOpen(false)} 
         site={site} 
         articles={articles} 
+      />
+
+      <PriceHistoryModal
+        open={selectedPriceHistoryArticle !== null}
+        onClose={() => setSelectedPriceHistoryArticle(null)}
+        itemId={selectedPriceHistoryArticle?.id}
+        itemDesignation={selectedPriceHistoryArticle?.designation}
       />
     </div>
   );

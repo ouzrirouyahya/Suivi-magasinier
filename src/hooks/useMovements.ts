@@ -76,7 +76,26 @@ export function useMovements() {
   }, [setAnomalyReports]);
 
   const addMouvement = useCallback(async (mouvement: Mouvement) => {
-    await movementsService.addMouvement(mouvement);
+    const res = await movementsService.addMouvement(mouvement);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
+  }, []);
+
+  const addPurchaseRequest = useCallback(async (pr: PurchaseRequest) => {
+    const res = await movementsService.addPurchaseRequest(pr);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
+    return res;
+  }, []);
+
+  const updatePRStatus = useCallback(async (id: string, status: any) => {
+    const res = await movementsService.updatePRStatus(id, status);
+    if (!res.success) {
+      throw new Error(res.error);
+    }
+    return res;
   }, []);
 
   return {
@@ -86,8 +105,8 @@ export function useMovements() {
     anomalyReports,
     addMouvement,
     calculatePriceUpdates, // Preserve function reference
-    addPurchaseRequest: movementsService.addPurchaseRequest,
-    updatePRStatus: movementsService.updatePRStatus,
+    addPurchaseRequest,
+    updatePRStatus,
   };
 }
 export default useMovements;

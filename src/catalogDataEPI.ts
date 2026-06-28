@@ -1,4 +1,5 @@
 import { CatalogItem } from './types';
+import { logPriceChange } from './services/priceHistory.service';
 
 export interface EPIPriceConfig {
   id: string;
@@ -306,10 +307,14 @@ export const EPI_CATALOG: CatalogItem[] = RAW_ITEMS.map(it => ({
 export function updateEPIPrice(
   id: string,
   newPrice: number,
-  updatedBy: string = 'magasinier'
+  updatedBy: string = 'magasinier',
+  reason?: string
 ): boolean {
   const config = EPI_PRICES.find(p => p.id === id);
   if (!config) return false;
+  
+  const oldPrice = config.sellingPrice;
+  
   config.basePrice = newPrice;
   config.sellingPrice = newPrice;
   config.lastUpdated = new Date().toISOString();
@@ -320,6 +325,21 @@ export function updateEPIPrice(
   if (catalogItem) {
     catalogItem.price = newPrice;
   }
+
+  // Log price change asynchronously
+  logPriceChange({
+    itemId: id,
+    itemReference: config.reference,
+    itemDesignation: config.designation,
+    oldPrice,
+    newPrice,
+    changedBy: updatedBy,
+    changedByName: updatedBy,
+    changedAt: new Date().toISOString(),
+    reason,
+    category: 'EPI',
+  }).catch(console.error);
+
   return true;
 }
 

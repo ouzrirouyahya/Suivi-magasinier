@@ -465,5 +465,12 @@ service cloud.firestore {
       allow update: if canReadIfActive() && isValidId(id);
       allow delete: if isAdmin() && isValidId(id);
     }
+
+    // Price History Logs
+    match /priceHistory/{id} {
+      allow read: if canReadIfActive();
+      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+      allow update, delete: if isAdmin();
+    }
   }
 }

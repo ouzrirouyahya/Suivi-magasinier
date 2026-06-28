@@ -35,6 +35,7 @@ import { SITES } from '../demoData';
 import { MASTER_CATALOG } from '../catalogData';
 import { useInventory } from '../context/InventoryContext';
 import { motion, AnimatePresence } from 'motion/react';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 
 interface MouvementFormProps {
   type: 'ENTREE' | 'SORTIE';
@@ -51,6 +52,7 @@ interface MouvementFormProps {
 }
 
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId, isReadOnly = false }: MouvementFormProps) {
+  const { isOnline } = useOfflineSync();
   const { hydrominesCatalog = [], saveHydrominesCatalogItem, importFromHydrominesCatalog } = useInventory();
 
   // Automatic selection after import state & effect
@@ -1544,16 +1546,23 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             </div>
             <div className="flex gap-4 w-full sm:w-auto">
               <button 
+                id="mouvement-submit-btn"
                 type="submit" 
-                disabled={items.length === 0 || site === 'ALL'} 
+                disabled={items.length === 0 || site === 'ALL' || (!isOnline && type === 'SORTIE')} 
                 className={cn(
                   "flex-1 sm:flex-none px-12 h-16 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl transition-all cursor-pointer",
-                  (items.length === 0 || site === 'ALL')
+                  (items.length === 0 || site === 'ALL' || (!isOnline && type === 'SORTIE'))
                     ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-50 border-none"
                     : "bg-slate-950 text-white hover:bg-sky-600 border-none"
                 )}
               >
-                {site === 'ALL' ? 'Sélectionnez un chantier dans le menu' : 'Valider & Générer Bon'}
+                {site === 'ALL' 
+                  ? 'Sélectionnez un chantier dans le menu' 
+                  : !isOnline && type === 'SORTIE'
+                    ? 'Sortie impossible hors-ligne'
+                    : isOnline 
+                      ? 'Enregistrer' 
+                      : 'Enregistrer (sera sync quand online)'}
               </button>
             </div>
           </div>

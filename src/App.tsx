@@ -16,6 +16,7 @@ import { PageLoading } from './components/common/PageLoading';
 import { Toolbar } from './components/layout/Toolbar';
 import { ArticleDetail } from './components/ArticleDetail';
 import { AppRoutes } from './app/routes';
+import { OfflineBanner } from './components/OfflineBanner';
 
 const pageRouteMap: Record<string, string> = {
   'COCKPIT': '/',
@@ -305,6 +306,7 @@ function AuthenticatedLayout() {
           onClose={() => setSelectedArticle(null)} 
         />
       )}
+      <OfflineBanner />
     </div>
   );
 }
