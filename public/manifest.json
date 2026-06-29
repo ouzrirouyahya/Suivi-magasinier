@@ -1,0 +1,21 @@
+{
+  "name": "Suivi Magasinier — Hydromines",
+  "short_name": "Hydromines",
+  "description": "Gestion de stock multi-sites — SMI, Oumejrane, Koudia, Bou-Azzer, Ouansimi",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0a1628",
+  "theme_color": "#d4af37",
+  "orientation": "portrait-primary",
+  "lang": "fr-MA",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Bon d'Entrée", "short_name": "Entrée", "url": "/movement/entree", "description": "Créer un bon d'entrée" },
+    { "name": "Bon de Sortie", "short_name": "Sortie", "url": "/movement/sortie", "description": "Créer un bon de sortie" }
+  ],
+  "categories": ["business", "productivity"]
+}

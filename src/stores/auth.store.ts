@@ -15,21 +15,60 @@ interface AuthState {
   updateAccount: (id: string, updates: Partial<UserAccount>) => void;
 }
 
+interface CachedUserMinimal {
+  id: string;
+  uid: string;
+  email: string;
+  name: string;
+  role: string;
+  assignedSite: string;
+  active: boolean;
+  status: string;
+  cachedAt: number;
+}
+
+const CACHE_TTL = 8 * 60 * 60 * 1000; // 8 heures = durée d'un shift
+
+function minimizeUser(user: UserAccount): CachedUserMinimal {
+  return {
+    id: user.id || (user as any).uid || '',
+    uid: (user as any).uid || user.id || '',
+    email: user.email || '',
+    name: user.name || '',
+    role: user.role || 'MAGASINIER',
+    assignedSite: user.assignedSite || '',
+    active: user.active ?? (user as any).isActive ?? true,
+    status: user.status || 'APPROVED',
+    cachedAt: Date.now()
+  };
+}
+
 const getCachedUser = (): UserAccount | null => {
   try {
     const cached = localStorage.getItem('hydromines_cached_user');
-    return cached ? JSON.parse(cached) : null;
+    if (!cached) return null;
+    const parsed = JSON.parse(cached) as CachedUserMinimal;
+    if (!parsed || typeof parsed.cachedAt !== 'number') {
+      return null;
+    }
+    const age = Date.now() - parsed.cachedAt;
+    if (age > CACHE_TTL) {
+      console.warn('[AuthStore] Session expirée (shift de 8h terminé). Forcer reconnexion.');
+      localStorage.removeItem('hydromines_cached_user');
+      return null;
+    }
+    return {
+      id: parsed.id || parsed.uid,
+      uid: parsed.uid || parsed.id,
+      email: parsed.email,
+      name: parsed.name,
+      role: parsed.role,
+      active: parsed.active,
+      status: parsed.status,
+      assignedSite: parsed.assignedSite,
+    } as any;
   } catch {
     return null;
-  }
-};
-
-const getCachedAccounts = (): UserAccount[] => {
-  try {
-    const cached = localStorage.getItem('hydromines_cached_accounts');
-    return cached ? JSON.parse(cached) : [];
-  } catch {
-    return [];
   }
 };
 
@@ -46,7 +85,7 @@ export const useAuthStore = create<AuthState>((set) => {
   const cachedUser = getCachedUser();
   return {
     currentUser: cachedUser,
-    accounts: getCachedAccounts(),
+    accounts: [], // Ne jamais cacher la liste complète en local
     currentSite: getCachedSite(),
     isLoaded: cachedUser !== null,
     isAuthenticated: cachedUser !== null,
@@ -54,7 +93,7 @@ export const useAuthStore = create<AuthState>((set) => {
       const nextUser = typeof arg === 'function' ? (arg as Function)(state.currentUser) : arg;
       try {
         if (nextUser) {
-          localStorage.setItem('hydromines_cached_user', JSON.stringify(nextUser));
+          localStorage.setItem('hydromines_cached_user', JSON.stringify(minimizeUser(nextUser)));
         } else {
           localStorage.removeItem('hydromines_cached_user');
         }
@@ -68,11 +107,7 @@ export const useAuthStore = create<AuthState>((set) => {
     }),
     setAccounts: (arg) => set((state) => {
       const nextAccounts = typeof arg === 'function' ? (arg as Function)(state.accounts) : arg;
-      try {
-        localStorage.setItem('hydromines_cached_accounts', JSON.stringify(nextAccounts));
-      } catch (err) {
-        console.warn('Failed to cache account list in localStorage:', err);
-      }
+      // NIVEAU 2 : Suppression complète du stockage de comptes dans localStorage
       return { accounts: nextAccounts };
     }),
     setCurrentSite: (site) => {
@@ -89,9 +124,8 @@ export const useAuthStore = create<AuthState>((set) => {
       const nextAccounts = state.accounts.map(a => a.id === id ? { ...a, ...updates } : a);
       const nextUser = state.currentUser?.id === id ? { ...state.currentUser, ...updates } : state.currentUser;
       try {
-        localStorage.setItem('hydromines_cached_accounts', JSON.stringify(nextAccounts));
         if (nextUser) {
-          localStorage.setItem('hydromines_cached_user', JSON.stringify(nextUser));
+          localStorage.setItem('hydromines_cached_user', JSON.stringify(minimizeUser(nextUser)));
         }
       } catch (err) {
         console.warn(err);

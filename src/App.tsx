@@ -59,7 +59,7 @@ function AuthenticatedLayout() {
   const {
     currentSite, setCurrentSite, currentUser, networkQuality, retryQueue = [],
     maintenanceMode, maintenanceReason, articles, selectedArticle, setSelectedArticle,
-    notifications, globalSearch, setGlobalSearch, movements: movementsList
+    notifications, globalSearch, setGlobalSearch, movements: movementsList, isLoaded
   } = useInventory();
 
   const handleToggleDarkMode = () => setIsDarkMode(prev => !prev);
@@ -102,6 +102,48 @@ function AuthenticatedLayout() {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, [isDesktopViewport]);
+
+  // Dynamic automatic routing and session-state redirection flow
+  useEffect(() => {
+    if (!isLoaded) return;
+
+    if (!currentUser) {
+      if (location.pathname !== '/login') {
+        navigate('/login', { replace: true });
+      }
+      return;
+    }
+
+    const status = currentUser.status;
+    const active = currentUser.active;
+
+    if (status === 'PENDING') {
+      if (location.pathname !== '/pending') {
+        navigate('/pending', { replace: true });
+      }
+    } else if (status === 'REJECTED') {
+      if (location.pathname !== '/rejected') {
+        navigate('/rejected', { replace: true });
+      }
+    } else if (active === false && status === 'APPROVED') {
+      if (location.pathname !== '/disabled') {
+        navigate('/disabled', { replace: true });
+      }
+    } else {
+      // User is fully APPROVED and ACTIVE (magasinier, admin, etc.)
+      if (['/login', '/pending', '/rejected', '/disabled'].includes(location.pathname)) {
+        navigate('/', { replace: true });
+      }
+    }
+  }, [currentUser, isLoaded, location.pathname, navigate]);
+
+  if (!isLoaded) {
+    return (
+      <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
+        <PageLoading />
+      </div>
+    );
+  }
 
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
   const isAdmin = currentUser?.role === 'ADMIN' || isSuperAdmin;

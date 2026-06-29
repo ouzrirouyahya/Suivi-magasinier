@@ -1,30 +1,49 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
-import firebaseConfig from '../../firebase-applet-config.json';
+import {
+  initializeFirestore,
+  persistentLocalCache,
+  persistentMultipleTabManager
+} from 'firebase/firestore';
+import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
-/**
- * CONFIGURATION PRODUCTION - HYDRO-SUIVI-MAGASINIER
- * Mise à jour le: 16/05/2026
- */
+const firebaseConfig = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+};
+
+const DATABASE_ID = import.meta.env.VITE_FIREBASE_DATABASE_ID;
+
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, firebaseConfig.firestoreDatabaseId);
 
-// Activer la persistance hors-ligne Firestore (IndexedDB)
-enableIndexedDbPersistence(db).catch((err) => {
-  if (err.code === 'failed-precondition') {
-    console.warn('[Firebase] Persistence offline impossible — plusieurs onglets ouverts');
-  } else if (err.code === 'unimplemented') {
-    console.warn('[Firebase] Navigateur incompatible avec IndexedDB');
-  } else {
-    console.error('Erreur lors de l\'activation de la persistance Firestore:', err);
-  }
-});
+// Firebase v12 : persistance offline via initializeFirestore
+// persistentMultipleTabManager : plusieurs onglets partagent le cache
+// sans conflit ni warning "failed-precondition"
+export const db = initializeFirestore(app, {
+  localCache: persistentLocalCache({
+    tabManager: persistentMultipleTabManager()
+  })
+}, DATABASE_ID);
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
-
-// Forcer la langue en Français pour les popups
 auth.languageCode = 'fr';
+
+// Activation sécurisée de Firebase App Check avec reCAPTCHA Enterprise
+if (typeof window !== 'undefined' && import.meta.env.VITE_RECAPTCHA_KEY) {
+  try {
+    initializeAppCheck(app, {
+      provider: new ReCaptchaEnterpriseProvider(import.meta.env.VITE_RECAPTCHA_KEY),
+      isTokenAutoRefreshEnabled: true
+    });
+    console.log('[Firebase] App Check initialisé avec succès.');
+  } catch (err) {
+    console.warn('[Firebase] Impossible d\'initialiser App Check:', err);
+  }
+}
 
 export default app;

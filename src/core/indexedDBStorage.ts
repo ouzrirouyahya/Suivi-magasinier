@@ -9,7 +9,7 @@ const STORES = [
   'articles', 'catalog', 'mouvements', 'maintenanceLogs', 'transferts', 
   'agents', 'engins', 'perfos', 'hydromines_catalog',
   'inventaires', 'auditLogs', 'notifications', 'distributions', 
-  'purchaseRequests', 'anomalyReports'
+  'purchaseRequests', 'anomalyReports', 'offlineQueue'
 ];
 
 class IndexedDBStorageClass {
@@ -120,6 +120,44 @@ class IndexedDBStorageClass {
       this.isFallbackMode = true; // Downgrade to fallback
       console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB write failed for '${storeName}'. Writing completely to LocalStorage.`, err);
       localStorage.setItem(`hydromines_cache_${storeName}`, JSON.stringify(items));
+    }
+  }
+
+  /**
+   * Saves a single item into IndexedDB.
+   */
+  public async saveItem<T extends { id: any }>(storeName: string, item: T): Promise<void> {
+    try {
+      const db = await this.ensureDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const req = store.put(item);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error || new Error(`Failed to save item to ${storeName}.`));
+      });
+    } catch (err) {
+      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB saveItem failed for '${storeName}'.`, err);
+      throw err;
+    }
+  }
+
+  /**
+   * Deletes a single item from IndexedDB by ID.
+   */
+  public async deleteItem(storeName: string, id: any): Promise<void> {
+    try {
+      const db = await this.ensureDb();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const req = store.delete(id);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error || new Error(`Failed to delete item from ${storeName}.`));
+      });
+    } catch (err) {
+      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB deleteItem failed for '${storeName}'.`, err);
+      throw err;
     }
   }
 

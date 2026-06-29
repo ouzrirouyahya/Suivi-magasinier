@@ -1,24 +1,29 @@
-const CACHE_NAME = 'hydromines-suivi-magasinier-v1';
+const CACHE_NAME = 'hydromines-v' + (self.__BUILD_TIMESTAMP__ || Date.now());
 
-// Assets de base à pré-cacher pour garantir un premier démarrage hors-ligne
-const ASSETS_TO_CACHE = [
+const SHELL_ASSETS = [
   '/',
   '/index.html',
-  '/src/main.tsx',
-  '/src/index.css',
-  '/src/App.tsx'
+  '/manifest.json',
+  '/favicon.ico'
 ];
+
+// self.__WB_MANIFEST sera injecté par VitePWA avec la liste 
+// exacte des chunks buildés. Si absent (dev), utiliser SHELL_ASSETS.
+const PRECACHE_ASSETS = (typeof self.__WB_MANIFEST !== 'undefined')
+  ? self.__WB_MANIFEST.map(e => e.url)
+  : SHELL_ASSETS;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Pré-mise en cache des ressources essentielles');
-      return cache.addAll(ASSETS_TO_CACHE).catch(err => {
-        console.warn('[Service Worker] Échec du pré-caching initial (normal en dév), mise en cache dynamique active :', err);
-      });
-    })
+    caches.open(CACHE_NAME).then(cache => {
+      // addAll échoue si UN seul asset manque — utiliser add() individuel
+      return Promise.allSettled(
+        PRECACHE_ASSETS.map(url => cache.add(url).catch(err => 
+          console.warn('[SW] Précache raté pour', url, err)
+        ))
+      );
+    }).then(() => self.skipWaiting())
   );
-  self.skipWaiting();
 });
 
 self.addEventListener('activate', (event) => {
@@ -37,67 +42,53 @@ self.addEventListener('activate', (event) => {
   self.clients.claim();
 });
 
-// Interception des requêtes avec stratégie Stale-While-Revalidate
 self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url);
-
-  // NE PAS intercepter ni bloquer :
-  // - Les requêtes non GET (POST, PUT, DELETE pour l'écriture directe ou Firestore)
-  // - Les appels directs aux serveurs Firestore / Firebase Auth / APIs Google
-  // - Les scripts internes de l'environnement de développement de l'AI Studio
+  
+  // Ignorer Firebase / Google APIs
   if (
     event.request.method !== 'GET' ||
     url.hostname.includes('firestore.googleapis.com') ||
     url.hostname.includes('firebase') ||
     url.hostname.includes('googleapis.com') ||
-    url.pathname.startsWith('/api/') ||
-    url.href.includes('__')
-  ) {
+    url.pathname.startsWith('/api/')
+  ) return;
+  
+  // Navigation (HTML) : Network-First avec fallback /index.html
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .catch(() => caches.match('/index.html'))
+    );
     return;
   }
-
-  event.respondWith(
-    caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Stratégie Stale-While-Revalidate : renvoie instantanément la ressource en cache
-        // puis met à jour le cache en arrière-plan si le réseau est disponible
-        fetch(event.request)
-          .then((networkResponse) => {
-            if (networkResponse.status === 200) {
-              caches.open(CACHE_NAME).then((cache) => {
-                cache.put(event.request, networkResponse);
-              });
-            }
-          })
-          .catch(() => {
-            // Silencieux en cas de réseau coupé (hors-ligne)
-          });
-
-        return cachedResponse;
-      }
-
-      // Si la ressource n'est pas dans le cache, faire la requête réseau
-      return fetch(event.request)
-        .then((networkResponse) => {
-          if (!networkResponse || networkResponse.status !== 200 || (networkResponse.type !== 'basic' && networkResponse.type !== 'cors')) {
-            return networkResponse;
-          }
-
-          // Stocker une copie de la ressource dans le cache pour la prochaine fois
-          const responseToCache = networkResponse.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, responseToCache);
-          });
-
-          return networkResponse;
-        })
-        .catch((err) => {
-          // En cas de panne de réseau complète et si on cherche à naviguer vers une page HTML
-          if (event.request.mode === 'navigate') {
-            return caches.match('/index.html') || caches.match('/');
-          }
-          throw err;
+  
+  // Assets JS/CSS/images : Cache-First (ils ont des hash dans le nom)
+  if (url.pathname.startsWith('/assets/')) {
+    event.respondWith(
+      caches.match(event.request).then(cached => {
+        if (cached) return cached;
+        return fetch(event.request).then(response => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          return response;
         });
+      })
+    );
+    return;
+  }
+  
+  // Tout le reste : Stale-While-Revalidate
+  event.respondWith(
+    caches.match(event.request).then(cached => {
+      const networkFetch = fetch(event.request).then(response => {
+        if (response.status === 200) {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+        }
+        return response;
+      }).catch(() => cached);
+      return cached || networkFetch;
     })
   );
 });
@@ -107,7 +98,6 @@ self.addEventListener('sync', (event) => {
   if (event.tag === 'hydromines-sync') {
     console.log('[Service Worker] Événement de synchronisation d\'arrière-plan reçu pour "hydromines-sync"');
     event.waitUntil(
-      // Récupérer tous les clients (onglets) ouverts de notre PWA
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
         // Notifier chaque client ouvert que la connexion est de retour et qu'il faut lancer la synchronisation de la file
         clients.forEach((client) => {
