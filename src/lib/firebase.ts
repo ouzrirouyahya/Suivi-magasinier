@@ -23,11 +23,12 @@ const app = initializeApp(firebaseConfig);
 // Firebase v12 : persistance offline via initializeFirestore
 // persistentMultipleTabManager : plusieurs onglets partagent le cache
 // sans conflit ni warning "failed-precondition"
+const dbId = DATABASE_ID && DATABASE_ID !== '(default)' && DATABASE_ID.trim() !== '' ? DATABASE_ID : undefined;
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   })
-}, DATABASE_ID);
+}, dbId);
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
