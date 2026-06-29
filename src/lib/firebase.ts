@@ -8,15 +8,15 @@ import {
 import { initializeAppCheck, ReCaptchaEnterpriseProvider } from 'firebase/app-check';
 
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyCPZ4AvxoPaQzA2UqxJm9mNT5N65pGiPnw",
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "hydro-suivi-magasinier",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:940620142266:web:073720dd0109b8f9f3d483",
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "hydro-suivi-magasinier.firebaseapp.com",
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "hydro-suivi-magasinier.firebasestorage.app",
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "940620142266",
 };
 
-const DATABASE_ID = import.meta.env.VITE_FIREBASE_DATABASE_ID;
+const DATABASE_ID = import.meta.env.VITE_FIREBASE_DATABASE_ID || "ai-studio-8a211b3e-d9c6-4439-b61e-9282b9488046";
 
 const app = initializeApp(firebaseConfig);
 
