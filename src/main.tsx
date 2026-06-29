@@ -5,6 +5,7 @@ import './index.css';
 
 import { InventoryProvider } from './context/InventoryContext.tsx';
 import { Toaster } from 'sonner';
+import { ErrorBoundary } from './components/ErrorBoundary';
 
 // Enregistrement du Service Worker pour un support Offline complet et performant
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
@@ -36,9 +37,11 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <InventoryProvider>
-      <Toaster position="top-right" richColors closeButton />
-      <App />
-    </InventoryProvider>
+    <ErrorBoundary componentName="App">
+      <InventoryProvider>
+        <Toaster position="top-right" richColors closeButton />
+        <App />
+      </InventoryProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

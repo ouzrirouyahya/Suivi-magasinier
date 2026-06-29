@@ -2,6 +2,7 @@ import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../stores/auth.store';
 import LoadingScreen from '../components/LoadingScreen';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 
 // Lazy load Pages
 const LoginPage = lazy(() => import('../pages/LoginPage'));
@@ -101,33 +102,33 @@ const ProtectedRoute = ({
 export const AppRoutes: React.FC = () => (
   <Suspense fallback={<LoadingScreen />}>
     <Routes>
-      <Route path="/login" element={<LoginPage />} />
-      <Route path="/pending" element={<PendingPage />} />
-      <Route path="/rejected" element={<RejectedPage />} />
-      <Route path="/disabled" element={<DisabledPage />} />
+      <Route path="/login" element={<ErrorBoundary componentName="LoginPage"><LoginPage /></ErrorBoundary>} />
+      <Route path="/pending" element={<ErrorBoundary componentName="PendingPage"><PendingPage /></ErrorBoundary>} />
+      <Route path="/rejected" element={<ErrorBoundary componentName="RejectedPage"><RejectedPage /></ErrorBoundary>} />
+      <Route path="/disabled" element={<ErrorBoundary componentName="DisabledPage"><DisabledPage /></ErrorBoundary>} />
       
-      <Route path="/" element={<ProtectedRoute><CockpitPage /></ProtectedRoute>} />
-      <Route path="/stock/engins" element={<ProtectedRoute><StockEnginesPage /></ProtectedRoute>} />
-      <Route path="/stock/perforateurs" element={<ProtectedRoute><StockPerforatorsPage /></ProtectedRoute>} />
-      <Route path="/stock/consommables" element={<ProtectedRoute><StockConsumablesPage /></ProtectedRoute>} />
-      <Route path="/stock/epi" element={<ProtectedRoute><StockEpiPage /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute><ErrorBoundary componentName="CockpitPage"><CockpitPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/stock/engins" element={<ProtectedRoute><ErrorBoundary componentName="StockEnginesPage"><StockEnginesPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/stock/perforateurs" element={<ProtectedRoute><ErrorBoundary componentName="StockPerforatorsPage"><StockPerforatorsPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/stock/consommables" element={<ProtectedRoute><ErrorBoundary componentName="StockConsumablesPage"><StockConsumablesPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/stock/epi" element={<ProtectedRoute><ErrorBoundary componentName="StockEpiPage"><StockEpiPage /></ErrorBoundary></ProtectedRoute>} />
       
-      <Route path="/movement/entree" element={<ProtectedRoute requiredRole="MAGASINIER"><BonEntreePage /></ProtectedRoute>} />
-      <Route path="/movement/sortie" element={<ProtectedRoute requiredRole="MAGASINIER"><BonSortiePage /></ProtectedRoute>} />
-      <Route path="/transfers" element={<ProtectedRoute requiredRole="MAGASINIER"><TransfersPage /></ProtectedRoute>} />
-      <Route path="/returns" element={<ProtectedRoute requiredRole="MAGASINIER"><ReturnsPage /></ProtectedRoute>} />
-      <Route path="/inventaire" element={<ProtectedRoute requiredRole="MAGASINIER"><InventairePage /></ProtectedRoute>} />
+      <Route path="/movement/entree" element={<ProtectedRoute requiredRole="MAGASINIER"><ErrorBoundary componentName="BonEntreePage"><BonEntreePage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/movement/sortie" element={<ProtectedRoute requiredRole="MAGASINIER"><ErrorBoundary componentName="BonSortiePage"><BonSortiePage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/transfers" element={<ProtectedRoute requiredRole="MAGASINIER"><ErrorBoundary componentName="TransfersPage"><TransfersPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/returns" element={<ProtectedRoute requiredRole="MAGASINIER"><ErrorBoundary componentName="ReturnsPage"><ReturnsPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/inventaire" element={<ProtectedRoute requiredRole="MAGASINIER"><ErrorBoundary componentName="InventairePage"><InventairePage /></ErrorBoundary></ProtectedRoute>} />
       
-      <Route path="/catalog/master" element={<ProtectedRoute><MasterCatalogPage /></ProtectedRoute>} />
-      <Route path="/catalog/hydromines" element={<ProtectedRoute><HydrominesCatalogPage /></ProtectedRoute>} />
+      <Route path="/catalog/master" element={<ProtectedRoute><ErrorBoundary componentName="MasterCatalogPage"><MasterCatalogPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/catalog/hydromines" element={<ProtectedRoute><ErrorBoundary componentName="HydrominesCatalogPage"><HydrominesCatalogPage /></ErrorBoundary></ProtectedRoute>} />
       
-      <Route path="/maintenance" element={<ProtectedRoute requiredRole="ADMIN"><MaintenancePage /></ProtectedRoute>} />
-      <Route path="/finance" element={<ProtectedRoute requiredRole="SUPER_ADMIN"><FinancialPage /></ProtectedRoute>} />
-      <Route path="/reports" element={<ProtectedRoute requiredRole="ADMIN"><ReportsPage /></ProtectedRoute>} />
-      <Route path="/audit" element={<ProtectedRoute requiredRole="ADMIN"><AuditLogsPage /></ProtectedRoute>} />
-      <Route path="/users" element={<ProtectedRoute requiredRole="ADMIN"><UsersPage /></ProtectedRoute>} />
-      <Route path="/restock" element={<ProtectedRoute requiredRole="MAGASINIER"><RestockPage /></ProtectedRoute>} />
-      <Route path="/traceability" element={<ProtectedRoute><TraceabilityPage /></ProtectedRoute>} />
+      <Route path="/maintenance" element={<ProtectedRoute requiredRole="ADMIN"><ErrorBoundary componentName="MaintenancePage"><MaintenancePage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/finance" element={<ProtectedRoute requiredRole="SUPER_ADMIN"><ErrorBoundary componentName="FinancialPage"><FinancialPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/reports" element={<ProtectedRoute requiredRole="ADMIN"><ErrorBoundary componentName="ReportsPage"><ReportsPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/audit" element={<ProtectedRoute requiredRole="ADMIN"><ErrorBoundary componentName="AuditLogsPage"><AuditLogsPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/users" element={<ProtectedRoute requiredRole="ADMIN"><ErrorBoundary componentName="UsersPage"><UsersPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/restock" element={<ProtectedRoute requiredRole="MAGASINIER"><ErrorBoundary componentName="RestockPage"><RestockPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/traceability" element={<ProtectedRoute><ErrorBoundary componentName="TraceabilityPage"><TraceabilityPage /></ErrorBoundary></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

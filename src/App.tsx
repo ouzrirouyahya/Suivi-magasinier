@@ -17,6 +17,7 @@ import { Toolbar } from './components/layout/Toolbar';
 import { ArticleDetail } from './components/ArticleDetail';
 import { AppRoutes } from './app/routes';
 import { OfflineBanner } from './components/OfflineBanner';
+import { useSessionTimeout } from './hooks/useSessionTimeout';
 
 const pageRouteMap: Record<string, string> = {
   'COCKPIT': '/',
@@ -61,6 +62,8 @@ function AuthenticatedLayout() {
     maintenanceMode, maintenanceReason, articles, selectedArticle, setSelectedArticle,
     notifications, globalSearch, setGlobalSearch, movements: movementsList, isLoaded
   } = useInventory();
+
+  useSessionTimeout();
 
   const handleToggleDarkMode = () => setIsDarkMode(prev => !prev);
   const handleDensityChange = (d: 'compact' | 'standard' | 'large') => {
