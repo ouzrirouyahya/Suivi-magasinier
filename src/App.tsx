@@ -106,6 +106,17 @@ function AuthenticatedLayout() {
     return () => window.removeEventListener('resize', handleResize);
   }, [isDesktopViewport]);
 
+  // Global listener for PWA installation prompt stashing
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e: Event) => {
+      e.preventDefault();
+      (window as any).deferredPrompt = e;
+      window.dispatchEvent(new Event('pwa-installable'));
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
   // Dynamic automatic routing and session-state redirection flow
   useEffect(() => {
     if (!isLoaded) return;

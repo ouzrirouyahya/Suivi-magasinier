@@ -40,6 +40,7 @@ import { toast } from 'sonner';
 import { db } from '../lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useNotifications } from '../hooks/useNotifications';
+import { useOfflineSync } from '../hooks/useOfflineSync';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 export type Page = 
@@ -116,6 +117,46 @@ export const Sidebar = React.memo(function Sidebar({
   const location = useLocation();
   const { currentUser } = useInventory();
   const { addNotification } = useNotifications();
+  const { isOnline, isSyncing } = useOfflineSync();
+
+  // State to track if app can be installed as PWA
+  const [isInstallable, setIsInstallable] = React.useState(!!(window as any).deferredPrompt);
+
+  React.useEffect(() => {
+    const handleInstallable = () => {
+      setIsInstallable(true);
+    };
+    window.addEventListener('pwa-installable', handleInstallable);
+    
+    // Also track if successfully installed to hide the button
+    const handleAppInstalled = () => {
+      setIsInstallable(false);
+      (window as any).deferredPrompt = null;
+      toast.success("HydroMines a été installée sur votre appareil !");
+    };
+    window.addEventListener('appinstalled', handleAppInstalled);
+
+    return () => {
+      window.removeEventListener('pwa-installable', handleInstallable);
+      window.removeEventListener('appinstalled', handleAppInstalled);
+    };
+  }, []);
+
+  const handleInstallApp = () => {
+    const promptEvent = (window as any).deferredPrompt;
+    if (!promptEvent) {
+      toast.info("L'installation n'est pas disponible pour le moment. Si vous êtes sur iOS, utilisez l'option 'Sur l'écran d'accueil' de Safari.");
+      return;
+    }
+    promptEvent.prompt();
+    promptEvent.userChoice.then((choiceResult: any) => {
+      if (choiceResult.outcome === 'accepted') {
+        toast.success("Installation acceptée !");
+      }
+      (window as any).deferredPrompt = null;
+      setIsInstallable(false);
+    });
+  };
 
   const [showReplacementModal, setShowReplacementModal] = React.useState(false);
   const [reason, setReason] = React.useState('');
@@ -444,10 +485,24 @@ export const Sidebar = React.memo(function Sidebar({
             </div>
           )}
 
+          {isInstallable && (
+            <button
+              onClick={handleInstallApp}
+              className="w-full py-2.5 px-3 bg-gradient-to-r from-[#d4af37] to-[#b8860b] hover:from-[#b8860b] hover:to-[#996515] text-white rounded-xl font-black text-[10px] uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_2px_10px_rgba(212,175,55,0.25)] active:scale-95 animate-pulse select-none"
+            >
+              <Smartphone className="w-3.5 h-3.5" /> Installer l'App PWA
+            </button>
+          )}
+
           <div className="flex items-center justify-between px-1">
             <div className="flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Connecté au Cloud</span>
+              <div className={cn(
+                "w-2 h-2 rounded-full",
+                isOnline ? "bg-emerald-500 animate-pulse" : "bg-amber-500 animate-ping"
+              )} />
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                {isOnline ? (isSyncing ? "Synchro..." : "Connecté Cloud") : "Mode Hors-Ligne"}
+              </span>
             </div>
             <div className="flex items-center gap-2">
               {onToggleDarkMode && (
@@ -459,7 +514,7 @@ export const Sidebar = React.memo(function Sidebar({
                   {isDarkMode ? <Sun className="w-3.5 h-3.5 text-amber-500" /> : <Moon className="w-3.5 h-3.5" />}
                 </button>
               )}
-              <RefreshCw className="w-3 h-3 text-slate-300" />
+              <RefreshCw className={cn("w-3 h-3 text-slate-300", isSyncing && "animate-spin text-amber-500")} />
             </div>
           </div>
 

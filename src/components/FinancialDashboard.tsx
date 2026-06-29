@@ -31,8 +31,19 @@ export function FinancialDashboard() {
   const { articles, auditLogs, mouvements, currentSite, maintenanceLogs } = useInventory();
 
   // Financial Stats Calculation
-  const totalStockValue = articles.reduce((sum, a) => sum + (a.quantity * (a.price || 0)), 0);
-  const siteStockValue = articles.filter(a => a.site === currentSite).reduce((sum, a) => sum + (a.quantity * (a.price || 0)), 0);
+  const totalStockValue = articles.reduce((sum, a) => {
+    const qty = Number(a.quantity) || 0;
+    const price = Number(a.price) || 0;
+    return sum + (qty * price);
+  }, 0);
+
+  const siteStockValue = articles
+    .filter(a => a.site === currentSite)
+    .reduce((sum, a) => {
+      const qty = Number(a.quantity) || 0;
+      const price = Number(a.price) || 0;
+      return sum + (qty * price);
+    }, 0);
   
   // Last 30 days entries vs exits
   const thirtyDaysAgo = new Date();
@@ -42,17 +53,21 @@ export function FinancialDashboard() {
 
   const totalEntriesValue = mouvements
     .filter(m => filterLast30(m) && (m.type === 'ENTREE' || m.type === 'TRANSFERT_IN'))
-    .reduce((sum, m) => sum + m.items.reduce((s, it) => s + (it.quantity * it.price), 0), 0);
+    .reduce((sum, m) => sum + (m.items?.reduce((s, it) => s + ((Number(it.quantity) || 0) * (Number(it.price) || 0)), 0) || 0), 0);
 
   const totalExitsValue = mouvements
     .filter(m => filterLast30(m) && (m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT'))
-    .reduce((sum, m) => sum + m.items.reduce((s, it) => s + (it.quantity * it.price), 0), 0);
+    .reduce((sum, m) => sum + (m.items?.reduce((s, it) => s + ((Number(it.quantity) || 0) * (Number(it.price) || 0)), 0) || 0), 0);
 
   // Chart Data: Stock Value by Site
   const sites = ['SMI', 'OUMEJRANE', 'KOUDIA', 'BOU-AZZER', 'OUANSIMI'];
   const stockBySiteData = sites.map(s => ({
     name: s,
-    value: articles.filter(a => a.site === s).reduce((sum, a) => sum + (a.quantity * (a.price || 0)), 0)
+    value: articles.filter(a => a.site === s).reduce((sum, a) => {
+      const qty = Number(a.quantity) || 0;
+      const price = Number(a.price) || 0;
+      return sum + (qty * price);
+    }, 0)
   }));
 
   // Chart Data: Financial Trends (Mocked for better visual)
@@ -253,18 +268,26 @@ export function FinancialDashboard() {
          <div className="card p-6 bg-white border-slate-100 shadow-sm">
             <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-6">Top 5 Articles à Forte Valeur Immédiate</h3>
             <div className="space-y-4">
-               {articles.sort((a, b) => (b.quantity * (b.price || 0)) - (a.quantity * (a.price || 0))).slice(0, 5).map(article => (
-                  <div key={article.id} className="flex items-center justify-between group">
-                     <div>
-                        <div className="text-xs font-black text-slate-900 uppercase">{article.designation}</div>
-                        <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{article.ref} • Stock: {article.quantity}</div>
+               {[...articles].sort((a, b) => {
+                  const valB = (Number(b.quantity) || 0) * (Number(b.price) || 0);
+                  const valA = (Number(a.quantity) || 0) * (Number(a.price) || 0);
+                  return valB - valA;
+               }).slice(0, 5).map(article => {
+                  const qty = Number(article.quantity) || 0;
+                  const price = Number(article.price) || 0;
+                  return (
+                     <div key={article.id} className="flex items-center justify-between group">
+                        <div>
+                           <div className="text-xs font-black text-slate-900 uppercase">{article.designation}</div>
+                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{article.ref} • Stock: {qty}</div>
+                        </div>
+                        <div className="text-right">
+                           <div className="text-xs font-black text-slate-900">{formatCurrency(qty * price)}</div>
+                           <div className="text-[9px] font-bold text-slate-400 uppercase">Site: {article.site}</div>
+                        </div>
                      </div>
-                     <div className="text-right">
-                        <div className="text-xs font-black text-slate-900">{formatCurrency(article.quantity * (article.price || 0))}</div>
-                        <div className="text-[9px] font-bold text-slate-400 uppercase">Site: {article.site}</div>
-                     </div>
-                  </div>
-               ))}
+                  );
+               })}
             </div>
          </div>
 
