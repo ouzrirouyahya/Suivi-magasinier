@@ -5,14 +5,15 @@ import { useTransfersStore } from '../stores/transfer.store';
 import { useAuthStore } from '../stores/auth.store';
 import { transfersService } from '../services/transfer.service';
 import { Transfert, MouvementItem } from '../types';
-import { serializeFirestoreData } from '../lib/utils';
+import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 
 export function useTransfers() {
   const { transferts, setTransferts } = useTransfersStore();
   const currentSite = useAuthStore(s => s.currentSite);
+  const currentUser = useAuthStore(s => s.currentUser);
 
   useEffect(() => {
-    if (!currentSite) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'transferts'))
@@ -27,9 +28,11 @@ export function useTransfers() {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Transfert);
       setTransferts(list);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'transferts');
     });
     return unsub;
-  }, [setTransferts, currentSite]);
+  }, [setTransferts, currentSite, currentUser]);
 
   const addTransfert = useCallback(async (t: Transfert) => {
     const res = await transfersService.addTransfert(t);

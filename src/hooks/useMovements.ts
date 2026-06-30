@@ -6,11 +6,12 @@ import { useAuthStore } from '../stores/auth.store';
 import { movementsService } from '../services/movement.service';
 import { offlineService } from '../services/offline.service';
 import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article } from '../types';
-import { serializeFirestoreData } from '../lib/utils';
+import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 import { calculatePriceUpdates } from '../context/InventoryContext';
 
 export function useMovements() {
   const currentSite = useAuthStore(s => s.currentSite);
+  const currentUser = useAuthStore(s => s.currentUser);
   const {
     mouvements,
     distributions,
@@ -39,7 +40,7 @@ export function useMovements() {
 
   // Subscribe to movements (filter by site and last 90 days for better performance & accuracy)
   useEffect(() => {
-    if (!currentSite) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
@@ -64,48 +65,56 @@ export function useMovements() {
       offlineService.saveCollection('mouvements', list).catch(err => {
         console.warn('Error saving movements to IndexedDB:', err);
       });
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'mouvements');
     });
     return unsub;
-  }, [setMouvements, currentSite]);
+  }, [setMouvements, currentSite, currentUser]);
 
   // Subscribe to distributions
   useEffect(() => {
-    if (!currentSite) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
     const q = currentSite === 'ALL'
       ? query(collection(db, 'distributions'))
       : query(collection(db, 'distributions'), where('site', '==', currentSite));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as DistributionEPI);
       setDistributions(list);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'distributions');
     });
     return unsub;
-  }, [setDistributions, currentSite]);
+  }, [setDistributions, currentSite, currentUser]);
 
   // Subscribe to purchase requests
   useEffect(() => {
-    if (!currentSite) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
     const q = currentSite === 'ALL'
       ? query(collection(db, 'purchaseRequests'))
       : query(collection(db, 'purchaseRequests'), where('site', '==', currentSite));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as PurchaseRequest);
       setPurchaseRequests(list);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'purchaseRequests');
     });
     return unsub;
-  }, [setPurchaseRequests, currentSite]);
+  }, [setPurchaseRequests, currentSite, currentUser]);
 
   // Subscribe to anomaly reports
   useEffect(() => {
-    if (!currentSite) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
     const q = currentSite === 'ALL'
       ? query(collection(db, 'anomalyReports'))
       : query(collection(db, 'anomalyReports'), where('site', '==', currentSite));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AnomalyReport);
       setAnomalyReports(list);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'anomalyReports');
     });
     return unsub;
-  }, [setAnomalyReports, currentSite]);
+  }, [setAnomalyReports, currentSite, currentUser]);
 
   const addMouvement = useCallback(async (mouvement: Mouvement) => {
     const res = await movementsService.addMouvement(mouvement);

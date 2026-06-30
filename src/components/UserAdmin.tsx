@@ -104,6 +104,8 @@ export const UserAdmin = React.memo(function UserAdmin({
       const list = snap.docs.map(doc => ({ id: doc.id, ...doc.data() }) as any);
       list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
       setReplacementRequests(list);
+    }, (error) => {
+      console.warn("replacementRequests snapshot error:", error);
     });
     return unsub;
   }, [isAdminUser]);

@@ -646,5 +646,11 @@ export interface BannerFilter {
   dateTo?: string;
 }
 
+// Convenient type aliases matching phase 2 requirements
+export type Message = SystemMessage;
+export type InboxItem = UserInboxItem;
+export type MessageTelemetry = MessageTelemetryEvent;
+
+
 
 

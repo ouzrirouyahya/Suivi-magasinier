@@ -4,7 +4,7 @@ import { db } from '../lib/firebase';
 import { useSystemStore } from '../stores/system.store';
 import { auditService } from '../services/audit.service';
 import { AuditLog } from '../types';
-import { serializeFirestoreData } from '../lib/utils';
+import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 import { useAuthStore } from '../stores/auth.store';
 
 export function useAudit() {
@@ -12,13 +12,17 @@ export function useAudit() {
   const { currentUser } = useAuthStore();
 
   useEffect(() => {
+    if (!currentUser || !currentUser.active) return;
+
     const q = query(collection(db, 'auditLogs'), orderBy('timestamp', 'desc'), limit(200));
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AuditLog);
       setAuditLogs(list);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'auditLogs');
     });
     return unsub;
-  }, [setAuditLogs]);
+  }, [setAuditLogs, currentUser]);
 
   return {
     auditLogs,

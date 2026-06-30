@@ -9,7 +9,7 @@ import { offlineService } from '../services/offline.service';
 import { Article, CatalogItem, DeletionRequest, HydrominesCatalogItem, SiteCode } from '../types';
 import { CatalogUsageStats } from '../context/InventoryContext';
 import { MASTER_CATALOG } from '../catalogData';
-import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID } from '../lib/utils';
+import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID, handleFirestoreError, OperationType } from '../lib/utils';
 import { toast } from 'sonner';
 
 export function useArticles() {
@@ -45,7 +45,7 @@ export function useArticles() {
 
   // Subscribe to articles
   useEffect(() => {
-    if (!currentSite) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'articles'))
@@ -59,18 +59,24 @@ export function useArticles() {
       offlineService.saveCollection('articles', list).catch(err => {
         console.warn('Error saving articles to IndexedDB:', err);
       });
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'articles');
     });
     return unsub;
-  }, [setArticles, currentSite]);
+  }, [setArticles, currentSite, currentUser]);
 
   // Subscribe to deletion requests
   useEffect(() => {
+    if (!currentUser || !currentUser.active) return;
+
     const unsub = onSnapshot(collection(db, 'deletionRequests'), (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as DeletionRequest);
       setDeletionRequests(list);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'deletionRequests');
     });
     return unsub;
-  }, [setDeletionRequests]);
+  }, [setDeletionRequests, currentUser]);
 
   // Computed: ghostArticles
   const ghostArticles = useMemo(() => {

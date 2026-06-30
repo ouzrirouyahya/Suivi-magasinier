@@ -4,7 +4,8 @@ import { db } from '../lib/firebase';
 import { useArticlesStore } from '../stores/article.store';
 import { catalogService } from '../services/catalog.service';
 import { CatalogItem, HydrominesCatalogItem, EquipmentFamily } from '../types';
-import { serializeFirestoreData, generateId } from '../lib/utils';
+import { serializeFirestoreData, generateId, handleFirestoreError, OperationType } from '../lib/utils';
+import { useAuthStore } from '../stores/auth.store';
 import { toast } from 'sonner';
 
 // Import verified sub-catalogs and master catalog hub
@@ -129,6 +130,7 @@ export function buildHierarchy(catalog: CatalogItem[] = MASTER_CATALOG) {
 }
 
 export function useCatalog() {
+  const currentUser = useAuthStore(s => s.currentUser);
   const {
     catalog,
     hydrominesCatalog,
@@ -138,23 +140,31 @@ export function useCatalog() {
 
   // Subscribe to master catalog entries in Firestore
   useEffect(() => {
+    if (!currentUser || !currentUser.active) return;
+
     const unsub = onSnapshot(collection(db, 'catalog'), (snap) => {
       const list = snap.docs
         .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as CatalogItem)
         .filter(item => !(item as any).deleted);
       setCatalog(list);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'catalog');
     });
     return unsub;
-  }, [setCatalog]);
+  }, [setCatalog, currentUser]);
 
   // Subscribe to hydromines catalog
   useEffect(() => {
+    if (!currentUser || !currentUser.active) return;
+
     const unsub = onSnapshot(collection(db, 'hydromines_catalog'), (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as HydrominesCatalogItem);
       setHydrominesCatalog(list);
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'hydromines_catalog');
     });
     return unsub;
-  }, [setHydrominesCatalog]);
+  }, [setHydrominesCatalog, currentUser]);
 
   const addToHydrominesCatalog = useCallback(async (
     item: any,

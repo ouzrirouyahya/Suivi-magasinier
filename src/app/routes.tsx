@@ -28,12 +28,12 @@ const TraceabilityPage = lazy(() => import('../pages/TraceabilityPage'));
 const PendingPage = lazy(() => import('../pages/PendingPage'));
 const RejectedPage = lazy(() => import('../pages/RejectedPage'));
 const DisabledPage = lazy(() => import('../pages/DisabledPage'));
-const CommunicationPage = lazy(() => import('../pages/CommunicationPage'));
+const MessagingPage = lazy(() => import('../components/messaging/MessagingPage'));
 
 const RESPONSABLE_READONLY_PAGES = [
   '/', '/stock/engins', '/stock/perforateurs', '/stock/consommables', 
   '/stock/epi', '/catalog/master', '/catalog/hydromines', 
-  '/traceability', '/alerts', '/communication'
+  '/traceability', '/alerts', '/messaging'
 ];
 
 const RESPONSABLE_REPLACEMENT_PAGES = [
@@ -130,7 +130,7 @@ export const AppRoutes: React.FC = () => (
       <Route path="/users" element={<ProtectedRoute requiredRole="ADMIN"><ErrorBoundary componentName="UsersPage"><UsersPage /></ErrorBoundary></ProtectedRoute>} />
       <Route path="/restock" element={<ProtectedRoute requiredRole="MAGASINIER"><ErrorBoundary componentName="RestockPage"><RestockPage /></ErrorBoundary></ProtectedRoute>} />
       <Route path="/traceability" element={<ProtectedRoute><ErrorBoundary componentName="TraceabilityPage"><TraceabilityPage /></ErrorBoundary></ProtectedRoute>} />
-      <Route path="/communication" element={<ProtectedRoute><ErrorBoundary componentName="CommunicationPage"><CommunicationPage /></ErrorBoundary></ProtectedRoute>} />
+      <Route path="/messaging" element={<ProtectedRoute><ErrorBoundary componentName="MessagingPage"><MessagingPage /></ErrorBoundary></ProtectedRoute>} />
       
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

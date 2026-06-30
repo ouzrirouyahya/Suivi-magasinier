@@ -41,6 +41,7 @@ import { db } from '../lib/firebase';
 import { doc, setDoc } from 'firebase/firestore';
 import { useNotifications } from '../hooks/useNotifications';
 import { useOfflineSync } from '../hooks/useOfflineSync';
+import { useMessages } from '../hooks/useMessages';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 export type Page = 
@@ -65,6 +66,7 @@ export type Page =
   | 'TRACEABILITY'
   | 'TRANSFERS'
   | 'COMMUNICATION'
+  | 'MESSAGING'
   | 'ANALYSE_EQUIPEMENTS';
 
 interface SidebarProps {
@@ -101,6 +103,7 @@ const pageRouteMap: Record<string, string> = {
   'AUDIT_LOGS': '/audit',
   'FINANCE': '/finance',
   'COMMUNICATION': '/communication',
+  'MESSAGING': '/messaging',
 };
 
 export const Sidebar = React.memo(function Sidebar({ 
@@ -120,6 +123,7 @@ export const Sidebar = React.memo(function Sidebar({
   const { currentUser } = useInventory();
   const { addNotification } = useNotifications();
   const { isOnline, isSyncing } = useOfflineSync();
+  const { unreadCount } = useMessages();
 
   // State to track if app can be installed as PWA
   const [isInstallable, setIsInstallable] = React.useState(!!(window as any).deferredPrompt);
@@ -239,7 +243,6 @@ export const Sidebar = React.memo(function Sidebar({
   const menuItems = React.useMemo(() => {
     const itemTemplates = [
       { id: 'COCKPIT', label: 'Mon Magasin', icon: LayoutDashboard, section: 'MON_MAGASIN' },
-      { id: 'COMMUNICATION', label: 'Messagerie & Annonces 💬', icon: MessageSquare, section: 'MON_MAGASIN' },
       
       { id: 'BON_ENTREE', label: 'Bons d’Entrée', icon: ArrowDownLeft, section: 'BONS_MOUVEMENT' },
       { id: 'BON_SORTIE', label: 'Bons de Sortie', icon: ArrowUpRight, section: 'BONS_MOUVEMENT' },
@@ -257,7 +260,8 @@ export const Sidebar = React.memo(function Sidebar({
       { id: 'ANALYSE_EQUIPEMENTS', label: 'Rapports & Analyses 📊', icon: Activity, section: 'ADMINISTRATION' },
       { id: 'USER_MGMT', label: 'Paramètres système', icon: Users, section: 'ADMINISTRATION' },
 
-      { id: 'FINANCE', label: 'Valeur du Stock Mère', icon: Landmark, section: 'DIRECTION' }
+      { id: 'FINANCE', label: 'Valeur du Stock Mère', icon: Landmark, section: 'DIRECTION' },
+      { id: 'MESSAGING', label: 'Messagerie & Annonces 💬', icon: MessageSquare, badge: unreadCount > 0 ? unreadCount.toString() : undefined, section: 'MON_MAGASIN' }
     ];
 
     const sectionHeaders: Record<string, { label: string; id: string; isSeparator: boolean }> = {
@@ -279,12 +283,12 @@ export const Sidebar = React.memo(function Sidebar({
         if (item.id !== 'FINANCE') allowedPageIds.add(item.id);
       });
     } else if (userRole === 'MAGASINIER') {
-      const allowed = ['COCKPIT', 'COMMUNICATION', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
+      const allowed = ['COCKPIT', 'MESSAGING', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
       allowed.forEach(id => allowedPageIds.add(id));
     } else if (userRole === 'RESPONSABLE_CHANTIER') {
       const allowed = currentUser?.isReplacingMagasinier && currentUser?.canWrite
-        ? ['COCKPIT', 'COMMUNICATION', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES']
-        : ['COCKPIT', 'COMMUNICATION', 'STOCK_ENGINS', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'TRACEABILITY', 'RESTOCK_MGMT'];
+        ? ['COCKPIT', 'MESSAGING', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES']
+        : ['COCKPIT', 'MESSAGING', 'STOCK_ENGINS', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'TRACEABILITY', 'RESTOCK_MGMT'];
       allowed.forEach(id => allowedPageIds.add(id));
     }
 
@@ -307,7 +311,7 @@ export const Sidebar = React.memo(function Sidebar({
     });
 
     return finalMenuItems;
-  }, [currentUser?.role, currentUser?.isReplacingMagasinier, currentUser?.canWrite, criticalCount, warningCount]);
+  }, [currentUser?.role, currentUser?.isReplacingMagasinier, currentUser?.canWrite, criticalCount, warningCount, unreadCount]);
 
   // Memoized navigation handler
   const handlePageSelect = React.useCallback((pageId: Page) => {
@@ -426,8 +430,8 @@ export const Sidebar = React.memo(function Sidebar({
                   isActive ? "text-amber-600 stroke-[2.2]" : "text-slate-400 group-hover:text-amber-500"
                 )} />
                 <span className="flex-1 truncate uppercase tracking-[0.05em]">{item.label}</span>
-                {typeof item.badge === 'number' && item.badge > 0 && (
-                  <span className="bg-rose-500 text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-lg shadow-rose-200">
+                {((typeof item.badge === 'number' && item.badge > 0) || (typeof item.badge === 'string' && item.badge !== '')) && (
+                  <span className="bg-[#FF5252] text-white text-[10px] font-black px-1.5 py-0.5 rounded-full min-w-[1.25rem] text-center shadow-lg shadow-rose-200">
                     {item.badge}
                   </span>
                 )}

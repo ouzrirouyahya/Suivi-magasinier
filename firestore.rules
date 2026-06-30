@@ -476,268 +476,260 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Replacement Requests
+    match /replacementRequests/{id} {
+      allow read: if isActive() && (
+        isAdmin() || 
+        (request.auth.token.email != null && request.auth.token.email == resource.data.userEmail) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == resource.data.userEmail.lower()) ||
+        getUserEmail() == resource.data.userEmail || 
+        getUserEmail().lower() == resource.data.userEmail.lower()
+      );
+      allow create: if isActive() && isValidId(id) && (
+        (request.auth.token.email != null && request.auth.token.email == request.resource.data.userEmail) ||
+        getUserEmail() == request.resource.data.userEmail
+      );
+      allow update: if isActive() && (
+        isAdmin() || (
+          ((request.auth.token.email != null && request.auth.token.email == resource.data.userEmail) || getUserEmail() == resource.data.userEmail) && 
+          request.resource.data.userEmail == resource.data.userEmail
+        )
+      );
+      allow delete: if isAdmin();
+    }
+
     // =========================================================================
-    // PHASE 1 — RÈGLES FIRESTORE : MESSAGERIE & NOTIFICATIONS BANNIÈRES
+    // PHASE 1 — RÈGLES FIRESTORE : MESSAGERIE & NOTIFICATIONS BANNIÈRES (CORRIGÉES)
     // =========================================================================
 
-    // Helper functions for Messaging & Banners
-    function isAuthenticatedUser(email) {
-      return request.auth != null && request.auth.token.email == email;
-    }
-
-    function isAdminRole(email) {
-      return email == 'ouzrirouyahya@gmail.com' || 
-        (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role in ['ADMIN', 'SUPER_ADMIN']);
-    }
-
-    function isSuperAdmin(email) {
-      return email == 'ouzrirouyahya@gmail.com' || 
-        (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'SUPER_ADMIN');
-    }
-
-    function isMagasinierOrAbove(email) {
-      return isAdminRole(email) || 
-        (exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) &&
-         get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role in ['MAGASINIER', 'RESPONSABLE_CHANTIER']);
-    }
-
-    function getUserSite(email) {
-      return exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) 
-        ? get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.assignedSite 
-        : null;
-    }
-
-    function getUserRole(email) {
-      return exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) 
-        ? get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role 
-        : null;
+    // Helper function to safely get user email with database fallback
+    function getUserEmail() {
+      return request.auth != null && request.auth.token != null && request.auth.token.email != null
+        ? request.auth.token.email
+        : (request.auth != null && exists(/databases/$(database)/documents/accounts/$(request.auth.uid))
+            ? get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.email
+            : null);
     }
 
     // --- COLLECTION : messages & system_messages ---
     match /messages/{messageId} {
-      allow read: if request.auth != null && 
-        (request.auth.token.email == resource.data.senderId ||
-         request.auth.token.email in resource.data.recipientIds ||
-         isAdminRole(request.auth.token.email));
+      allow read: if canReadIfActive();
 
-      allow create: if request.auth != null &&
-        request.auth.token.email == request.resource.data.senderId &&
-        isMagasinierOrAbove(request.auth.token.email) &&
-        request.resource.data.createdBy == request.auth.token.email &&
+      allow create: if isActive() &&
+        getUserEmail() == request.resource.data.senderId &&
+        request.resource.data.createdBy == getUserEmail() &&
         request.resource.data.status == 'ACTIVE';
 
-      allow update: if request.auth != null &&
-        (request.auth.token.email == resource.data.senderId ||
-         isAdminRole(request.auth.token.email)) &&
+      allow update: if isActive() &&
+        (getUserEmail() == resource.data.senderId || isAdmin()) &&
         request.resource.data.status in ['ACTIVE', 'DELETED_BY_SENDER'];
 
-      allow delete: if request.auth != null &&
-        isSuperAdmin(request.auth.token.email);
+      allow delete: if isSuperAdmin();
     }
 
     match /system_messages/{messageId} {
-      allow read: if request.auth != null && 
-        (request.auth.token.email == resource.data.senderId ||
-         request.auth.token.email in resource.data.recipientIds ||
-         isAdminRole(request.auth.token.email));
+      allow read: if canReadIfActive();
 
-      allow create: if request.auth != null &&
-        request.auth.token.email == request.resource.data.senderId &&
-        isMagasinierOrAbove(request.auth.token.email) &&
-        request.resource.data.createdBy == request.auth.token.email &&
+      allow create: if isActive() &&
+        getUserEmail() == request.resource.data.senderId &&
+        request.resource.data.createdBy == getUserEmail() &&
         request.resource.data.status == 'ACTIVE';
 
-      allow update: if request.auth != null &&
-        (request.auth.token.email == resource.data.senderId ||
-         isAdminRole(request.auth.token.email)) &&
+      allow update: if isActive() &&
+        (getUserEmail() == resource.data.senderId || isAdmin()) &&
         request.resource.data.status in ['ACTIVE', 'DELETED_BY_SENDER'];
 
-      allow delete: if request.auth != null &&
-        isSuperAdmin(request.auth.token.email);
+      allow delete: if isSuperAdmin();
     }
 
     // --- COLLECTION : userInbox & inbox_items ---
     match /userInbox/{userId}/messages/{messageId} {
-      allow read: if request.auth != null &&
-        request.auth.token.email == userId;
+      allow read: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == userId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == userId.lower()) ||
+        getUserEmail() == userId ||
+        getUserEmail().lower() == userId.lower()
+      );
 
-      allow create: if request.auth != null &&
-        request.auth.token.email == request.resource.data.senderId &&
-        isMagasinierOrAbove(request.auth.token.email) &&
-        request.resource.data.userId == userId;
+      allow create: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == request.resource.data.senderId) ||
+        getUserEmail() == request.resource.data.senderId
+      ) && request.resource.data.userId == userId;
 
-      allow update: if request.auth != null &&
-        (request.auth.token.email == userId ||
-         isAdminRole(request.auth.token.email)) &&
-        request.resource.data.userId == userId;
+      allow update: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == userId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == userId.lower()) ||
+        getUserEmail() == userId ||
+        getUserEmail().lower() == userId.lower() ||
+        isAdmin()
+      ) && request.resource.data.userId == userId;
 
-      allow delete: if request.auth != null &&
-        request.auth.token.email == userId;
+      allow delete: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == userId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == userId.lower()) ||
+        getUserEmail() == userId ||
+        getUserEmail().lower() == userId.lower()
+      );
     }
 
     match /inbox_items/{itemId} {
-      allow read: if request.auth != null &&
-        request.auth.token.email == resource.data.userId;
+      allow read: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == resource.data.userId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == resource.data.userId.lower()) ||
+        getUserEmail() == resource.data.userId ||
+        getUserEmail().lower() == resource.data.userId.lower()
+      );
 
-      allow create: if request.auth != null &&
-        request.auth.token.email == request.resource.data.senderId &&
-        isMagasinierOrAbove(request.auth.token.email);
+      allow create: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == request.resource.data.senderId) ||
+        getUserEmail() == request.resource.data.senderId
+      );
 
-      allow update: if request.auth != null &&
-        (request.auth.token.email == resource.data.userId ||
-         isAdminRole(request.auth.token.email));
+      allow update: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == resource.data.userId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == resource.data.userId.lower()) ||
+        getUserEmail() == resource.data.userId ||
+        getUserEmail().lower() == resource.data.userId.lower() ||
+        isAdmin()
+      );
 
-      allow delete: if request.auth != null &&
-        request.auth.token.email == resource.data.userId;
+      allow delete: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == resource.data.userId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == resource.data.userId.lower()) ||
+        getUserEmail() == resource.data.userId ||
+        getUserEmail().lower() == resource.data.userId.lower()
+      );
     }
 
     // --- COLLECTION : messageDrafts & message_drafts ---
     match /messageDrafts/{draftId} {
-      allow read: if request.auth != null &&
-        request.auth.token.email == resource.data.senderId;
+      allow read: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == resource.data.senderId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == resource.data.senderId.lower()) ||
+        getUserEmail() == resource.data.senderId ||
+        getUserEmail().lower() == resource.data.senderId.lower()
+      );
 
-      allow create, update: if request.auth != null &&
-        request.auth.token.email == request.resource.data.senderId;
+      allow create, update: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == request.resource.data.senderId) ||
+        getUserEmail() == request.resource.data.senderId
+      );
 
-      allow delete: if request.auth != null &&
-        request.auth.token.email == resource.data.senderId;
+      allow delete: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == resource.data.senderId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == resource.data.senderId.lower()) ||
+        getUserEmail() == resource.data.senderId ||
+        getUserEmail().lower() == resource.data.senderId.lower()
+      );
     }
 
     match /message_drafts/{draftId} {
-      allow read: if request.auth != null &&
-        request.auth.token.email == resource.data.senderId;
+      allow read: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == resource.data.senderId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == resource.data.senderId.lower()) ||
+        getUserEmail() == resource.data.senderId ||
+        getUserEmail().lower() == resource.data.senderId.lower()
+      );
 
-      allow create, update: if request.auth != null &&
-        request.auth.token.email == request.resource.data.senderId;
+      allow create, update: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == request.resource.data.senderId) ||
+        getUserEmail() == request.resource.data.senderId
+      );
 
-      allow delete: if request.auth != null &&
-        request.auth.token.email == resource.data.senderId;
+      allow delete: if isActive() && (
+        (request.auth.token.email != null && request.auth.token.email == resource.data.senderId) ||
+        (request.auth.token.email != null && request.auth.token.email.lower() == resource.data.senderId.lower()) ||
+        getUserEmail() == resource.data.senderId ||
+        getUserEmail().lower() == resource.data.senderId.lower()
+      );
     }
 
     // --- COLLECTION : messageTelemetry & telemetry_events ---
     match /messageTelemetry/{eventId} {
-      allow read: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
+      allow read: if isAdmin();
 
-      allow create: if request.auth != null &&
-        request.auth.token.email == request.resource.data.userId;
+      allow create: if isActive() &&
+        getUserEmail() == request.resource.data.userId;
 
       allow update, delete: if false;
     }
 
     match /telemetry_events/{eventId} {
-      allow read: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
+      allow read: if isAdmin();
 
-      allow create: if request.auth != null &&
-        request.auth.token.email == request.resource.data.userId;
+      allow create: if isActive() &&
+        getUserEmail() == request.resource.data.userId;
 
       allow update, delete: if false;
     }
 
     // --- COLLECTION : bannerNotifications & banner_notifications ---
     match /bannerNotifications/{bannerId} {
-      allow read: if request.auth != null &&
-        (resource.data.status == 'ACTIVE') &&
-        (
-          'ALL' in resource.data.targetSites ||
-          getUserSite(request.auth.token.email) in resource.data.targetSites ||
-          resource.data.targetSites.size() == 0
-        ) &&
-        (
-          'ALL' in resource.data.targetRoles ||
-          getUserRole(request.auth.token.email) in resource.data.targetRoles ||
-          ('targetUsers' in resource.data && request.auth.token.email in resource.data.targetUsers) ||
-          resource.data.targetRoles.size() == 0
-        );
+      allow read: if canReadIfActive();
 
-      allow create: if request.auth != null &&
-        isAdminRole(request.auth.token.email) &&
-        request.auth.token.email == request.resource.data.createdBy;
+      allow create: if isAdmin() &&
+        getUserEmail() == request.resource.data.createdBy;
 
-      allow update: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
+      allow update: if isAdmin();
 
-      allow delete: if request.auth != null &&
-        isSuperAdmin(request.auth.token.email);
+      allow delete: if isSuperAdmin();
     }
 
     match /banner_notifications/{bannerId} {
-      allow read: if request.auth != null &&
-        (resource.data.status == 'ACTIVE') &&
-        (
-          'ALL' in resource.data.targetSites ||
-          getUserSite(request.auth.token.email) in resource.data.targetSites ||
-          resource.data.targetSites.size() == 0
-        ) &&
-        (
-          'ALL' in resource.data.targetRoles ||
-          getUserRole(request.auth.token.email) in resource.data.targetRoles ||
-          ('targetUsers' in resource.data && request.auth.token.email in resource.data.targetUsers) ||
-          resource.data.targetRoles.size() == 0
-        );
+      allow read: if canReadIfActive();
 
-      allow create: if request.auth != null &&
-        isAdminRole(request.auth.token.email) &&
-        request.auth.token.email == request.resource.data.createdBy;
+      allow create: if isAdmin() &&
+        getUserEmail() == request.resource.data.createdBy;
 
-      allow update: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
+      allow update: if isAdmin();
 
-      allow delete: if request.auth != null &&
-        isSuperAdmin(request.auth.token.email);
+      allow delete: if isSuperAdmin();
     }
 
     // --- COLLECTION : bannerViews & banner_views ---
     match /bannerViews/{viewId} {
-      allow read: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
+      allow read: if isActive() && (
+        getUserEmail() == resource.data.userId ||
+        getUserEmail().lower() == resource.data.userId.lower() ||
+        isAdmin()
+      );
 
-      allow create: if request.auth != null &&
-        request.auth.token.email == request.resource.data.userId;
+      allow create: if isActive() &&
+        getUserEmail() == request.resource.data.userId;
 
-      allow update: if request.auth != null &&
-        request.auth.token.email == resource.data.userId;
+      allow update: if isActive() &&
+        getUserEmail() == request.resource.data.userId;
 
       allow delete: if false;
     }
 
     match /banner_views/{viewId} {
-      allow read: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
+      allow read: if isActive() && (
+        getUserEmail() == resource.data.userId ||
+        getUserEmail().lower() == resource.data.userId.lower() ||
+        isAdmin()
+      );
 
-      allow create: if request.auth != null &&
-        request.auth.token.email == request.resource.data.userId;
+      allow create: if isActive() &&
+        getUserEmail() == request.resource.data.userId;
 
-      allow update: if request.auth != null &&
-        request.auth.token.email == resource.data.userId;
+      allow update: if isActive() &&
+        getUserEmail() == request.resource.data.userId;
 
       allow delete: if false;
     }
 
     // --- COLLECTION : messageAnalytics & message_analytics ---
     match /messageAnalytics/{messageId} {
-      allow read: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
-
-      allow create, update: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
-
-      allow delete: if request.auth != null &&
-        isSuperAdmin(request.auth.token.email);
+      allow read: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
 
     match /message_analytics/{messageId} {
-      allow read: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
-
-      allow create, update: if request.auth != null &&
-        isAdminRole(request.auth.token.email);
-
-      allow delete: if request.auth != null &&
-        isSuperAdmin(request.auth.token.email);
+      allow read: if isAdmin();
+      allow create, update: if isAdmin();
+      allow delete: if isSuperAdmin();
     }
   }
 }
