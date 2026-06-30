@@ -423,5 +423,228 @@ export interface HydrominesCatalogItem {
   updatedAt: string;
 }
 
+// =========================================================================
+// PHASE 1 — MESSAGERIE & NOTIFICATIONS BANNIÈRES
+// Extensions de types pour le système de communication interne Hydromines
+// =========================================================================
+
+export type MessagePriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
+
+export type MessageTargetType = 'INDIVIDUAL' | 'SITE' | 'ROLE' | 'ALL';
+
+export type MessageStatus = 'ACTIVE' | 'DELETED_BY_SENDER';
+
+export type RecipientStatus = 'UNREAD' | 'READ' | 'ARCHIVED';
+
+export type TelemetryEventType =
+  | 'MESSAGE_OPENED'
+  | 'MESSAGE_CLOSED'
+  | 'REPLY_STARTED'
+  | 'REPLY_DRAFT_SAVED'
+  | 'REPLY_TEXT_EDITED'
+  | 'REPLY_TEXT_DELETED'
+  | 'REPLY_SENT'
+  | 'ATTACHMENT_OPENED'
+  | 'MESSAGE_SCROLLED'
+  | 'USER_TYPING';
+
+export type BannerStatus = 'ACTIVE' | 'PAUSED' | 'EXPIRED' | 'DELETED';
+
+export interface MessageAttachment {
+  id: string;
+  fileName: string;
+  originalUrl: string;           // URL Firebase Storage (original)
+  compressedUrl?: string;        // URL Firebase Storage (compressé)
+  mimeType: string;
+  sizeBytes: number;
+  compressedSizeBytes?: number;
+  uploadedAt: string;
+  uploadedBy: string;
+}
+
+export interface MessageRecipient {
+  userId: string;                // Email
+  userName: string;
+  userRole: UserRole;
+  site: SiteCode;
+  status: RecipientStatus;
+  readAt?: string;               // Heure exacte de lecture
+  timeSpentSeconds?: number;     // Temps passé avant réponse/fermeture
+  dismissedAt?: string;
+}
+
+export interface SystemMessage {
+  id: string;
+  senderId: string;              // Email expéditeur
+  senderName: string;
+  senderRole: UserRole;
+  senderSite: SiteCode;
+
+  // Ciblage
+  targetType: MessageTargetType;
+  targetSite?: SiteCode;         // Si targetType === 'SITE'
+  targetRole?: UserRole;         // Si targetType === 'ROLE'
+  targetUserId?: string;         // Si targetType === 'INDIVIDUAL'
+
+  // Contenu
+  subject: string;
+  body: string;
+  priority: MessagePriority;
+  attachments?: MessageAttachment[];
+
+  // Thread / Conversation
+  parentId?: string;             // ID du message parent (pour réponses)
+  threadId: string;              // ID racine de la conversation
+  replyCount: number;
+
+  // Recipients (denormalisé pour lecture rapide sans jointure)
+  recipientIds: string[];          // Tableau des emails destinataires
+  recipients: MessageRecipient[];
+
+  // Métadonnées
+  createdAt: string;
+  updatedAt: string;
+  createdBy: string;
+  status: MessageStatus;
+}
+
+export interface UserInboxItem {
+  id: string;                    // = messageId
+  userId: string;                // Email du propriétaire de l'inbox
+  messageId: string;             // Référence vers SystemMessage.id
+  senderId: string;
+  senderName: string;
+  senderRole: UserRole;
+  senderSite: SiteCode;
+  subject: string;
+  body: string;                  // Tronqué si > 500 caractères, "..." ajouté
+  priority: MessagePriority;
+  threadId: string;
+  parentId?: string;
+  hasAttachments: boolean;
+  attachmentCount: number;
+  status: RecipientStatus;
+  readAt?: string;
+  timeSpentSeconds?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MessageDraft {
+  id: string;
+  senderId: string;
+  messageId?: string;            // Si réponse à un message existant
+  threadId?: string;
+  recipientType: MessageTargetType;
+  recipientSite?: SiteCode;
+  recipientRole?: UserRole;
+  recipientId?: string;          // Email individuel
+  subject: string;
+  body: string;
+  attachments?: MessageAttachment[];
+  lastSavedAt: string;
+  createdAt: string;
+  isLocalOnly?: boolean;         // True si pas encore sync avec Firestore
+}
+
+export interface MessageTelemetryEvent {
+  id: string;
+  messageId: string;
+  threadId: string;
+  userId: string;                // Email de l'utilisateur tracké
+  userName: string;
+  userRole: UserRole;
+  userSite: SiteCode;
+  eventType: TelemetryEventType;
+  timestamp: string;             // ISO 8601 exact
+  sessionId: string;             // UUID de session (regroupe les événements)
+  payload?: {
+    draftText?: string;          // Texte du brouillon à l'instant T
+    previousText?: string;       // Avant modification
+    newText?: string;            // Après modification
+    deletedText?: string;        // Ce qui a été supprimé
+    cursorPosition?: number;     // Position du curseur
+    timeSpentSoFar?: number;     // Temps cumulé en secondes
+    attachmentId?: string;       // Si ouverture pièce jointe
+    scrollDepth?: number;        // % de scroll dans le message
+    viewportTime?: number;       // Temps passé dans le viewport
+  };
+}
+
+export interface BannerNotification {
+  id: string;
+  title: string;
+  body: string;
+
+  // Média (image compressée)
+  imageUrl?: string;             // URL Firebase Storage (compressée)
+  imageMimeType?: string;        // image/jpeg, image/webp
+  originalImageSizeBytes?: number;
+  compressedImageSizeBytes?: number;
+  compressionRatio?: number;   // Ex: 0.85 = 85% de réduction
+
+  // Ciblage
+  targetSites: (SiteCode | 'ALL')[];       // ['SMI'] ou ['ALL']
+  targetRoles: (UserRole | 'ALL')[];       // ['MAGASINIER'] ou ['ALL']
+  targetUsers?: string[];        // Ciblage ultra-précis (optionnel)
+
+  // Comportement
+  dismissible: boolean;          // L'utilisateur peut-il fermer ?
+  priority: MessagePriority;
+  startDate: string;             // Date de début d'affichage
+  endDate: string;               // Date d'expiration
+
+  // Métadonnées
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  status: BannerStatus;
+}
+
+export interface BannerView {
+  id: string;
+  bannerId: string;
+  userId: string;
+  userName: string;
+  userSite: SiteCode;
+  userRole: UserRole;
+  viewedAt: string;
+  dismissedAt?: string;
+  timeSpentSeconds?: number;
+  clickedAt?: string;
+  clickTarget?: string;          // Si la bannière a un lien
+}
+
+export interface MessageAnalytics {
+  messageId: string;
+  totalRecipients: number;
+  readCount: number;
+  unreadCount: number;
+  archivedCount: number;
+  averageReadTimeSeconds?: number;
+  medianReadTimeSeconds?: number;
+  replyCount: number;
+  lastActivityAt: string;
+  readRatePercent: number;       // (readCount / totalRecipients) * 100
+}
+
+export interface MessageFilter {
+  site?: SiteCode;
+  role?: UserRole;
+  status?: RecipientStatus;
+  priority?: MessagePriority;
+  searchQuery?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
+export interface BannerFilter {
+  site?: SiteCode;
+  role?: UserRole;
+  status?: BannerStatus;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 
 

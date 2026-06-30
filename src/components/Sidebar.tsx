@@ -64,6 +64,7 @@ export type Page =
   | 'SEARCH_RESULTS'
   | 'TRACEABILITY'
   | 'TRANSFERS'
+  | 'COMMUNICATION'
   | 'ANALYSE_EQUIPEMENTS';
 
 interface SidebarProps {
@@ -99,6 +100,7 @@ const pageRouteMap: Record<string, string> = {
   'USER_MGMT': '/users',
   'AUDIT_LOGS': '/audit',
   'FINANCE': '/finance',
+  'COMMUNICATION': '/communication',
 };
 
 export const Sidebar = React.memo(function Sidebar({ 
@@ -237,6 +239,7 @@ export const Sidebar = React.memo(function Sidebar({
   const menuItems = React.useMemo(() => {
     const itemTemplates = [
       { id: 'COCKPIT', label: 'Mon Magasin', icon: LayoutDashboard, section: 'MON_MAGASIN' },
+      { id: 'COMMUNICATION', label: 'Messagerie & Annonces 💬', icon: MessageSquare, section: 'MON_MAGASIN' },
       
       { id: 'BON_ENTREE', label: 'Bons d’Entrée', icon: ArrowDownLeft, section: 'BONS_MOUVEMENT' },
       { id: 'BON_SORTIE', label: 'Bons de Sortie', icon: ArrowUpRight, section: 'BONS_MOUVEMENT' },
@@ -276,12 +279,12 @@ export const Sidebar = React.memo(function Sidebar({
         if (item.id !== 'FINANCE') allowedPageIds.add(item.id);
       });
     } else if (userRole === 'MAGASINIER') {
-      const allowed = ['COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
+      const allowed = ['COCKPIT', 'COMMUNICATION', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
       allowed.forEach(id => allowedPageIds.add(id));
     } else if (userRole === 'RESPONSABLE_CHANTIER') {
       const allowed = currentUser?.isReplacingMagasinier && currentUser?.canWrite
-        ? ['COCKPIT', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES']
-        : ['COCKPIT', 'STOCK_ENGINS', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'TRACEABILITY', 'RESTOCK_MGMT'];
+        ? ['COCKPIT', 'COMMUNICATION', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES']
+        : ['COCKPIT', 'COMMUNICATION', 'STOCK_ENGINS', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'TRACEABILITY', 'RESTOCK_MGMT'];
       allowed.forEach(id => allowedPageIds.add(id));
     }
 

@@ -18,6 +18,7 @@ import { ArticleDetail } from './components/ArticleDetail';
 import { AppRoutes } from './app/routes';
 import { OfflineBanner } from './components/OfflineBanner';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
+import BannerNotificationView from './components/BannerNotificationView';
 
 const pageRouteMap: Record<string, string> = {
   'COCKPIT': '/',
@@ -190,6 +191,7 @@ function AuthenticatedLayout() {
         density === 'large' ? 'p-6 sm:p-8 md:p-10' : 'p-4 sm:p-6 md:p-8'
       )}>
         <Suspense fallback={<PageLoading />}>
+          <BannerNotificationView />
           <Toolbar 
             globalSearch={globalSearch}
             setGlobalSearch={(val) => {
