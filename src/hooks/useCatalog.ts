@@ -3,6 +3,8 @@ import { collection, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useArticlesStore } from '../stores/article.store';
 import { catalogService } from '../services/catalog.service';
+import { offlineService } from '../services/offline.service';
+import { snapshotManager } from '../lib/snapshotManager';
 import { CatalogItem, HydrominesCatalogItem, EquipmentFamily } from '../types';
 import { serializeFirestoreData, generateId, handleFirestoreError, OperationType } from '../lib/utils';
 import { useAuthStore } from '../stores/auth.store';
@@ -147,6 +149,9 @@ export function useCatalog() {
         .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as CatalogItem)
         .filter(item => !(item as any).deleted);
       setCatalog(list);
+      offlineService.saveCollection('catalog', list)
+        .then(() => snapshotManager.markCollectionSaved('catalog'))
+        .catch(err => console.warn('[IDB] catalog save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'catalog');
     });
@@ -160,6 +165,9 @@ export function useCatalog() {
     const unsub = onSnapshot(collection(db, 'hydromines_catalog'), (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as HydrominesCatalogItem);
       setHydrominesCatalog(list);
+      offlineService.saveCollection('hydrominesCatalog', list)
+        .then(() => snapshotManager.markCollectionSaved('hydrominesCatalog'))
+        .catch(err => console.warn('[IDB] hydrominesCatalog save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'hydromines_catalog');
     });

@@ -4,6 +4,8 @@ import { db } from '../lib/firebase';
 import { useTransfersStore } from '../stores/transfer.store';
 import { useAuthStore } from '../stores/auth.store';
 import { transfersService } from '../services/transfer.service';
+import { offlineService } from '../services/offline.service';
+import { snapshotManager } from '../lib/snapshotManager';
 import { Transfert, MouvementItem } from '../types';
 import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 import { offlineQueue } from '../lib/offlineQueue';
@@ -31,6 +33,9 @@ export function useTransfers() {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Transfert);
       setTransferts(list);
+      offlineService.saveCollection('transferts', list)
+        .then(() => snapshotManager.markCollectionSaved('transferts'))
+        .catch(err => console.warn('[IDB] transferts save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'transferts');
     });

@@ -3,6 +3,8 @@ import { collection, onSnapshot, doc, setDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useMaintenanceStore } from '../stores/maintenance.store';
 import { maintenanceService } from '../services/maintenance.service';
+import { offlineService } from '../services/offline.service';
+import { snapshotManager } from '../lib/snapshotManager';
 import { useAuthStore } from '../stores/auth.store';
 import { MaintenanceLog, EnginMaster, PerfoMaster, AgentMaster } from '../types';
 import { serializeFirestoreData, cleanObject, handleFirestoreError, OperationType } from '../lib/utils';
@@ -27,6 +29,9 @@ export function useMaintenance() {
     const unsub = onSnapshot(collection(db, 'maintenanceLogs'), (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as MaintenanceLog);
       setMaintenanceLogs(list);
+      offlineService.saveCollection('maintenanceLogs', list)
+        .then(() => snapshotManager.markCollectionSaved('maintenanceLogs'))
+        .catch(err => console.warn('[IDB] maintenanceLogs save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'maintenanceLogs');
     });

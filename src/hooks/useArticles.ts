@@ -6,6 +6,7 @@ import { useAuthStore } from '../stores/auth.store';
 import { useMovementsStore } from '../stores/movement.store';
 import { articleService } from '../services/article.service';
 import { offlineService } from '../services/offline.service';
+import { snapshotManager } from '../lib/snapshotManager';
 import { Article, CatalogItem, DeletionRequest, HydrominesCatalogItem, SiteCode } from '../types';
 import { CatalogUsageStats } from '../context/InventoryContext';
 import { MASTER_CATALOG } from '../catalogData';
@@ -58,9 +59,11 @@ export function useArticles() {
         .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Article)
         .filter(a => !(a as any).deleted);
       setArticles(list);
-      offlineService.saveCollection('articles', list).catch(err => {
-        console.warn('Error saving articles to IndexedDB:', err);
-      });
+      offlineService.saveCollection('articles', list)
+        .then(() => snapshotManager.markCollectionSaved('articles'))
+        .catch(err => {
+          console.warn('Error saving articles to IndexedDB:', err);
+        });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'articles');
     });
@@ -345,36 +348,43 @@ export function useArticles() {
   const importSpecificCatalogItems = useCallback(async (targetSite: SiteCode, itemsToImport: CatalogItem[]) => {
     if (itemsToImport.length === 0) return { imported: 0, skipped: 0 };
     
-    const batch = writeBatch(db);
+    const chunkSize = 400;
     let importedCount = 0;
 
-    for (const item of itemsToImport) {
-      const artId = generateId();
-      const art: Article = {
-        id: artId,
-        site: targetSite,
-        ref: item.reference,
-        designation: item.designation,
-        type: item.suggestedType,
-        category: item.functionalCategory || 'NON_CATEGORISE',
-        functionalCategory: item.functionalCategory,
-        subCategory: item.subCategory,
-        component: item.component,
-        subComponent: item.subComponent,
-        unit: item.unit || 'PIECE',
-        quantity: 0,
-        minStock: item.minStock || 5,
-        location: 'Non assigné',
-        price: item.price || 0,
-        active: true,
-        notes: item.notes,
-        compatibility: item.compatibility,
-        criticality: item.criticality || 'MOYENNE'
-      };
-      batch.set(doc(db, 'articles', artId), cleanObject(art));
-      importedCount++;
+    for (let i = 0; i < itemsToImport.length; i += chunkSize) {
+      const chunk = itemsToImport.slice(i, i + chunkSize);
+      const batch = writeBatch(db);
+
+      for (const item of chunk) {
+        const artId = generateId();
+        const art: Article = {
+          id: artId,
+          site: targetSite,
+          ref: item.reference,
+          designation: item.designation,
+          type: item.suggestedType,
+          category: item.functionalCategory || 'NON_CATEGORISE',
+          functionalCategory: item.functionalCategory,
+          subCategory: item.subCategory,
+          component: item.component,
+          subComponent: item.subComponent,
+          unit: item.unit || 'PIECE',
+          quantity: 0,
+          minStock: item.minStock || 5,
+          location: 'Non assigné',
+          price: item.price || 0,
+          active: true,
+          notes: item.notes,
+          compatibility: item.compatibility,
+          criticality: item.criticality || 'MOYENNE'
+        };
+        batch.set(doc(db, 'articles', artId), cleanObject(art));
+        importedCount++;
+      }
+
+      await batch.commit();
     }
-    await batch.commit();
+
     return { imported: importedCount, skipped: 0 };
   }, []);
 

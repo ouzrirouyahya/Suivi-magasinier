@@ -114,7 +114,31 @@ export class MovementsService {
             );
             newPMP = updates.price;
             lastPurchasePrice = updates.lastPurchasePrice;
-            updatedHistory = updates.priceHistory;
+            
+            // Compacter l'historique : migrer les anciennes entrées et stocker les nouvelles sous forme compacte { p, d, q }
+            const compactHistory = updates.priceHistory.map((h: any) => {
+              if (h && typeof h === 'object' && 'p' in h) {
+                return h; // Déjà au format compact
+              }
+              return {
+                p: h.price ?? 0,
+                d: (h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
+                q: h.quantityAttached ?? 0
+              };
+            });
+            updatedHistory = compactHistory;
+          } else {
+            // S'assurer que l'historique existant est aussi compacté si nécessaire
+            updatedHistory = updatedHistory.map((h: any) => {
+              if (h && typeof h === 'object' && 'p' in h) {
+                return h;
+              }
+              return {
+                p: h.price ?? 0,
+                d: (h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
+                q: h.quantityAttached ?? 0
+              };
+            });
           }
 
           articleUpdates.push({ 
@@ -123,7 +147,7 @@ export class MovementsService {
             newQty, 
             newPMP, 
             lastPurchasePrice, 
-            priceHistory: updatedHistory.slice(-100) 
+            priceHistory: updatedHistory.slice(-50) 
           });
         }
 

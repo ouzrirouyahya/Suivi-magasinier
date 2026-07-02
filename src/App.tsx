@@ -18,6 +18,7 @@ import { ArticleDetail } from './components/ArticleDetail';
 import { AppRoutes } from './app/routes';
 import { OfflineBanner } from './components/OfflineBanner';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
+import { useInitialSnapshot } from './hooks/useInitialSnapshot';
 import BannerCarousel from './components/messaging/BannerCarousel';
 
 const pageRouteMap: Record<string, string> = {
@@ -58,6 +59,8 @@ function AuthenticatedLayout() {
     return localStorage.getItem('hydromines_dark_mode') === 'true';
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const snapshotStatus = useInitialSnapshot();
 
   const {
     currentSite, setCurrentSite, currentUser, networkQuality, retryQueue = [],
@@ -133,6 +136,15 @@ function AuthenticatedLayout() {
     const status = currentUser.status;
     const active = currentUser.active;
 
+    // Utilisateur Google connecté mais pas encore de compte Hydromines
+    // → rester sur /login pour afficher le formulaire de rôle
+    if (status === 'PENDING_REGISTRATION') {
+      if (location.pathname !== '/login') {
+        navigate('/login', { replace: true });
+      }
+      return;
+    }
+
     if (status === 'PENDING') {
       if (location.pathname !== '/pending') {
         navigate('/pending', { replace: true });
@@ -168,6 +180,55 @@ function AuthenticatedLayout() {
 
   if (isAuthPage) {
     return <AppRoutes />;
+  }
+
+  if (snapshotStatus.isLoadingInitial) {
+    return (
+      <div style={{
+        minHeight: '100vh', background: '#0a1628',
+        display: 'flex', flexDirection: 'column',
+        alignItems: 'center', justifyContent: 'center',
+        gap: '1.5rem', padding: '2rem', fontFamily: 'inherit'
+      }}>
+        <div style={{ 
+          width: 64, height: 64, borderRadius: 16, 
+          background: '#d4af37', display: 'flex',
+          alignItems: 'center', justifyContent: 'center',
+          fontSize: '2rem'
+        }}>⛏️</div>
+        <div style={{ textAlign: 'center' }}>
+          <h1 style={{ 
+            color: 'white', fontWeight: 900, fontSize: '1.25rem', 
+            margin: '0 0 0.5rem' 
+          }}>
+            Préparation hors-ligne
+          </h1>
+          <p style={{ color: '#94a3b8', fontSize: '0.875rem', margin: 0 }}>
+            Sauvegarde des données pour le chantier sans connexion...
+          </p>
+        </div>
+        <div style={{ 
+          width: 256, height: 8, background: '#1e3a5f', 
+          borderRadius: 999, overflow: 'hidden' 
+        }}>
+          <div style={{
+            height: '100%', background: '#d4af37', borderRadius: 999,
+            width: `${snapshotStatus.progress}%`,
+            transition: 'width 0.5s ease'
+          }} />
+        </div>
+        <p style={{ color: '#64748b', fontSize: '0.75rem', margin: 0 }}>
+          {snapshotStatus.loadedCollections.length}/
+          {snapshotStatus.totalCollections} collections — 
+          {snapshotStatus.progress}%
+        </p>
+        {snapshotStatus.error && (
+          <p style={{ color: '#f97316', fontSize: '0.75rem', margin: 0 }}>
+            {snapshotStatus.error}
+          </p>
+        )}
+      </div>
+    );
   }
 
   return (

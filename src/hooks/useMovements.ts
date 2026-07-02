@@ -5,6 +5,7 @@ import { useMovementsStore } from '../stores/movement.store';
 import { useAuthStore } from '../stores/auth.store';
 import { movementsService } from '../services/movement.service';
 import { offlineService } from '../services/offline.service';
+import { snapshotManager } from '../lib/snapshotManager';
 import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article } from '../types';
 import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 import { calculatePriceUpdates } from '../context/InventoryContext';
@@ -65,9 +66,11 @@ export function useMovements() {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Mouvement);
       setMouvements(list);
-      offlineService.saveCollection('mouvements', list).catch(err => {
-        console.warn('Error saving movements to IndexedDB:', err);
-      });
+      offlineService.saveCollection('mouvements', list)
+        .then(() => snapshotManager.markCollectionSaved('mouvements'))
+        .catch(err => {
+          console.warn('Error saving movements to IndexedDB:', err);
+        });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'mouvements');
     });
@@ -83,6 +86,9 @@ export function useMovements() {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as DistributionEPI);
       setDistributions(list);
+      offlineService.saveCollection('distributions', list)
+        .then(() => snapshotManager.markCollectionSaved('distributions'))
+        .catch(err => console.warn('[IDB] distributions save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'distributions');
     });
@@ -98,6 +104,9 @@ export function useMovements() {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as PurchaseRequest);
       setPurchaseRequests(list);
+      offlineService.saveCollection('purchaseRequests', list)
+        .then(() => snapshotManager.markCollectionSaved('purchaseRequests'))
+        .catch(err => console.warn('[IDB] purchaseRequests save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'purchaseRequests');
     });
@@ -113,6 +122,9 @@ export function useMovements() {
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AnomalyReport);
       setAnomalyReports(list);
+      offlineService.saveCollection('anomalyReports', list)
+        .then(() => snapshotManager.markCollectionSaved('anomalyReports'))
+        .catch(err => console.warn('[IDB] anomalyReports save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'anomalyReports');
     });

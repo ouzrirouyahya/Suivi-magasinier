@@ -61,7 +61,19 @@ export function useAuth() {
             await setDoc(doc(db, 'accounts', uid), cleanObject(newUser));
             setIsLoaded(true);
           } else {
-            setCurrentUser(null);
+            // Utilisateur Google authentifié mais pas encore de compte Hydromines
+            // Créer un UserAccount temporaire "EN_ATTENTE_INSCRIPTION"
+            // pour que App.tsx ne redirige PAS vers /login
+            const pendingFirebaseUser: UserAccount = {
+              id: uid,
+              email: user.email || '',
+              name: user.displayName || '',
+              role: 'MAGASINIER',         // rôle temporaire neutre
+              active: false,
+              status: 'PENDING_REGISTRATION', // nouveau statut temporaire
+              createdAt: new Date().toISOString()
+            };
+            setCurrentUser(pendingFirebaseUser);
             setIsLoaded(true);
           }
         }

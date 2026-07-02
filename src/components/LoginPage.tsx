@@ -2,76 +2,71 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, db } from '../lib/firebase';
-import { getDoc, setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc } from 'firebase/firestore';
 import { toast } from 'sonner';
 import { Package, Shield, ArrowRight, Briefcase } from 'lucide-react';
 import { SITES } from '../demoData';
 import { SiteCode, UserAccount } from '../types';
+import { useAuthStore } from '../stores/auth.store';
 import loginImage from '../assets/images/hydromines_login_banner_clean.png';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 const LoginPage: React.FC = () => {
+  const { currentUser } = useAuthStore();
   const [authError, setAuthError] = React.useState<string | null>(null);
-  const [showRoleSelection, setShowRoleSelection] = React.useState(false);
-  const [pendingUser, setPendingUser] = React.useState<any>(null);
   const [selectedRequestedRole, setSelectedRequestedRole] = React.useState<'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' | ''>('');
   const [requestedSite, setRequestedSite] = React.useState<SiteCode | ''>('');
+
+  const showRoleSelection = currentUser?.status === 'PENDING_REGISTRATION';
 
   const handleLogin = async () => {
     try {
       setAuthError(null);
-      console.log("[Google Auth] Initialisation du flux Google Sign-In...");
       googleProvider.setCustomParameters({ prompt: 'select_account' });
-      const result = await signInWithPopup(auth, googleProvider);
-      console.log("[Google Auth] Connexion réussie ! Utilisateur Authentifié :", result.user.email);
-      
-      const accountSnap = await getDoc(doc(db, 'accounts', result.user.uid));
-      if (!accountSnap.exists()) {
-        setPendingUser(result.user);
-        setShowRoleSelection(true);
-      } else {
-        toast.success(`Bienvenue, ${result.user.displayName || result.user.email || 'Opérateur'}`);
-      }
+      await signInWithPopup(auth, googleProvider);
+      // useAuth prend le relais automatiquement via onAuthStateChanged
+      // Pas besoin de getDoc() ici — useAuth le fait déjà
     } catch (error: any) {
-      console.error("[Google Auth] Erreur complète de connexion :", error);
-      let message = `La connexion a échoué (${error.code || error.message || 'Erreur inconnue'}). Veuillez réessayer.`;
+      if (error.code === 'auth/cancelled-popup-request' || 
+          error.code === 'auth/popup-closed-by-user') return;
       
+      let message = `Connexion échouée (${error.code || 'Erreur inconnue'})`;
       if (error.code === 'auth/unauthorized-domain') {
-        message = `Domaine non autorisé : ${window.location.hostname}.\n\nVeuillez l'ajouter dans la console Firebase (Authentification > Paramètres > Domaines autorisés).`;
+        message = `Domaine non autorisé : ${window.location.hostname}. Ajoutez-le dans Firebase Console → Authentication → Domaines autorisés.`;
       } else if (error.code === 'auth/popup-blocked') {
-        message = "La fenêtre de connexion (popup) a été bloquée par votre navigateur. Veuillez autoriser les fenêtres pop-up pour cette application.";
-      } else if (error.code === 'auth/cancelled-popup-request') {
-        console.warn("[Google Auth] Popup refermé par l'utilisateur.");
-        return; // Ignore if user just closed the popup
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        message = "La fenêtre de connexion Google a été fermée ou bloquée par l'environnement d'iframe. Ouvrez l'application dans un nouvel onglet.";
+        message = 'Popup bloquée par le navigateur. Autorisez les popups pour ce site.';
       }
-      
       setAuthError(error.code || 'unknown');
       toast.error(message, { duration: 8000 });
     }
   };
 
   const handleSubmitRequest = async () => {
-    if (!pendingUser || !selectedRequestedRole) return;
+    if (!currentUser || !selectedRequestedRole) return;
+    
     const newUser: Partial<UserAccount> = {
-      id: pendingUser.uid,
-      email: pendingUser.email || '',
-      name: pendingUser.displayName || 'Utilisateur',
-      role: 'ADMIN',
+      id: currentUser.id,
+      email: currentUser.email,
+      name: currentUser.name,
+      role: 'MAGASINIER',           // rôle par défaut en attente d'approbation
       canWrite: false,
-      requestedRole: selectedRequestedRole as any,
-      assignedSite: (selectedRequestedRole === 'MAGASINIER' || selectedRequestedRole === 'RESPONSABLE_CHANTIER') ? requestedSite || undefined : undefined,
+      requestedRole: selectedRequestedRole,
+      assignedSite: (selectedRequestedRole === 'MAGASINIER' || 
+                     selectedRequestedRole === 'RESPONSABLE_CHANTIER') 
+        ? requestedSite || undefined 
+        : undefined,
       active: false,
-      status: 'PENDING',
+      status: 'PENDING',            // passe de PENDING_REGISTRATION à PENDING
       createdAt: new Date().toISOString()
     };
+    
     try {
-      await setDoc(doc(db, 'accounts', pendingUser.uid), newUser);
-      toast.success("Votre demande a été envoyée. Un administrateur va l'examiner.");
-      setShowRoleSelection(false);
+      await setDoc(doc(db, 'accounts', currentUser.id), newUser);
+      toast.success("Demande envoyée. Un administrateur va l'examiner.");
+      // useAuth détectera le nouveau document via onSnapshot
+      // et mettra à jour currentUser avec status: 'PENDING'
+      // App.tsx redirigera vers /pending automatiquement
     } catch (err: any) {
-      console.error("[LoginPage] Erreur lors de la création de la demande :", err);
       toast.error(`Erreur : ${err.message || err}`);
     }
   };
@@ -270,7 +265,7 @@ const LoginPage: React.FC = () => {
               <div className="text-left py-2 px-1">
                 <div className="space-y-1.5 mb-6 text-center">
                   <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    Bienvenue, {pendingUser?.displayName || "Opérateur Core"} !
+                    Bienvenue, {currentUser?.name || "Opérateur Core"} !
                   </h2>
                   <p className="text-xs text-slate-500 font-medium">
                     Pour finaliser votre demande d'accès, veuillez préciser votre rôle :

@@ -121,57 +121,49 @@ export function cleanObject<T>(obj: T): T {
 }
 
 /**
- * Recursively converts Firestore Timestamp instances to ISO strings for UI compatibility
+ * Recursively converts Firestore Timestamp instances and native Dates to ISO strings for UI compatibility
  */
-export function serializeFirestoreData<T>(data: T): any {
-  if (data === null || data === undefined) {
-    return data;
-  }
+export function serializeFirestoreData(data: any): any {
+  if (data === null || data === undefined) return data;
 
-  // Handle Timestamp or duck-typed Timestamp objects as primitives
-  if (typeof data === "object") {
-    if (typeof (data as any).toDate === "function") {
+  // Firestore Timestamp (object with seconds + nanoseconds or toDate function)
+  if (typeof data === 'object') {
+    if (typeof data.toDate === 'function') {
       try {
-        return (data as any).toDate().toISOString();
+        return data.toDate().toISOString();
       } catch (e) {
-        // Fall back to other checks
+        // Fallback
       }
     }
-    if (typeof (data as any).seconds === "number" && typeof (data as any).nanoseconds === "number") {
-      try {
-        return new Date((data as any).seconds * 1000).toISOString();
-      } catch (e) {
-        // Fall back to other checks
-      }
+    if ('seconds' in data && 'nanoseconds' in data && typeof data.seconds === 'number') {
+      return new Date(data.seconds * 1000).toISOString();
     }
   }
 
-  if (data instanceof Timestamp) {
-    return data.toDate().toISOString();
-  }
-
+  // Date JavaScript native
   if (data instanceof Date) {
     return data.toISOString();
   }
 
+  // Arrays : recursif
   if (Array.isArray(data)) {
-    return data.map(item => serializeFirestoreData(item));
+    return data.map(serializeFirestoreData);
   }
 
-  if (typeof data === 'object') {
-    // Preserve other complex objects
-    if (data.constructor && data.constructor !== Object && data.constructor !== Array) {
-      return data;
-    }
+  // Primitives : retourner directement
+  if (typeof data !== 'object') return data;
 
-    const result: any = {};
-    Object.keys(data as any).forEach(key => {
-      result[key] = serializeFirestoreData((data as any)[key]);
-    });
-    return result;
+  // Preserve complex custom objects
+  if (data.constructor && data.constructor !== Object && data.constructor !== Array) {
+    return data;
   }
 
-  return data;
+  // Objets : récursif sur toutes les clés
+  const result: any = {};
+  for (const key of Object.keys(data)) {
+    result[key] = serializeFirestoreData(data[key]);
+  }
+  return result;
 }
 
 /**

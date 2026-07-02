@@ -42,6 +42,7 @@ import { doc, setDoc } from 'firebase/firestore';
 import { useNotifications } from '../hooks/useNotifications';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { useMessages } from '../hooks/useMessages';
+import { snapshotManager } from '../lib/snapshotManager';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 export type Page = 
@@ -124,6 +125,10 @@ export const Sidebar = React.memo(function Sidebar({
   const { addNotification } = useNotifications();
   const { isOnline, isSyncing } = useOfflineSync();
   const { unreadCount } = useMessages();
+
+  const snapshot = snapshotManager.getSnapshot();
+  const snapshotAge = snapshotManager.getSnapshotAgeMinutes();
+  const hasSnapshot = snapshotManager.isFullSnapshotAvailable();
 
   // State to track if app can be installed as PWA
   const [isInstallable, setIsInstallable] = React.useState(!!(window as any).deferredPrompt);
@@ -523,6 +528,26 @@ export const Sidebar = React.memo(function Sidebar({
               )}
               <RefreshCw className={cn("w-3 h-3 text-slate-300", isSyncing && "animate-spin text-amber-500")} />
             </div>
+          </div>
+
+          <div className="mt-1 flex items-center gap-1.5 text-[10px]">
+            <Database className="w-2.5 h-2.5 flex-shrink-0 text-slate-500" />
+            {hasSnapshot ? (
+              <span className={
+                snapshotAge && snapshotAge > 120 
+                  ? 'text-orange-400' 
+                  : 'text-slate-500'
+              }>
+                {'Sauvegarde : '}
+                <span className="text-slate-300 font-medium">
+                  {snapshotManager.formatSnapshotDate(snapshot.lastFullSync)}
+                </span>
+              </span>
+            ) : (
+              <span className="text-amber-500 font-medium">
+                Aucune sauvegarde locale
+              </span>
+            )}
           </div>
 
           <div className="card-mini bg-slate-50/80 rounded-xl p-2.5 flex items-center gap-3 border border-slate-100/50">

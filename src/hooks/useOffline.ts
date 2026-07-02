@@ -25,6 +25,10 @@ export function useOffline() {
   // Sync from IndexedDB offlineQueue to store's retryQueue on load
   useEffect(() => {
     const syncFromIndexedDB = async () => {
+      // Éviter une sync parallèle si le réseau revient pendant le chargement IndexedDB
+      if (isSyncingRef.current) return;
+      isSyncingRef.current = true;
+
       try {
         const items = await offlineQueue.load();
         const mappedQueue = items.map(item => ({
@@ -38,7 +42,13 @@ export function useOffline() {
         }));
         setRetryQueue(mappedQueue);
       } catch (err) {
-        console.error('[useOffline] Failed to load offline queue from IndexedDB:', err);
+        console.error(
+          '[useOffline] Failed to load offline queue from IndexedDB:',
+          err
+        );
+      } finally {
+        // Toujours libérer le verrou, même en cas d'erreur
+        isSyncingRef.current = false;
       }
     };
     syncFromIndexedDB();

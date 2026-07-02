@@ -32,7 +32,7 @@ export interface UserAccount {
   active: boolean;
   createdAt: FirestoreDate;
   assignedSite?: SiteCode;
-  status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+  status?: 'PENDING' | 'PENDING_REGISTRATION' | 'APPROVED' | 'REJECTED' | 'DISABLED';
   requestedRole?: 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER';
   canWrite?: boolean;
   isReplacingMagasinier?: boolean;
