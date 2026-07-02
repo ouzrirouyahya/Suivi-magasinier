@@ -9,6 +9,57 @@
 
 const STORAGE_PREFIX = 'hydromines_intent:';
 const ACK_REGISTRY_PREFIX = 'hydromines_ack_reg:';
+const INTENT_TTL_MS = 24 * 60 * 60 * 1000; // 24 heures
+
+export function purgeStaleIntents(): void {
+  const now = Date.now();
+  const keysToDelete: string[] = [];
+  
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+      
+      // Cibler les clés des intents et des acks
+      const isIntent = key.startsWith('hydromines_intent:') || 
+                       key.startsWith('hydromines_ack_reg:') ||
+                       key.startsWith(STORAGE_PREFIX) ||
+                       key.startsWith(ACK_REGISTRY_PREFIX);
+      
+      if (!isIntent) continue;
+      
+      try {
+        const raw = localStorage.getItem(key);
+        if (!raw) {
+          keysToDelete.push(key);
+          continue;
+        }
+        const entry = JSON.parse(raw);
+        const createdAt = entry.createdAt || entry.serverTimestamp || 0;
+        const age = now - createdAt;
+        
+        if (age > INTENT_TTL_MS || createdAt === 0) {
+          keysToDelete.push(key);
+        }
+      } catch {
+        // JSON corrompu → supprimer immédiatement
+        keysToDelete.push(key);
+      }
+    }
+  } catch (err) {
+    console.warn('[OperationIntent] Erreur lors du scan localStorage:', err);
+  }
+  
+  keysToDelete.forEach(key => {
+    try { localStorage.removeItem(key); } catch {}
+  });
+  
+  if (keysToDelete.length > 0) {
+    console.log(
+      `[OperationIntent] Purgé ${keysToDelete.length} intents périmés`
+    );
+  }
+}
 
 export interface OperationIntent {
   intentId: string;

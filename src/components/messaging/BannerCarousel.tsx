@@ -108,6 +108,9 @@ export default function BannerCarousel() {
         initial={{ y: -50, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -50, opacity: 0 }}
+        role="region"
+        aria-label="Annonces Hydromines"
+        aria-live="polite"
         className={`fixed top-[56px] left-0 right-0 z-40 flex items-center justify-between px-4 py-3 text-white transition-all ${style.bg} ${style.accent}`}
         id="banner-carousel-container"
       >
@@ -150,6 +153,8 @@ export default function BannerCarousel() {
             <div className="flex items-center gap-1.5 text-xs text-slate-300 bg-slate-900/50 px-2 py-1 rounded-md border border-slate-700/30">
               <button 
                 onClick={prev} 
+                type="button"
+                aria-label="Annonce précédente"
                 className="hover:text-[#d4af37] disabled:opacity-30 cursor-pointer"
                 disabled={currentIndex === 0}
               >
@@ -158,6 +163,8 @@ export default function BannerCarousel() {
               <span>{currentIndex + 1} / {total}</span>
               <button 
                 onClick={next} 
+                type="button"
+                aria-label="Annonce suivante"
                 className="hover:text-[#d4af37] disabled:opacity-30 cursor-pointer"
                 disabled={currentIndex === total - 1}
               >
@@ -169,6 +176,8 @@ export default function BannerCarousel() {
           {currentBanner.dismissible && (
             <button
               onClick={() => dismiss(currentBanner.id)}
+              type="button"
+              aria-label="Fermer cette annonce"
               className="p-1 hover:bg-slate-800 rounded-md transition text-slate-300 hover:text-white cursor-pointer"
               title="Fermer"
               id={`dismiss-btn-${currentBanner.id}`}

@@ -7,8 +7,9 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function formatCurrency(amount: number) {
-  const validAmount = typeof amount === 'number' && !isNaN(amount) ? amount : 0;
+export function formatCurrency(amount: number | undefined | null) {
+  const safe = Number(amount);
+  const validAmount = isNaN(safe) ? 0 : safe;
   return new Intl.NumberFormat('fr-MA', {
     style: 'currency',
     currency: 'MAD',

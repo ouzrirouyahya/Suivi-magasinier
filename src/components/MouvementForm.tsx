@@ -37,6 +37,19 @@ import { useInventory } from '../context/InventoryContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 
+const generateReference = (prefix: string, site: string): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  // Timestamp base36 = encode l'unicité temporelle en 4 chars
+  const ts = Date.now().toString(36).toUpperCase().slice(-4);
+  // 4 chiffres random pour unicité intra-milliseconde
+  const rand = Math.floor(Math.random() * 9999)
+    .toString()
+    .padStart(4, '0');
+  return `${prefix}/${site}/${year}${month}-${ts}${rand}`;
+};
+
 interface MouvementFormProps {
   type: 'ENTREE' | 'SORTIE';
   site: SiteCode;
@@ -273,10 +286,18 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     return enrichFilteredItems.slice(0, enrichLimit);
   }, [enrichFilteredItems, enrichLimit]);
 
-  const prefix = type === 'ENTREE' ? 'BE' : 'BS';
   const autoId = useMemo(() => {
-    return `${prefix}/${site === 'ALL' ? '—' : site}/${new Date().getFullYear()}-${Math.floor(Math.random() * 1000).toString().padStart(3, '0')}`;
+    const prefix = type === 'ENTREE' ? 'BE' : 
+                   type === 'SORTIE' ? 'BS' : 
+                   type === 'RETOUR' ? 'BR' : 'BA';
+    return generateReference(prefix, site === 'ALL' ? 'HYDRO' : site);
   }, [type, site]);
+
+  useEffect(() => {
+    if (!reference) {
+      setReference(autoId);
+    }
+  }, [autoId]);
 
   const siteEngins = site !== 'ALL' ? engins.filter(e => e.site === site) : [];
   const sitePerfos = site !== 'ALL' ? perfos.filter(p => p.site === site) : [];

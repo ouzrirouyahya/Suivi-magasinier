@@ -18,8 +18,11 @@ export function RestockModule({ site, articles, purchaseRequests, onCreatePR, on
   const [isExpanded, setIsExpanded] = React.useState(false);
 
   const lowStockArticles = articles.filter(a => 
-    (site === 'ALL' ? true : a.site === site) && 
-    a.quantity <= a.minStock && 
+    a.active === true &&                          // strictement true
+    !(a as any).deleted &&                        // pas soft-deleted
+    (site === 'ALL' ? true : a.site === site) &&
+    (Number(a.minStock) || 0) > 0 &&             // minStock doit être défini et > 0
+    (Number(a.quantity) || 0) <= (Number(a.minStock) || 0) && // guard NaN
     (a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase()))
   );
 

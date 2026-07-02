@@ -11,6 +11,8 @@ import { CatalogUsageStats } from '../context/InventoryContext';
 import { MASTER_CATALOG } from '../catalogData';
 import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID, handleFirestoreError, OperationType } from '../lib/utils';
 import { toast } from 'sonner';
+import { offlineQueue } from '../lib/offlineQueue';
+import { useSystemStore } from '../stores/system.store';
 
 export function useArticles() {
   const {
@@ -67,16 +69,23 @@ export function useArticles() {
 
   // Subscribe to deletion requests
   useEffect(() => {
-    if (!currentUser || !currentUser.active) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
 
-    const unsub = onSnapshot(collection(db, 'deletionRequests'), (snap) => {
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'deletionRequests'))
+      : query(
+          collection(db, 'deletionRequests'),
+          where('site', '==', currentSite)
+        );
+
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as DeletionRequest);
       setDeletionRequests(list);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'deletionRequests');
     });
     return unsub;
-  }, [setDeletionRequests, currentUser]);
+  }, [setDeletionRequests, currentUser, currentSite]);
 
   // Computed: ghostArticles
   const ghostArticles = useMemo(() => {
@@ -190,23 +199,146 @@ export function useArticles() {
   }, [rawArticles, movements, hydrominesCatalog]);
 
   const saveArticle = useCallback(async (article: Article) => {
-    const res = await articleService.saveArticle(article);
-    if (!res.success) {
-      throw new Error(res.error);
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await articleService.saveArticle(article, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'art_' + crypto.randomUUID();
+      const payload = { intentId, type: 'saveArticle', payload: article };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'saveArticle',
+        payload: article,
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.info("Mode hors-ligne : article sauvegardé localement.");
+      return;
+    }
+
+    try {
+      const res = await articleService.saveArticle(article);
+      if (!res.success) throw new Error(res.error);
+    } catch (err: any) {
+      console.warn('[useArticles] Save Article failed, queuing offline fallback', err);
+      const res = await articleService.saveArticle(article, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'art_' + crypto.randomUUID();
+      const payload = { intentId, type: 'saveArticle', payload: article };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'saveArticle',
+        payload: article,
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.warning("Échec réseau : article sauvegardé localement.");
     }
   }, []);
 
   const deleteArticle = useCallback(async (id: string) => {
-    const res = await articleService.deleteArticles([id]);
-    if (!res.success) {
-      throw new Error(res.error);
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await articleService.deleteArticles([id], true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'del_art_' + crypto.randomUUID();
+      const payload = { intentId, type: 'deleteArticles', payload: { ids: [id] } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'deleteArticles',
+        payload: { ids: [id] },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.info("Mode hors-ligne : demande de suppression enregistrée localement.");
+      return;
+    }
+
+    try {
+      const res = await articleService.deleteArticles([id]);
+      if (!res.success) throw new Error(res.error);
+    } catch (err: any) {
+      console.warn('[useArticles] Delete Article failed, queuing offline fallback', err);
+      const res = await articleService.deleteArticles([id], true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'del_art_' + crypto.randomUUID();
+      const payload = { intentId, type: 'deleteArticles', payload: { ids: [id] } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'deleteArticles',
+        payload: { ids: [id] },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.warning("Échec réseau : suppression enregistrée localement.");
     }
   }, []);
 
   const deleteArticles = useCallback(async (ids: string[]) => {
-    const res = await articleService.deleteArticles(ids);
-    if (!res.success) {
-      throw new Error(res.error);
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await articleService.deleteArticles(ids, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'del_arts_' + crypto.randomUUID();
+      const payload = { intentId, type: 'deleteArticles', payload: { ids } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'deleteArticles',
+        payload: { ids },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.info("Mode hors-ligne : suppression de groupe enregistrée localement.");
+      return;
+    }
+
+    try {
+      const res = await articleService.deleteArticles(ids);
+      if (!res.success) throw new Error(res.error);
+    } catch (err: any) {
+      console.warn('[useArticles] Delete Articles failed, queuing offline fallback', err);
+      const res = await articleService.deleteArticles(ids, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'del_arts_' + crypto.randomUUID();
+      const payload = { intentId, type: 'deleteArticles', payload: { ids } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'deleteArticles',
+        payload: { ids },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.warning("Échec réseau : suppressions enregistrées localement.");
     }
   }, []);
 

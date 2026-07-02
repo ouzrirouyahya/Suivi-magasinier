@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -24,7 +24,8 @@ import {
   ResponsiveContainer, 
   Cell,
   AreaChart,
-  Area
+  Area,
+  Legend
 } from 'recharts';
 
 export function FinancialDashboard() {
@@ -70,14 +71,39 @@ export function FinancialDashboard() {
     }, 0)
   }));
 
-  // Chart Data: Financial Trends (Mocked for better visual)
-  const trendData = [
-    { name: 'S-4', value: totalStockValue * 0.95 },
-    { name: 'S-3', value: totalStockValue * 0.98 },
-    { name: 'S-2', value: totalStockValue * 1.02 },
-    { name: 'S-1', value: totalStockValue * 0.99 },
-    { name: 'S-0', value: totalStockValue },
-  ];
+  const trendData = useMemo(() => {
+    const weeks = [];
+    for (let i = 4; i >= 0; i--) {
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() - (i * 7));
+      const weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() - 7);
+
+      const siteFilter = (m: typeof mouvements[0]) =>
+        currentSite === 'ALL' ? true : m.site === currentSite;
+
+      const calcValue = (types: string[]) =>
+        mouvements
+          .filter(m =>
+            siteFilter(m) &&
+            types.includes(m.type) &&
+            m.date >= weekStart.toISOString() &&
+            m.date < weekEnd.toISOString()
+          )
+          .reduce((sum, m) =>
+            sum + (m.items?.reduce(
+              (s, it) => s + ((Number(it.quantity) || 0) * (Number(it.price) || 0)),
+              0
+            ) || 0), 0);
+
+      weeks.push({
+        name: i === 0 ? 'Cette sem.' : `S-${i}`,
+        entrees: Math.round(calcValue(['ENTREE', 'TRANSFERT_IN', 'RETOUR'])),
+        sorties: Math.round(calcValue(['SORTIE', 'TRANSFERT_OUT'])),
+      });
+    }
+    return weeks;
+  }, [mouvements, currentSite]);
 
   return (
     <div className="space-y-6">
@@ -256,7 +282,25 @@ export function FinancialDashboard() {
                     contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                     formatter={(val: number) => formatCurrency(val)}
                   />
-                  <Area type="monotone" dataKey="value" stroke="#0ea5e9" strokeWidth={3} fillOpacity={1} fill="url(#colorValue)" />
+                  <Legend verticalAlign="top" height={36} iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase' }} />
+                  <Area
+                    type="monotone"
+                    dataKey="entrees"
+                    name="Entrées"
+                    stroke="#10b981"
+                    fill="#10b981"
+                    fillOpacity={0.15}
+                    strokeWidth={2}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="sorties"
+                    name="Sorties"
+                    stroke="#ef4444"
+                    fill="#ef4444"
+                    fillOpacity={0.15}
+                    strokeWidth={2}
+                  />
                 </AreaChart>
               </ResponsiveContainer>
            </div>

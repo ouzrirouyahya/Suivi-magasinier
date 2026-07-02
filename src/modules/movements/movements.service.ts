@@ -36,7 +36,12 @@ export class MovementsService {
           if (index !== -1) {
             const article = updatedArticles[index];
             const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
-            const newQty = isAddition ? article.quantity + item.quantity : article.quantity - item.quantity;
+            const isAdjustment = mouvement.type === 'AJUSTEMENT';
+            const newQty = isAdjustment
+              ? item.quantity
+              : isAddition 
+                ? (article.quantity || 0) + item.quantity 
+                : (article.quantity || 0) - item.quantity;
             updatedArticles[index] = { ...article, quantity: Math.max(0, newQty) };
           }
         }
@@ -82,9 +87,14 @@ export class MovementsService {
           totalValue += item.quantity * (article.price || 0);
           
           const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
-          const newQty = isAddition ? (article.quantity || 0) + item.quantity : (article.quantity || 0) - item.quantity;
+          const isAdjustment = mouvement.type === 'AJUSTEMENT';
+          const newQty = isAdjustment
+            ? item.quantity
+            : isAddition 
+              ? (article.quantity || 0) + item.quantity 
+              : (article.quantity || 0) - item.quantity;
           
-          if (newQty < 0) {
+          if (newQty < 0 && !isAdjustment) {
             throw new Error(`Stock insuffisant pour l'article ${article.ref}. Disponible: ${article.quantity || 0}, Demandé: ${item.quantity}`);
           }
 

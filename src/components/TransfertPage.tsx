@@ -155,7 +155,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
 
     const activeDrafts = transferts.filter(t => t.status === 'BROUILLON' && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
     const activeDemandes = transferts.filter(t => t.status === 'DEMANDE' && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
-    const activeInTransit = transferts.filter(t => t.status === 'EXPEDIE' && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
+    const activeInTransit = transferts.filter(t => (t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
     const activeDisputes = transferts.filter(t => t.status === 'LITIGE' && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
 
     return {
@@ -177,7 +177,13 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
   // Deep search over references and tags
   const filteredTransferts = useMemo(() => {
     return siteTransferts.filter(t => {
-      if (statusFilter !== 'ALL' && t.status !== statusFilter) return false;
+      if (statusFilter !== 'ALL') {
+        if (statusFilter === 'EXPEDIE') {
+          if (t.status !== 'EXPEDIE' && t.status !== 'EN_TRANSIT' && t.status !== 'IN_TRANSIT') return false;
+        } else {
+          if (t.status !== statusFilter) return false;
+        }
+      }
 
       if (searchQuery) {
         const query = searchQuery.toLowerCase();
@@ -628,12 +634,12 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                     <div className="flex items-center gap-3">
                       <div className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center text-white",
-                        t.status === 'EXPEDIE' ? "bg-amber-500" :
+                        (t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') ? "bg-amber-500" :
                         t.status === 'DEMANDE' ? "bg-sky-505 bg-sky-600" :
                         t.status === 'ACCEPTE' ? "bg-emerald-600" :
                         t.status === 'LITIGE' ? "bg-rose-500 animate-pulse" : "bg-slate-500"
                       )}>
-                        {t.status === 'EXPEDIE' ? <Truck className="w-5 h-5 animate-pulse" /> : <Package className="w-5 h-5" />}
+                        {(t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') ? <Truck className="w-5 h-5 animate-pulse" /> : <Package className="w-5 h-5" />}
                       </div>
 
                       <div className="space-y-1">
@@ -652,7 +658,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                               Validation superviseur requise
                             </span>
                           )}
-                          {t.status === 'EXPEDIE' && t.targetSite === currentSite && (
+                          {(t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') && t.targetSite === currentSite && (
                             <span className="text-[8px] font-bold bg-rose-50 text-rose-600 px-1.5 py-0.5 rounded uppercase tracking-widest border border-rose-100 animate-pulse">
                               Réception à effectuer
                             </span>
@@ -1014,7 +1020,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                       )}
 
                       {/* EXPEDIE Action Block: Reception inspection entry */}
-                      {t.status === 'EXPEDIE' && t.targetSite === currentSite && (
+                      {(t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') && t.targetSite === currentSite && (
                         <div className="bg-amber-600/5 border border-amber-205 rounded-xl p-4 space-y-4">
                           {!isInspecting ? (
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-3">

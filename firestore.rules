@@ -406,10 +406,20 @@ service cloud.firestore {
 
     // Deletion requests: submitted by magaziniers, approved/rejected by admins
     match /deletionRequests/{id} {
-      allow read: if canReadIfActive();
+      allow read: if isActive() && (
+        isSuperAdmin() || 
+        userAssignedSite() == 'ALL' || 
+        userAssignedSite() == resource.data.site
+      );
       allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDeletionRequest(incoming());
-      allow update: if isAdmin() && isValidId(id);
-      allow delete: if isAdmin();
+      allow update: if isActive() && (
+        isSuperAdmin() || 
+        (isAdmin() && (userAssignedSite() == 'ALL' || userAssignedSite() == existing().site))
+      ) && isValidId(id);
+      allow delete: if isActive() && (
+        isSuperAdmin() || 
+        (isAdmin() && (userAssignedSite() == 'ALL' || userAssignedSite() == existing().site))
+      );
     }
 
     // Inventaires

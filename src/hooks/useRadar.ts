@@ -4,6 +4,14 @@ import { RadarAnalyzer, RadarReport, RadarAnomaly } from '../core/radarAnalyzer'
 import { SiteCode } from '../types';
 import { toast } from 'sonner';
 
+const RADAR_IGNORED_KEY = 'radar_ignored';
+const IGNORED_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 jours
+
+interface IgnoredEntry {
+  id: string;
+  at: number; // timestamp ms
+}
+
 export function useRadar() {
   const { mouvements, articles, maintenanceLogs } = useInventory();
   
@@ -12,8 +20,33 @@ export function useRadar() {
   const [selectedSite, setSelectedSite] = useState<SiteCode | 'GLOBAL'>('GLOBAL');
   
   const [ignoredAnomalies, setIgnoredAnomalies] = useState<Set<string>>(() => {
-    const stored = localStorage.getItem('radar_ignored');
-    return stored ? new Set(JSON.parse(stored)) : new Set();
+    try {
+      const stored = localStorage.getItem(RADAR_IGNORED_KEY);
+      if (!stored) return new Set();
+      
+      const parsed: Array<IgnoredEntry | string> = JSON.parse(stored);
+      const now = Date.now();
+      
+      // Filtrer les entrées périmées + gérer l'ancien format (string simple)
+      const fresh = parsed.filter(e => {
+        if (typeof e === 'string') return true; // ancien format : garder
+        return (now - e.at) < IGNORED_TTL_MS;
+      });
+      
+      // Si on a purgé des entrées, sauvegarder le nouveau format propre
+      if (fresh.length < parsed.length) {
+        const withTs: IgnoredEntry[] = fresh.map(e =>
+          typeof e === 'string' 
+            ? { id: e, at: Date.now() }
+            : e
+        );
+        localStorage.setItem(RADAR_IGNORED_KEY, JSON.stringify(withTs));
+      }
+      
+      return new Set(fresh.map(e => typeof e === 'string' ? e : e.id));
+    } catch {
+      return new Set();
+    }
   });
   
   const activeAnomalies = useMemo(() => {
@@ -50,7 +83,21 @@ export function useRadar() {
     setIgnoredAnomalies(prev => {
       const next = new Set(prev);
       next.add(id);
-      localStorage.setItem('radar_ignored', JSON.stringify([...next]));
+      
+      // Reconstruire avec timestamps pour toutes les entrées
+      try {
+        const stored = localStorage.getItem(RADAR_IGNORED_KEY);
+        const existing: IgnoredEntry[] = stored ? JSON.parse(stored) : [];
+        const existingMap = new Map(existing.map(e => [e.id, e.at]));
+        
+        const withTs: IgnoredEntry[] = [...next].map(anomId => ({
+          id: anomId,
+          at: existingMap.get(anomId) || Date.now()
+        }));
+        
+        localStorage.setItem(RADAR_IGNORED_KEY, JSON.stringify(withTs));
+      } catch {}
+      
       return next;
     });
     toast.info('Anomalie ignorée');
@@ -60,9 +107,22 @@ export function useRadar() {
     setIgnoredAnomalies(prev => {
       const next = new Set(prev);
       next.delete(id);
-      localStorage.setItem('radar_ignored', JSON.stringify([...next]));
+      
+      try {
+        const stored = localStorage.getItem(RADAR_IGNORED_KEY);
+        const existing: IgnoredEntry[] = stored ? JSON.parse(stored) : [];
+        const filtered = existing.filter(e => e.id !== id);
+        localStorage.setItem(RADAR_IGNORED_KEY, JSON.stringify(filtered));
+      } catch {}
+      
       return next;
     });
+  }, []);
+
+  const clearAllIgnored = useCallback(() => {
+    setIgnoredAnomalies(new Set());
+    localStorage.removeItem(RADAR_IGNORED_KEY);
+    toast.success('Toutes les anomalies ignorées ont été réinitialisées');
   }, []);
   
   const generatePDF = useCallback(async (report: RadarReport) => {
@@ -170,6 +230,7 @@ export function useRadar() {
     runAnalysis,
     ignoreAnomaly,
     restoreAnomaly,
+    clearAllIgnored,
     generatePDF,
     ignoredCount: ignoredAnomalies.size
   };

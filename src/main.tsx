@@ -6,6 +6,10 @@ import './index.css';
 import { InventoryProvider } from './context/InventoryContext.tsx';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { purgeStaleIntents } from './core/operationIntent';
+
+// Purge des intents transactionnels orphelins ou périmés au démarrage de l'application
+purgeStaleIntents();
 
 // Enregistrement du Service Worker pour un support Offline complet et performant
 if ('serviceWorker' in navigator && import.meta.env.PROD) {

@@ -3,11 +3,32 @@ import { db } from '../lib/firebase';
 import { MessageTelemetry } from '../types';
 
 const QUEUE_KEY = 'hydromines_telemetry_queue';
+const MAX_QUEUE_SIZE = 500;
+const QUEUE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 jours max
 
 function getQueue(): Omit<MessageTelemetry, 'id'>[] {
   try {
     const data = localStorage.getItem(QUEUE_KEY);
-    return data ? JSON.parse(data) : [];
+    if (!data) return [];
+    const parsed = JSON.parse(data);
+    if (!Array.isArray(parsed)) return [];
+    
+    // Purger les events > 7 jours automatiquement
+    const now = Date.now();
+    const fresh = parsed.filter((e: any) => {
+      if (!e || typeof e !== 'object') return false;
+      const ts = e.timestamp 
+        ? new Date(e.timestamp).getTime() 
+        : 0;
+      return (now - ts) < QUEUE_TTL_MS;
+    });
+    
+    // Si on a purgé, sauvegarder immédiatement
+    if (fresh.length < parsed.length) {
+      saveQueue(fresh);
+    }
+    
+    return fresh;
   } catch {
     return [];
   }
@@ -30,13 +51,20 @@ export const telemetryService = {
       } else {
         const queue = getQueue();
         queue.push(event);
-        saveQueue(queue);
+        // Garder seulement les MAX_QUEUE_SIZE plus récents
+        const trimmed = queue.length > MAX_QUEUE_SIZE
+          ? queue.slice(-MAX_QUEUE_SIZE)
+          : queue;
+        saveQueue(trimmed);
       }
     } catch (error) {
       console.warn('[TelemetryService] Silent error during direct record, queueing event:', error);
       const queue = getQueue();
       queue.push(event);
-      saveQueue(queue);
+      const trimmed = queue.length > MAX_QUEUE_SIZE
+        ? queue.slice(-MAX_QUEUE_SIZE)
+        : queue;
+      saveQueue(trimmed);
     }
   },
 
@@ -44,15 +72,18 @@ export const telemetryService = {
   async flush(): Promise<void> {
     const queue = getQueue();
     if (queue.length === 0) return;
-
-    try {
-      for (const event of queue) {
+    
+    const failed: Omit<MessageTelemetry, 'id'>[] = [];
+    for (const event of queue) {
+      try {
         await addDoc(collection(db, 'messageTelemetry'), event);
+      } catch (error) {
+        console.warn('[TelemetryService] Failed to flush telemetry event, keeping in queue:', error);
+        // Garder les events qui ont échoué pour retry ultérieur
+        failed.push(event);
       }
-      saveQueue([]);
-    } catch (error) {
-      console.warn('[TelemetryService] Failed to flush all queued telemetry events:', error);
     }
+    saveQueue(failed); // [] si tout réussi, sinon les échoués
   }
 };
 

@@ -263,8 +263,9 @@ export function exportToExcel(
  */
 export function exportToCSV(data: any[], filename: string): void {
   const ws = XLSX.utils.json_to_sheet(data);
-  const csv = XLSX.utils.sheet_to_csv(ws);
-  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const csv = XLSX.utils.sheet_to_csv(ws, { FS: ';' });
+  const BOM = '\uFEFF';
+  const blob = new Blob([BOM + csv], { type: 'text/csv;charset=utf-8;' });
   const link = document.createElement('a');
   link.href = URL.createObjectURL(blob);
   const dateStr = new Date().toISOString().split('T')[0];
@@ -333,8 +334,8 @@ export function formatMovementsForExport(
           const art = articleMap.get(item.articleId);
           const ref = art ? art.ref : '';
           const des = art ? art.designation : '';
-          const unitPrice = item.price || (art ? art.price : 0) || 0;
-          const totalPrice = (item.quantity || 0) * unitPrice;
+          const unitPrice = Number(item.price) || (art ? Number(art.price) : 0) || 0;
+          const totalPrice = (Number(item.quantity) || 0) * unitPrice;
 
           formatted.push(buildRawMovementRow(m, mDate, ref, des, item.quantity || 0, unitPrice, totalPrice, item.beneficiaryName || item.comment || ''));
         });
@@ -455,8 +456,8 @@ export function formatMovementsForExport(
         const art = articleMap.get(item.articleId);
         const ref = art ? art.ref : '';
         const des = art ? art.designation : '';
-        const unitPrice = item.price || (art ? art.price : 0) || 0;
-        const totalPrice = (item.quantity || 0) * unitPrice;
+        const unitPrice = Number(item.price) || (art ? Number(art.price) : 0) || 0;
+        const totalPrice = (Number(item.quantity) || 0) * unitPrice;
 
         const row = buildRawMovementRow(
           m, mDate, ref, des, item.quantity || 0, unitPrice, totalPrice, 
@@ -543,8 +544,8 @@ export function formatMovementsConsolidated(movements: Mouvement[], articles: Ar
       const unit = art ? art.unit : 'PIECE';
       const category = art ? (art.functionalCategory || art.category || 'Non classé') : 'Non classé';
 
-      const unitPrice = item.price || (art ? art.price : 0) || 0;
-      const totalPrice = (item.quantity || 0) * unitPrice;
+      const unitPrice = Number(item.price) || (art ? Number(art.price) : 0) || 0;
+      const totalPrice = (Number(item.quantity) || 0) * unitPrice;
 
       if (!summaryMap.has(articleId)) {
         summaryMap.set(articleId, {
@@ -626,8 +627,8 @@ export function formatTransfersForExport(transfers: Transfert[], articles: Artic
         const art = articleMap.get(item.articleId);
         const ref = art ? art.ref : '';
         const des = art ? art.designation : '';
-        const unitPrice = item.price || (art ? art.price : 0) || 0;
-        const totalVal = (item.quantity || 0) * unitPrice;
+        const unitPrice = Number(item.price) || (art ? Number(art.price) : 0) || 0;
+        const totalVal = (Number(item.quantity) || 0) * unitPrice;
 
         const recItem = t.receivedItems?.find(ri => ri.articleId === item.articleId);
         const qtyRec = recItem ? (recItem.quantityReceived ?? recItem.quantity) : (t.status === 'RECEPTIONNE' || t.status === 'ACCEPTE' || t.status === 'RECU' ? item.quantity : 0);

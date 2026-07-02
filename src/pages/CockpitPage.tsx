@@ -1,7 +1,9 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Dashboard } from '../components/Dashboard';
 import { useInventory } from '../context/InventoryContext';
+import { SiteComparator } from '../core/siteComparator';
+import { RadarAnalyzer } from '../core/radarAnalyzer';
 
 const pageRouteMap: Record<string, string> = {
   'COCKPIT': '/',
@@ -28,7 +30,27 @@ const pageRouteMap: Record<string, string> = {
 
 export const CockpitPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentSite, articles, mouvements, isAdmin } = useInventory();
+  const { currentSite, articles, mouvements, isAdmin, engins = [], perfos = [], maintenanceLogs = [] } = useInventory();
+
+  // Compute live site comparison metrics
+  const metrics = useMemo(() => {
+    const validSites: ('SMI' | 'OUMEJRANE' | 'BOU-AZZER' | 'OUANSIMI' | 'KOUDIA')[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+    const radarReports = validSites.map(site => {
+      return RadarAnalyzer.generateReport(
+        site,
+        mouvements || [],
+        articles || [],
+        maintenanceLogs || []
+      );
+    });
+    return SiteComparator.compareSites(
+      radarReports,
+      articles,
+      mouvements,
+      engins,
+      perfos
+    );
+  }, [articles, mouvements, engins, perfos, maintenanceLogs]);
 
   const handleAction = (page: string) => {
     const route = pageRouteMap[page];

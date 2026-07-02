@@ -8,6 +8,9 @@ import { offlineService } from '../services/offline.service';
 import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article } from '../types';
 import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 import { calculatePriceUpdates } from '../context/InventoryContext';
+import { offlineQueue } from '../lib/offlineQueue';
+import { useSystemStore } from '../stores/system.store';
+import { toast } from 'sonner';
 
 export function useMovements() {
   const currentSite = useAuthStore(s => s.currentSite);
@@ -117,26 +120,151 @@ export function useMovements() {
   }, [setAnomalyReports, currentSite, currentUser]);
 
   const addMouvement = useCallback(async (mouvement: Mouvement) => {
-    const res = await movementsService.addMouvement(mouvement);
-    if (!res.success) {
-      throw new Error(res.error);
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await movementsService.addMouvement(mouvement, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'mvt_' + crypto.randomUUID();
+      const payload = { intentId, type: 'addMouvement', payload: mouvement };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'addMouvement',
+        payload: mouvement,
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.info("Mode hors-ligne : mouvement enregistré localement. Il sera synchronisé dès le retour du réseau.");
+      return;
+    }
+
+    try {
+      const res = await movementsService.addMouvement(mouvement);
+      if (!res.success) throw new Error(res.error);
+    } catch (err: any) {
+      console.warn('[useMovements] Transaction failed, queuing offline fallback', err);
+      const res = await movementsService.addMouvement(mouvement, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'mvt_' + crypto.randomUUID();
+      const payload = { intentId, type: 'addMouvement', payload: mouvement };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'addMouvement',
+        payload: mouvement,
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.warning("Échec réseau : mouvement enregistré localement pour synchronisation future.");
     }
   }, []);
 
   const addPurchaseRequest = useCallback(async (pr: PurchaseRequest) => {
-    const res = await movementsService.addPurchaseRequest(pr);
-    if (!res.success) {
-      throw new Error(res.error);
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await movementsService.addPurchaseRequest(pr, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'pr_' + crypto.randomUUID();
+      const payload = { intentId, type: 'addPurchaseRequest', payload: pr };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'addPurchaseRequest',
+        payload: pr,
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.info("Mode hors-ligne : demande d'achat enregistrée localement.");
+      return { success: true };
     }
-    return res;
+
+    try {
+      const res = await movementsService.addPurchaseRequest(pr);
+      if (!res.success) throw new Error(res.error);
+      return res;
+    } catch (err: any) {
+      console.warn('[useMovements] Add PR failed, queuing offline fallback', err);
+      const res = await movementsService.addPurchaseRequest(pr, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'pr_' + crypto.randomUUID();
+      const payload = { intentId, type: 'addPurchaseRequest', payload: pr };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'addPurchaseRequest',
+        payload: pr,
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.warning("Échec réseau : demande d'achat enregistrée localement.");
+      return { success: true };
+    }
   }, []);
 
   const updatePRStatus = useCallback(async (id: string, status: any) => {
-    const res = await movementsService.updatePRStatus(id, status);
-    if (!res.success) {
-      throw new Error(res.error);
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await movementsService.updatePRStatus(id, status, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'upr_' + crypto.randomUUID();
+      const payload = { intentId, type: 'updatePRStatus', payload: { id, status } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'updatePRStatus',
+        payload: { id, status },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.info("Mode hors-ligne : changement de statut enregistré localement.");
+      return { success: true };
     }
-    return res;
+
+    try {
+      const res = await movementsService.updatePRStatus(id, status);
+      if (!res.success) throw new Error(res.error);
+      return res;
+    } catch (err: any) {
+      console.warn('[useMovements] Update PR status failed, queuing offline fallback', err);
+      const res = await movementsService.updatePRStatus(id, status, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'upr_' + crypto.randomUUID();
+      const payload = { intentId, type: 'updatePRStatus', payload: { id, status } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'updatePRStatus',
+        payload: { id, status },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.warning("Échec réseau : changement de statut enregistré localement.");
+      return { success: true };
+    }
   }, []);
 
   return {

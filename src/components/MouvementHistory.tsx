@@ -90,8 +90,8 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
   const exportCSV = () => {
     const escape = (val: any) => {
       if (val === null || val === undefined) return '';
-      const s = String(val).replace(/"/g, '""');
-      return s.includes(',') || s.includes('"') || s.includes('\n') ? `"${s}"` : s;
+      const s = String(val).replace(/"/g, '""').replace(/\n/g, ' ');
+      return `"${s}"`;
     };
 
     const headers = [
@@ -131,7 +131,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
       escape(m.createdBy || 'Admin')
     ]);
 
-    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(",")).join("\n");
+    const csvContent = "\uFEFF" + [headers, ...rows].map(e => e.join(";")).join("\n");
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -571,7 +571,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                             {formatCurrency(item.price)}
                           </td>
                           <td className="py-4 px-6 text-right font-black text-slate-950 text-sm">
-                            {formatCurrency(item.quantity * item.price)}
+                            {formatCurrency((Number(item.quantity) || 0) * (Number(item.price) || 0))}
                           </td>
                         </tr>
                       );
@@ -581,7 +581,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                     <tr className="bg-slate-50/80 border-t border-slate-200 text-sm font-black">
                       <td colSpan={3} className="py-5 px-6 text-right uppercase text-xs text-slate-450 tracking-wider">Total Général (HT) :</td>
                       <td className="py-5 px-6 text-right text-base text-slate-950 font-black">
-                        {formatCurrency(selectedMouvement.items.reduce((sum, i) => sum + (i.quantity * i.price), 0))}
+                        {formatCurrency(selectedMouvement.items.reduce((sum, i) => sum + ((Number(i.quantity) || 0) * (Number(i.price) || 0)), 0))}
                       </td>
                     </tr>
                   </tfoot>

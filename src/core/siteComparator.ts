@@ -21,14 +21,25 @@ export interface SiteMetrics {
 }
 
 export class SiteComparator {
-  static compareSites(reports: RadarReport[], articles: any[] = [], movements: any[] = []): SiteMetrics[] {
+  static compareSites(
+    reports: RadarReport[],
+    articles: any[] = [],
+    movements: any[] = [],
+    engins: any[] = [],
+    perfos: any[] = []
+  ): SiteMetrics[] {
     const validSites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
     
     const metrics = validSites.map(site => {
       const report = reports.find(r => r.site === site);
       
-      const enginCount = this.getEnginCount(site);
-      const perforateurCount = this.getPerforateurCount(site);
+      const enginCount = engins.filter(e =>
+        e.site === site && e.status !== 'REFORME' && e.status !== 'VENDU'
+      ).length || 1;
+      
+      const perforateurCount = perfos.filter(p =>
+        p.site === site && p.status !== 'REFORME' && p.status !== 'VENDU'
+      ).length || 1;
       
       // Calculate from live articles if available, otherwise fallback to reports anomalies
       const siteArticles = articles.filter(a => a.site === site);

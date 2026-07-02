@@ -124,11 +124,11 @@ export function useCommunication() {
       return;
     }
 
-    const path = 'inbox_items';
+    const inboxCol = collection(db, 'userInbox', currentUser.email, 'messages');
     const q = query(
-      collection(db, path),
-      where('userId', '==', currentUser.email),
-      orderBy('createdAt', 'desc')
+      inboxCol,
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -139,7 +139,7 @@ export function useCommunication() {
       setInbox(items);
       setLoading(false);
     }, (error) => {
-      handleFirestoreError(error, OperationType.LIST, path);
+      handleFirestoreError(error, OperationType.LIST, `userInbox/${currentUser.email}/messages`);
     });
 
     return () => unsubscribe();
@@ -359,7 +359,8 @@ export function useCommunication() {
         updatedAt: nowISO
       };
       // To preserve offline writes, we use user-specific sub-keys or just a random generated ID
-      batch.set(doc(db, 'inbox_items', inboxItemId), inboxItem);
+      const inboxRef = doc(db, 'userInbox', rec.email, 'messages', inboxItemId);
+      batch.set(inboxRef, inboxItem);
     });
 
     try {
@@ -385,9 +386,9 @@ export function useCommunication() {
     status: RecipientStatus,
     timeSpentSeconds?: number
   ) => {
-    if (!currentUser) return;
+    if (!currentUser?.email) return;
 
-    const inboxRef = doc(db, 'inbox_items', inboxItemId);
+    const inboxRef = doc(db, 'userInbox', currentUser.email, 'messages', inboxItemId);
     const nowISO = new Date().toISOString();
 
     const updates: Partial<UserInboxItem> = {
@@ -436,7 +437,7 @@ export function useCommunication() {
         }
       }
     } catch (error) {
-      handleFirestoreError(error, OperationType.UPDATE, 'inbox_items');
+      handleFirestoreError(error, OperationType.UPDATE, `userInbox/${currentUser.email}/messages`);
     }
   }, [currentUser, trackTelemetry]);
 

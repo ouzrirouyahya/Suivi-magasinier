@@ -57,7 +57,7 @@ const TABS = [
 const COLORS = ['#d4af37', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export function ReportPage() {
-  const { articles, mouvements, transferts, maintenanceLogs = [], currentUser } = useInventory();
+  const { articles, mouvements, transferts, maintenanceLogs = [], currentUser, engins = [], perfos = [] } = useInventory();
   const printRef = useRef<HTMLDivElement>(null);
   
   const {
@@ -116,22 +116,22 @@ export function ReportPage() {
   const siteMetrics = useMemo(() => {
     const validSites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
     const reports = validSites.map(site => {
-      return RadarAnalyzer.generateReport(
-        site,
-        mouvements || [],
-        articles || [],
-        maintenanceLogs || []
-      );
+       return RadarAnalyzer.generateReport(
+         site,
+         mouvements || [],
+         articles || [],
+         maintenanceLogs || []
+       );
     });
-    return SiteComparator.compareSites(reports, articles || [], mouvements || []);
-  }, [mouvements, articles, maintenanceLogs]);
+    return SiteComparator.compareSites(reports, articles || [], mouvements || [], engins, perfos);
+  }, [mouvements, articles, maintenanceLogs, engins, perfos]);
 
   const criticalAlertsCount = useMemo(() => {
     return articles.filter(a => (Number(a.quantity) || 0) <= (Number(a.minStock) || 0)).length;
   }, [articles]);
 
   const enTransitCount = useMemo(() => {
-    const activeTransfers = transferts.filter(t => t.status === 'EN_TRANSIT');
+    const activeTransfers = transferts.filter(t => t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT');
     const totalQty = activeTransfers.reduce((sum, t) => {
       return sum + (t.items?.reduce((isum, it) => isum + (Number(it.quantity) || 0), 0) || 0);
     }, 0);
@@ -268,13 +268,19 @@ export function ReportPage() {
 
   // CSV Export Method
   const handleExportCSV = () => {
-    const headers = "ID,Référence,Date,Site,Type,Bénéficiaire,Valeur (MAD)\n";
+    const headers = "ID;Référence;Date;Site;Type;Bénéficiaire;Valeur (MAD)\n";
+    const escape = (val: any) => {
+      if (val === null || val === undefined) return '';
+      const s = String(val).replace(/"/g, '""').replace(/\n/g, ' ');
+      return `"${s}"`;
+    };
     const rows = filteredMouvements.map(m => {
       const val = getMovementValue(m);
-      return `"${m.id || ''}","${m.reference || ''}","${m.date || ''}","${m.site || ''}","${m.type || ''}","${m.beneficiaire || ''}",${val}`;
+      return `${escape(m.id)};${escape(m.reference)};${escape(m.date)};${escape(m.site)};${escape(m.type)};${escape(m.beneficiaire)};${val}`;
     }).join('\n');
 
-    const blob = new Blob([headers + rows], { type: 'text/csv;charset=utf-8;' });
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + headers + rows], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.setAttribute("href", url);

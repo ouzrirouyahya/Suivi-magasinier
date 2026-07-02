@@ -1,6 +1,7 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 import { useSystemStore } from '../stores/system.store';
 import { offlineService } from '../services/offline.service';
+import { offlineQueue } from '../lib/offlineQueue';
 import { toast } from 'sonner';
 
 export function useOffline() {
@@ -19,29 +20,128 @@ export function useOffline() {
     setIsDegradedNetwork
   } = useSystemStore();
 
+  const isSyncingRef = useRef(false);
+
+  // Sync from IndexedDB offlineQueue to store's retryQueue on load
+  useEffect(() => {
+    const syncFromIndexedDB = async () => {
+      try {
+        const items = await offlineQueue.load();
+        const mappedQueue = items.map(item => ({
+          intentId: item.payload.intentId || item.id,
+          type: item.payload.type,
+          payload: item.payload.payload,
+          dbId: item.id,
+          retryCount: item.retryCount || 0,
+          maxRetries: item.maxRetries || 3,
+          lastError: item.lastError
+        }));
+        setRetryQueue(mappedQueue);
+      } catch (err) {
+        console.error('[useOffline] Failed to load offline queue from IndexedDB:', err);
+      }
+    };
+    syncFromIndexedDB();
+  }, [setRetryQueue]);
+
   const triggerProcessing = useCallback(async () => {
-    if (retryQueue.length === 0) return;
+    if (retryQueue.length === 0 || isSyncingRef.current) return;
+    isSyncingRef.current = true;
     
     const queue = [...retryQueue];
-    const processed: string[] = [];
-    const failed: any[] = [];
+    const processedIds: string[] = [];
+    const failedItems: any[] = [];
     
     for (const item of queue) {
       try {
+        const startTx = Date.now();
         await offlineService.processItem(item);
-        processed.push(item.intentId);
-      } catch (err) {
-        failed.push({ ...item, error: err });
+        const duration = Date.now() - startTx;
+        
+        processedIds.push(item.intentId);
+        
+        // Remove from persistent IndexedDB/localStorage queue
+        if (item.dbId) {
+          await offlineQueue.remove(item.dbId);
+        } else {
+          const items = await offlineQueue.load();
+          const match = items.find(i => i.payload.intentId === item.intentId);
+          if (match) {
+            await offlineQueue.remove(match.id);
+          }
+        }
+        
+        // Update stats
+        setAvgTxDuration(avgTxDuration > 0 ? (avgTxDuration + duration) / 2 : duration);
+        setTxStats({
+          total: txStats.total + 1,
+          success: txStats.success + 1,
+          failed: txStats.failed
+        });
+      } catch (err: any) {
+        console.error(`[useOffline] Error processing queued operation ${item.intentId}:`, err);
+        const errorMsg = err.message || String(err);
+        
+        // Record retry failure in IndexedDB
+        if (item.dbId) {
+          await offlineQueue.incrementRetry(item.dbId, errorMsg);
+        } else {
+          const items = await offlineQueue.load();
+          const match = items.find(i => i.payload.intentId === item.intentId);
+          if (match) {
+            await offlineQueue.incrementRetry(match.id, errorMsg);
+          }
+        }
+        
+        const nextRetryCount = (item.retryCount || 0) + 1;
+        failedItems.push({
+          ...item,
+          retryCount: nextRetryCount,
+          lastError: errorMsg
+        });
+
+        setTxStats({
+          total: txStats.total + 1,
+          success: txStats.success,
+          failed: txStats.failed + 1
+        });
       }
     }
     
-    setRetryQueue(retryQueue.filter(q => !processed.includes(q.intentId)));
-    if (failed.length > 0) {
-      setDlq([...dlq, ...failed]);
+    // Compute next retry queue
+    const remainingInQueue = retryQueue.filter(q => !processedIds.includes(q.intentId));
+    
+    // Separate active retry operations from dead letters
+    const nextRetryQueue: any[] = [];
+    const newDeadLetters: any[] = [];
+    
+    remainingInQueue.forEach(item => {
+      const failedMatch = failedItems.find(f => f.intentId === item.intentId);
+      if (failedMatch) {
+        if (failedMatch.retryCount >= (item.maxRetries || 3)) {
+          newDeadLetters.push(failedMatch);
+        } else {
+          nextRetryQueue.push(failedMatch);
+        }
+      } else {
+        nextRetryQueue.push(item);
+      }
+    });
+
+    setRetryQueue(nextRetryQueue);
+    if (newDeadLetters.length > 0) {
+      setDlq([...dlq, ...newDeadLetters]);
     }
     
-    toast.success(`${processed.length} opération(s) synchronisée(s)`);
-  }, [retryQueue, dlq, setRetryQueue, setDlq]);
+    if (processedIds.length > 0) {
+      toast.success(`${processedIds.length} opération(s) synchronisée(s) avec succès !`);
+    }
+    if (newDeadLetters.length > 0) {
+      toast.error(`${newDeadLetters.length} opération(s) ont échoué définitivement et déplacées dans la file d'erreurs (DLQ)`);
+    }
+    
+    isSyncingRef.current = false;
+  }, [retryQueue, dlq, txStats, avgTxDuration, setRetryQueue, setDlq, setAvgTxDuration, setTxStats]);
 
   // Network monitoring
   useEffect(() => {
@@ -86,13 +186,17 @@ export function useOffline() {
   }, [setDlq]);
 
   const simulateRuleFailure = useCallback(async () => {
-    // Test firestore rules
-    toast.info("Test des règles de sécurité...");
+    toast.info("Test des règles de sécurité en cours...");
+    setTimeout(() => {
+      toast.error("Simulation d'échec : Permission Firestore insuffisante");
+    }, 1000);
   }, []);
 
   const simulateConcurrentConflicts = useCallback(async () => {
-    // Simulate concurrent writes
-    toast.info("Simulation de conflits concurrents...");
+    toast.info("Simulation de conflits de concurrence...");
+    setTimeout(() => {
+      toast.warning("Conflit de transaction détecté. Retransmission automatique de l'action.");
+    }, 1000);
   }, []);
 
   return {
