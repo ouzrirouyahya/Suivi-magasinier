@@ -35,7 +35,7 @@ export function MonthlyClosingView() {
   const [isLoading, setIsLoading] = useState(true);
   const [isClosingInProgress, setIsClosingInProgress] = useState(false);
 
-  // Determine current eligible month for closing
+  // Determine current active month
   const currentMonthValue = useMemo(() => {
     const today = new Date();
     const y = today.getFullYear();
@@ -43,7 +43,22 @@ export function MonthlyClosingView() {
     return `${y}-${m}`;
   }, []);
 
-  const [targetMonth, setTargetMonth] = useState<string>(currentMonthValue);
+  // Determine previous month value (the default month to close)
+  const previousMonthValue = useMemo(() => {
+    const today = new Date();
+    // Move to previous month
+    today.setMonth(today.getMonth() - 1);
+    const y = today.getFullYear();
+    const m = String(today.getMonth() + 1).padStart(2, '0');
+    return `${y}-${m}`;
+  }, []);
+
+  // Initialize with previous month, not the current month!
+  const [targetMonth, setTargetMonth] = useState<string>(previousMonthValue);
+
+  const isCurrentOrFutureMonth = useMemo(() => {
+    return targetMonth >= currentMonthValue;
+  }, [targetMonth, currentMonthValue]);
 
   // Check if current user has Super Admin permissions
   const isSuperAdmin = useMemo(() => {
@@ -149,8 +164,34 @@ export function MonthlyClosingView() {
       return;
     }
 
+    if (isCurrentOrFutureMonth) {
+      toast.error(`Impossible de clôturer le mois en cours (${getMonthLabel(targetMonth)}). Attendez la fin de la période active.`);
+      return;
+    }
+
     if (!canExecuteClosing) {
-      toast.error("Impossible de clôturer : Les 3 vigilances absolues ne sont pas au vert.");
+      const failures = [];
+      if (!isVigilance1Passed) {
+        failures.push(`Vigilance 1 : ${activeTransfers.length} transfert(s) inter-sites en transit`);
+      }
+      if (!isVigilance2Passed) {
+        failures.push(`Vigilance 2 : ${pendingRequests.length} demande(s) de suppression ou de transfert en suspens`);
+      }
+      if (!isVigilance3Passed) {
+        failures.push(`Vigilance 3 : ${negativeStockArticles.length} article(s) avec stock négatif`);
+      }
+
+      toast.error(
+        <div>
+          <p className="font-extrabold uppercase mb-1">🔒 Clôture bloquée (Vigilance) :</p>
+          <ul className="list-disc pl-4 space-y-0.5 text-[11px] font-semibold">
+            {failures.map((f, idx) => (
+              <li key={idx}>{f}</li>
+            ))}
+          </ul>
+        </div>,
+        { duration: 6000 }
+      );
       return;
     }
 
@@ -276,12 +317,26 @@ export function MonthlyClosingView() {
                 <input 
                   type="month" 
                   value={targetMonth} 
+                  max={previousMonthValue}
                   onChange={(e) => setTargetMonth(e.target.value)} 
                   disabled={!isSuperAdmin || isClosingInProgress}
                   className="bg-slate-50 border border-slate-200 h-8 px-2.5 rounded-lg text-xs font-bold outline-none focus:border-amber-500 text-slate-700"
                 />
               </div>
             </div>
+
+            {/* CURRENT MONTH NOT FINISHED WARNING */}
+            {isCurrentOrFutureMonth && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex gap-2 text-[11px] text-amber-800 font-medium">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-extrabold uppercase tracking-wider text-[10px]">Période en cours de saisie</p>
+                  <p className="mt-0.5 text-amber-700">
+                    Le mois de <strong>{getMonthLabel(targetMonth)}</strong> n'est pas encore terminé. Vous ne pouvez pas sceller une période active. Veuillez sélectionner un mois précédent déjà achevé.
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* AUTOMATED CALCULATIONS IN REALTIME */}
             <div>
@@ -403,15 +458,15 @@ export function MonthlyClosingView() {
 
             </div>
 
-            {/* TRIGGER BUTTON (Only for Super Admin, and only when 3 checks are green) */}
+            {/* TRIGGER BUTTON (Only for Super Admin) */}
             {isSuperAdmin && (
               <button
-                disabled={!canExecuteClosing || isClosingInProgress}
+                disabled={isClosingInProgress}
                 onClick={handleExecuteClosing}
                 className={`w-full py-3.5 px-4 font-black uppercase text-xs tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
-                  canExecuteClosing 
+                  (canExecuteClosing && !isCurrentOrFutureMonth)
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 active:scale-98'
-                    : 'bg-slate-100 border border-slate-200 text-slate-400 cursor-not-allowed'
+                    : 'bg-slate-100 border border-slate-200 text-slate-400 hover:bg-slate-200 hover:text-slate-600'
                 }`}
               >
                 {isClosingInProgress ? (
@@ -428,9 +483,15 @@ export function MonthlyClosingView() {
               </button>
             )}
 
-            {!canExecuteClosing && isSuperAdmin && (
-              <p className="text-[10px] text-center text-red-600 font-bold">
-                🔒 Le bouton de clôture sera débloqué une fois les 3 vigilances de conformité passées au vert.
+            {isSuperAdmin && (
+              <p className="text-[10px] text-center font-bold">
+                {isCurrentOrFutureMonth ? (
+                  <span className="text-amber-600">⚠️ Impossible de clôturer un mois en cours d'exercice.</span>
+                ) : !canExecuteClosing ? (
+                  <span className="text-red-600">🔒 Vigilances requises non résolues. Cliquez sur le bouton pour afficher les détails du blocage.</span>
+                ) : (
+                  <span className="text-green-600">✅ Tous les voyants sont au vert. Cliquez pour sceller définitivement.</span>
+                )}
               </p>
             )}
 
