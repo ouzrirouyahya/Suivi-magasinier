@@ -651,6 +651,31 @@ export type Message = SystemMessage;
 export type InboxItem = UserInboxItem;
 export type MessageTelemetry = MessageTelemetryEvent;
 
+export interface MonthlyClosing {
+  id: string; // e.g. "2026-06"
+  month: string; // e.g. "2026-06"
+  closedAt: string;
+  closedBy: string;
+  closedByName: string;
+  totalItems: number;
+  totalQuantity: number;
+  totalValue: number;
+  mouvementsCount: number;
+  status: 'LOCKED' | 'CLOSED';
+  vigilanceChecks: {
+    activeTransfers: number;
+    pendingRequests: number;
+    negativeStocks: number;
+  };
+  siteMetrics: {
+    site: string;
+    name: string;
+    value: number;
+    count: number;
+    critical: number;
+  }[];
+}
+
 
 
 

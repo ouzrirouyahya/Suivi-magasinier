@@ -312,8 +312,8 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     const siteArticles = articles.filter(a => a.site === site);
     const totalItems = siteArticles.length;
     const totalValue = siteArticles.reduce((sum, a) => sum + ((a.price || 0) * (a.quantity || 0)), 0);
-    const alertCount = siteArticles.filter(a => a.quantity <= a.minStock && a.quantity > 0).length;
-    const outOfStockCount = siteArticles.filter(a => a.quantity === 0).length;
+    const alertCount = siteArticles.filter(a => (a.minStock || 0) > 0 && a.quantity <= a.minStock && a.quantity > 0).length;
+    const outOfStockCount = siteArticles.filter(a => (a.minStock || 0) > 0 && a.quantity === 0).length;
     
     return {
       totalItems,
@@ -422,9 +422,11 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       
       // 4. Stock alert & out-of-stock count filter
       if (activeMainStatus === 'ALERT') {
-        if (a.quantity > a.minStock || a.quantity === 0) return false;
+        const minS = a.minStock || 0;
+        if (minS === 0 || a.quantity > minS || a.quantity === 0) return false;
       } else if (activeMainStatus === 'OUT_OF_STOCK') {
-        if (a.quantity !== 0) return false;
+        const minS = a.minStock || 0;
+        if (minS === 0 || a.quantity !== 0) return false;
       } else if (activeMainStatus === 'IN_STOCK') {
         if (a.quantity === 0) return false;
       }

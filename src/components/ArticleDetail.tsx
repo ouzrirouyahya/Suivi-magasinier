@@ -77,21 +77,21 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                     <span className="text-sm text-neutral-500">Quantité actuelle</span>
                     <span className={cn(
                       "text-4xl font-black",
-                      article.quantity <= article.minStock ? "text-red-600" : "text-blue-600"
+                      (article.minStock || 0) > 0 && article.quantity <= article.minStock ? "text-red-600" : "text-blue-600"
                     )}>{article.quantity} <span className="text-sm font-normal text-neutral-400">{article.unit}</span></span>
                   </div>
                   <div className="h-2 w-full bg-neutral-200 rounded-full overflow-hidden">
                     <div 
                       className={cn(
                         "h-full transition-all duration-1000",
-                        article.quantity <= article.minStock ? "bg-red-500" : "bg-blue-500"
+                        (article.minStock || 0) > 0 && article.quantity <= article.minStock ? "bg-red-500" : "bg-blue-500"
                       )}
-                      style={{ width: `${Math.min((article.quantity / (article.minStock * 2)) * 100, 100)}%` }}
+                      style={{ width: `${(article.minStock || 0) > 0 ? Math.min((article.quantity / (article.minStock * 2)) * 100, 100) : 100}%` }}
                     />
                   </div>
                   <div className="flex justify-between text-[10px] font-bold text-neutral-400 uppercase tracking-tighter">
                     <span>SEUIL: {article.minStock}</span>
-                    <span>CAPACITÉ MAX EST.: {article.minStock * 2}</span>
+                    <span>CAPACITÉ MAX EST.: {article.minStock > 0 ? article.minStock * 2 : '—'}</span>
                   </div>
                 </div>
               </div>
@@ -105,12 +105,12 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                     <span className="text-xs text-neutral-500">Valeur Immobilisée</span>
                     <span className="font-black text-rose-600">{formatCurrency(article.quantity * (article.price || 0))}</span>
                   </div>
-                  {article.quantity > article.minStock * 2 ? (
+                  {(article.minStock || 0) > 0 && article.quantity > article.minStock * 2 ? (
                     <div className="p-3 bg-rose-100 rounded-xl">
                       <p className="text-[10px] font-black text-rose-700 uppercase tracking-widest mb-1 text-center">Surstockage Détecté</p>
                       <p className="text-[11px] text-rose-600 font-bold leading-tight">Ce produit dépasse 2x le seuil de sécurité. Immobilisation excessive détectée.</p>
                     </div>
-                  ) : article.quantity === 0 ? (
+                  ) : (article.minStock || 0) > 0 && article.quantity === 0 ? (
                     <div className="p-3 bg-red-100 rounded-xl">
                       <p className="text-[10px] font-black text-red-700 uppercase tracking-widest mb-1 text-center">Rupture de Stock</p>
                       <p className="text-[11px] text-red-600 font-bold leading-tight">Risque critique d'arrêt de production.</p>

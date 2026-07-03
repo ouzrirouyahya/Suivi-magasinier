@@ -114,9 +114,33 @@
         "category": { "type": "string" }
       },
       "required": ["id", "itemId", "itemReference", "itemDesignation", "oldPrice", "newPrice", "changedBy", "changedByName", "changedAt", "category"]
+    },
+    "MonthlyClosing": {
+      "title": "Monthly Closing",
+      "description": "Clôture mensuelle des stocks avec calculs de valeur et états de vigilance",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "month": { "type": "string" },
+        "closedAt": { "type": "string" },
+        "closedBy": { "type": "string" },
+        "closedByName": { "type": "string" },
+        "totalItems": { "type": "number" },
+        "totalQuantity": { "type": "number" },
+        "totalValue": { "type": "number" },
+        "mouvementsCount": { "type": "number" },
+        "status": { "type": "string" },
+        "vigilanceChecks": { "type": "object" },
+        "siteMetrics": { "type": "array" }
+      },
+      "required": ["id", "month", "closedAt", "closedBy", "totalItems", "totalQuantity", "totalValue", "status", "vigilanceChecks"]
     }
   },
   "firestore": {
+    "/monthlyClosings/{closingId}": {
+      "schema": "MonthlyClosing",
+      "description": "Enregistrements d'archivage des clôtures mensuelles de stock"
+    },
     "/priceHistory/{recordId}": {
       "schema": "PriceChangeRecord",
       "description": "Historique complet des variations de prix"

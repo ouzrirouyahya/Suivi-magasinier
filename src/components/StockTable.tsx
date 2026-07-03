@@ -159,14 +159,16 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   const sortedAndFilteredArticles = useMemo(() => {
     const list = [...filteredArticles];
     list.sort((a, b) => {
-      const aRupture = a.quantity === 0 ? 1 : 0;
-      const bRupture = b.quantity === 0 ? 1 : 0;
+      const aMin = a.minStock || 0;
+      const bMin = b.minStock || 0;
+      const aRupture = (aMin > 0 && a.quantity === 0) ? 1 : 0;
+      const bRupture = (bMin > 0 && b.quantity === 0) ? 1 : 0;
       if (aRupture !== bRupture) {
         return bRupture - aRupture; // Rupture first
       }
       
-      const aCritique = a.quantity <= a.minStock ? 1 : 0;
-      const bCritique = b.quantity <= b.minStock ? 1 : 0;
+      const aCritique = (aMin > 0 && a.quantity <= aMin) ? 1 : 0;
+      const bCritique = (bMin > 0 && b.quantity <= bMin) ? 1 : 0;
       if (aCritique !== bCritique) {
         return bCritique - aCritique; // Critique next
       }
@@ -192,8 +194,11 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   }, [articles, selectedStockType, site]);
 
   const getStockStatus = (article: Article) => {
-    if (article.quantity === 0) return { label: 'RUPTURE', class: 'bg-rose-500 text-white', icon: AlertTriangle };
-    if (article.quantity <= article.minStock) return { label: 'CRITIQUE', class: 'bg-amber-500 text-white', icon: AlertTriangle };
+    const minS = article.minStock || 0;
+    if (minS > 0) {
+      if (article.quantity === 0) return { label: 'RUPTURE', class: 'bg-rose-500 text-white', icon: AlertTriangle };
+      if (article.quantity <= minS) return { label: 'CRITIQUE', class: 'bg-amber-500 text-white', icon: AlertTriangle };
+    }
     return { label: 'OPTIMAL', class: 'bg-emerald-500 text-white', icon: Package };
   };
 
@@ -769,8 +774,9 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
               <tbody className="divide-y divide-amber-100/50 bg-white">
                 {paginatedArticles.map((article) => {
                   const status = getStockStatus(article);
-                  const isZero = article.quantity === 0;
-                  const isCritical = article.quantity <= article.minStock;
+                  const minS = article.minStock || 0;
+                  const isZero = minS > 0 && article.quantity === 0;
+                  const isCritical = minS > 0 && article.quantity <= minS;
                   
                   return (
                     <tr 

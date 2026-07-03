@@ -11,7 +11,7 @@ interface StockAlertViewProps {
 
 export function StockAlertView({ articles, currentSite, onAction }: StockAlertViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const lowStockArticles = articles.filter(a => a.active && a.site === currentSite && a.quantity <= a.minStock);
+  const lowStockArticles = articles.filter(a => a.active && a.site === currentSite && (a.minStock || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0));
   
   const getTypeIcon = (type: string) => {
     switch (type) {

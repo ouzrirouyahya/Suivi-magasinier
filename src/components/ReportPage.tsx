@@ -20,7 +20,8 @@ import {
   X,
   ChevronLeft,
   ChevronRight,
-  GitCompare
+  GitCompare,
+  Lock
 } from 'lucide-react';
 import { 
   BarChart, 
@@ -45,13 +46,15 @@ import { jsPDF } from 'jspdf';
 import { toast } from 'sonner';
 import { SiteComparator } from '../core/siteComparator';
 import { RadarAnalyzer } from '../core/radarAnalyzer';
+import { MonthlyClosingView } from './MonthlyClosingView';
 
 const TABS = [
   { id: 'OVERVIEW', label: '📈 Vue Générale', icon: BarChart3 },
   { id: 'AI', label: '🤖 IA Analyse', icon: Brain },
   { id: 'SITES', label: '🏭 Sites', icon: MapPin },
   { id: 'COMPARISON', label: '📊 Comparaison', icon: GitCompare },
-  { id: 'DETAILS', label: '📋 Détails', icon: FileText }
+  { id: 'DETAILS', label: '📋 Détails', icon: FileText },
+  { id: 'CLOSING', label: '🔒 Clôture Mensuelle', icon: Lock }
 ];
 
 const COLORS = ['#d4af37', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
@@ -74,7 +77,7 @@ export function ReportPage() {
   } = useRadar();
   
   // States
-  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'AI' | 'SITES' | 'COMPARISON' | 'DETAILS'>('OVERVIEW');
+  const [activeTab, setActiveTab] = useState<'OVERVIEW' | 'AI' | 'SITES' | 'COMPARISON' | 'DETAILS' | 'CLOSING'>('OVERVIEW');
   const [selectedSite, setSelectedSite] = useState<SiteCode | 'ALL'>('ALL');
   const [dateStart, setDateStart] = useState<string>('');
   const [dateEnd, setDateEnd] = useState<string>('');
@@ -1179,6 +1182,8 @@ export function ReportPage() {
 
           </div>
         )}
+
+        {activeTab === 'CLOSING' && <MonthlyClosingView />}
 
       </div>
 

@@ -46,7 +46,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
     const totalArticles = siteArticles.length;
     const stockValue = siteArticles.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price || 0)), 0);
-    const lowStockCount = siteArticles.filter(a => (a.quantity || 0) <= (a.minStock || 0)).length;
+    const lowStockCount = siteArticles.filter(a => (a.minStock || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0)).length;
 
     // Last movements (always based on actual real actions)
     const lastSortie = [...siteMouvements]

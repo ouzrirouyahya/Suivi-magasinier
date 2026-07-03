@@ -404,6 +404,12 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // Monthly Closings
+    match /monthlyClosings/{id} {
+      allow read: if canReadIfActive();
+      allow create, update, delete: if isSuperAdmin() && isValidId(id);
+    }
+
     // Deletion requests: submitted by magaziniers, approved/rejected by admins
     match /deletionRequests/{id} {
       allow read: if isActive() && (
