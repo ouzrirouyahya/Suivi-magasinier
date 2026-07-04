@@ -1,5 +1,4 @@
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, addDoc, db } from '../lib/db';
 import { MessageTelemetry } from '../types';
 
 const QUEUE_KEY = 'hydromines_telemetry_queue';

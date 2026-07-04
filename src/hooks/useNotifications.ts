@@ -1,6 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, onSnapshot, query, orderBy, limit, where, db } from '../lib/db';
 import { useNotificationsStore } from '../stores/notification.store';
 import { useAuthStore } from '../stores/auth.store';
 import { notificationsService } from '../services/notification.service';

@@ -14,8 +14,7 @@ import {
   MapPin,
   ClipboardList
 } from 'lucide-react';
-import { doc, setDoc, onSnapshot, collection, deleteDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { doc, setDoc, onSnapshot, collection, deleteDoc, db } from '../lib/db';
 import { useInventory } from '../context/InventoryContext';
 import { MonthlyClosing, Article } from '../types';
 import { formatCurrency } from '../lib/utils';
@@ -34,6 +33,9 @@ export function MonthlyClosingView() {
   const [selectedClosing, setSelectedClosing] = useState<MonthlyClosing | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isClosingInProgress, setIsClosingInProgress] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [confirmInput, setConfirmInput] = useState('');
+  const [pendingCloseIsOverwrite, setPendingCloseIsOverwrite] = useState(false);
 
   // Determine current active month
   const currentMonthValue = useMemo(() => {
@@ -59,6 +61,13 @@ export function MonthlyClosingView() {
   const isCurrentOrFutureMonth = useMemo(() => {
     return targetMonth >= currentMonthValue;
   }, [targetMonth, currentMonthValue]);
+
+  const isOutOf90DayWindow = useMemo(() => {
+    const targetDate = new Date(targetMonth + '-01');
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+    return targetDate < ninetyDaysAgo;
+  }, [targetMonth]);
 
   // Check if current user has Super Admin permissions
   const isSuperAdmin = useMemo(() => {
@@ -132,9 +141,18 @@ export function MonthlyClosingView() {
     const targetMouvements = mouvements.filter(m => m.date && m.date.startsWith(targetMonth));
     const mouvementsCount = targetMouvements.length;
 
-    // 5. Per-site analytical breakdown
-    const sitesList = ['SMI', 'OUMEJRANE', 'KOUDIA', 'BOU-AZZER', 'OUANSIMI'];
-    const siteMetrics = sitesList.map(siteCode => {
+    // 5. Per-site analytical breakdown (derived from active articles)
+    const sitesPresents: string[] = [...new Set<string>(
+      activeArticles
+        .map(a => a.site as string)
+        .filter((s): s is string => !!s && s !== 'ALL')
+    )].sort();
+
+    const sitesList: string[] = sitesPresents.length > 0 
+      ? sitesPresents 
+      : ['SMI', 'OUMEJRANE', 'KOUDIA', 'BOU-AZZER', 'OUANSIMI']; // fallback
+
+    const siteMetrics = sitesList.map((siteCode: string) => {
       const siteArts = activeArticles.filter(a => a.site === siteCode);
       const siteValue = siteArts.reduce((sum, a) => sum + (Number(a.quantity) || 0) * (Number(a.price) || 0), 0);
       const criticalCount = siteArts.filter(a => (Number(a.quantity) || 0) <= (Number(a.minStock) || 0)).length;
@@ -153,12 +171,15 @@ export function MonthlyClosingView() {
       totalQuantity,
       totalValue,
       mouvementsCount,
+      mouvementsCountWarning: isOutOf90DayWindow 
+        ? 'ATTENTION : données de mouvements potentiellement incomplètes (> 90 jours)'
+        : null,
       siteMetrics
     };
-  }, [articles, mouvements, targetMonth]);
+  }, [articles, mouvements, targetMonth, isOutOf90DayWindow]);
 
   // Execute the Month Closing operation
-  const handleExecuteClosing = async () => {
+  const handleCloseMonth = async () => {
     if (!isSuperAdmin) {
       toast.error("Seul le rôle Super Admin est autorisé à clôturer le mois.");
       return;
@@ -195,16 +216,13 @@ export function MonthlyClosingView() {
       return;
     }
 
-    // Check if month already closed
     const alreadyClosed = closings.find(c => c.month === targetMonth);
-    if (alreadyClosed) {
-      const confirmOverwrite = window.confirm(`Le mois ${targetMonth} a déjà été clôturé. Voulez-vous écraser et recalculer cette clôture ?`);
-      if (!confirmOverwrite) return;
-    } else {
-      const confirmClosing = window.confirm(`Êtes-vous sûr de vouloir sceller définitivement la clôture de stock pour le mois ${targetMonth} ? Cette action enregistrera les métriques financières officielles de la plateforme.`);
-      if (!confirmClosing) return;
-    }
+    setPendingCloseIsOverwrite(!!alreadyClosed);
+    setConfirmInput('');
+    setShowConfirmModal(true);
+  };
 
+  const handlePerformClosing = async () => {
     setIsClosingInProgress(true);
     try {
       const closingId = targetMonth;
@@ -218,6 +236,9 @@ export function MonthlyClosingView() {
         totalQuantity: closingStats.totalQuantity,
         totalValue: closingStats.totalValue,
         mouvementsCount: closingStats.mouvementsCount,
+        mouvementsCountNote: isOutOf90DayWindow 
+          ? 'INCOMPLET_HORS_FENETRE_90J' 
+          : 'COMPLET',
         status: 'LOCKED',
         vigilanceChecks: {
           activeTransfers: activeTransfers.length,
@@ -333,6 +354,18 @@ export function MonthlyClosingView() {
                   <p className="font-extrabold uppercase tracking-wider text-[10px]">Période en cours de saisie</p>
                   <p className="mt-0.5 text-amber-700">
                     Le mois de <strong>{getMonthLabel(targetMonth)}</strong> n'est pas encore terminé. Vous ne pouvez pas sceller une période active. Veuillez sélectionner un mois précédent déjà achevé.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {isOutOf90DayWindow && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex gap-2 text-[11px] text-amber-800 font-medium">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="font-extrabold uppercase tracking-wider text-[10px]">Mois hors fenêtre de données</p>
+                  <p className="mt-0.5 text-amber-700">
+                    Ce mois est hors de la fenêtre de données (90 jours). Le décompte des mouvements peut être incomplet. Recommandé : clôturer dans les 90 jours suivant la fin du mois.
                   </p>
                 </div>
               </div>
@@ -462,7 +495,7 @@ export function MonthlyClosingView() {
             {isSuperAdmin && (
               <button
                 disabled={isClosingInProgress}
-                onClick={handleExecuteClosing}
+                onClick={handleCloseMonth}
                 className={`w-full py-3.5 px-4 font-black uppercase text-xs tracking-wider rounded-xl transition-all flex items-center justify-center gap-2 cursor-pointer shadow-sm ${
                   (canExecuteClosing && !isCurrentOrFutureMonth)
                     ? 'bg-gradient-to-r from-amber-500 to-amber-600 text-white hover:from-amber-600 hover:to-amber-700 active:scale-98'
@@ -723,6 +756,55 @@ export function MonthlyClosingView() {
           </div>
           {/* PRINTABLE ZONE END */}
 
+        </div>
+      )}
+
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 no-print animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-md w-full shadow-2xl">
+            <div className="flex items-center gap-3 mb-4">
+              <ShieldAlert className="w-6 h-6 text-amber-400" />
+              <h3 className="text-white font-black text-lg">
+                {pendingCloseIsOverwrite ? 'Réécrire la clôture' : 'Confirmer la clôture'}
+              </h3>
+            </div>
+            <p className="text-slate-300 text-sm mb-2">
+              {pendingCloseIsOverwrite 
+                ? `Le mois ${targetMonth} a déjà été clôturé. Cette action écrasera les données existantes.`
+                : `Vous êtes sur le point de sceller définitivement la clôture financière de ${targetMonth}.`
+              }
+            </p>
+            <p className="text-slate-400 text-sm mb-4">
+              Tapez <span className="text-amber-400 font-mono font-bold">{targetMonth}</span> pour confirmer :
+            </p>
+            <input
+              type="text"
+              value={confirmInput}
+              onChange={e => setConfirmInput(e.target.value)}
+              placeholder={targetMonth}
+              className="w-full bg-slate-800 border border-slate-600 rounded-lg px-4 py-2 text-white font-mono mb-4 focus:outline-none focus:border-amber-500"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <button
+                onClick={() => { setShowConfirmModal(false); setConfirmInput(''); }}
+                className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmModal(false);
+                  setConfirmInput('');
+                  handlePerformClosing();
+                }}
+                disabled={confirmInput !== targetMonth}
+                className="flex-1 px-4 py-2 bg-amber-500 text-black rounded-lg font-black hover:bg-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {isClosingInProgress ? 'Clôture...' : 'Confirmer la clôture'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

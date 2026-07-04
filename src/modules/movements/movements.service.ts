@@ -1,5 +1,4 @@
-import { doc, runTransaction } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { doc, runTransaction, db } from '../../lib/db';
 import { Article, Mouvement, PurchaseRequest } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useMovementsStore } from './movements.store';
@@ -110,7 +109,7 @@ export class MovementsService {
               item.price || 0,
               movementId,
               mouvement.createdBy,
-              mouvement.date
+              mouvement.date as any
             );
             newPMP = updates.price;
             lastPurchasePrice = updates.lastPurchasePrice;

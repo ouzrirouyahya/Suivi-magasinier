@@ -10,9 +10,9 @@ import {
   orderBy,
   limit,
   runTransaction,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
+  onSnapshot,
+  db
+} from '../lib/db';
 import { Message, InboxItem, MessageDraft } from '../types';
 
 export const messagingService = {

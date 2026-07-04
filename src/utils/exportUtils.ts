@@ -317,8 +317,8 @@ export function formatMovementsForExport(
 
   // Sort movements by date descending
   const sortedMovements = [...movements].sort((a, b) => {
-    const tA = a.date ? new Date(typeof a.date.toDate === 'function' ? a.date.toDate() : a.date).getTime() : 0;
-    const tB = b.date ? new Date(typeof b.date.toDate === 'function' ? b.date.toDate() : b.date).getTime() : 0;
+    const tA = a.date ? new Date(typeof (a.date as any).toDate === 'function' ? (a.date as any).toDate() : a.date as any).getTime() : 0;
+    const tB = b.date ? new Date(typeof (b.date as any).toDate === 'function' ? (b.date as any).toDate() : b.date as any).getTime() : 0;
     return tB - tA; // descending
   });
 
@@ -593,8 +593,8 @@ export function formatTransfersForExport(transfers: Transfert[], articles: Artic
   const articleMap = new Map(articles.map(a => [a.id, a]));
 
   const sortedTransfers = [...transfers].sort((a, b) => {
-    const tA = a.dateEnvoi ? new Date(typeof a.dateEnvoi.toDate === 'function' ? a.dateEnvoi.toDate() : a.dateEnvoi).getTime() : 0;
-    const tB = b.dateEnvoi ? new Date(typeof b.dateEnvoi.toDate === 'function' ? b.dateEnvoi.toDate() : b.dateEnvoi).getTime() : 0;
+    const tA = a.dateEnvoi ? new Date(typeof (a.dateEnvoi as any).toDate === 'function' ? (a.dateEnvoi as any).toDate() : a.dateEnvoi as any).getTime() : 0;
+    const tB = b.dateEnvoi ? new Date(typeof (b.dateEnvoi as any).toDate === 'function' ? (b.dateEnvoi as any).toDate() : b.dateEnvoi as any).getTime() : 0;
     return tB - tA;
   });
 

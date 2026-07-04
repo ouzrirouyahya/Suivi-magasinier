@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useCallback } from 'react';
-import { collection, onSnapshot, doc, writeBatch, setDoc, runTransaction, query, where } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, onSnapshot, doc, writeBatch, setDoc, runTransaction, query, where, db } from '../lib/db';
 import { useArticlesStore } from '../stores/article.store';
 import { useAuthStore } from '../stores/auth.store';
 import { useMovementsStore } from '../stores/movement.store';
@@ -202,6 +201,39 @@ export function useArticles() {
   }, [rawArticles, movements, hydrominesCatalog]);
 
   const saveArticle = useCallback(async (article: Article) => {
+    // Vérifier l'unicité de la référence sur le site
+    const existingArticle = (rawArticles || []).find(a => a.id === article.id);
+
+    if (existingArticle) {
+      // Dans updateArticle() logic:
+      if (article.ref && article.ref !== existingArticle.ref) {
+        const conflict = (rawArticles || []).find(a => 
+          a.id !== article.id &&
+          a.ref.trim().toLowerCase() === article.ref.trim().toLowerCase() &&
+          a.site === (article.site || existingArticle.site) &&
+          a.active !== false
+        );
+        if (conflict) {
+          throw new Error(`La référence "${article.ref}" est déjà utilisée par l'article "${conflict.designation}".`);
+        }
+      }
+    } else {
+      // Dans addArticle() logic:
+      const existingWithSameRef = (rawArticles || []).find(a => 
+        a.ref.trim().toLowerCase() === article.ref.trim().toLowerCase() &&
+        a.site === article.site &&
+        a.active !== false
+      );
+
+      if (existingWithSameRef) {
+        throw new Error(
+          `La référence "${article.ref}" existe déjà sur le chantier ${article.site} ` +
+          `(Article : "${existingWithSameRef.designation}", ID : ${existingWithSameRef.id}). ` +
+          `Utilisez une référence différente ou mettez à jour l'article existant.`
+        );
+      }
+    }
+
     const isOnline = navigator.onLine;
     if (!isOnline) {
       const res = await articleService.saveArticle(article, true);
@@ -247,7 +279,7 @@ export function useArticles() {
       
       toast.warning("Échec réseau : article sauvegardé localement.");
     }
-  }, []);
+  }, [rawArticles]);
 
   const deleteArticle = useCallback(async (id: string) => {
     const isOnline = navigator.onLine;
@@ -488,12 +520,17 @@ export function useArticles() {
     toast.success("Demande de suppression rejetée.");
   }, [deletionRequests]);
 
+  const addArticle = saveArticle;
+  const updateArticle = saveArticle;
+
   return {
     articles: rawArticles,
     ghostArticles,
     catalogUsageStats,
     deletionRequests,
     saveArticle,
+    addArticle,
+    updateArticle,
     deleteArticle,
     deleteArticles,
     importAllCatalogToArticles: articleService.importAllCatalogToArticles,

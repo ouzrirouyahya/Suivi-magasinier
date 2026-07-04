@@ -1,6 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { collection, onSnapshot, query, orderBy, where, Timestamp } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, onSnapshot, query, orderBy, where, Timestamp, db } from '../lib/db';
 import { useMovementsStore } from '../stores/movement.store';
 import { useAuthStore } from '../stores/auth.store';
 import { movementsService } from '../services/movement.service';

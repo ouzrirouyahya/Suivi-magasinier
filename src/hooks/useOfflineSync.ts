@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from 'react';
-import { onSnapshotsInSync } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { onSnapshotsInSync, db } from '../lib/db';
 
 export function useOfflineSync() {
   const [isOnline, setIsOnline] = useState(navigator.onLine);

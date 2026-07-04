@@ -1,12 +1,11 @@
 import { useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
-import { doc, onSnapshot, collection } from 'firebase/firestore';
-import { auth, db } from '../lib/firebase';
+import { doc, onSnapshot, collection, setDoc, db } from '../lib/db';
+import { auth } from '../lib/firebase';
 import { useAuthStore } from '../stores/auth.store';
 import { authService } from '../services/auth.service';
 import { UserAccount, SiteCode } from '../types';
 import { serializeFirestoreData, cleanObject } from '../lib/utils';
-import { setDoc } from 'firebase/firestore';
 import { toast } from 'sonner';
 
 export function useAuth() {

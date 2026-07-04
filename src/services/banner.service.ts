@@ -5,9 +5,9 @@ import {
   updateDoc,
   getDoc,
   setDoc,
-  onSnapshot
-} from 'firebase/firestore';
-import { db } from '../lib/firebase';
+  onSnapshot,
+  db
+} from '../lib/db';
 import { BannerNotification, BannerView, SiteCode, UserRole } from '../types';
 
 export const bannerService = {

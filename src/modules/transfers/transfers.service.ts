@@ -1,5 +1,4 @@
-import { doc, runTransaction } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { doc, runTransaction, db } from '../../lib/db';
 import { Article, Transfert, MouvementItem } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useTransfersStore } from './transfers.store';

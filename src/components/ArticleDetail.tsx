@@ -22,7 +22,7 @@ interface ArticleDetailProps {
 export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailProps) {
   const articleMouvements = mouvements.filter(m => 
     m.items.some(item => item.articleId === article.id)
-  ).sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  ).sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime());
 
   // Prepare data for consumption chart (last 6 months)
   const last6Months = Array.from({ length: 6 }).map((_, i) => {
@@ -33,7 +33,7 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
     
     const consumed = mouvements
       .filter(m => {
-        const md = new Date(m.date);
+        const md = new Date(m.date as any);
         return m.type === 'SORTIE' && 
                md.getMonth() === d.getMonth() && 
                md.getFullYear() === d.getFullYear() &&
@@ -203,7 +203,7 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                         const isStockIncrease = ['ENTREE', 'TRANSFERT_IN', 'RETOUR'].includes(m.type);
                         return (
                           <tr key={m.id}>
-                            <td className="text-xs text-neutral-500">{formatDate(m.date).split(' ')[0]}</td>
+                            <td className="text-xs text-neutral-500">{formatDate(m.date as any).split(' ')[0]}</td>
                             <td className="font-bold text-neutral-800 text-xs tracking-tight">{m.reference || m.id}</td>
                             <td>
                               <span className={cn(

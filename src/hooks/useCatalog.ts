@@ -1,6 +1,5 @@
 import { useEffect, useCallback, useState, useMemo } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, onSnapshot, db } from '../lib/db';
 import { useArticlesStore } from '../stores/article.store';
 import { catalogService } from '../services/catalog.service';
 import { offlineService } from '../services/offline.service';

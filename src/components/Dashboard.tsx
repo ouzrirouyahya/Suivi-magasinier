@@ -51,15 +51,15 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     // Last movements (always based on actual real actions)
     const lastSortie = [...siteMouvements]
       .filter(m => m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+      .sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime())[0];
 
     const lastEntree = [...siteMouvements]
       .filter(m => m.type === 'ENTREE' || m.type === 'TRANSFERT_IN')
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
+      .sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime())[0];
 
     const formatLastMouvementText = (m?: any) => {
       if (!m) return 'Aucun';
-      const d = new Date(m.date);
+      const d = new Date(m.date as any);
       const dateStr = d.toLocaleDateString('fr-MA', { day: '2-digit', month: '2-digit' });
       const priceSum = m.items.reduce((sum: number, it: any) => sum + (it.quantity * (it.price || 0)), 0);
       return `${dateStr} (${formatCurrency(priceSum)})`;
@@ -324,7 +324,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full shrink-0 animate-pulse" />
               Aujourd'hui : {(() => {
                 const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'ENTREE'));
-                const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                const count = mvs.filter(m => new Date(m.date as any).toDateString() === new Date().toDateString()).length;
                 return `${count} réception${count > 1 ? 's' : ''}`;
               })()}
             </div>
@@ -361,7 +361,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               <span className="w-1.5 h-1.5 bg-rose-500 rounded-full shrink-0 animate-pulse" />
               Aujourd'hui : {(() => {
                 const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && m.type === 'SORTIE');
-                const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                const count = mvs.filter(m => new Date(m.date as any).toDateString() === new Date().toDateString()).length;
                 return `${count} bon${count > 1 ? 's' : ''} de sortie`;
               })()}
             </div>
@@ -397,7 +397,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
             <span className="text-[10px] text-slate-400 font-bold uppercase tracking-wider whitespace-nowrap">
               Flux ce jour : {(() => {
                 const mvs = mouvements.filter(m => (site === 'ALL' ? true : m.site === site) && (m.type === 'TRANSFERT_OUT' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR'));
-                const count = mvs.filter(m => new Date(m.date).toDateString() === new Date().toDateString()).length;
+                const count = mvs.filter(m => new Date(m.date as any).toDateString() === new Date().toDateString()).length;
                 return count;
               })()}
             </span>

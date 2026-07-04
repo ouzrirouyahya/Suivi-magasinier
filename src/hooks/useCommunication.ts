@@ -13,9 +13,10 @@ import {
   writeBatch, 
   updateDoc,
   increment,
-  limit
-} from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+  limit,
+  db
+} from '../lib/db';
+import { auth } from '../lib/firebase';
 import { useInventory } from '../context/InventoryContext';
 import { 
   SystemMessage, 

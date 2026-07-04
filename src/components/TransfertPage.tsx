@@ -675,7 +675,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                           <ArrowRight className="w-3 h-3 text-slate-350" />
                           <span className={cn(t.targetSite === currentSite ? "text-slate-800 font-extrabold" : "")}>{t.targetSite}</span>
                           <span className="opacity-30">•</span>
-                          <span>Créé le {new Date(t.dateEnvoi).toLocaleDateString()} par <strong className="text-slate-500 font-extrabold lowercase font-mono">{t.creatorEmail || 'magasinier'}</strong></span>
+                          <span>Créé le {new Date(t.dateEnvoi as any).toLocaleDateString()} par <strong className="text-slate-500 font-extrabold lowercase font-mono">{t.creatorEmail || 'magasinier'}</strong></span>
                         </div>
                       </div>
                     </div>

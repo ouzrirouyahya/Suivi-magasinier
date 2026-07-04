@@ -1,6 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { collection, onSnapshot, query, where, or } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, onSnapshot, query, where, or, db } from '../lib/db';
 import { useTransfersStore } from '../stores/transfer.store';
 import { useAuthStore } from '../stores/auth.store';
 import { transfersService } from '../services/transfer.service';

@@ -47,7 +47,7 @@ export class RadarAnalyzer {
     const enginPieceMap = new Map<string, Mouvement[]>();
     
     movements
-      .filter(m => m.type === 'SORTIE' && m.engin && new Date(m.date) >= cutoffDate)
+      .filter(m => m.type === 'SORTIE' && m.engin && new Date(m.date as any) >= cutoffDate)
       .forEach(m => {
         m.items.forEach(item => {
           const key = `${m.engin}_${item.articleId}`;
@@ -61,7 +61,7 @@ export class RadarAnalyzer {
       if (mouvements.length >= 2) {
         const [engin, articleId] = key.split('_');
         const article = articles.find(a => a.id === articleId);
-        const dates = mouvements.map(m => new Date(m.date)).sort((a, b) => a.getTime() - b.getTime());
+        const dates = mouvements.map(m => new Date(m.date as any)).sort((a, b) => a.getTime() - b.getTime());
         
         // Vérifier si 2+ mouvements en moins de 15 jours
         for (let i = 1; i < dates.length; i++) {
@@ -105,7 +105,7 @@ export class RadarAnalyzer {
     const mecanoPieceMap = new Map<string, Mouvement[]>();
     
     movements
-      .filter(m => m.type === 'SORTIE' && m.mecanicien && new Date(m.date) >= cutoffDate)
+      .filter(m => m.type === 'SORTIE' && m.mecanicien && new Date(m.date as any) >= cutoffDate)
       .forEach(m => {
         m.items.forEach(item => {
           const key = `${m.mecanicien}_${item.articleId}`;
@@ -154,7 +154,7 @@ export class RadarAnalyzer {
     // Sorties de 1 unité répétées
     const smallMoves = movements.filter(
       m => m.type === 'SORTIE' && 
-           new Date(m.date) >= cutoffDate &&
+           new Date(m.date as any) >= cutoffDate &&
            m.items.some(i => i.quantity === 1)
     );
     
@@ -224,8 +224,8 @@ export class RadarAnalyzer {
       .filter(a => {
         const lastMove = movements
           .filter(m => m.items.some(i => i.articleId === a.id))
-          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
-        return !lastMove || new Date(lastMove.date) < cutoffDate;
+          .sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime())[0];
+        return !lastMove || new Date(lastMove.date as any) < cutoffDate;
       })
       .map(a => ({
         id: `anom_obs_${a.id}`,

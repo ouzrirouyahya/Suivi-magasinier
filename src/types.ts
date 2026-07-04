@@ -1,9 +1,30 @@
 
-import { Timestamp, FieldValue } from 'firebase/firestore';
+import { Timestamp, FieldValue } from './lib/db';
+import type { SiteCode } from './lib/constants';
 
-export type FirestoreDate = string | Timestamp | FieldValue | any;
+export type FirestoreDate = string | Timestamp | FieldValue;
+export type { SiteCode };
 
-export type SiteCode = 'SMI' | 'OUMEJRANE' | 'KOUDIA' | 'BOU-AZZER' | 'OUANSIMI' | 'ALL';
+export function toDateString(date: FirestoreDate | null | undefined): string {
+  if (!date) return '';
+  if (typeof date === 'string') return date;
+  if (date instanceof Date) return date.toISOString();
+  // Firestore Timestamp (objet avec seconds)
+  if (typeof date === 'object' && 'seconds' in date && typeof (date as any).seconds === 'number') {
+    return new Date((date as any).seconds * 1000).toISOString();
+  }
+  // FieldValue (serverTimestamp etc.) — pas de conversion possible
+  return '';
+}
+
+export function compareDates(a: FirestoreDate | null | undefined, b: FirestoreDate | null | undefined): number {
+  const dateA = toDateString(a);
+  const dateB = toDateString(b);
+  if (!dateA && !dateB) return 0;
+  if (!dateA) return 1;
+  if (!dateB) return -1;
+  return dateA.localeCompare(dateB);
+}
 
 export type StockType = 'ENGINS' | 'PERFORATEURS' | 'CONSOMMABLES' | 'EPI' | 'OUTILS_TRAVAUX' | 'AUTRES';
 export type ArticleType = StockType;
@@ -661,6 +682,7 @@ export interface MonthlyClosing {
   totalQuantity: number;
   totalValue: number;
   mouvementsCount: number;
+  mouvementsCountNote?: 'INCOMPLET_HORS_FENETRE_90J' | 'COMPLET';
   status: 'LOCKED' | 'CLOSED';
   vigilanceChecks: {
     activeTransfers: number;

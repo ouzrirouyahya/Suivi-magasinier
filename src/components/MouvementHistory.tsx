@@ -73,15 +73,15 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
     
     const matchesType = typeFilter === 'ALL' || m.type === typeFilter;
     
-    const mDate = m.date ? new Date(m.date).getTime() : 0;
+    const mDate = m.date ? new Date(m.date as any).getTime() : 0;
     const validMDate = isNaN(mDate) ? 0 : mDate;
     const matchesStart = !dateStart || validMDate >= new Date(dateStart).getTime();
     const matchesEnd = !dateEnd || validMDate <= new Date(dateEnd).getTime();
     
     return matchesSite && matchesSearch && matchesType && matchesStart && matchesEnd;
   }).sort((a, b) => {
-    const timeA = a.date ? new Date(a.date).getTime() : 0;
-    const timeB = b.date ? new Date(b.date).getTime() : 0;
+    const timeA = a.date ? new Date(a.date as any).getTime() : 0;
+    const timeB = b.date ? new Date(b.date as any).getTime() : 0;
     const validA = isNaN(timeA) ? 0 : timeA;
     const validB = isNaN(timeB) ? 0 : timeB;
     return validB - validA;
@@ -113,7 +113,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
 
     const rows = filteredMouvements.map(m => [
       escape(m.id),
-      escape(new Date(m.date).toLocaleString('fr-FR')),
+      escape(new Date(m.date as any).toLocaleString('fr-FR')),
       escape(m.type),
       escape(m.reference || ''),
       escape(m.status || 'VALIDE'),
@@ -286,7 +286,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
               displayedMouvements.map(m => (
                 <tr key={m.id} className="group hover:bg-slate-50/50 transition-all duration-200">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <p className="font-black text-slate-950 text-xs tracking-tight leading-none mb-1">{formatDate(m.date).split(' ')[0]}</p>
+                    <p className="font-black text-slate-950 text-xs tracking-tight leading-none mb-1">{formatDate(m.date as any).split(' ')[0]}</p>
                     <p className="text-[9px] font-mono font-black text-slate-400 uppercase tracking-widest flex items-center gap-1.5">
                        <HardDrive className="w-3 h-3 text-slate-300" /> {m.id.substring(0, 12)}
                     </p>
@@ -466,7 +466,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                   <span className="text-[11px] font-black uppercase tracking-widest bg-slate-900 text-white px-4 py-1.5 rounded-lg inline-block mb-3 shadow-sm">
                     {MOUVEMENT_TITLES[selectedMouvement.type] || "Bon de Mouvement"}
                   </span>
-                  <p className="text-slate-500 font-mono text-sm leading-none mt-1">Émis le : {formatDate(selectedMouvement.date)}</p>
+                  <p className="text-slate-500 font-mono text-sm leading-none mt-1">Émis le : {formatDate(selectedMouvement.date as any)}</p>
                   <p className="text-slate-805 font-black text-xs uppercase mt-2.5">ID : <span className="font-mono text-slate-500 tracking-tight">{selectedMouvement.id}</span></p>
                   {selectedMouvement.reference && (
                     <p className="text-sky-650 font-black text-sm uppercase mt-1">Réf : {selectedMouvement.reference}</p>

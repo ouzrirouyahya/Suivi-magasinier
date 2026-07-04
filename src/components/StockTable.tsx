@@ -81,7 +81,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
       .filter(m => {
         if (site !== 'ALL' && m.site !== site) return false;
         
-        const mDate = new Date(m.date);
+        const mDate = new Date(m.date as any);
         if (isNaN(mDate.getTime())) return false;
         
         const isRecent = (now - mDate.getTime()) <= dayInMs && (now - mDate.getTime()) >= 0;

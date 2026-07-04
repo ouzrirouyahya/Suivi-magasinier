@@ -1,5 +1,4 @@
-import { doc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { doc, db } from '../../lib/db';
 import { Article, MaintenanceLog } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useMaintenanceStore } from './maintenance.store';

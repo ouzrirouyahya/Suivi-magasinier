@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { collection, onSnapshot, query, orderBy, limit, where, startAfter, getDocs, DocumentSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, onSnapshot, query, orderBy, limit, where, startAfter, getDocs, DocumentSnapshot, db } from '../lib/db';
 import { useSystemStore } from '../stores/system.store';
 import { auditService } from '../services/audit.service';
 import { AuditLog } from '../types';

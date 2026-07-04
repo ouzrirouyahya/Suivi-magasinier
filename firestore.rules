@@ -111,6 +111,15 @@ service cloud.firestore {
       return isActive();
     }
 
+    // Helper function to safely get user email with database fallback
+    function getUserEmail() {
+      return request.auth != null && request.auth.token != null && request.auth.token.email != null
+        ? request.auth.token.email
+        : (request.auth != null && exists(/databases/$(database)/documents/accounts/$(request.auth.uid))
+            ? get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.email
+            : null);
+    }
+
     // System-wide write condition with Maintenance Mode protection
     function canWrite(allowedRoles) {
       return isMaintenanceLocked() 
@@ -159,7 +168,7 @@ service cloud.firestore {
 
     function isValidMouvement(data) {
       return data.keys().hasAll(['id', 'site', 'date', 'type', 'items', 'status'])
-        && data.keys().size() <= 25
+        && data.keys().size() <= 30
         && data.id is string && data.id.size() > 0 && data.id.size() <= 128
         && data.site is string && data.site.size() > 0 && data.site.size() <= 64
         && data.date is string && data.date.size() > 0 && data.date.size() <= 128
@@ -171,7 +180,18 @@ service cloud.firestore {
         && data.get('mecanicien', '') is string && data.get('mecanicien', '').size() <= 128
         && data.get('service', '') is string && data.get('service', '').size() <= 128
         && data.get('motif', '') is string && data.get('motif', '').size() <= 512
-        && data.get('notes', '') is string && data.get('notes', '').size() <= 2048;
+        && data.get('notes', '') is string && data.get('notes', '').size() <= 2048
+        && (!data.keys().contains('createdBy') || (data.createdBy is string && data.createdBy.size() <= 256))
+        && (!data.keys().contains('interventionType') || data.interventionType is string)
+        && (!data.keys().contains('effectiveDemandeur') || data.effectiveDemandeur is string)
+        && (!data.keys().contains('category') || data.category is string)
+        && (!data.keys().contains('targetSite') || data.targetSite is string)
+        && (!data.keys().contains('foreur') || data.foreur is string)
+        && (!data.keys().contains('perforateur') || data.perforateur is string)
+        && (!data.keys().contains('beneficiaire') || data.beneficiaire is string)
+        && (!data.keys().contains('referenceEngin') || data.referenceEngin is string)
+        && (!data.keys().contains('engin') || data.engin is string)
+        && (!data.keys().contains('vendeur') || data.vendeur is string);
     }
 
     function isValidTransfert(data) {
@@ -201,7 +221,7 @@ service cloud.firestore {
         && data.active is bool
         && (!data.keys().contains('canWrite') || data.canWrite is bool)
         && data.get('createdAt', '') is string && data.get('createdAt', '').size() <= 128
-        && (!data.keys().contains('status') || data.status in ['PENDING', 'APPROVED', 'REJECTED'])
+        && (!data.keys().contains('status') || data.status in ['PENDING', 'PENDING_REGISTRATION', 'APPROVED', 'REJECTED', 'DISABLED'])
         && (!data.keys().contains('requestedRole') || data.requestedRole in ['ADMIN', 'MAGASINIER', 'RESPONSABLE_CHANTIER'])
         && (!data.keys().contains('assignedSite') || data.assignedSite == null || data.assignedSite is string)
         && (!data.keys().contains('requestedSite') || data.requestedSite == null || data.requestedSite is string);
@@ -312,9 +332,14 @@ service cloud.firestore {
       allow read: if canReadIfActive();
       allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidHydrominesCatalog(incoming());
     }
-    match /metadata/{id} {
+    // system_config public pour afficher la page de maintenance
+    match /metadata/system_config {
       allow read: if true;
-      allow write: if isAdmin() && isValidId(id); // System admins bypass canWrite during lockdown
+    }
+    // Tous les autres documents metadata : auth requise
+    match /metadata/{id} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin() && isValidId(id);
     }
     match /engins/{id} {
       allow read: if canReadIfActive();
@@ -384,7 +409,7 @@ service cloud.firestore {
     // Transactional Movements: Append-only, never modifiable except by ADMIN, never deletable
     match /mouvements/{id} {
       allow read: if canReadSite(resource.data.site);
-      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER', 'MAINTENANCE'], incoming().site) 
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) 
                     && isValidId(id) && isValidMouvement(incoming());
       allow update: if canWrite(['ADMIN']) && isValidId(id) && isValidMouvement(incoming());
       allow delete: if false;
@@ -406,8 +431,9 @@ service cloud.firestore {
 
     // Monthly Closings
     match /monthlyClosings/{id} {
-      allow read: if canReadIfActive();
-      allow create, update, delete: if isSuperAdmin() && isValidId(id);
+      allow read: if isAdmin();  // Seulement ADMIN et SUPER_ADMIN
+      allow create, update: if isSuperAdmin() && isValidId(id);
+      allow delete: if isSuperAdmin() && isValidId(id);
     }
 
     // Deletion requests: submitted by magaziniers, approved/rejected by admins
@@ -517,15 +543,6 @@ service cloud.firestore {
     // =========================================================================
     // PHASE 1 — RÈGLES FIRESTORE : MESSAGERIE & NOTIFICATIONS BANNIÈRES (CORRIGÉES)
     // =========================================================================
-
-    // Helper function to safely get user email with database fallback
-    function getUserEmail() {
-      return request.auth != null && request.auth.token != null && request.auth.token.email != null
-        ? request.auth.token.email
-        : (request.auth != null && exists(/databases/$(database)/documents/accounts/$(request.auth.uid))
-            ? get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.email
-            : null);
-    }
 
     // --- COLLECTION : messages & system_messages ---
     match /messages/{messageId} {

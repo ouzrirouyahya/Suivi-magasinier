@@ -97,10 +97,10 @@ export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogV
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-slate-300" />
                       <span className="text-[11px] font-bold text-slate-600">
-                        {!log.timestamp || new Date(log.timestamp).getFullYear() <= 1970 ? (
+                        {!log.timestamp || new Date(log.timestamp as any).getFullYear() <= 1970 ? (
                           <span className="text-amber-500 animate-pulse uppercase tracking-wider text-[9px]">À l'instant</span>
                         ) : (
-                          new Date(log.timestamp).toLocaleString('fr-FR', {
+                          new Date(log.timestamp as any).toLocaleString('fr-FR', {
                             day: '2-digit',
                             month: '2-digit',
                             hour: '2-digit',

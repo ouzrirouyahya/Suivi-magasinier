@@ -1,6 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { doc, onSnapshot, setDoc, db } from '../lib/db';
 import { useSystemStore } from '../stores/system.store';
 import { useAuthStore } from '../stores/auth.store';
 import { toast } from 'sonner';
