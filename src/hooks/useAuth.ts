@@ -42,6 +42,19 @@ export function useAuth() {
           if (user.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
             userData.role = 'SUPER_ADMIN';
             userData.active = true;
+            userData.status = 'APPROVED';
+            
+            // S'assurer que les données en base sont synchronisées si elles diffèrent
+            const dbData = snap.data();
+            if (dbData && (dbData.role !== 'SUPER_ADMIN' || dbData.active !== true || dbData.status !== 'APPROVED')) {
+              setDoc(doc(db, 'accounts', uid), {
+                role: 'SUPER_ADMIN',
+                active: true,
+                status: 'APPROVED'
+              }, { merge: true }).catch(err => {
+                console.error("Erreur lors de la mise à jour asynchrone du statut Super Admin :", err);
+              });
+            }
           }
           setCurrentUser(userData);
           if ((userData.role === 'MAGASINIER' || userData.role === 'RESPONSABLE_CHANTIER') && userData.assignedSite) {
