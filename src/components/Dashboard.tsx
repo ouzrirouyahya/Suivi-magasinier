@@ -44,9 +44,12 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     const siteArticles = site === 'ALL' ? articles : articles.filter(a => a.site === site);
     const siteMouvements = site === 'ALL' ? mouvements : mouvements.filter(m => m.site === site);
 
-    const totalArticles = siteArticles.length;
-    const stockValue = siteArticles.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price || 0)), 0);
-    const lowStockCount = siteArticles.filter(a => (a.minStock || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0)).length;
+    const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+    const realStockArticles = siteArticles.filter(isRealStock);
+
+    const totalArticles = realStockArticles.length;
+    const stockValue = realStockArticles.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price || 0)), 0);
+    const lowStockCount = realStockArticles.filter(a => (a.minStock || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0)).length;
 
     // Last movements (always based on actual real actions)
     const lastSortie = [...siteMouvements]

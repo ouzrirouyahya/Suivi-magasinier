@@ -740,9 +740,10 @@ function buildRawPriceRow(r: PriceChangeRecord) {
  */
 export function formatArticlesSummaryDashboard(articles: Article[]): any[] {
   const sites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
   
   const siteKPIs = sites.map(site => {
-    const siteArts = articles.filter(a => a.site === site);
+    const siteArts = articles.filter(a => a.site === site && isRealStock(a));
     const activeRefs = siteArts.filter(a => (a.quantity || 0) > 0);
     const totalQty = siteArts.reduce((acc, a) => acc + (a.quantity || 0), 0);
     const totalVal = siteArts.reduce((acc, a) => acc + (a.quantity || 0) * (a.price || 0), 0);
@@ -760,11 +761,12 @@ export function formatArticlesSummaryDashboard(articles: Article[]): any[] {
   });
 
   // Calculate totals across all sites
-  const totalRefs = articles.filter(a => (a.quantity || 0) > 0).length;
-  const grandQty = articles.reduce((acc, a) => acc + (a.quantity || 0), 0);
-  const grandVal = articles.reduce((acc, a) => acc + (a.quantity || 0) * (a.price || 0), 0);
-  const totalAlerts = articles.filter(a => (a.quantity || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0)).length;
-  const totalRuptures = articles.filter(a => (a.quantity || 0) === 0 && (a.minStock || 0) > 0).length;
+  const realArticles = articles.filter(isRealStock);
+  const totalRefs = realArticles.filter(a => (a.quantity || 0) > 0).length;
+  const grandQty = realArticles.reduce((acc, a) => acc + (a.quantity || 0), 0);
+  const grandVal = realArticles.reduce((acc, a) => acc + (a.quantity || 0) * (a.price || 0), 0);
+  const totalAlerts = realArticles.filter(a => (a.quantity || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0)).length;
+  const totalRuptures = realArticles.filter(a => (a.quantity || 0) === 0 && (a.minStock || 0) > 0).length;
 
   siteKPIs.push({
     'Site / Chantier': '📊 TOTAL GÉNÉRAL CONSOLIDÉ',

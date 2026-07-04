@@ -44,14 +44,77 @@ class IndexedDBStorageClass {
         const missingStores = STORES.filter(store => !db.objectStoreNames.contains(store));
         if (missingStores.length > 0) {
           console.warn(`[STORAGE_HARDENING] Missing stores detected: ${missingStores.join(', ')}. Triggering self-healing upgrade...`);
-          db.close();
+          
+          // ÉTAPE 1 : Sauvegarder la queue offline avant destruction
+          const BACKUP_KEY = 'hydromines_idb_migration_backup_' + Date.now();
           try {
-            // Reopen with an incremented version to force onupgradeneeded
-            const upgradedDb = await this.initDatabase(db.version + 1);
-            resolve(upgradedDb);
-          } catch (upgradeErr) {
-            reject(upgradeErr);
+            // Lire les items offline depuis l'ancienne base
+            const backupItems: any[] = [];
+            const stores = ['offlineQueue'];
+            for (const storeName of stores) {
+              if (db.objectStoreNames.contains(storeName)) {
+                const tx = db.transaction(storeName, 'readonly');
+                const store = tx.objectStore(storeName);
+                const request = store.getAll();
+                await new Promise<void>((res) => {
+                  request.onsuccess = () => {
+                    if (request.result && request.result.length > 0) {
+                      backupItems.push(...request.result.map((item: any) => ({
+                        ...item,
+                        _backupStore: storeName
+                      })));
+                    }
+                    res();
+                  };
+                  request.onerror = () => res(); // Ne pas bloquer si erreur
+                });
+              }
+            }
+            if (backupItems.length > 0) {
+              localStorage.setItem(BACKUP_KEY, JSON.stringify(backupItems));
+              console.info(
+                `[IDB Migration] Sauvegardé ${backupItems.length} items offline avant migration`
+              );
+            }
+          } catch (backupErr) {
+            console.warn('[IDB Migration] Backup échoué (non bloquant) :', backupErr);
           }
+
+          // ÉTAPE 2 : Détruire et recréer la base
+          db.close();
+          await new Promise<void>((res, rej) => {
+            const del = indexedDB.deleteDatabase(DB_NAME);
+            del.onsuccess = () => res();
+            del.onerror = () => rej(del.error);
+          });
+
+          const freshDb = await this.initDatabase(DB_VERSION);
+
+          // ÉTAPE 3 : Restaurer la queue offline depuis le backup
+          try {
+            const backupRaw = localStorage.getItem(BACKUP_KEY);
+            if (backupRaw) {
+              const backupItems = JSON.parse(backupRaw);
+              for (const item of backupItems) {
+                const storeName = item._backupStore;
+                delete item._backupStore;
+                if (freshDb.objectStoreNames.contains(storeName)) {
+                  const tx = freshDb.transaction(storeName, 'readwrite');
+                  const store = tx.objectStore(storeName);
+                  store.add(item);
+                }
+              }
+              localStorage.removeItem(BACKUP_KEY); // Nettoyer après restauration
+              console.info(
+                `[IDB Migration] Restauré ${backupItems.length} items offline après migration`
+              );
+            }
+          } catch (restoreErr) {
+            console.warn('[IDB Migration] Restauration échouée :', restoreErr);
+            // Ne pas bloquer — les items seront perdus mais l'app reste fonctionnelle
+          }
+
+          resolve(freshDb);
           return;
         }
 

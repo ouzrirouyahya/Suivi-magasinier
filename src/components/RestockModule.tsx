@@ -17,10 +17,13 @@ export function RestockModule({ site, articles, purchaseRequests, onCreatePR, on
   const [selectedItems, setSelectedItems] = React.useState<Record<string, number>>({});
   const [isExpanded, setIsExpanded] = React.useState(false);
 
+  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+
   const lowStockArticles = articles.filter(a => 
     a.active === true &&                          // strictement true
     !(a as any).deleted &&                        // pas soft-deleted
     (site === 'ALL' ? true : a.site === site) &&
+    isRealStock(a) &&
     (Number(a.minStock) || 0) > 0 &&             // minStock doit être défini et > 0
     (Number(a.quantity) || 0) <= (Number(a.minStock) || 0) && // guard NaN
     (a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase()))

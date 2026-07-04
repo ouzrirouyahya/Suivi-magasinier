@@ -129,8 +129,10 @@ export function ReportPage() {
     return SiteComparator.compareSites(reports, articles || [], mouvements || [], engins, perfos);
   }, [mouvements, articles, maintenanceLogs, engins, perfos]);
 
+  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+
   const criticalAlertsCount = useMemo(() => {
-    return articles.filter(a => (Number(a.quantity) || 0) <= (Number(a.minStock) || 0)).length;
+    return articles.filter(a => isRealStock(a) && (Number(a.quantity) || 0) <= (Number(a.minStock) || 0)).length;
   }, [articles]);
 
   const enTransitCount = useMemo(() => {
@@ -171,7 +173,7 @@ export function ReportPage() {
   // Critical items (Top 5)
   const topCriticalItems = useMemo(() => {
     return articles
-      .filter(a => (Number(a.quantity) || 0) <= (Number(a.minStock) || 0))
+      .filter(a => isRealStock(a) && (Number(a.quantity) || 0) <= (Number(a.minStock) || 0))
       .sort((a, b) => (Number(a.quantity) || 0) - (Number(b.quantity) || 0))
       .slice(0, 5);
   }, [articles]);
@@ -179,7 +181,7 @@ export function ReportPage() {
   // Sites stock comparison calculation
   const siteStockStats = useMemo(() => {
     return SITES.map(s => {
-      const siteArts = articles.filter(a => a.site === s.code);
+      const siteArts = articles.filter(a => a.site === s.code && isRealStock(a));
       const val = siteArts.reduce((sum, a) => sum + (Number(a.quantity) || 0) * (Number(a.price) || 0), 0);
       const alerts = siteArts.filter(a => (Number(a.quantity) || 0) <= (Number(a.minStock) || 0)).length;
       return {

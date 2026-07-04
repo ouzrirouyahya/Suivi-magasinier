@@ -107,6 +107,8 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
       }, 0);
   }, [mouvements, site, selectedStockType, articles]);
 
+  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+
   const availableCount = useMemo(() => {
     return articles.filter(a => {
       const matchesSite = site === 'ALL' ? true : a.site === site;
@@ -129,7 +131,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
       const matchesLocation = !locationFilter || (a.location || '').toLowerCase().includes(locationFilter.toLowerCase());
       const matchesActive = a.active !== false;
 
-      return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesLocation && a.quantity === 0;
+      return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesLocation && isRealStock(a) && a.quantity === 0;
     }).length;
   }, [articles, site, selectedStockType, search, categoryFilter, locationFilter]);
 
@@ -152,7 +154,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
 
       const matchesActive = a.active !== false;
 
-      return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation;
+      return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation && isRealStock(a);
     });
   }, [articles, site, selectedStockType, search, categoryFilter, statusFilter, locationFilter, stockAvailabilityTab]);
 
@@ -186,11 +188,11 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   const totalPages = Math.max(1, Math.ceil(sortedAndFilteredArticles.length / ITEMS_PER_PAGE));
 
   const categories = useMemo(() => {
-    return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (site === 'ALL' ? true : a.site === site)).map(a => a.category)));
+    return Array.from(new Set(articles.filter(a => isRealStock(a) && (selectedStockType === 'ALL' || a.type === selectedStockType) && (site === 'ALL' ? true : a.site === site)).map(a => a.category)));
   }, [articles, selectedStockType, site]);
 
   const locations = useMemo(() => {
-    return Array.from(new Set(articles.filter(a => (selectedStockType === 'ALL' || a.type === selectedStockType) && (site === 'ALL' ? true : a.site === site)).map(a => a.location))).filter(Boolean);
+    return Array.from(new Set(articles.filter(a => isRealStock(a) && (selectedStockType === 'ALL' || a.type === selectedStockType) && (site === 'ALL' ? true : a.site === site)).map(a => a.location))).filter(Boolean);
   }, [articles, selectedStockType, site]);
 
   const getStockStatus = (article: Article) => {
