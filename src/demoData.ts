@@ -9,7 +9,6 @@ export const SITES: { code: SiteCode; label: string }[] = [
 ];
 
 export const SERVICES = [
-  'MAINTENANCE',
   'FORAGE',
   'TRANSPORT & LOGISTIQUE',
   'HSE',
@@ -30,10 +29,10 @@ export const INITIAL_PERFOS: PerfoMaster[] = [
 ];
 
 export const INITIAL_AGENTS: AgentMaster[] = [
-  { id: 'a1', matricule: 'M001', firstname: 'Ahmed', lastname: 'Brahimi', service: 'MAINTENANCE', site: 'SMI' },
+  { id: 'a1', matricule: 'M001', firstname: 'Ahmed', lastname: 'Brahimi', service: 'FORAGE', site: 'SMI' },
   { id: 'a2', matricule: 'M042', firstname: 'Jean', lastname: 'Dupont', service: 'FORAGE', site: 'SMI' },
   { id: 'a3', matricule: 'M105', firstname: 'Momo', lastname: 'Diallo', service: 'LOGISTIQUE', site: 'SMI' },
-  { id: 'a4', matricule: 'M220', firstname: 'Karim', lastname: 'Nasri', service: 'MAINTENANCE', site: 'OUMEJRANE' },
+  { id: 'a4', matricule: 'M220', firstname: 'Karim', lastname: 'Nasri', service: 'FORAGE', site: 'OUMEJRANE' },
   { id: 'a5', matricule: 'M315', firstname: 'Said', lastname: 'Belkacem', service: 'FORAGE', site: 'OUMEJRANE' },
 ];
 
@@ -261,7 +260,7 @@ export const INITIAL_MOUVEMENTS: Mouvement[] = [
     demandeur: 'Abdelatif R.',
     mecanicien: 'Momo Diallo',
     engin: 'e1_smi',
-    service: 'MAINTENANCE',
+    service: 'MÉCANICIEN',
     items: [{ articleId: 'smi_st2g_mot_01', quantity: 1, price: 135000 }],
     status: 'COMPLETE'
   }

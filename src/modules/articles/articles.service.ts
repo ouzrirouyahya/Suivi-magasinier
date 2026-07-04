@@ -1,5 +1,4 @@
-import { doc, setDoc } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { doc, setDoc, db } from '../../lib/db';
 import { Article, CatalogItem, SiteCode } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useArticlesStore } from './articles.store';

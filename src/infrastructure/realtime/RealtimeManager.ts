@@ -1,4 +1,10 @@
-import { onSnapshot, Query, DocumentReference, DocumentSnapshot, QuerySnapshot } from 'firebase/firestore';
+import { 
+  onSnapshot, 
+  type Query, 
+  type DocumentReference, 
+  type DocumentSnapshot, 
+  type QuerySnapshot 
+} from '../../lib/db';
 import { handleFirestoreError, OperationType } from '../../lib/utils';
 
 export interface SubscriptionOptions {

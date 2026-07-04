@@ -36,6 +36,7 @@ export function MonthlyClosingView() {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [confirmInput, setConfirmInput] = useState('');
   const [pendingCloseIsOverwrite, setPendingCloseIsOverwrite] = useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Determine current active month
   const currentMonthValue = useMemo(() => {
@@ -259,21 +260,24 @@ export function MonthlyClosingView() {
     }
   };
 
-  const handleDeleteClosing = async (id: string, e: React.MouseEvent) => {
+  const handleDeleteClosing = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (!isSuperAdmin) return;
-    const confirmDelete = window.confirm("Êtes-vous sûr de vouloir supprimer définitivement cette archive de clôture ?");
-    if (!confirmDelete) return;
+    setDeleteConfirmId(id);
+  };
 
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmId) return;
     try {
-      await deleteDoc(doc(db, 'monthlyClosings', id));
-      toast.success("Clôture supprimée de l'historique.");
-      if (selectedClosing?.id === id) {
+      await deleteDoc(doc(db, 'monthlyClosings', deleteConfirmId));
+      toast.success("Archive de clôture supprimée");
+      if (selectedClosing?.id === deleteConfirmId) {
         setSelectedClosing(null);
       }
-    } catch (err) {
-      console.error('Error deleting closing:', err);
-      toast.error("Erreur lors de la suppression de la clôture");
+    } catch (err: any) {
+      toast.error(`Erreur lors de la suppression : ${err.message}`);
+    } finally {
+      setDeleteConfirmId(null);
     }
   };
 
@@ -802,6 +806,36 @@ export function MonthlyClosingView() {
                 className="flex-1 px-4 py-2 bg-amber-500 text-black rounded-lg font-black hover:bg-amber-400 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {isClosingInProgress ? 'Clôture...' : 'Confirmer la clôture'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 no-print">
+          <div className="bg-slate-900 border border-red-700/50 rounded-2xl p-6 max-w-sm w-full">
+            <div className="flex items-center gap-3 mb-3">
+              <ShieldAlert className="w-5 h-5 text-red-400 flex-shrink-0" />
+              <h3 className="text-white font-black text-lg">
+                Supprimer l'archive ?
+              </h3>
+            </div>
+            <p className="text-slate-400 text-sm mb-6">
+              Cette clôture mensuelle sera supprimée définitivement. Cette action est irréversible.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition-colors cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-black hover:bg-red-500 transition-colors cursor-pointer"
+              >
+                Supprimer définitivement
               </button>
             </div>
           </div>

@@ -7,14 +7,14 @@ import {
   updateDoc, 
   deleteDoc, 
   query, 
-  QueryConstraint,
-  DocumentReference,
-  DocumentData,
-  Query,
+  type QueryConstraint,
+  type DocumentReference,
+  type DocumentData,
+  type Query,
   runTransaction,
-  writeBatch
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+  writeBatch,
+  db
+} from '../../lib/db';
 import { handleFirestoreError, OperationType } from '../../lib/utils';
 
 export class FirestoreRepository {

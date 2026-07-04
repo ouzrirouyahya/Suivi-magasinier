@@ -44,6 +44,9 @@ export function useAuth() {
             userData.active = true;
           }
           setCurrentUser(userData);
+          if ((userData.role === 'MAGASINIER' || userData.role === 'RESPONSABLE_CHANTIER') && userData.assignedSite) {
+            setCurrentSite(userData.assignedSite);
+          }
           setIsLoaded(true);
         } else {
           if (user.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
@@ -85,7 +88,7 @@ export function useAuth() {
         unsubUser();
       }
     };
-  }, [setCurrentUser, setIsLoaded]);
+  }, [setCurrentUser, setIsLoaded, setCurrentSite]);
 
   // Subscribe to all accounts for Admin+
   useEffect(() => {

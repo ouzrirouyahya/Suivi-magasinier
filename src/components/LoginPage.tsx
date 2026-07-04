@@ -2,7 +2,8 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { signInWithPopup } from 'firebase/auth';
 import { auth, googleProvider, db } from '../lib/firebase';
-import { setDoc, doc } from 'firebase/firestore';
+import { setDoc, doc } from '../lib/db';
+import { cleanObject } from '../lib/utils';
 import { toast } from 'sonner';
 import { Package, Shield, ArrowRight, Briefcase } from 'lucide-react';
 import { SITES } from '../demoData';
@@ -61,7 +62,7 @@ const LoginPage: React.FC = () => {
     };
     
     try {
-      await setDoc(doc(db, 'accounts', currentUser.id), newUser);
+      await setDoc(doc(db, 'accounts', currentUser.id), cleanObject(newUser));
       toast.success("Demande envoyée. Un administrateur va l'examiner.");
       // useAuth détectera le nouveau document via onSnapshot
       // et mettra à jour currentUser avec status: 'PENDING'

@@ -4,9 +4,9 @@ import {
   getDocs, 
   doc, 
   updateDoc, 
-  deleteDoc 
-} from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+  deleteDoc,
+  db
+} from '../../lib/db';
 import { useInventory } from '../../context/InventoryContext';
 import { Message, MessageTelemetry, BannerNotification } from '../../types';
 import { 

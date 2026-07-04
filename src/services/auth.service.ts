@@ -1,5 +1,4 @@
-import { doc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { doc, setDoc, updateDoc, db } from '../lib/db';
 import { SiteCode, UserAccount, UserRole } from '../types';
 
 export const authService = {

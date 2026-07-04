@@ -48,6 +48,7 @@ export default defineConfig(({ mode }) => {
     test: {
       globals: true,
       environment: 'jsdom',
+      include: ['src/__tests__/**/*.test.ts'],
     },
     server: {
       hmr: process.env.DISABLE_HMR !== 'true',

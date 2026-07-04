@@ -3,8 +3,7 @@ import { Users, Shield, CheckCircle2, XCircle, Mail, Clock, Search, Truck, Drill
 import { UserAccount, EnginMaster, AgentMaster, PerfoMaster, SiteCode } from '../types';
 import { cn, generateId } from '../lib/utils';
 import { SITES, SERVICES } from '../demoData';
-import { db } from '../lib/firebase';
-import { collection, onSnapshot, query, doc, updateDoc } from 'firebase/firestore';
+import { collection, onSnapshot, query, doc, updateDoc, db } from '../lib/db';
 import { toast } from 'sonner';
 import { useInventory } from '../context/InventoryContext';
 
@@ -25,7 +24,6 @@ export const FONCTIONS = [
 ];
 
 export const SERVICES_LIST = [
-  'Maintenance',
   'Forage',
   'Administration'
 ];
@@ -133,7 +131,7 @@ export const UserAdmin = React.memo(function UserAdmin({
   const [agentMatricule, setAgentMatricule] = useState('');
   const [agentFirstname, setAgentFirstname] = useState('');
   const [agentLastname, setAgentLastname] = useState('');
-  const [agentService, setAgentService] = useState('Maintenance');
+  const [agentService, setAgentService] = useState('Forage');
   const [agentFonction, setAgentFonction] = useState('Mineur');
   const [customAgentFonction, setCustomAgentFonction] = useState('');
   const [agentSubmitted, setAgentSubmitted] = useState(false);
@@ -218,7 +216,7 @@ export const UserAdmin = React.memo(function UserAdmin({
     setAgentMatricule('');
     setAgentFirstname('');
     setAgentLastname('');
-    setAgentService('MAINTENANCE');
+    setAgentService('FORAGE');
     setAgentFonction('MINEUR');
     setCustomAgentFonction('');
     setAgentSubmitted(false);
@@ -246,7 +244,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       setAgentMatricule('');
       setAgentFirstname('');
       setAgentLastname('');
-      setAgentService('MAINTENANCE');
+      setAgentService('FORAGE');
       setAgentFonction('MINEUR');
       setCustomAgentFonction('');
       setAgentSubmitted(false);
@@ -1027,7 +1025,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                       setAgentMatricule('');
                       setAgentFirstname('');
                       setAgentLastname('');
-                      setAgentService('Maintenance');
+                      setAgentService('Forage');
                       setAgentFonction('Mineur');
                       setAgentSubmitted(false);
                     }}
@@ -1158,7 +1156,7 @@ export const UserAdmin = React.memo(function UserAdmin({
                       setAgentMatricule('');
                       setAgentFirstname('');
                       setAgentLastname('');
-                      setAgentService('Maintenance');
+                      setAgentService('Forage');
                       setAgentFonction('Mineur');
                       setCustomAgentFonction('');
                       setAgentSubmitted(false);

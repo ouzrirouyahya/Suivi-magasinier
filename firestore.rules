@@ -127,7 +127,13 @@ service cloud.firestore {
         : (
           isSuperAdmin() ||
           (('ADMIN' in allowedRoles) && isAdminWithWriteAccess()) ||
-          (('MAGASINIER' in allowedRoles) && isActive() && exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'MAGASINIER' && get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role in allowedRoles)
+          (('MAGASINIER' in allowedRoles) && isActive() && exists(/databases/$(database)/documents/accounts/$(request.auth.uid)) && (
+            get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'MAGASINIER' || (
+              get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.role == 'RESPONSABLE_CHANTIER' &&
+              get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.get('isReplacingMagasinier', false) == true &&
+              get(/databases/$(database)/documents/accounts/$(request.auth.uid)).data.get('canWrite', false) == true
+            )
+          ))
         );
     }
 

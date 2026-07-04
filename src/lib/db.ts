@@ -49,6 +49,8 @@ export {
   type WriteBatch,
   type Transaction,
   type FieldPath,
+  type QueryConstraint,
+  type DocumentData,
 } from 'firebase/firestore';
 
 // Ré-exporter db depuis firebase.ts

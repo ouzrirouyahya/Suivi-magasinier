@@ -51,7 +51,9 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 auth.languageCode = 'fr';
 
-// Activation sécurisée de Firebase App Check avec reCAPTCHA Enterprise
+// TODO: Réactiver App Check après configuration complète
+// dans Google Cloud Console et Firebase Console
+/*
 if (typeof window !== 'undefined' && import.meta.env.VITE_RECAPTCHA_KEY) {
   try {
     initializeAppCheck(app, {
@@ -63,5 +65,6 @@ if (typeof window !== 'undefined' && import.meta.env.VITE_RECAPTCHA_KEY) {
     console.warn('[Firebase] Impossible d\'initialiser App Check:', err);
   }
 }
+*/
 
 export default app;

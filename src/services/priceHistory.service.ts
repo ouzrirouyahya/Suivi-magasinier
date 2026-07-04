@@ -1,5 +1,4 @@
-import { collection, query, orderBy, getDocs, doc, setDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { collection, query, orderBy, getDocs, doc, setDoc, db } from '../lib/db';
 import { PriceChangeRecord } from '../types/priceHistory';
 import { generateSecureUUID } from '../lib/utils';
 

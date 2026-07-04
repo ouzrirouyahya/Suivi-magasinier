@@ -1,5 +1,4 @@
-import { doc, getDoc, setDoc, writeBatch } from 'firebase/firestore';
-import { db } from '../../lib/firebase';
+import { doc, getDoc, setDoc, writeBatch, db } from '../../lib/db';
 import { AppNotification } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useNotificationsStore } from './notifications.store';

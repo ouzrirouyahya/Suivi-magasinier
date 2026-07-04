@@ -1,5 +1,5 @@
-import { doc, setDoc, Transaction } from 'firebase/firestore';
-import { db, auth } from '../lib/firebase';
+import { doc, setDoc, type Transaction, db } from '../lib/db';
+import { auth } from '../lib/firebase';
 import { generateSecureUUID, cleanObject } from '../lib/utils';
 
 export const auditService = {

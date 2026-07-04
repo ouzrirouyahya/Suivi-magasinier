@@ -1,5 +1,4 @@
-import { doc, setDoc, getDocs, collection, deleteDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { doc, setDoc, getDocs, collection, deleteDoc, db } from '../lib/db';
 import { CatalogItem, HydrominesCatalogItem, PurchaseRequest } from '../types';
 import { generateId, cleanObject } from '../lib/utils';
 

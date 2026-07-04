@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { 
   TrendingUp, 
   Package, 
@@ -83,6 +83,14 @@ export function ReportPage() {
   const [dateEnd, setDateEnd] = useState<string>('');
   const [movementType, setMovementType] = useState<string>('ALL');
   const [searchTerm, setSearchTerm] = useState<string>('');
+
+  // Lock site selection for Responsable de Chantier
+  useEffect(() => {
+    if (currentUser?.role === 'RESPONSABLE_CHANTIER' && currentUser?.assignedSite) {
+      setSelectedSite(currentUser.assignedSite);
+      setRadarSite(currentUser.assignedSite);
+    }
+  }, [currentUser, setRadarSite]);
   
   // Pagination & Sorting for DETAILS tab
   const [currentPage, setCurrentPage] = useState(1);
@@ -472,8 +480,8 @@ export function ReportPage() {
     }
   };
 
-  // Access restriction guard (Magasinier can't view reports, only ADMIN or Super Admin)
-  const isAuthorized = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  // Access restriction guard (Magasinier can't view reports, only ADMIN, Super Admin or Responsable de Chantier)
+  const isAuthorized = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'RESPONSABLE_CHANTIER';
   if (!isAuthorized) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] text-center p-8 bg-white rounded-3xl border border-slate-100 italic">
@@ -703,6 +711,7 @@ export function ReportPage() {
                     value={radarSite} 
                     onChange={(e) => setRadarSite(e.target.value as SiteCode | 'GLOBAL')}
                     className="site-selector font-bold text-xs"
+                    disabled={currentUser?.role === 'RESPONSABLE_CHANTIER'}
                   >
                     <option value="GLOBAL">🌍 Tous les sites</option>
                     <option value="SMI">🏭 SMI</option>
@@ -1016,7 +1025,8 @@ export function ReportPage() {
                 <select
                   value={selectedSite}
                   onChange={(e) => { setSelectedSite(e.target.value as any); setCurrentPage(1); }}
-                  className="w-full bg-white h-9 px-3 rounded-lg text-xs outline-none border border-slate-200 focus:border-amber-500 transition-all font-bold uppercase"
+                  className="w-full bg-white h-9 px-3 rounded-lg text-xs outline-none border border-slate-200 focus:border-amber-500 transition-all font-bold uppercase disabled:bg-slate-100 disabled:text-slate-500"
+                  disabled={currentUser?.role === 'RESPONSABLE_CHANTIER'}
                 >
                   <option value="ALL">Tous les sites</option>
                   {SITES.map(s => <option key={s.code} value={s.code}>{s.label}</option>)}
