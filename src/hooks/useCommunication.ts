@@ -120,7 +120,7 @@ export function useCommunication() {
 
   // 2. Fetch User Inbox Items (Subscribed)
   useEffect(() => {
-    if (!currentUser?.email) {
+    if (!currentUser?.email || !currentUser.active) {
       setLoading(false);
       return;
     }
@@ -144,11 +144,11 @@ export function useCommunication() {
     });
 
     return () => unsubscribe();
-  }, [currentUser?.email]);
+  }, [currentUser?.email, currentUser?.active]);
 
   // 3. Fetch Sent Messages (Subscribed)
   useEffect(() => {
-    if (!currentUser?.email) return;
+    if (!currentUser?.email || !currentUser.active) return;
 
     const path = 'system_messages';
     const q = query(
@@ -169,11 +169,11 @@ export function useCommunication() {
     });
 
     return () => unsubscribe();
-  }, [currentUser?.email]);
+  }, [currentUser?.email, currentUser?.active]);
 
   // 4. Fetch Drafts (Subscribed)
   useEffect(() => {
-    if (!currentUser?.email) return;
+    if (!currentUser?.email || !currentUser.active) return;
 
     const path = 'message_drafts';
     const q = query(
@@ -193,10 +193,12 @@ export function useCommunication() {
     });
 
     return () => unsubscribe();
-  }, [currentUser?.email]);
+  }, [currentUser?.email, currentUser?.active]);
 
   // 5. Fetch Active Banners (Subscribed)
   useEffect(() => {
+    if (!currentUser || !currentUser.active) return;
+
     const path = 'banner_notifications';
     const q = query(
       collection(db, path),
@@ -232,11 +234,11 @@ export function useCommunication() {
     });
 
     return () => unsubscribe();
-  }, [currentUser, currentSite]);
+  }, [currentUser, currentUser?.active, currentSite]);
 
   // 6. Fetch Banner Views (to keep track of already dismissed banners)
   useEffect(() => {
-    if (!currentUser?.email) return;
+    if (!currentUser?.email || !currentUser.active) return;
 
     const path = 'banner_views';
     const q = query(
@@ -255,7 +257,7 @@ export function useCommunication() {
     });
 
     return () => unsubscribe();
-  }, [currentUser?.email]);
+  }, [currentUser?.email, currentUser?.active]);
 
   // 7. Send New System Message
   const sendMessage = useCallback(async (
