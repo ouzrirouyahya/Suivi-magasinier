@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuthStore } from '../../stores/auth.store';
+import { SITE_CODES } from '../../lib/constants';
 import { InboxItem, MessageDraft, UserAccount, SiteCode, UserRole, MessageAttachment } from '../../types';
 import { 
   Send, 
@@ -232,7 +233,7 @@ export default function MessageComposer({
         senderId: currentUser?.id || 'system',
         senderName: currentUser?.name || 'Système',
         senderRole: currentUser?.role || 'OPERATEUR',
-        senderSite: currentUser?.assignedSite || 'SMI',
+        senderSite: currentUser?.assignedSite || SITE_CODES[0],
         subject: subject,
         body: body,
         priority: priority,

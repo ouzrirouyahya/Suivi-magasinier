@@ -9,10 +9,14 @@ export class NotificationsService {
    * Post a new warning message or notification
    */
   async addNotification(notif: Partial<AppNotification>, isSimulation: boolean = false): Promise<void> {
+    if (!notif.siteId) {
+      console.error('siteId manquant');
+      return;
+    }
     const id = notif.id || generateSecureUUID();
     const notification: AppNotification = {
       id,
-      siteId: notif.siteId || 'SMI',
+      siteId: notif.siteId,
       type: notif.type || 'INFO',
       category: notif.category || 'SYSTEM',
       message: notif.message || '',

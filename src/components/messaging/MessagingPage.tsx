@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useMessages } from '../../hooks/useMessages';
 import { useAuthStore } from '../../stores/auth.store';
+import { SITE_CODES } from '../../lib/constants';
 import { bannerService } from '../../services/banner.service';
 import { messagingService } from '../../services/message.service';
 import MessageComposer from './MessageComposer';
@@ -127,7 +128,7 @@ export default function MessagingPage() {
           senderId: currentUser?.id || 'system',
           senderName: currentUser?.name || 'Système',
           senderRole: currentUser?.role || 'RESPONSABLE_CHANTIER',
-          senderSite: currentUser?.assignedSite || 'SMI',
+          senderSite: currentUser?.assignedSite || SITE_CODES[0],
           targetType: 'INDIVIDUAL',
           targetUserId: selectedItem.senderId,
           subject: selectedItem.subject.startsWith('RE:') ? selectedItem.subject : `RE: ${selectedItem.subject}`,

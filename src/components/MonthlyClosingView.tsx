@@ -16,6 +16,7 @@ import {
 } from 'lucide-react';
 import { doc, setDoc, onSnapshot, collection, deleteDoc, db } from '../lib/db';
 import { useInventory } from '../context/InventoryContext';
+import { SITE_CODES } from '../lib/constants';
 import { MonthlyClosing, Article } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
@@ -151,7 +152,7 @@ export function MonthlyClosingView() {
 
     const sitesList: string[] = sitesPresents.length > 0 
       ? sitesPresents 
-      : ['SMI', 'OUMEJRANE', 'KOUDIA', 'BOU-AZZER', 'OUANSIMI']; // fallback
+      : [...SITE_CODES]; // fallback
 
     const siteMetrics = sitesList.map((siteCode: string) => {
       const siteArts = activeArticles.filter(a => a.site === siteCode);

@@ -12,6 +12,7 @@ import { MASTER_CATALOG } from '../catalogData';
 import { generateId, formatCurrency, cn } from '../lib/utils';
 import { toast } from 'sonner';
 import { useCatalogFilter, getCatalogByFamily } from '../hooks/useCatalog';
+import { SITE_CODES } from '../lib/constants';
 
 const CATALOG_OPTIONS: (CatalogSelectorConfig & { desc: string })[] = [
   { id: 'ST2G', label: 'Epiroc ST2G (4 T.)', description: 'Cummins QSB4.5', desc: 'Cummins QSB4.5', color: 'from-amber-50 to-amber-100/50 hover:bg-amber-100 text-amber-800 border-amber-200' },
@@ -105,7 +106,7 @@ export function HydrominesCatalog() {
   // Multi-selection and import to Stock states
   const [selectedItems, setSelectedItems] = useState<HydrominesCatalogItem[]>([]);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const [importTargetSite, setImportTargetSite] = useState<SiteCode>('SMI');
+  const [importTargetSite, setImportTargetSite] = useState<SiteCode>(SITE_CODES[0]);
   const [isImporting, setIsImporting] = useState(false);
 
   // Reset selected items on tab or filters change
@@ -1586,7 +1587,7 @@ export function HydrominesCatalog() {
                       required
                       className="w-full bg-slate-50 border border-slate-150 rounded-2xl px-4 py-3 text-xs font-bold text-slate-705 focus:outline-none focus:ring-2 focus:ring-sky-500/20 focus:bg-white transition-all"
                     >
-                      {['SMI', 'OUMEJRANE', 'KOUDIA', 'BOU-AZZER', 'OUANSIMI'].map(site => (
+                      {SITE_CODES.map(site => (
                         <option key={site} value={site}>{site}</option>
                       ))}
                     </select>

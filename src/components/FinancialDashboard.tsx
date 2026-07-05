@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { formatCurrency, cn } from '../lib/utils';
+import { SITE_CODES } from '../lib/constants';
 import { 
   BarChart, 
   Bar, 
@@ -61,7 +62,7 @@ export function FinancialDashboard() {
     .reduce((sum, m) => sum + (m.items?.reduce((s, it) => s + ((Number(it.quantity) || 0) * (Number(it.price) || 0)), 0) || 0), 0);
 
   // Chart Data: Stock Value by Site
-  const sites = ['SMI', 'OUMEJRANE', 'KOUDIA', 'BOU-AZZER', 'OUANSIMI'];
+  const sites = SITE_CODES;
   const stockBySiteData = sites.map(s => ({
     name: s,
     value: articles.filter(a => a.site === s).reduce((sum, a) => {

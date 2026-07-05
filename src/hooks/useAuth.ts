@@ -152,7 +152,18 @@ export function useAuth() {
     isLoaded,
     currentSite,
     setCurrentSite,
-    isReadOnlyUser: currentUser?.role === 'ADMIN' && !currentUser?.canWrite,
+    isReadOnlyUser: (() => {
+      if (!currentUser) return true;
+      const role = currentUser.role;
+      // SUPER_ADMIN : jamais read-only
+      if (role === 'SUPER_ADMIN') return false;
+      // RESPONSABLE_CHANTIER : read-only sauf si remplacement actif avec canWrite
+      if (role === 'RESPONSABLE_CHANTIER') {
+        return !(currentUser.isReplacingMagasinier === true && currentUser.canWrite === true);
+      }
+      // ADMIN et MAGASINIER : read-only si canWrite = false
+      return currentUser.canWrite !== true;
+    })(),
     approveUser: authService.approveUser,
     rejectUser: authService.rejectUser,
     toggleUser: async (id: string) => {

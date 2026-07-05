@@ -1,9 +1,10 @@
 import { doc, db } from '../../lib/db';
-import { Article, MaintenanceLog } from '../../types';
+import { Article, MaintenanceLog, SiteCode } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useMaintenanceStore } from './maintenance.store';
 import { useArticlesStore } from '../articles/articles.store';
 import { useSystemStore } from '../system/system.store';
+import { useAuthStore } from '../auth/auth.store';
 import { validateMaintenanceInvariants } from '../../core/BusinessStateValidator';
 import { generateSecureUUID, cleanObject } from '../../lib/utils';
 
@@ -16,7 +17,8 @@ export class MaintenanceService {
     log.id = id;
 
     const { articles } = useArticlesStore.getState();
-    const { engins } = useMaintenanceStore.getState();
+    const { engins, perfos } = useMaintenanceStore.getState();
+    const { currentSite } = useAuthStore.getState();
 
     // 1. BSV checking of invariants
     const validation = validateMaintenanceInvariants(log, articles);
@@ -73,18 +75,22 @@ export class MaintenanceService {
         transaction.update(update.ref, { quantity: update.newQty });
       }
 
+      // Resolve the machine's site
+      let machineSite: SiteCode = currentSite || 'SMI';
+      if (log.machineType === 'ENGIN') {
+        const matchedEngin = engins.find(e => e.id === log.machineId);
+        if (matchedEngin) machineSite = matchedEngin.site;
+      } else if (log.machineType === 'PERFO') {
+        const matchedPerfo = perfos.find(p => p.id === log.machineId);
+        if (matchedPerfo) machineSite = matchedPerfo.site;
+      }
+
       // Record associated movements if parts are used
       if (log.partsUsed && log.partsUsed.length > 0) {
         log.partsUsed.forEach((part, index) => {
           const update = articleUpdates[index];
           const mId = generateSecureUUID();
           const movementRef = doc(db, 'mouvements', mId);
-
-          let machineSite = 'SMI';
-          if (log.machineType === 'ENGIN') {
-            const matchedEngin = engins.find(e => e.id === log.machineId);
-            if (matchedEngin) machineSite = matchedEngin.site;
-          }
 
           transaction.set(movementRef, cleanObject({
             id: mId,
@@ -109,7 +115,7 @@ export class MaintenanceService {
         id: auditLogId,
         timestamp: new Date().toISOString(),
         userEmail: log.performer || 'system_service_account',
-        site: 'SMI',
+        site: machineSite,
         action: 'MAINTENANCE',
         details: `Machine: ${log.machineId}`,
         amount: log.cost || 0

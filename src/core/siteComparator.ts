@@ -1,4 +1,5 @@
 import { SiteCode } from '../types';
+import { SITE_CODES } from '../lib/constants';
 import { RadarReport } from './radarAnalyzer';
 import { toast } from 'sonner';
 
@@ -28,7 +29,7 @@ export class SiteComparator {
     engins: any[] = [],
     perfos: any[] = []
   ): SiteMetrics[] {
-    const validSites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+    const validSites = SITE_CODES;
     
     const metrics = validSites.map(site => {
       const report = reports.find(r => r.site === site);

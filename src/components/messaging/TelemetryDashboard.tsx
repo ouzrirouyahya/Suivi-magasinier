@@ -49,6 +49,7 @@ export default function TelemetryDashboard() {
   const [siteFilter, setSiteFilter] = useState<string>('ALL');
   const [priorityFilter, setPriorityFilter] = useState<string>('ALL');
   const [periodFilter, setPeriodFilter] = useState<string>('30'); // '7', '30', 'ALL'
+  const [deleteBannerConfirmId, setDeleteBannerConfirmId] = useState<string | null>(null);
 
   // Fetch telemetry/analytics data on load
   const fetchData = async () => {
@@ -179,21 +180,25 @@ export default function TelemetryDashboard() {
     }
   };
 
-  const handleDeleteBanner = async (bannerId: string) => {
+  const handleDeleteBanner = (bannerId: string) => {
     if (!isSuperAdmin) {
       toast.error('Action réservée aux Super Administrateurs');
       return;
     }
-    if (!window.confirm('Voulez-vous vraiment supprimer cette bannière définitivement ?')) {
-      return;
-    }
+    setDeleteBannerConfirmId(bannerId);
+  };
+
+  const handleConfirmDeleteBanner = async () => {
+    if (!deleteBannerConfirmId) return;
     try {
-      await deleteDoc(doc(db, 'bannerNotifications', bannerId));
+      await deleteDoc(doc(db, 'bannerNotifications', deleteBannerConfirmId));
       toast.success('Bannière supprimée avec succès');
       fetchData();
     } catch (err) {
       console.error('[TelemetryDashboard] Failed to delete banner:', err);
       toast.error('Erreur lors de la suppression de la bannière');
+    } finally {
+      setDeleteBannerConfirmId(null);
     }
   };
 
@@ -707,6 +712,38 @@ export default function TelemetryDashboard() {
           </table>
         </div>
       </div>
+
+      {deleteBannerConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center 
+                        bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-red-700/50 
+                          rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-white font-black text-lg mb-2">
+              Supprimer la bannière ?
+            </h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Cette bannière sera supprimée définitivement.
+              Les utilisateurs ne la verront plus.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteBannerConfirmId(null)}
+                className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 text-white 
+                           rounded-lg font-medium transition cursor-pointer"
+              >
+                Annuler
+              </button>
+              <button
+                onClick={handleConfirmDeleteBanner}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 text-white 
+                           rounded-lg font-black transition cursor-pointer"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

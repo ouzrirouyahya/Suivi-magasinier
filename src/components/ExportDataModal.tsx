@@ -32,6 +32,7 @@ import { useTransfersStore } from '../stores/transfer.store';
 import { getPriceHistory } from '../services/priceHistory.service';
 import { PriceChangeRecord } from '../types/priceHistory';
 import { SiteCode } from '../types';
+import { SITE_CODES } from '../lib/constants';
 import { toast } from 'sonner';
 
 interface ExportDataModalProps {
@@ -230,7 +231,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
               title: "Tableau de Bord d'Inventaire Consolidé (Tous les Sites)"
             });
 
-            const sitesList: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+            const sitesList = SITE_CODES;
             sitesList.forEach(siteName => {
               const siteArts = articles.filter(a => a.site === siteName);
               const data = formatArticlesForExport(siteArts);
@@ -274,7 +275,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
               });
             }
 
-            const sitesList: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+            const sitesList = SITE_CODES;
             sitesList.forEach(siteName => {
               const siteMovs = filteredMovements.filter(m => m.site === siteName || m.targetSite === siteName);
               const data = formatMovementsForExport(siteMovs, articles, dailyGrouped);

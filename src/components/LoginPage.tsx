@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { Package, Shield, ArrowRight, Briefcase } from 'lucide-react';
 import { SITES } from '../demoData';
 import { SiteCode, UserAccount } from '../types';
+import { SITE_CODES } from '../lib/constants';
 import { useAuthStore } from '../stores/auth.store';
 import loginImage from '../assets/images/hydromines_login_banner_clean.png';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
@@ -401,7 +402,7 @@ const LoginPage: React.FC = () => {
               <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-slate-400 font-extrabold">Sites Sous Supervision active</p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
-              {['SMI', 'OUMEJRANE', 'KOUDIA', 'OUANSIMI', 'BOU-AZZER'].map((site) => (
+              {SITE_CODES.map((site) => (
                 <div 
                   key={site} 
                   className="font-mono text-[9px] font-bold tracking-widest text-slate-500 px-3 py-1.5 bg-slate-50/80 rounded-lg flex items-center gap-2 hover:bg-slate-100/80 transition-colors cursor-default uppercase"

@@ -38,6 +38,7 @@ import {
 import { useInventory } from '../context/InventoryContext';
 import { useRadar } from '../hooks/useRadar';
 import { SiteCode } from '../types';
+import { SITE_CODES } from '../lib/constants';
 import { SITES } from '../demoData';
 import { formatCurrency, cn } from '../lib/utils';
 import type { Article, Mouvement } from '../types';
@@ -125,7 +126,7 @@ export function ReportPage() {
   }, [mouvements]);
 
   const siteMetrics = useMemo(() => {
-    const validSites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+    const validSites = SITE_CODES;
     const reports = validSites.map(site => {
        return RadarAnalyzer.generateReport(
          site,
