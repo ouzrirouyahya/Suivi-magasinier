@@ -6,6 +6,19 @@ import { useArticlesStore } from '../articles/articles.store';
 import { validateTransferInvariants, validateCompleteTransferInvariants } from '../../core/BusinessStateValidator';
 import { generateSecureUUID, cleanObject } from '../../lib/utils';
 
+const sanitizeForFirestoreId = (str: string): string => {
+  return str
+    .trim()
+    .toUpperCase()
+    .replace(/\//g, '-')           // slash → tiret
+    .replace(/\./g, '_')           // point → underscore
+    .replace(/[\[\]\*\`~\(\)]/g, '') // supprimer les chars interdits
+    .replace(/\s+/g, '_')          // espaces → underscore
+    .replace(/_{2,}/g, '_')        // double underscore → simple
+    .replace(/^_|_$/g, '')         // supprimer underscore en début/fin
+    .slice(0, 100);                 // max 100 chars
+};
+
 export class TransfersService {
   /**
    * Submit inter-site transfer
@@ -222,7 +235,7 @@ export class TransfersService {
           }
           const sourceArticle = sourceArticleSnap.data() as Article;
 
-          const targetDeterministicId = `${transfert.targetSite}_${sourceArticle.ref.trim().toUpperCase().replace(/\s+/g, '_')}`;
+          const targetDeterministicId = `${transfert.targetSite}_${sanitizeForFirestoreId(sourceArticle.ref)}`;
           const targetArticleRef = doc(db, 'articles', targetDeterministicId);
           const targetArticleSnap = await transaction.get(targetArticleRef);
 

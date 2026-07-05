@@ -525,6 +525,9 @@ export function useArticles() {
 
   return {
     articles: rawArticles,
+    rawArticles,
+    catalogItems: catalog,
+    hydrominesCatalog,
     ghostArticles,
     catalogUsageStats,
     deletionRequests,

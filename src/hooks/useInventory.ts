@@ -43,13 +43,13 @@ export function useInventory() {
     setUserRole: auth.setUserRole,
     setUserAssignedSite: auth.setUserAssignedSite,
     isAdmin: auth.currentUser?.role === 'ADMIN' || auth.currentUser?.role === 'SUPER_ADMIN',
-    isReadOnlyUser: auth.currentUser?.role === 'ADMIN' && !auth.currentUser?.canWrite,
+    isReadOnlyUser: auth.isReadOnlyUser,
 
     // ARTICLES
     articles: articles.articles,
-    rawArticles: articles.articles,
-    hydrominesCatalog: catalog.hydrominesCatalog,
-    catalogItems: (articles as any).catalogItems,
+    rawArticles: articles.rawArticles,
+    hydrominesCatalog: articles.hydrominesCatalog || catalog.hydrominesCatalog,
+    catalogItems: articles.catalogItems || catalog.catalog,
     deletionRequests: articles.deletionRequests,
     addArticle: articles.saveArticle,
     updateArticle: articles.saveArticle,

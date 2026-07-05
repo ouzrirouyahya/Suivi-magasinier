@@ -232,7 +232,7 @@ export function useMovements() {
       toast.warning("Échec réseau : demande d'achat enregistrée localement.");
       return { success: true };
     }
-  }, []);
+  }, [currentUser]);
 
   const updatePRStatus = useCallback(async (id: string, status: any) => {
     const isOnline = navigator.onLine;

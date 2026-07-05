@@ -152,6 +152,7 @@ export function useAuth() {
     isLoaded,
     currentSite,
     setCurrentSite,
+    isReadOnlyUser: currentUser?.role === 'ADMIN' && !currentUser?.canWrite,
     approveUser: authService.approveUser,
     rejectUser: authService.rejectUser,
     toggleUser: async (id: string) => {
