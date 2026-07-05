@@ -33,19 +33,18 @@ const firebaseConfig = {
   messagingSenderId: requireEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
 };
 
-const DATABASE_ID = requireEnv('VITE_FIREBASE_DATABASE_ID');
+const DATABASE_ID = 'ai-studio-8a211b3e-d9c6-4439-b61e-9282b9488046';
 
 const app = initializeApp(firebaseConfig);
 
 // Firebase v12 : persistance offline via initializeFirestore
 // persistentMultipleTabManager : plusieurs onglets partagent le cache
 // sans conflit ni warning "failed-precondition"
-const dbId = DATABASE_ID && DATABASE_ID !== '(default)' && DATABASE_ID.trim() !== '' ? DATABASE_ID : undefined;
 export const db = initializeFirestore(app, {
   localCache: persistentLocalCache({
     tabManager: persistentMultipleTabManager()
   })
-}, dbId);
+}, DATABASE_ID);
 
 export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
