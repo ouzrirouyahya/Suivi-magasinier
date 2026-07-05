@@ -167,6 +167,12 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_53", "5580 0153", "Capteur de température du liquide de refroidissement", 1, 5, "Capteur température eau", "Cummins", "PIECE", 480, "HAUTE"],
   ["mot_54", "5580 0154", "Capteur de pression de suralimentation du rail", 1, 5, "Capteur pression rail", "Cummins", "PIECE", 520, "CRITIQUE"],
   ["mot_55", "5580 0155", "Jauge de niveau d'huile moteur Cummins d'origine", 1, 5, "Jauge d'huile", "Cummins", "PIECE", 240, "BASSE"],
+  ["mot_56", "LF9009", "Filtre à huile moteur Cummins QSB6.7 Fleetguard LF9009", 1, 4, "Filtre à huile moteur", "Fleetguard", "PIECE", 320, "CRITIQUE"],
+  ["mot_57", "LF9011", "Filtre à huile by-pass haute efficacité Cummins QSB6.7", 1, 4, "Filtre by-pass huile", "Fleetguard", "PIECE", 280, "HAUTE"],
+  ["mot_58", "3801277", "Kit de joints supérieur Cummins QSB6.7 (Upper Gasket Set)", 1, 0, "Kit joints supérieur moteur", "Cummins QSB6.7", "KIT", 4800, "CRITIQUE"],
+  ["mot_59", "3801278", "Kit de joints inférieur Cummins QSB6.7 (Lower Gasket Set)", 1, 0, "Kit joints inférieur moteur", "Cummins QSB6.7", "KIT", 3800, "HAUTE"],
+  ["mot_60", "5580 0160", "Huile moteur Cummins Premium Blue 15W-40 CES 20078 (Fût 20L)", 1, 4, "Huile moteur 15W-40", "Cummins", "LITRE", 42, "CRITIQUE"],
+  ["mot_61", "5580 0161", "Liquide de refroidissement OAT longue durée pré-dilué 50/50 (Bidon 20L)", 1, 3, "Liquide de refroidissement OAT", "Cummins", "LITRE", 38, "CRITIQUE"],
 
   // SOU-SYSTÈME 2 : SYSTÈME HYDRAULIQUE & VÉRINS — Rexroth A10VO load sensing, 24.0 MPa (65 pièces)
   ["hyd_01", "3128 3001", "Pompe hydraulique principale Rexroth A10VO à cylindrée variable", 2, 7, "Pompe Rexroth A10VO", "Rexroth", "PIECE", 18500, "CRITIQUE"],
@@ -234,6 +240,8 @@ const RAW_ITEMS: RawItem[] = [
   ["hyd_63", "3128 3063", "Kit de joints de rechange complet de distributeur principal", 2, 9, "Kit joints distributeur", "Epiroc", "JEU", 2200, "HAUTE"],
   ["hyd_64", "3128 3064", "Flexible hydraulique de retour principal tressé 2\"", 2, 10, "Flexible retour 2\"", "Epiroc", "PIECE", 1100, "MOYENNE"],
   ["hyd_65", "3128 3065", "Raccord union coudé 45° acier JIC mâle 1/2\"", 2, 10, "Raccord JIC 45°", "Epiroc", "PIECE", 110, "BASSE"],
+  ["hyd_66", "5580 3066", "Huile hydraulique minérale ISO VG 46 (Fût 20L)", 2, 11, "Huile hydraulique VG46", "Epiroc", "LITRE", 28, "CRITIQUE"],
+  ["hyd_67", "5580 3067", "Huile hydraulique biodégradable Panolin HLPD 46 (Fût 20L)", 2, 11, "Huile hydraulique biodégradable", "Panolin", "LITRE", 45, "HAUTE"],
 
   // SOU-SYSTÈME 3 : TRANSMISSION & CONVERTISSEUR — Funk DF150 (35 pièces)
   ["tra_01", "3115 6001", "Transmission automatique power shift Funk DF150", 3, 15, "Transmission Funk DF150", "Funk DF150", "PIECE", 38000, "CRITIQUE"],
@@ -271,6 +279,7 @@ const RAW_ITEMS: RawItem[] = [
   ["tra_33", "3115 6033", "Pignon de liaison à chaîne d'arbre de renvoi", 3, 15, "Pignon à chaîne", "Epiroc", "PIECE", 2800, "MOYENNE"],
   ["tra_34", "3115 6034", "Chaîne de transmission de rechange renforcée", 3, 15, "Chaîne de boîte", "Epiroc", "PIECE", 3500, "HAUTE"],
   ["tra_35", "3115 6035", "Tendeur mécanique de chaîne de transmission de boîte", 3, 15, "Tendeur de chaîne", "Epiroc", "PIECE", 1400, "MOYENNE"],
+  ["tra_36", "5580 6036", "Huile de transmission ATF Allison C-4 Dexron III (Fût 20L)", 3, 15, "Huile de transmission ATF", "Allison", "LITRE", 35, "CRITIQUE"],
 
   // SOU-SYSTÈME 4 : PONTS, ESSIEUX & ROUES — Okubo Rock Tough 406 (40 pièces)
   ["pon_01", "3115 7001", "Carter de pont avant d'origine Okubo Rock Tough 406", 4, 16, "Carter de pont avant", "Okubo 406", "PIECE", 12500, "CRITIQUE"],
@@ -313,6 +322,7 @@ const RAW_ITEMS: RawItem[] = [
   ["pon_38", "3115 7038", "Bague d'usure en bronze de pivot de fusée Okubo", 4, 16, "Bague pivot fusée", "Okubo 406", "PIECE", 680, "MOYENNE"],
   ["pon_39", "3115 7039", "Joint d'étanchéité à rotule d'essieu oscillant", 4, 16, "Joint à rotule essieu", "Epiroc", "PIECE", 450, "MOYENNE"],
   ["pon_40", "3115 7040", "Manomètre d'indication de pression de pneus", 4, 17, "Manomètre de pneus", "Epiroc", "PIECE", 320, "BASSE"],
+  ["pon_41", "5580 7041", "Huile de pont GL-5 85W-140 haute pression (Fût 20L)", 4, 16, "Huile de pont GL-5 85W-140", "Epiroc", "LITRE", 32, "CRITIQUE"],
 
   // SOU-SYSTÈME 5 : FREINAGE & SÉCURITÉ — SAHR force-cooled wet discs, door interlock (30 pièces)
   ["fre_01", "3115 8001", "Disque de frein humide force-cooled de rechange d'origine", 5, 18, "Disque de frein wet", "Epiroc", "PIECE", 3200, "CRITIQUE"],
@@ -345,6 +355,8 @@ const RAW_ITEMS: RawItem[] = [
   ["fre_28", "5580 8009", "Gyrophare de signalisation orange à LED 24V", 5, 21, "Gyrophare orange LED", "Epiroc", "PIECE", 1100, "HAUTE"],
   ["fre_29", "5580 8010", "Projecteur de travail à LED 40W longue portée avant", 5, 21, "Phare LED 40W AV", "Epiroc", "PIECE", 3200, "HAUTE"],
   ["fre_30", "5580 8011", "Projecteur de travail à LED 40W longue portée arrière", 5, 21, "Phare LED 40W AR", "Epiroc", "PIECE", 3200, "HAUTE"],
+  ["fre_31", "5580 8031", "Graisse compatible freins humides multidisques NLGI 2 sans MoS2 (Cartouche 400g)", 5, 18, "Graisse freins wet NLGI 2", "Epiroc", "PIECE", 280, "HAUTE"],
+  ["fre_32", "5580 8032", "Kit de joints de réfection de maître-cylindre de frein de service ST7", 5, 19, "Kit joints maître-cylindre frein", "Epiroc", "KIT", 680, "HAUTE"],
 
   // SOU-SYSTÈME 6 : ÉLECTRICITÉ & POSTE OPÉRATEUR — 140A alternator, RCS dashboard, cabine pressurisée climatisée optionnelle (45 pièces)
   ["ele_01", "5580 9001", "Batterie sans entretien heavy duty étanche 12V 180Ah", 6, 22, "Batterie 12V 180Ah", "Epiroc", "PIECE", 2800, "CRITIQUE"],
@@ -392,6 +404,9 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_43", "5580 9043", "Vitre latérale en verre feuilleté sécurisé (Option cabine)", 6, 26, "Vitre cabine latérale", "Epiroc", "PIECE", 4200, "MOYENNE"],
   ["ele_44", "5580 9044", "Pare-brise avant en verre feuilleté trempé (Option cabine)", 6, 26, "Pare-brise avant cabine", "Epiroc", "PIECE", 6800, "HAUTE"],
   ["ele_45", "5580 9045", "Module complet de climatisation de cabine 24V (Option cabine)", 6, 26, "Climatisation cabine", "Epiroc", "PIECE", 12500, "HAUTE"],
+  ["ele_46", "5580 9046", "Câble de masse batterie 70mm² renforcé longueur 1.5m", 6, 22, "Câble de masse batterie", "Epiroc", "PIECE", 620, "HAUTE"],
+  ["ele_47", "5580 9047", "Câble de démarrage positif 70mm² renforcé longueur 1.2m", 6, 22, "Câble démarrage positif", "Epiroc", "PIECE", 580, "HAUTE"],
+  ["ele_48", "5580 9048", "Cosses de batterie en plomb renforcées (Jeu de 2)", 6, 22, "Cosses de batterie", "Epiroc", "JEU", 120, "MOYENNE"],
 
   // SOU-SYSTÈME 7 : CHÂSSIS, STRUCTURE & LIAISON — 8720mm frame, central lubrication, knockdown option (45 pièces)
   ["cha_01", "0428 8001", "Châssis avant complet mécano-soudé ultra-robuste ST7", 7, 28, "Cadre avant châssis", "Epiroc", "PIECE", 38000, "CRITIQUE"],
@@ -438,7 +453,15 @@ const RAW_ITEMS: RawItem[] = [
   ["cha_42", "0428 8042", "Bague d'axe de vérin de direction en bronze", 7, 27, "Bague vérin direction", "Epiroc", "PIECE", 580, "MOYENNE"],
   ["cha_43", "0428 8043", "Bague d'axe de vérin de levage en bronze", 7, 27, "Bague vérin levage", "Epiroc", "PIECE", 720, "MOYENNE"],
   ["cha_44", "0428 8044", "Réservoir de carburant métallique renforcé 190L ST7", 7, 28, "Réservoir de gazole 190L", "Epiroc", "PIECE", 9500, "CRITIQUE"],
-  ["cha_45", "0428 8045", "Bouchon antivol verrouillable de réservoir de gazole", 7, 28, "Bouchon gazole antivol", "Epiroc", "PIECE", 480, "MOYENNE"]
+  ["cha_45", "0428 8045", "Bouchon antivol verrouillable de réservoir de gazole", 7, 28, "Bouchon gazole antivol", "Epiroc", "PIECE", 480, "MOYENNE"],
+  ["cha_46", "0428 8046", "Graisse lithium EP NLGI 2 pour articulations (Fût 20kg)", 7, 27, "Graisse NLGI 2 articulations", "Lincoln", "PIECE", 85, "CRITIQUE"],
+  ["cha_47", "0428 8047", "Graisse lithium EP NLGI 2 pour articulations (Cartouche 400g)", 7, 27, "Graisse NLGI 2 cartouche", "Lincoln", "PIECE", 45, "CRITIQUE"],
+  ["cha_48", "0428 8048", "Goupille de pivot de bras de levage avant ST7", 7, 27, "Goupille pivot bras levage AV", "Epiroc", "PIECE", 2400, "HAUTE"],
+  ["cha_49", "0428 8049", "Bague de pivot de bras de levage en bronze cémenté", 7, 27, "Bague pivot bras levage", "Epiroc", "PIECE", 1200, "HAUTE"],
+  ["cha_50", "0428 8050", "Dent de godet GET type minier compatible ST7 (pièce)", 7, 28, "Dent de godet GET", "Epiroc", "PIECE", 1800, "CRITIQUE"],
+  ["cha_51", "0428 8051", "Adaptateur de dent de godet GET compatible ST7", 7, 28, "Adaptateur GET godet", "Epiroc", "PIECE", 2800, "CRITIQUE"],
+  ["cha_52", "0428 8052", "Verrou de fixation de dent GET (Jeu de 10)", 7, 28, "Verrous GET godet", "Epiroc", "JEU", 480, "HAUTE"],
+  ["cha_53", "0428 8053", "Lame frontale de godet en acier Hardox ST7", 7, 28, "Lame de godet Hardox", "Epiroc", "PIECE", 8500, "HAUTE"]
 ];
 
 export const ST7_CATALOG: CatalogItem[] = RAW_ITEMS.map(([idSuffix, reference, designationRaw, catIndex, subCatIndex, component, subComponent, unit, price, criticality]) => {

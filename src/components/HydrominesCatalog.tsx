@@ -546,7 +546,7 @@ export function HydrominesCatalog() {
   };
 
   const handleOpenImportModal = () => {
-    setImportTargetSite(currentSite && currentSite !== 'ALL' ? currentSite : 'SMI');
+    setImportTargetSite(currentSite && currentSite !== 'ALL' ? currentSite : SITE_CODES[0]);
     setIsImportModalOpen(true);
   };
 

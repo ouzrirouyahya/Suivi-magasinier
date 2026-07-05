@@ -55,7 +55,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
   const [includeSummary, setIncludeSummary] = useState<boolean>(true);
   const [dailyGrouped, setDailyGrouped] = useState<boolean>(true);
   const [movementTypeFilter, setMovementTypeFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'RETOUR' | 'AJUSTEMENT'>('ALL');
-  const [siteFilter, setSiteFilter] = useState<'ALL' | 'SMI' | 'OUMEJRANE' | 'BOU-AZZER' | 'OUANSIMI' | 'KOUDIA'>('ALL');
+  const [siteFilter, setSiteFilter] = useState<SiteCode | 'ALL'>('ALL');
 
   // States for fetching dynamic data
   const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
