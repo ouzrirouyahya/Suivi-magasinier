@@ -61,22 +61,31 @@ self.addEventListener('fetch', (event) => {
   // Caches spéciaux pour les polices Google Fonts
   const isGoogleFont = url.hostname.includes('fonts.googleapis.com') || url.hostname.includes('fonts.gstatic.com');
   
-  // Ignorer Firebase et les requêtes API (mais conserver Google Fonts)
+  // Ignorer totalement Firebase, Firebase Auth, Firebase Hosting endpoints et les APIs de l'application
   if (
     event.request.method !== 'GET' ||
     url.hostname.includes('firestore.googleapis.com') ||
+    url.hostname.includes('identitytoolkit.googleapis.com') ||
+    url.hostname.includes('securetoken.googleapis.com') ||
     url.hostname.includes('firebase') ||
+    url.hostname.includes('firebaseapp.com') ||
     url.pathname.startsWith('/api/') ||
+    url.pathname.includes('/__/auth') ||
     (url.hostname.includes('googleapis.com') && !isGoogleFont)
-  ) return;
+  ) {
+    return; // Laisse le navigateur gérer directement la requête via le réseau
+  }
   
   // Navigation (HTML) : Network-First avec timeout rapide de 2.5s et fallback sur /index.html
   if (event.request.mode === 'navigate') {
     event.respondWith(
       fetchWithTimeout(event.request, 2500)
-        .catch(() => {
+        .catch(async () => {
           console.log('[SW] Réseau trop lent ou déconnecté, service de /index.html depuis le cache');
-          return caches.match('/index.html');
+          const cached = await caches.match('/index.html');
+          if (cached) return cached;
+          // Si index.html n'est pas encore mis en cache (premier chargement), forcer un fetch classique sans timeout
+          return fetch(event.request);
         })
     );
     return;
@@ -88,7 +97,7 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request).then(cached => {
         if (cached) return cached;
         return fetch(event.request).then(response => {
-          if (response.status === 200) {
+          if (response && response.status === 200) {
             const clone = response.clone();
             caches.open('hydromines-fonts').then(cache => cache.put(event.request, clone));
           }
@@ -105,8 +114,10 @@ self.addEventListener('fetch', (event) => {
       caches.match(event.request).then(cached => {
         if (cached) return cached;
         return fetch(event.request).then(response => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          if (response && response.status === 200) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
+          }
           return response;
         });
       })
@@ -118,12 +129,16 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request).then(cached => {
       const networkFetch = fetch(event.request).then(response => {
-        if (response.status === 200) {
+        if (response && response.status === 200) {
           const clone = response.clone();
           caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
         }
         return response;
-      }).catch(() => cached);
+      }).catch((err) => {
+        if (cached) return cached;
+        // Jeter l'erreur plutôt que de renvoyer "undefined", ce qui évite le crash "TypeError: Failed to convert value to 'Response'"
+        throw err;
+      });
       return cached || networkFetch;
     })
   );
