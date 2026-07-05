@@ -4,7 +4,7 @@
  */
 
 const DB_NAME = 'hydromines_secure_warehouse_v9';
-const DB_VERSION = 5;
+const DB_VERSION = 7;
 const STORES = [
   'articles', 'catalog', 'mouvements', 'maintenanceLogs', 'transferts', 
   'agents', 'engins', 'perfos', 'hydromines_catalog',
