@@ -167,16 +167,10 @@ export function serializeFirestoreData(data: any): any {
 }
 
 /**
- * Generates a cryptographically secure UUID
+ * Standardisation : generateId() utilise déjà crypto.randomUUID() de manière sécurisée.
+ * generateSecureUUID() est conservé comme alias pour la compatibilité existante, mais est déprécié.
+ * Veuillez utiliser generateId() pour toute nouvelle création d'identifiants.
  */
 export function generateSecureUUID(): string {
-  try {
-    return crypto.randomUUID();
-  } catch (e) {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
-      return v.toString(16);
-    });
-  }
+  return generateId();
 }

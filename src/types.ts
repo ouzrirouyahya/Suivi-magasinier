@@ -219,6 +219,7 @@ export interface Mouvement {
   motif?: string; // Justification for the exit
   interventionType?: string;
   createdBy?: string; // Operator who created the movement
+  condition?: 'NEUF' | 'BON' | 'MAUVAIS' | 'HORS_SERVICE';
 }
 
 export interface EnginMaster {

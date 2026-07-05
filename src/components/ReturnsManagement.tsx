@@ -108,17 +108,19 @@ export function ReturnsManagement() {
     const emitterString = selectedAgent 
       ? `Émetteur: ${selectedAgent.lastname} ${selectedAgent.firstname} (Service: ${selectedAgent.service || 'MINES'})` 
       : 'Émetteur: Agent Mineur non spécifié';
-    const finalNotes = `État: ${condition} - ${emitterString} - Motif: ${reason}`;
+    const finalNotes = `${emitterString} - Motif: ${reason}`;
 
     const newMouvement: Mouvement = {
       id: generateId(),
       site: articleObj.site,
       date: new Date().toISOString(),
       type: 'RETOUR',
+      condition: condition,
       reference: `RET-${Date.now().toString().slice(-6)}`,
       items: [{ articleId: selectedArticleId, quantity: qty, price: articleObj.price || 0 }],
       notes: finalNotes,
       status: 'COMPLETE',
+      createdBy: currentUser?.email || 'unknown',
       beneficiaire: selectedAgent ? `${selectedAgent.lastname} ${selectedAgent.firstname}` : undefined
     };
 
@@ -153,9 +155,13 @@ export function ReturnsManagement() {
 
       // Match condition filter
       if (conditionFilter !== 'ALL') {
-        const condTypeStr = `état: ${conditionFilter}`.toLowerCase();
-        const fallbackCondStr = `condition: ${conditionFilter}`.toLowerCase();
-        if (!notesLower.includes(condTypeStr) && !notesLower.includes(fallbackCondStr)) {
+        const mCondition = m.condition || (
+          notesLower.includes('neuf') ? 'NEUF' :
+          notesLower.includes('mauvais') ? 'MAUVAIS' :
+          notesLower.includes('hors_service') ? 'HORS_SERVICE' :
+          notesLower.includes('bon') ? 'BON' : undefined
+        );
+        if (mCondition !== conditionFilter) {
           return false;
         }
       }
@@ -183,12 +189,21 @@ export function ReturnsManagement() {
   // Quick Stats
   const returnStats = useMemo(() => {
     const siteReturns = mouvements.filter(m => m.type === 'RETOUR' && (currentSite === 'ALL' ? true : m.site === currentSite));
+    const getCondition = (m: Mouvement) => {
+      if (m.condition) return m.condition;
+      const notesLower = (m.notes || '').toLowerCase();
+      if (notesLower.includes('neuf')) return 'NEUF';
+      if (notesLower.includes('mauvais')) return 'MAUVAIS';
+      if (notesLower.includes('hors_service')) return 'HORS_SERVICE';
+      return 'BON';
+    };
+
     return {
       total: siteReturns.length,
-      neuf: siteReturns.filter(m => (m.notes || '').toLowerCase().includes('neuf')).length,
-      bon: siteReturns.filter(m => (m.notes || '').toLowerCase().includes('bon')).length,
-      repair: siteReturns.filter(m => (m.notes || '').toLowerCase().includes('mauvais')).length,
-      scrap: siteReturns.filter(m => (m.notes || '').toLowerCase().includes('hors_service')).length
+      neuf: siteReturns.filter(m => getCondition(m) === 'NEUF').length,
+      bon: siteReturns.filter(m => getCondition(m) === 'BON').length,
+      repair: siteReturns.filter(m => getCondition(m) === 'MAUVAIS').length,
+      scrap: siteReturns.filter(m => getCondition(m) === 'HORS_SERVICE').length
     };
   }, [mouvements, currentSite]);
 
@@ -603,14 +618,18 @@ export function ReturnsManagement() {
                       const article = articles.find(a => a.id === item?.articleId) || articles.find(a => a.ref === item?.articleId);
                       
                       // Highlight condition badges
-                      const notesLower = (m.notes || '').toLowerCase();
-                      let statusBadge = <span className="bg-slate-100 text-slate-700 border border-slate-200/60 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">BON</span>;
+                      const mCondition = m.condition || (
+                        (m.notes || '').toLowerCase().includes('neuf') ? 'NEUF' :
+                        (m.notes || '').toLowerCase().includes('mauvais') ? 'MAUVAIS' :
+                        ((m.notes || '').toLowerCase().includes('hors_service') || (m.notes || '').toLowerCase().includes('h.s')) ? 'HORS_SERVICE' : 'BON'
+                      );
                       
-                      if (notesLower.includes('neuf')) {
+                      let statusBadge = <span className="bg-slate-100 text-slate-700 border border-slate-200/60 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">BON</span>;
+                      if (mCondition === 'NEUF') {
                         statusBadge = <span className="bg-emerald-50 text-emerald-700 border border-emerald-200/40 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">NEUF</span>;
-                      } else if (notesLower.includes('mauvais')) {
+                      } else if (mCondition === 'MAUVAIS') {
                         statusBadge = <span className="bg-amber-50 text-amber-700 border border-amber-200/40 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">MAUVAIS</span>;
-                      } else if (notesLower.includes('hors_service') || notesLower.includes('h.s')) {
+                      } else if (mCondition === 'HORS_SERVICE') {
                         statusBadge = <span className="bg-rose-50 text-rose-700 border border-rose-200/40 text-[8px] font-black px-1.5 py-0.5 rounded mr-1">H.S.</span>;
                       }
 

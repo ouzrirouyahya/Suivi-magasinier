@@ -41,7 +41,21 @@ export class MovementsService {
               : isAddition 
                 ? (article.quantity || 0) + item.quantity 
                 : (article.quantity || 0) - item.quantity;
-            updatedArticles[index] = { ...article, quantity: Math.max(0, newQty) };
+            
+            // Guard supplémentaire pour simulation :
+            if (newQty < 0 && !isAdjustment) {
+              return { 
+                success: false, 
+                error: `Stock local insuffisant pour ${article.ref}. ` +
+                       `Disponible: ${article.quantity}, Demandé: ${item.quantity}. ` +
+                       `Note: le stock réel en ligne peut différer.`
+              };
+            }
+
+            updatedArticles[index] = { 
+              ...article, 
+              quantity: isAdjustment ? newQty : Math.max(0, newQty) 
+            };
           }
         }
         

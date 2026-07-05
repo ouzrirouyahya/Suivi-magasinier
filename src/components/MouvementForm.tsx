@@ -27,7 +27,8 @@ import {
   RefreshCw,
   Eye,
   Info,
-  Star
+  Star,
+  WifiOff
 } from 'lucide-react';
 import { Article, Mouvement, MouvementItem, SiteCode, EnginMaster, PerfoMaster, AgentMaster, CatalogItem, HydrominesCatalogItem, StockType } from '../types';
 import { cn, formatCurrency, generateId } from '../lib/utils';
@@ -738,6 +739,35 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     }
 
     if (items.length === 0) { setValidationError('Ajoutez des articles.'); return; }
+
+    // Vérifier que toutes les quantités sont valides et > 0
+    const invalidQtyItem = items.find(item => 
+      !item.quantity || 
+      isNaN(item.quantity) || 
+      item.quantity <= 0 ||
+      !Number.isInteger(item.quantity)  // pas de décimales sur les quantités
+    );
+
+    if (invalidQtyItem) {
+      const art = articles.find(a => a.id === invalidQtyItem.articleId) || localCreatedArticles.find(a => a.id === invalidQtyItem.articleId);
+      setValidationError(
+        `Quantité invalide pour "${art?.designation || 'un article'}" : la quantité doit être un nombre entier supérieur à 0.`
+      );
+      return;
+    }
+
+    if (type === 'ENTREE') {
+      const negativePriceItem = items.find(item => 
+        item.price !== undefined && item.price < 0
+      );
+      if (negativePriceItem) {
+        const art = articles.find(a => a.id === negativePriceItem.articleId) || localCreatedArticles.find(a => a.id === negativePriceItem.articleId);
+        setValidationError(
+          `Prix négatif détecté pour "${art?.designation}" : un prix ne peut pas être négatif.`
+        );
+        return;
+      }
+    }
 
     // NOUVELLE VÉRIFICATION : tous les articles doivent appartenir au chantier sélectionné
     const mismatchedItem = items.find(item => {
@@ -1565,26 +1595,35 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                 <p className="text-5xl font-black text-slate-950 tracking-tighter tabular-nums">{formatCurrency(totalValue)}</p>
               </div>
             </div>
-            <div className="flex gap-4 w-full sm:w-auto">
-              <button 
-                id="mouvement-submit-btn"
-                type="submit" 
-                disabled={items.length === 0 || site === 'ALL' || (!isOnline && type === 'SORTIE')} 
-                className={cn(
-                  "flex-1 sm:flex-none px-12 h-16 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl transition-all cursor-pointer",
-                  (items.length === 0 || site === 'ALL' || (!isOnline && type === 'SORTIE'))
-                    ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-50 border-none"
-                    : "bg-slate-950 text-white hover:bg-sky-600 border-none"
-                )}
-              >
-                {site === 'ALL' 
-                  ? 'Sélectionnez un chantier dans le menu' 
-                  : !isOnline && type === 'SORTIE'
-                    ? 'Sortie impossible hors-ligne'
+            <div className="flex flex-col items-stretch sm:items-end gap-3 w-full sm:w-auto">
+              <div className="flex gap-4 w-full sm:w-auto">
+                <button 
+                  id="mouvement-submit-btn"
+                  type="submit" 
+                  disabled={items.length === 0 || site === 'ALL'} 
+                  className={cn(
+                    "flex-1 sm:flex-none px-12 h-16 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl transition-all cursor-pointer",
+                    (items.length === 0 || site === 'ALL')
+                      ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-50 border-none"
+                      : "bg-slate-950 text-white hover:bg-sky-600 border-none"
+                  )}
+                >
+                  {site === 'ALL' 
+                    ? 'Sélectionnez un chantier dans le menu' 
                     : isOnline 
                       ? 'Enregistrer' 
                       : 'Enregistrer (sera sync quand online)'}
-              </button>
+                </button>
+              </div>
+              {!isOnline && type === 'SORTIE' && (
+                <div className="flex items-center gap-2 text-amber-600 text-xs bg-amber-50 border border-amber-200 rounded-lg p-2 max-w-sm self-stretch sm:self-auto">
+                  <WifiOff className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span>
+                    Mode hors-ligne : le bon de sortie sera enregistré localement 
+                    et synchronisé automatiquement au retour du réseau.
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </div>

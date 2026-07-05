@@ -287,6 +287,7 @@ export class TransfersService {
             date: new Date().toISOString(),
             type: 'TRANSFERT_IN',
             reference: transfert.reference,
+            createdBy: recepteur,
             items: [{
               articleId: work.deterministicId,
               quantity: work.transferItem.quantity,

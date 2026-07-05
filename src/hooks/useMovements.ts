@@ -131,20 +131,26 @@ export function useMovements() {
   }, [setAnomalyReports, currentSite, currentUser]);
 
   const addMouvement = useCallback(async (mouvement: Mouvement) => {
+    // Injecter createdBy depuis l'utilisateur connecté
+    const enrichedMouvement: Mouvement = {
+      ...mouvement,
+      createdBy: currentUser?.email || mouvement.createdBy || 'unknown'
+    };
+
     const isOnline = navigator.onLine;
     if (!isOnline) {
-      const res = await movementsService.addMouvement(mouvement, true);
+      const res = await movementsService.addMouvement(enrichedMouvement, true);
       if (!res.success) throw new Error(res.error);
       
       const intentId = 'mvt_' + crypto.randomUUID();
-      const payload = { intentId, type: 'addMouvement', payload: mouvement };
+      const payload = { intentId, type: 'addMouvement', payload: enrichedMouvement };
       await offlineQueue.add(payload);
       
       const { retryQueue, setRetryQueue } = useSystemStore.getState();
       setRetryQueue([...retryQueue, {
         intentId,
         type: 'addMouvement',
-        payload: mouvement,
+        payload: enrichedMouvement,
         retryCount: 0,
         maxRetries: 3
       }]);
@@ -154,29 +160,29 @@ export function useMovements() {
     }
 
     try {
-      const res = await movementsService.addMouvement(mouvement);
+      const res = await movementsService.addMouvement(enrichedMouvement);
       if (!res.success) throw new Error(res.error);
     } catch (err: any) {
       console.warn('[useMovements] Transaction failed, queuing offline fallback', err);
-      const res = await movementsService.addMouvement(mouvement, true);
+      const res = await movementsService.addMouvement(enrichedMouvement, true);
       if (!res.success) throw new Error(res.error);
       
       const intentId = 'mvt_' + crypto.randomUUID();
-      const payload = { intentId, type: 'addMouvement', payload: mouvement };
+      const payload = { intentId, type: 'addMouvement', payload: enrichedMouvement };
       await offlineQueue.add(payload);
       
       const { retryQueue, setRetryQueue } = useSystemStore.getState();
       setRetryQueue([...retryQueue, {
         intentId,
         type: 'addMouvement',
-        payload: mouvement,
+        payload: enrichedMouvement,
         retryCount: 0,
         maxRetries: 3
       }]);
       
       toast.warning("Échec réseau : mouvement enregistré localement pour synchronisation future.");
     }
-  }, []);
+  }, [currentUser]);
 
   const addPurchaseRequest = useCallback(async (pr: PurchaseRequest) => {
     const isOnline = navigator.onLine;
