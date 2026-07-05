@@ -745,13 +745,14 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       !item.quantity || 
       isNaN(item.quantity) || 
       item.quantity <= 0 ||
-      !Number.isInteger(item.quantity)  // pas de décimales sur les quantités
+      item.quantity > 999999 ||  // plafond raisonnable
+      Math.round(item.quantity * 1000) / 1000 !== item.quantity  // max 3 décimales
     );
 
     if (invalidQtyItem) {
       const art = articles.find(a => a.id === invalidQtyItem.articleId) || localCreatedArticles.find(a => a.id === invalidQtyItem.articleId);
       setValidationError(
-        `Quantité invalide pour "${art?.designation || 'un article'}" : la quantité doit être un nombre entier supérieur à 0.`
+        `Quantité invalide pour "${art?.designation || 'un article'}" : la quantité doit être supérieure à 0 et comporter au maximum 3 décimales.`
       );
       return;
     }
@@ -827,12 +828,16 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       }
     }
 
+    // S'assurer que la référence est toujours présente
+    const finalReference = reference.trim() || 
+      generateReference(type === 'ENTREE' ? 'BE' : 'BS', (site as string) === 'ALL' ? 'HYDRO' : site);
+
     const mouvement: Mouvement = {
       id: generateId(),
       site: site,
       date,
       type,
-      reference,
+      reference: finalReference,
       vendeur: type === 'ENTREE' ? resolvedEntityName : undefined,
       demandeur: (type === 'SORTIE' && isEpiOrOutils) ? entityName : undefined,
       beneficiaire: finalBeneficiaireRef,
