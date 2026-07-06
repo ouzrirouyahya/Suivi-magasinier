@@ -55,12 +55,17 @@ export function useOffline() {
   }, [setRetryQueue]);
 
   const triggerProcessing = useCallback(async () => {
+    const { retryQueue, dlq, txStats, avgTxDuration, setRetryQueue, setDlq, setAvgTxDuration, setTxStats } = useSystemStore.getState();
     if (retryQueue.length === 0 || isSyncingRef.current) return;
     isSyncingRef.current = true;
     
     const queue = [...retryQueue];
     const processedIds: string[] = [];
     const failedItems: any[] = [];
+    
+    let totalSuccess = txStats.success;
+    let totalFailed = txStats.failed;
+    let accumulatedAvgDuration = avgTxDuration;
     
     for (const item of queue) {
       try {
@@ -81,13 +86,8 @@ export function useOffline() {
           }
         }
         
-        // Update stats
-        setAvgTxDuration(avgTxDuration > 0 ? (avgTxDuration + duration) / 2 : duration);
-        setTxStats({
-          total: txStats.total + 1,
-          success: txStats.success + 1,
-          failed: txStats.failed
-        });
+        accumulatedAvgDuration = accumulatedAvgDuration > 0 ? (accumulatedAvgDuration + duration) / 2 : duration;
+        totalSuccess += 1;
       } catch (err: any) {
         console.error(`[useOffline] Error processing queued operation ${item.intentId}:`, err);
         const errorMsg = err.message || String(err);
@@ -110,11 +110,7 @@ export function useOffline() {
           lastError: errorMsg
         });
 
-        setTxStats({
-          total: txStats.total + 1,
-          success: txStats.success,
-          failed: txStats.failed + 1
-        });
+        totalFailed += 1;
       }
     }
     
@@ -138,6 +134,12 @@ export function useOffline() {
       }
     });
 
+    setAvgTxDuration(accumulatedAvgDuration);
+    setTxStats({
+      total: totalSuccess + totalFailed,
+      success: totalSuccess,
+      failed: totalFailed
+    });
     setRetryQueue(nextRetryQueue);
     if (newDeadLetters.length > 0) {
       setDlq([...dlq, ...newDeadLetters]);
@@ -151,7 +153,7 @@ export function useOffline() {
     }
     
     isSyncingRef.current = false;
-  }, [retryQueue, dlq, txStats, avgTxDuration, setRetryQueue, setDlq, setAvgTxDuration, setTxStats]);
+  }, []);
 
   // Network monitoring
   useEffect(() => {
@@ -179,10 +181,24 @@ export function useOffline() {
     return () => clearInterval(interval);
   }, [setNetworkQuality, setIsDegradedNetwork]);
 
-  // Auto-sync when network recovers
+  // Auto-sync when network recovers with a safe cooldown/delay of 5 seconds to prevent tight loop spams
+  const lastSyncTimeRef = useRef(0);
   useEffect(() => {
     if (networkQuality === 'ONLINE' && retryQueue.length > 0) {
-      triggerProcessing();
+      const now = Date.now();
+      if (now - lastSyncTimeRef.current > 5000) {
+        lastSyncTimeRef.current = now;
+        triggerProcessing();
+      } else {
+        const timer = setTimeout(() => {
+          const freshStore = useSystemStore.getState();
+          if (freshStore.networkQuality === 'ONLINE' && freshStore.retryQueue.length > 0) {
+            lastSyncTimeRef.current = Date.now();
+            triggerProcessing();
+          }
+        }, 5000 - (now - lastSyncTimeRef.current));
+        return () => clearTimeout(timer);
+      }
     }
   }, [networkQuality, retryQueue.length, triggerProcessing]);
 
