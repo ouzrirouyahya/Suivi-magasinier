@@ -7,7 +7,7 @@ const DB_NAME = 'hydromines_secure_warehouse_v9';
 const DB_VERSION = 7;
 const STORES = [
   'articles', 'catalog', 'mouvements', 'maintenanceLogs', 'transferts', 
-  'agents', 'engins', 'perfos', 'hydromines_catalog',
+  'agents', 'engins', 'perfos', 'hydromines_catalog', 'hydrominesCatalog',
   'inventaires', 'auditLogs', 'notifications', 'distributions', 
   'purchaseRequests', 'anomalyReports', 'offlineQueue'
 ];
@@ -21,6 +21,11 @@ class IndexedDBStorageClass {
       console.warn('[STORAGE_HARDENING] IndexedDB initialization failed. LocalStorage fallback active.', err);
       this.isFallbackMode = true;
     });
+  }
+
+  private resolveStoreName(storeName: string): string {
+    if (storeName === 'hydrominesCatalog') return 'hydromines_catalog';
+    return storeName;
   }
 
   private initDatabase(forcedVersion?: number): Promise<IDBDatabase> {
@@ -126,15 +131,51 @@ class IndexedDBStorageClass {
     return this.initDatabase();
   }
 
+  private async verifyOrRecreateStore(storeName: string): Promise<IDBDatabase> {
+    const db = await this.ensureDb();
+    if (db.objectStoreNames.contains(storeName)) {
+      return db;
+    }
+
+    console.warn(`[STORAGE_HARDENING] Store '${storeName}' does not exist in current IndexedDB schema. Triggering self-healing recreation...`);
+    if (!STORES.includes(storeName)) {
+      STORES.push(storeName);
+    }
+
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        const del = indexedDB.deleteDatabase(DB_NAME);
+        del.onsuccess = () => resolve();
+        del.onerror = () => reject(del.error || new Error('Delete database failed during self-healing.'));
+        del.onblocked = () => {
+          console.warn('[STORAGE_HARDENING] Database deletion blocked by other tabs/connections.');
+          resolve();
+        };
+      });
+      const freshDb = await this.initDatabase();
+      this.db = freshDb;
+      return freshDb;
+    } catch (err) {
+      console.warn(`[STORAGE_HARDENING_FALLBACK] Self-healing db recreation failed for store '${storeName}'.`, err);
+      throw err;
+    }
+  }
+
   /**
    * Saves a collection of entities of type T into IndexedDB.
    */
   public async saveCollection<T extends { id: any }>(storeName: string, items: T[]): Promise<void> {
+    const resolvedStoreName = this.resolveStoreName(storeName);
     try {
-      const db = await this.ensureDb();
+      const db = await this.verifyOrRecreateStore(resolvedStoreName);
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
+        const tx = db.transaction(resolvedStoreName, 'readwrite');
+        const store = tx.objectStore(resolvedStoreName);
 
         // Clear existing items in store first to ensure clean snapshot consistency
         const clearReq = store.clear();
@@ -146,16 +187,16 @@ class IndexedDBStorageClass {
             const req = store.put(item);
             req.onerror = () => {
               errorOccured = true;
-              console.error(`[STORAGE_HARDENING] Error putting item into store ${storeName}:`, req.error);
+              console.error(`[STORAGE_HARDENING] Error putting item into store ${resolvedStoreName}:`, req.error);
             };
           });
 
           tx.oncomplete = () => {
             if (errorOccured) {
-              console.warn(`[STORAGE_HARDENING] Some items were discarded in store ${storeName}.`);
+              console.warn(`[STORAGE_HARDENING] Some items were discarded in store ${resolvedStoreName}.`);
             }
             // Keep a tiny quick reference / small cache in localStorage for instant boots
-            this.updateLocalStorageCache(storeName, items.slice(0, 50));
+            this.updateLocalStorageCache(resolvedStoreName, items.slice(0, 50));
             resolve();
           };
 
@@ -166,8 +207,12 @@ class IndexedDBStorageClass {
       });
     } catch (err) {
       this.isFallbackMode = true; // Downgrade to fallback
-      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB write failed for '${storeName}'. Writing completely to LocalStorage.`, err);
-      localStorage.setItem(`hydromines_cache_${storeName}`, JSON.stringify(items));
+      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB write failed for '${resolvedStoreName}'. Writing completely to LocalStorage.`, err);
+      try {
+        localStorage.setItem(`hydromines_cache_${resolvedStoreName}`, JSON.stringify(items));
+      } catch (storageErr) {
+        console.error('[STORAGE_HARDENING] LocalStorage write fallback failed:', storageErr);
+      }
     }
   }
 
@@ -175,18 +220,27 @@ class IndexedDBStorageClass {
    * Saves a single item into IndexedDB.
    */
   public async saveItem<T extends { id: any }>(storeName: string, item: T): Promise<void> {
+    const resolvedStoreName = this.resolveStoreName(storeName);
     try {
-      const db = await this.ensureDb();
+      const db = await this.verifyOrRecreateStore(resolvedStoreName);
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
+        const tx = db.transaction(resolvedStoreName, 'readwrite');
+        const store = tx.objectStore(resolvedStoreName);
         const req = store.put(item);
         req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error || new Error(`Failed to save item to ${storeName}.`));
+        req.onerror = () => reject(req.error || new Error(`Failed to save item to ${resolvedStoreName}.`));
       });
     } catch (err) {
-      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB saveItem failed for '${storeName}'.`, err);
-      throw err;
+      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB saveItem failed for '${resolvedStoreName}'.`, err);
+      // LocalStorage fallback for single item
+      try {
+        const current = this.readLocalStorageCache<T>(resolvedStoreName) || [];
+        const filtered = current.filter((x: any) => x.id !== item.id);
+        filtered.push(item);
+        this.updateLocalStorageCache(resolvedStoreName, filtered);
+      } catch (storageErr) {
+        console.error('[STORAGE_HARDENING] LocalStorage saveItem fallback failed:', storageErr);
+      }
     }
   }
 
@@ -194,18 +248,25 @@ class IndexedDBStorageClass {
    * Deletes a single item from IndexedDB by ID.
    */
   public async deleteItem(storeName: string, id: any): Promise<void> {
+    const resolvedStoreName = this.resolveStoreName(storeName);
     try {
-      const db = await this.ensureDb();
+      const db = await this.verifyOrRecreateStore(resolvedStoreName);
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readwrite');
-        const store = tx.objectStore(storeName);
+        const tx = db.transaction(resolvedStoreName, 'readwrite');
+        const store = tx.objectStore(resolvedStoreName);
         const req = store.delete(id);
         req.onsuccess = () => resolve();
-        req.onerror = () => reject(req.error || new Error(`Failed to delete item from ${storeName}.`));
+        req.onerror = () => reject(req.error || new Error(`Failed to delete item from ${resolvedStoreName}.`));
       });
     } catch (err) {
-      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB deleteItem failed for '${storeName}'.`, err);
-      throw err;
+      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB deleteItem failed for '${resolvedStoreName}'.`, err);
+      try {
+        const current = this.readLocalStorageCache<any>(resolvedStoreName) || [];
+        const filtered = current.filter((x: any) => x.id !== id);
+        this.updateLocalStorageCache(resolvedStoreName, filtered);
+      } catch (storageErr) {
+        console.error('[STORAGE_HARDENING] LocalStorage deleteItem fallback failed:', storageErr);
+      }
     }
   }
 
@@ -213,11 +274,12 @@ class IndexedDBStorageClass {
    * Retrieves a full collection from IndexedDB, falling back to LocalStorage if needed.
    */
   public async getCollection<T>(storeName: string): Promise<T[]> {
+    const resolvedStoreName = this.resolveStoreName(storeName);
     try {
-      const db = await this.ensureDb();
+      const db = await this.verifyOrRecreateStore(resolvedStoreName);
       return new Promise((resolve, reject) => {
-        const tx = db.transaction(storeName, 'readonly');
-        const store = tx.objectStore(storeName);
+        const tx = db.transaction(resolvedStoreName, 'readonly');
+        const store = tx.objectStore(resolvedStoreName);
         const req = store.getAll();
 
         req.onsuccess = () => {
@@ -226,18 +288,18 @@ class IndexedDBStorageClass {
             resolve(result);
           } else {
             // Check if there is cache in localStorage as backfill (unmigrated)
-            const fallback = this.readLocalStorageCache<T>(storeName);
+            const fallback = this.readLocalStorageCache<T>(resolvedStoreName);
             resolve(fallback);
           }
         };
 
         req.onerror = () => {
-          reject(req.error || new Error(`Failed to getAll elements from ${storeName}.`));
+          reject(req.error || new Error(`Failed to getAll elements from ${resolvedStoreName}.`));
         };
       });
     } catch (err) {
-      console.info(`[STORAGE_HARDENING_FALLBACK] IndexedDB read failed or inactive for '${storeName}'. Responding with LocalStorage backup.`, err);
-      return this.readLocalStorageCache<T>(storeName);
+      console.info(`[STORAGE_HARDENING_FALLBACK] IndexedDB read failed or inactive for '${resolvedStoreName}'. Responding with LocalStorage backup.`, err);
+      return this.readLocalStorageCache<T>(resolvedStoreName);
     }
   }
 

@@ -37,6 +37,15 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
       window.dispatchEvent(new CustomEvent('sw-sync-triggered'));
     }
   });
+
+  // Rechargement automatique de la page lorsqu'un nouveau Service Worker prend le contrôle
+  let refreshing = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (refreshing) return;
+    refreshing = true;
+    console.log('[Service Worker] Nouvelle version détectée, rechargement de l\'application...');
+    window.location.reload();
+  });
 }
 
 createRoot(document.getElementById('root')!).render(

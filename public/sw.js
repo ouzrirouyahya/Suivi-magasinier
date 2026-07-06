@@ -16,6 +16,7 @@ const PRECACHE_ASSETS = (typeof self.__WB_MANIFEST !== 'undefined')
   : SHELL_ASSETS;
 
 self.addEventListener('install', (event) => {
+  self.skipWaiting();
   event.waitUntil(
     caches.open(CACHE_NAME).then(cache => {
       // addAll échoue si UN seul asset manque — utiliser add() individuel
@@ -24,11 +25,12 @@ self.addEventListener('install', (event) => {
           console.warn('[SW] Précache raté pour', url, err)
         ))
       );
-    }).then(() => self.skipWaiting())
+    })
   );
 });
 
 self.addEventListener('activate', (event) => {
+  self.clients.claim();
   event.waitUntil(
     caches.keys().then((cacheNames) => {
       return Promise.all(
@@ -41,7 +43,6 @@ self.addEventListener('activate', (event) => {
       );
     })
   );
-  self.clients.claim();
 });
 
 // Helper pour éviter les attentes infinies sur réseau instable/faible
