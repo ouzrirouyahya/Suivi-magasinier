@@ -281,10 +281,11 @@ service cloud.firestore {
     }
 
     function isValidMaintenanceLog(data) {
-      return data.keys().hasAll(['id', 'machineId', 'machineType', 'date', 'type', 'description', 'partsUsed', 'performer'])
-        && data.keys().size() <= 12
+      return data.keys().hasAll(['id', 'machineId', 'machineType', 'date', 'type', 'description', 'partsUsed', 'performer', 'site'])
+        && data.keys().size() <= 13
         && data.id is string
         && data.machineId is string
+        && data.site is string
         && data.partsUsed is list;
     }
 
@@ -348,16 +349,16 @@ service cloud.firestore {
       allow write: if isAdmin() && isValidId(id);
     }
     match /engins/{id} {
-      allow read: if canReadIfActive();
-      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+      allow read: if canReadSite(resource.data.site);
+      allow write: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) && (resource == null || canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site)) && isValidId(id);
     }
     match /perfos/{id} {
-      allow read: if canReadIfActive();
-      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+      allow read: if canReadSite(resource.data.site);
+      allow write: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) && (resource == null || canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site)) && isValidId(id);
     }
     match /agents/{id} {
-      allow read: if canReadIfActive();
-      allow write: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id);
+      allow read: if canReadSite(resource.data.site);
+      allow write: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) && (resource == null || canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site)) && isValidId(id);
     }
 
     // Stocks/Articles: Protected from non-magasiniers and arbitrary value-poisoning
@@ -423,8 +424,8 @@ service cloud.firestore {
 
     // Audit logs: Strictly append-only. Immutable once recorded.
     match /auditLogs/{id} {
-      allow read: if canReadIfActive();
-      allow create: if canReadIfActive() && isValidId(id) && isValidAuditLog(incoming());
+      allow read: if canReadSite(resource.data.site);
+      allow create: if canReadIfActive() && isValidId(id) && isValidAuditLog(incoming()) && (isAdmin() || userAssignedSite() == incoming().site);
       allow update, delete: if false;
     }
 
@@ -449,7 +450,7 @@ service cloud.firestore {
         userAssignedSite() == 'ALL' || 
         userAssignedSite() == resource.data.site
       );
-      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidDeletionRequest(incoming());
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) && isValidId(id) && isValidDeletionRequest(incoming());
       allow update: if isActive() && (
         isSuperAdmin() || 
         (isAdmin() && (userAssignedSite() == 'ALL' || userAssignedSite() == existing().site))
@@ -495,25 +496,25 @@ service cloud.firestore {
 
     // Anomaly Reports
     match /anomalyReports/{id} {
-      allow read: if canReadIfActive();
-      allow create: if canReadIfActive() && isValidId(id) && isValidAnomalyReport(incoming());
-      allow update: if canReadIfActive() && isValidId(id) && isValidAnomalyReport(incoming());
+      allow read: if canReadSite(resource.data.site);
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) && isValidId(id) && isValidAnomalyReport(incoming());
+      allow update: if canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site) && canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) && isValidId(id) && isValidAnomalyReport(incoming());
       allow delete: if isAdmin();
     }
 
     // Maintenance Logs
     match /maintenanceLogs/{id} {
-      allow read: if canReadIfActive();
-      allow create: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidMaintenanceLog(incoming());
-      allow update: if canWrite(['ADMIN', 'MAGASINIER']) && isValidId(id) && isValidMaintenanceLog(incoming());
+      allow read: if canReadSite(resource.data.site);
+      allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) && isValidId(id) && isValidMaintenanceLog(incoming());
+      allow update: if canWriteOnSite(['ADMIN', 'MAGASINIER'], existing().site) && canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) && isValidId(id) && isValidMaintenanceLog(incoming());
       allow delete: if isAdmin();
     }
 
     // Notifications
     match /notifications/{id} {
-      allow read: if canReadIfActive();
-      allow create: if canReadIfActive() && isValidId(id) && isValidNotification(incoming());
-      allow update: if canReadIfActive() && isValidId(id);
+      allow read: if isActive() && (isAdmin() || userAssignedSite() == resource.data.siteId || resource.data.siteId == 'ALL');
+      allow create: if isActive() && (isAdmin() || userAssignedSite() == incoming().siteId) && isValidId(id) && isValidNotification(incoming());
+      allow update: if isActive() && (isAdmin() || userAssignedSite() == existing().siteId) && isValidId(id);
       allow delete: if isAdmin() && isValidId(id);
     }
 

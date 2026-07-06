@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { collection, onSnapshot, doc, setDoc, db } from '../lib/db';
+import { collection, onSnapshot, doc, setDoc, db, query, where } from '../lib/db';
 import { useMaintenanceStore } from '../stores/maintenance.store';
 import { maintenanceService } from '../services/maintenance.service';
 import { offlineService } from '../services/offline.service';
@@ -10,6 +10,7 @@ import { serializeFirestoreData, cleanObject, handleFirestoreError, OperationTyp
 
 export function useMaintenance() {
   const currentUser = useAuthStore(s => s.currentUser);
+  const currentSite = useAuthStore(s => s.currentSite);
   const {
     maintenanceLogs,
     engins,
@@ -23,9 +24,13 @@ export function useMaintenance() {
 
   // Subscribe to maintenance logs
   useEffect(() => {
-    if (!currentUser || !currentUser.active) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
 
-    const unsub = onSnapshot(collection(db, 'maintenanceLogs'), (snap) => {
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'maintenanceLogs'))
+      : query(collection(db, 'maintenanceLogs'), where('site', '==', currentSite));
+
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as MaintenanceLog);
       setMaintenanceLogs(list);
       offlineService.saveCollection('maintenanceLogs', list)
@@ -35,13 +40,17 @@ export function useMaintenance() {
       handleFirestoreError(error, OperationType.LIST, 'maintenanceLogs');
     });
     return unsub;
-  }, [setMaintenanceLogs, currentUser]);
+  }, [setMaintenanceLogs, currentUser, currentSite]);
 
   // Subscribe to engins
   useEffect(() => {
-    if (!currentUser || !currentUser.active) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
 
-    const unsub = onSnapshot(collection(db, 'engins'), (snap) => {
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'engins'))
+      : query(collection(db, 'engins'), where('site', '==', currentSite));
+
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs
         .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as EnginMaster)
         .filter(e => !(e as any).deleted);
@@ -50,13 +59,17 @@ export function useMaintenance() {
       handleFirestoreError(error, OperationType.LIST, 'engins');
     });
     return unsub;
-  }, [setEngins, currentUser]);
+  }, [setEngins, currentUser, currentSite]);
 
   // Subscribe to perfos
   useEffect(() => {
-    if (!currentUser || !currentUser.active) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
 
-    const unsub = onSnapshot(collection(db, 'perfos'), (snap) => {
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'perfos'))
+      : query(collection(db, 'perfos'), where('site', '==', currentSite));
+
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs
         .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as PerfoMaster)
         .filter(p => !(p as any).deleted);
@@ -65,13 +78,17 @@ export function useMaintenance() {
       handleFirestoreError(error, OperationType.LIST, 'perfos');
     });
     return unsub;
-  }, [setPerfos, currentUser]);
+  }, [setPerfos, currentUser, currentSite]);
 
   // Subscribe to agents
   useEffect(() => {
-    if (!currentUser || !currentUser.active) return;
+    if (!currentUser || !currentUser.active || !currentSite) return;
 
-    const unsub = onSnapshot(collection(db, 'agents'), (snap) => {
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'agents'))
+      : query(collection(db, 'agents'), where('site', '==', currentSite));
+
+    const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs
         .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AgentMaster)
         .filter(a => !(a as any).deleted);
@@ -80,7 +97,7 @@ export function useMaintenance() {
       handleFirestoreError(error, OperationType.LIST, 'agents');
     });
     return unsub;
-  }, [setAgents, currentUser]);
+  }, [setAgents, currentUser, currentSite]);
 
   const addMaintenanceLog = useCallback(async (log: MaintenanceLog) => {
     await maintenanceService.addMaintenanceLog(log);

@@ -106,7 +106,7 @@ export class MaintenanceService {
       }
 
       // Set maintenance log
-      transaction.set(logRef, cleanObject({ ...log, id }));
+      transaction.set(logRef, cleanObject({ ...log, id, site: machineSite }));
 
       // Audit log inside transaction
       const auditLogId = generateSecureUUID();
