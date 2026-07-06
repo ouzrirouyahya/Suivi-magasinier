@@ -79,10 +79,7 @@ export function useAuth() {
             // Utilisateur Google authentifié mais pas encore de compte Hydromines
             // Créer un UserAccount temporaire "EN_ATTENTE_INSCRIPTION"
             // pour que App.tsx ne redirige PAS vers /login
-            if (unsubUser) {
-              unsubUser();
-              unsubUser = null;
-            }
+            // Garder l'écouteur actif pour recevoir la mise à jour dès la création du document
             const pendingFirebaseUser: UserAccount = {
               id: uid,
               email: user.email || '',

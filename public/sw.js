@@ -72,6 +72,7 @@ self.addEventListener('fetch', (event) => {
     url.hostname.includes('firebaseapp.com') ||
     url.pathname.startsWith('/api/') ||
     url.pathname.includes('/__/auth') ||
+    url.searchParams.has('ping') ||
     (url.hostname.includes('googleapis.com') && !isGoogleFont)
   ) {
     return; // Laisse le navigateur gérer directement la requête via le réseau

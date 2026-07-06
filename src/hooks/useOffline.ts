@@ -158,7 +158,7 @@ export function useOffline() {
     const checkNetwork = async () => {
       try {
         const start = Date.now();
-        await fetch('/favicon.ico', { method: 'HEAD', cache: 'no-store' });
+        await fetch(`/favicon.ico?ping=${start}`, { method: 'HEAD', cache: 'no-store' });
         const latency = Date.now() - start;
         
         if (latency > 2000) {
