@@ -66,10 +66,12 @@ export function useInventory() {
     distributions: movements.distributions,
     purchaseRequests: movements.purchaseRequests,
     anomalyReports: movements.anomalyReports,
+    inventaires: (movements as any).inventaires,
     addMouvement: movements.addMouvement,
     calculatePriceUpdates: movements.calculatePriceUpdates,
     addPurchaseRequest: movements.addPurchaseRequest,
     updatePRStatus: movements.updatePRStatus,
+    saveInventaire: (movements as any).saveInventaire,
 
     // TRANSFERS
     transferts: transfers.transferts,

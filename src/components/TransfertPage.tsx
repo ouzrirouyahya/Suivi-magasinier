@@ -59,7 +59,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
 
   // UI list filters and accordion expansion
   const [expandedTransferts, setExpandedTransferts] = useState<Record<string, boolean>>({});
-  const [statusFilter, setStatusFilter] = useState<'ALL' | 'BROUILLON' | 'DEMANDE' | 'APPROUVE' | 'EXPEDIE' | 'RECEPTIONNE' | 'LITIGE' | 'ACCEPTE'>('ALL');
+  const [statusFilter, setStatusFilter] = useState<'ALL' | 'PENDING_APPROVAL' | 'IN_TRANSIT' | 'RECEIVED' | 'DISPUTED' | 'CLOSED'>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Active control forms inside cards
@@ -104,7 +104,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
     if (!targetSite || items.length === 0) return;
 
     const email = currentUser?.email || 'Mines-Transfer';
-    const initialStatus: TransfertStatus = submitNow ? 'DEMANDE' : 'BROUILLON';
+    const initialStatus: TransfertStatus = 'PENDING_APPROVAL';
 
     const cleanTransfert: Transfert = {
       id: `${currentSite}_TX_${Date.now()}`,
@@ -118,17 +118,11 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
       expediteur: email,
       history: [
         {
-          status: 'BROUILLON',
+          status: 'PENDING_APPROVAL',
           date: new Date().toISOString(),
           userEmail: email,
-          comment: 'Initialisation du bordereau'
-        },
-        ...(submitNow ? [{
-          status: 'DEMANDE' as TransfertStatus,
-          date: new Date().toISOString(),
-          userEmail: email,
-          comment: 'Bordereau soumis pour approbation superviseur'
-        }] : [])
+          comment: submitNow ? 'Bordereau soumis pour approbation superviseur' : 'Initialisation du bordereau'
+        }
       ]
     };
 
@@ -154,9 +148,9 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
     });
 
     const activeDrafts = transferts.filter(t => t.status === 'BROUILLON' && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
-    const activeDemandes = transferts.filter(t => t.status === 'DEMANDE' && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
+    const activeDemandes = transferts.filter(t => (t.status === 'DEMANDE' || t.status === 'PENDING_APPROVAL') && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
     const activeInTransit = transferts.filter(t => (t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
-    const activeDisputes = transferts.filter(t => t.status === 'LITIGE' && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
+    const activeDisputes = transferts.filter(t => (t.status === 'LITIGE' || t.status === 'DISPUTED') && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
 
     return {
       available,
@@ -178,8 +172,16 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
   const filteredTransferts = useMemo(() => {
     return siteTransferts.filter(t => {
       if (statusFilter !== 'ALL') {
-        if (statusFilter === 'EXPEDIE') {
-          if (t.status !== 'EXPEDIE' && t.status !== 'EN_TRANSIT' && t.status !== 'IN_TRANSIT') return false;
+        if (statusFilter === 'PENDING_APPROVAL') {
+          if (t.status !== 'PENDING_APPROVAL' && t.status !== 'BROUILLON' && t.status !== 'DEMANDE') return false;
+        } else if (statusFilter === 'IN_TRANSIT') {
+          if (t.status !== 'IN_TRANSIT' && t.status !== 'EXPEDIE' && t.status !== 'EN_TRANSIT' && t.status !== 'APPROUVE') return false;
+        } else if (statusFilter === 'RECEIVED') {
+          if (t.status !== 'RECEIVED' && t.status !== 'RECEPTIONNE' && t.status !== 'RECU') return false;
+        } else if (statusFilter === 'DISPUTED') {
+          if (t.status !== 'DISPUTED' && t.status !== 'LITIGE') return false;
+        } else if (statusFilter === 'CLOSED') {
+          if (t.status !== 'CLOSED' && t.status !== 'ACCEPTE') return false;
         } else {
           if (t.status !== statusFilter) return false;
         }
@@ -555,10 +557,36 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
           {/* Navigation filter bar with SAP MM classifications */}
           <div className="flex flex-col xl:flex-row gap-4 items-stretch xl:items-center justify-between bg-slate-100/50 border border-slate-200/50 p-4 rounded-2xl shadow-sm">
             <div className="flex flex-wrap gap-1.5">
-              {(['ALL', 'BROUILLON', 'DEMANDE', 'APPROUVE', 'EXPEDIE', 'RECEPTIONNE', 'LITIGE', 'ACCEPTE'] as const).map((status) => {
+              {(['ALL', 'PENDING_APPROVAL', 'IN_TRANSIT', 'RECEIVED', 'DISPUTED', 'CLOSED'] as const).map((status) => {
                 const count = status === 'ALL' 
                   ? siteTransferts.length 
-                  : siteTransferts.filter(t => t.status === status).length;
+                  : siteTransferts.filter(t => {
+                      if (status === 'PENDING_APPROVAL') {
+                        return t.status === 'PENDING_APPROVAL' || t.status === 'BROUILLON' || t.status === 'DEMANDE';
+                      }
+                      if (status === 'IN_TRANSIT') {
+                        return t.status === 'IN_TRANSIT' || t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'APPROUVE';
+                      }
+                      if (status === 'RECEIVED') {
+                        return t.status === 'RECEIVED' || t.status === 'RECEPTIONNE' || t.status === 'RECU';
+                      }
+                      if (status === 'DISPUTED') {
+                        return t.status === 'DISPUTED' || t.status === 'LITIGE';
+                      }
+                      if (status === 'CLOSED') {
+                        return t.status === 'CLOSED' || t.status === 'ACCEPTE';
+                      }
+                      return t.status === status;
+                    }).length;
+                
+                const statusLabels: Record<string, string> = {
+                  'ALL': 'Tous',
+                  'PENDING_APPROVAL': 'En attente',
+                  'IN_TRANSIT': 'En transit',
+                  'RECEIVED': 'Réceptionné',
+                  'DISPUTED': 'Litige',
+                  'CLOSED': 'Clôturé'
+                };
                 
                 return (
                   <button
@@ -572,7 +600,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                         : "bg-white border border-slate-205 text-slate-500 hover:bg-slate-50"
                     )}
                   >
-                    {status === 'ALL' ? 'Tous' : status} ({count})
+                    {statusLabels[status]} ({count})
                   </button>
                 );
               })}
@@ -626,7 +654,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                   key={t.id} 
                   className={cn(
                     "bg-white border border-slate-200/80 rounded-2xl shadow-sm p-4 hover:border-slate-300 transition-all space-y-4",
-                    t.status === 'LITIGE' ? "border-l-4 border-l-rose-500" : ""
+                    (t.status === 'LITIGE' || t.status === 'DISPUTED') ? "border-l-4 border-l-rose-500" : ""
                   )}
                 >
                   {/* Card top info */}
@@ -635,9 +663,9 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                       <div className={cn(
                         "w-10 h-10 rounded-xl flex items-center justify-center text-white",
                         (t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') ? "bg-amber-500" :
-                        t.status === 'DEMANDE' ? "bg-sky-505 bg-sky-600" :
-                        t.status === 'ACCEPTE' ? "bg-emerald-600" :
-                        t.status === 'LITIGE' ? "bg-rose-500 animate-pulse" : "bg-slate-500"
+                        (t.status === 'DEMANDE' || t.status === 'PENDING_APPROVAL') ? "bg-sky-505 bg-sky-600" :
+                        (t.status === 'ACCEPTE' || t.status === 'CLOSED') ? "bg-emerald-600" :
+                        (t.status === 'LITIGE' || t.status === 'DISPUTED') ? "bg-rose-500 animate-pulse" : "bg-slate-500"
                       )}>
                         {(t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') ? <Truck className="w-5 h-5 animate-pulse" /> : <Package className="w-5 h-5" />}
                       </div>
@@ -653,7 +681,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                           </span>
                           
                           {/* Recommended Action Badge */}
-                          {t.status === 'DEMANDE' && currentUser?.role === 'ADMIN' && (
+                          {(t.status === 'DEMANDE' || t.status === 'PENDING_APPROVAL') && currentUser?.role === 'ADMIN' && (
                             <span className="text-[8px] font-bold bg-violet-50 text-violet-600 px-1.5 py-0.5 rounded uppercase tracking-widest border border-violet-100 animate-pulse">
                               Validation superviseur requise
                             </span>
@@ -663,7 +691,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                               Réception à effectuer
                             </span>
                           )}
-                          {['RECEPTIONNE', 'LITIGE'].includes(t.status) && t.targetSite === currentSite && (
+                          {['RECEPTIONNE', 'LITIGE', 'RECEIVED', 'DISPUTED'].includes(t.status) && t.targetSite === currentSite && (
                             <span className="text-[8px] font-bold bg-emerald-50 text-emerald-600 px-1.5 py-0.5 rounded uppercase tracking-widest border border-emerald-100 animate-pulse">
                               Clôture comptable requise
                             </span>
@@ -775,13 +803,13 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                       <div className="flex items-center gap-2">
                         <div className={cn(
                           "w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-black",
-                          t.status === 'ACCEPTE' ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"
+                          (t.status === 'ACCEPTE' || t.status === 'CLOSED') ? "bg-emerald-600 text-white" : "bg-slate-200 text-slate-500"
                         )}>
                           5
                         </div>
                         <div>
-                          <p className="text-[10px] font-black text-slate-700 leading-none">INTÉGRÉ ET CLOS</p>
-                          <p className="text-[9px] text-slate-405 font-mono mt-0.5 lowercase">{t.status === 'ACCEPTE' ? 'comptabilité' : 'en suspens'}</p>
+                          <p className="text-[10px] font-black text-slate-700 leading-none font-mono">INTÉGRÉ ET CLOS</p>
+                          <p className="text-[9px] text-slate-405 font-mono mt-0.5 lowercase">{(t.status === 'ACCEPTE' || t.status === 'CLOSED') ? 'comptabilité' : 'en suspens'}</p>
                         </div>
                       </div>
                     </div>
@@ -941,7 +969,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                       )}
 
                       {/* DEMANDE Action Block (approver role required) */}
-                      {t.status === 'DEMANDE' && (
+                      {(t.status === 'DEMANDE' || t.status === 'PENDING_APPROVAL') && (
                         <div className="bg-violet-600/5 border border-violet-150 rounded-xl p-3 space-y-3">
                           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                             <div>

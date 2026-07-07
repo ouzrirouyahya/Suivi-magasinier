@@ -631,13 +631,13 @@ export function formatTransfersForExport(transfers: Transfert[], articles: Artic
         const totalVal = (Number(item.quantity) || 0) * unitPrice;
 
         const recItem = t.receivedItems?.find(ri => ri.articleId === item.articleId);
-        const qtyRec = recItem ? (recItem.quantityReceived ?? recItem.quantity) : (t.status === 'RECEPTIONNE' || t.status === 'ACCEPTE' || t.status === 'RECU' ? item.quantity : 0);
+        const qtyRec = recItem ? (recItem.quantityReceived ?? recItem.quantity) : (t.status === 'RECEPTIONNE' || t.status === 'ACCEPTE' || t.status === 'RECU' || t.status === 'RECEIVED' || t.status === 'CLOSED' ? item.quantity : 0);
 
         formatted.push({
           'Date Envoi': dateEnv,
           'ID Transfert': t.id || '',
           'Référence Transfert': t.reference || '',
-          'Statut': t.status === 'RECU' || t.status === 'RECEPTIONNE' ? '🟢 REÇU COMPLET' : (t.status === 'EXPEDIE' || t.status === 'IN_TRANSIT' || t.status === 'EN_TRANSIT' ? '🟡 EXPÉDIÉ / EN TRANSIT' : '🔴 LITIGE'),
+          'Statut': t.status === 'RECU' || t.status === 'RECEPTIONNE' || t.status === 'RECEIVED' || t.status === 'CLOSED' ? '🟢 REÇU COMPLET' : (t.status === 'EXPEDIE' || t.status === 'IN_TRANSIT' || t.status === 'EN_TRANSIT' ? '🟡 EXPÉDIÉ / EN TRANSIT' : '🔴 LITIGE'),
           'Site Source': t.sourceSite || '',
           'Site Cible': t.targetSite || '',
           'Date Réception': dateRec,

@@ -135,7 +135,7 @@ type RawItem = [
   number, // subCatIndex
   string, // component
   string, // subComponent
-  'PIECE' | 'JEU' | 'LITRE' | 'METRE' | 'KIT', // unit
+  'PIECE' | 'JEU' | 'LITRE' | 'METRE' | 'KIT' | 'KG', // unit
   number, // price
   'CRITIQUE' | 'HAUTE' | 'MOYENNE' | 'BASSE' // criticality
 ];
@@ -197,6 +197,9 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_54", "0428 1054", "Capteur de pression d'huile bloc moteur", 1, 5, "Capteur pression", "Deutz", "PIECE", 380, "CRITIQUE"],
   ["mot_55", "0428 1055", "Capteur inductif de régime moteur", 1, 5, "Capteur régime", "Deutz", "PIECE", 520, "CRITIQUE"],
   ["mot_56", "0428 1056", "Jauge de niveau d'huile manuelle d'origine", 1, 5, "Jauge de niveau d'huile", "Deutz", "PIECE", 180, "BASSE"],
+  ["mot_57", "0428 1055", "Huile moteur Deutz DQC II-05 LA 15W-40 spécifique air-cooled (Fût 20L)", 1, 4, "Huile moteur Deutz 15W-40", "Deutz DQC II-05", "LITRE", 48, "CRITIQUE"],
+  ["mot_58", "04290285", "Kit de joints complet moteur Deutz F6L-912W (Major Kit)", 1, 0, "Kit joints complet F6L-912W", "Deutz", "KIT", 6800, "CRITIQUE"],
+  ["mot_59", "02929042", "Kit de joints de culasse Deutz F6L-912W (par cylindre)", 1, 0, "Kit joints culasse Deutz", "Deutz", "KIT", 1200, "HAUTE"],
 
   // SOU-SYSTÈME 2 : SYSTÈME HYDRAULIQUE & VÉRINS — Gear pumps, 11.4 MPa / 13.1 MPa (61 pièces)
   ["hyd_01", "3128 2001", "Pompe hydraulique à engrenages dump/hoist principale", 2, 7, "Pompe hydraulique principale", "Commercial", "PIECE", 6800, "CRITIQUE"],
@@ -260,6 +263,8 @@ const RAW_ITEMS: RawItem[] = [
   ["hyd_61", "3128 2061", "Valve de sécurité d'isolation de circuit de levage", 2, 9, "Valve de sécurité", "Epiroc", "PIECE", 1200, "CRITIQUE"],
   ["hyd_62", "3128 2062", "Limiteur de pression hydraulique principal réglable", 2, 9, "Limiteur de pression", "Epiroc", "PIECE", 1800, "CRITIQUE"],
   ["hyd_63", "3128 2063", "Valve de dérivation by-pass manuelle de secours", 2, 9, "Valve by-pass", "Epiroc", "PIECE", 1400, "HAUTE"],
+  ["hyd_64", "3128 2061", "Huile hydraulique minérale ISO VG 46 (Fût 20L)", 2, 11, "Huile hydraulique VG46", "Epiroc", "LITRE", 28, "CRITIQUE"],
+  ["hyd_65", "3128 2062", "Huile hydraulique biodégradable Panolin HLPD 46 (Fût 20L)", 2, 11, "Huile hydraulique biodégradable", "Panolin", "LITRE", 45, "HAUTE"],
 
   // SOU-SYSTÈME 3 : TRANSMISSION & CONVERTISSEUR — Dana R32000 + C-270 (30 pièces)
   ["tra_01", "3115 3001", "Convertisseur de couple d'origine Dana C-270", 3, 14, "Convertisseur", "Dana C-270", "PIECE", 14000, "CRITIQUE"],
@@ -292,6 +297,7 @@ const RAW_ITEMS: RawItem[] = [
   ["tra_28", "3115 3028", "Joint de cardan universel (Croisillon central)", 3, 15, "Joint de cardan", "Epiroc", "PIECE", 1800, "HAUTE"],
   ["tra_29", "3115 3029", "Roulement d'appui d'arbre de cardan de transmission", 3, 15, "Roulement de cardan", "Epiroc", "PIECE", 980, "MOYENNE"],
   ["tra_30", "3115 3030", "Cale d'épaisseur de réglage de jeu différentiel", 3, 15, "Cale de réglage", "Epiroc", "PIECE", 340, "BASSE"],
+  ["tra_31", "3115 3031", "Huile de transmission ATF Dana Texaco 1888 (Fût 20L)", 3, 15, "Huile de transmission Dana", "Dana R32000", "LITRE", 38, "CRITIQUE"],
 
   // SOU-SYSTÈME 4 : PONTS, ESSIEUX & ROUES — Dana 14D, 12.00x24 L-5S bias TT (35 pièces)
   ["pon_01", "3115 4001", "Carter d'essieu avant d'origine Dana 14D ST2D", 4, 16, "Carter d'essieu avant", "Dana 14D", "PIECE", 9500, "CRITIQUE"],
@@ -329,6 +335,7 @@ const RAW_ITEMS: RawItem[] = [
   ["pon_33", "3115 4034", "Capteur de limite d'usure des garnitures de freins", 4, 16, "Capteur d'usure de freins", "Epiroc", "PIECE", 380, "MOYENNE"],
   ["pon_34", "3115 4035", "Barre de stabilisation d'oscillation d'articulation", 4, 16, "Barre de stabilisation", "Epiroc", "PIECE", 2800, "HAUTE"],
   ["pon_35", "3115 4036", "Chambre à air renforcée (Tube) 12.00x24 pour pneu TT", 4, 17, "Chambre à air 12.00x24", "Tube Type", "PIECE", 890, "HAUTE"],
+  ["pon_36", "3115 4036", "Huile de pont GL-5 85W-140 haute pression (Fût 20L)", 4, 16, "Huile de pont GL-5 85W-140", "Epiroc", "LITRE", 32, "CRITIQUE"],
 
   // SOU-SYSTÈME 5 : FREINAGE & SÉCURITÉ — SAHR wet discs, 24V (25 pièces)
   ["fre_01", "3115 5001", "Disque de frein de service wet humide avant d'origine", 5, 18, "Disque frein de service AV", "Epiroc", "PIECE", 2400, "CRITIQUE"],
@@ -356,6 +363,8 @@ const RAW_ITEMS: RawItem[] = [
   ["fre_23", "5580 5009", "Extincteur automatique à poudre chimique 6kg Ansul", 5, 20, "Extincteur 6kg", "Ansul", "PIECE", 1800, "HAUTE"],
   ["fre_24", "5580 5010", "Support de fixation en acier résistant pour extincteur", 5, 20, "Support extincteur", "Epiroc", "PIECE", 420, "MOYENNE"],
   ["fre_25", "5580 5011", "Voyant témoin lumineux d'activation du frein parking", 5, 21, "Témoin frein de parking", "Epiroc", "PIECE", 180, "MOYENNE"],
+  ["fre_26", "0428 8026", "Graisse compatible freins humides multidisques NLGI 2 sans MoS2 (Cartouche 400g)", 5, 18, "Graisse freins wet NLGI 2", "Epiroc", "PIECE", 280, "HAUTE"],
+  ["fre_27", "0428 8027", "Kit de joints de réfection de maître-cylindre de frein ST2D", 5, 19, "Kit joints maître-cylindre", "Epiroc", "KIT", 580, "HAUTE"],
 
   // SOU-SYSTÈME 6 : ÉLECTRICITÉ & CANOPY — 24V, MSHA canopy, side seated, NO cabine fermée (40 pièces)
   ["ele_01", "5580 6001", "Batterie étanche heavy duty plomb-acide 12V 180Ah", 6, 22, "Batterie 12V 180Ah", "Epiroc", "PIECE", 2800, "CRITIQUE"],
@@ -397,6 +406,9 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_37", "5580 6037", "Levier mécanique de commande de bennage", 6, 25, "Levier de commande dump", "Epiroc", "PIECE", 2800, "HAUTE"],
   ["ele_38", "5580 6038", "Levier mécanique de commande de levage/hoist", 6, 25, "Levier de commande hoist", "Epiroc", "PIECE", 2800, "HAUTE"],
   ["ele_40", "5580 6040", "Plafonnier de rechange à LED pour canopy", 6, 26, "Éclairage intérieur canopy", "LED 24V", "PIECE", 340, "BASSE"],
+  ["ele_45", "5580 6045", "Câble de masse batterie 70mm² renforcé longueur 1.5m", 6, 22, "Câble de masse batterie", "Epiroc", "PIECE", 580, "HAUTE"],
+  ["ele_46", "5580 6046", "Câble de démarrage positif 70mm² renforcé longueur 1.2m", 6, 22, "Câble démarrage positif", "Epiroc", "PIECE", 540, "HAUTE"],
+  ["ele_47", "5580 6047", "Cosses de batterie en plomb renforcées (Jeu de 2)", 6, 22, "Cosses de batterie", "Epiroc", "JEU", 120, "MOYENNE"],
 
   // SOU-SYSTÈME 7 : CHÂSSIS, STRUCTURE & LIAISON — Articulation 16°, 12 320 kg (39 pièces)
   ["cha_01", "0428 7001", "Cadre de châssis mécano-soudé de section avant ST2D", 7, 28, "Cadre avant châssis", "ST2D", "PIECE", 22000, "CRITIQUE"],
@@ -437,7 +449,13 @@ const RAW_ITEMS: RawItem[] = [
   ["cha_36", "0428 7036", "Câble métallique de remorquage renforcé d'origine", 7, 28, "Câble de remorquage", "Epiroc", "PIECE", 2400, "HAUTE"],
   ["cha_37", "0428 7037", "Élingue textile de sécurité pour travaux de levage", 7, 28, "Élingue de traction", "Epiroc", "PIECE", 1600, "HAUTE"],
   ["cha_38", "0428 7038", "Blindage métallique inférieur avant (Plaque de carter)", 7, 28, "Bouclier avant", "ST2D", "PIECE", 3600, "HAUTE"],
-  ["cha_39", "0428 7039", "Blindage métallique inférieur arrière (Plaque de carter)", 7, 28, "Bouclier arrière", "ST2D", "PIECE", 2800, "MOYENNE"]
+  ["cha_39", "0428 7039", "Blindage métallique inférieur arrière (Plaque de carter)", 7, 28, "Bouclier arrière", "ST2D", "PIECE", 2800, "MOYENNE"],
+  ["cha_40", "0428 8040", "Graisse lithium EP NLGI 2 pour articulations (Fût 20kg)", 7, 27, "Graisse NLGI 2 articulations", "Lincoln", "KG", 85, "CRITIQUE"],
+  ["cha_41", "0428 8041", "Graisse lithium EP NLGI 2 pour articulations (Cartouche 400g)", 7, 27, "Graisse NLGI 2 cartouche", "Lincoln", "PIECE", 45, "CRITIQUE"],
+  ["cha_42", "0428 8042", "Dent de godet GET type minier compatible ST2D (pièce)", 7, 28, "Dent de godet GET", "Epiroc", "PIECE", 1200, "CRITIQUE"],
+  ["cha_43", "0428 8043", "Adaptateur de dent de godet GET compatible ST2D", 7, 28, "Adaptateur GET godet", "Epiroc", "PIECE", 1800, "CRITIQUE"],
+  ["cha_44", "0428 8044", "Verrou de fixation de dent GET (Jeu de 10)", 7, 28, "Verrous GET godet", "Epiroc", "JEU", 380, "HAUTE"],
+  ["cha_45", "0428 8045", "Lame frontale de godet en acier Hardox ST2D", 7, 28, "Lame de godet Hardox", "Epiroc", "PIECE", 5200, "HAUTE"],
 ];
 
 export const ST2D_CATALOG: CatalogItem[] = RAW_ITEMS.map(([idSuffix, reference, designationRaw, catIndex, subCatIndex, component, subComponent, unit, price, criticality]) => {

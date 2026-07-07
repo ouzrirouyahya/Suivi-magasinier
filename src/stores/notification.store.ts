@@ -21,14 +21,14 @@ export const useNotificationsStore = create<NotificationsState>((set) => ({
 
   markReadLocal: (id) => set((state) => ({
     notifications: state.notifications.map(notif => 
-      notif.id === id ? { ...notif, isRead: true, status: 'read' as const } : notif
+      notif.id === id ? { ...notif, isRead: true } : notif
     )
   })),
 
   markAllReadLocal: (siteId) => set((state) => ({
     notifications: state.notifications.map(notif => 
       (siteId === 'ALL' || notif.siteId === siteId) 
-        ? { ...notif, isRead: true, status: 'read' as const } 
+        ? { ...notif, isRead: true } 
         : notif
     )
   }))

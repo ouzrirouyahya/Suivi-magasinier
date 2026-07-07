@@ -19,6 +19,9 @@ export const offlineService = {
       case 'addMouvement':
         await movementsService.addMouvement(payload);
         break;
+      case 'saveInventaire':
+        await movementsService.saveInventaire(payload);
+        break;
       case 'addPurchaseRequest':
         await movementsService.addPurchaseRequest(payload);
         break;

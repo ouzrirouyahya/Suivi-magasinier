@@ -33,7 +33,7 @@ const firebaseConfig = {
   messagingSenderId: requireEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
 };
 
-const DATABASE_ID = 'ai-studio-8a211b3e-d9c6-4439-b61e-9282b9488046';
+const DATABASE_ID = requireEnv('VITE_FIREBASE_DATABASE_ID');
 
 const app = initializeApp(firebaseConfig);
 
@@ -67,3 +67,4 @@ if (typeof window !== 'undefined' && import.meta.env.VITE_RECAPTCHA_KEY) {
 */
 
 export default app;
+export { signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';

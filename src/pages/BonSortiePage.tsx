@@ -1,13 +1,16 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MouvementForm } from '../components/MouvementForm';
 import { useInventory } from '../context/InventoryContext';
 import { toast } from 'sonner';
 
 export const BonSortiePage: React.FC = () => {
+  const [formKey, setFormKey] = useState(0);
   const { currentSite, articles, catalog, engins, perfos, agents, selectedArticleId, saveArticle, isReadOnlyUser, addMouvement, setSelectedArticleId } = useInventory();
 
   return (
     <MouvementForm 
+      key={formKey}
+      resetKey={formKey}
       type="SORTIE" 
       site={currentSite}
       articles={articles}
@@ -26,6 +29,7 @@ export const BonSortiePage: React.FC = () => {
             error: (err: any) => `Échec : ${err.message || err}`
           });
           setSelectedArticleId(null);
+          setFormKey(k => k + 1);
         } catch (e) {
           console.error(e);
         }

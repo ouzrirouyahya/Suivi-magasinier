@@ -1,5 +1,5 @@
 import { doc, runTransaction, db } from '../../lib/db';
-import { Article, Mouvement, PurchaseRequest } from '../../types';
+import { Article, Mouvement, PurchaseRequest, Inventaire } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useMovementsStore } from './movements.store';
 import { useArticlesStore } from '../articles/articles.store';
@@ -250,6 +250,53 @@ export class MovementsService {
     } catch (error: any) {
       console.error('[updatePRStatus] Erreur:', error);
       return { success: false, error: error.message || 'Erreur lors du changement de statut de la demande' };
+    }
+  }
+
+  /**
+   * Save or validate an inventory session
+   */
+  async saveInventaire(inventaire: Inventaire, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
+    try {
+      const invId = inventaire.id || generateSecureUUID();
+      const entry = { ...inventaire, id: invId };
+
+      if (isSimulation) {
+        useMovementsStore.getState().addInventaireLocal(entry);
+        return { success: true };
+      }
+
+      // Write to Firestore
+      await firestoreRepository.write('inventaires', invId, cleanObject(entry));
+      useMovementsStore.getState().addInventaireLocal(entry);
+
+      // If validated, trigger an AJUSTEMENT movement for any item with differences
+      if (entry.status === 'VALIDE') {
+        const itemsWithDifference = entry.items.filter(item => item.countedQuantity !== item.theoricQuantity);
+        if (itemsWithDifference.length > 0) {
+          const adjustmentMovement: Mouvement = {
+            id: generateSecureUUID(),
+            site: entry.site,
+            date: new Date().toISOString(),
+            type: 'AJUSTEMENT',
+            reference: `Inventaire ${entry.compteur || entry.id}`,
+            items: itemsWithDifference.map(item => ({
+              articleId: item.articleId,
+              quantity: item.countedQuantity, // Recall AJUSTEMENT sets final stock quantity
+              price: 0
+            })),
+            status: 'VALIDE',
+            createdBy: entry.validePar || 'Admin'
+          };
+          
+          await this.addMouvement(adjustmentMovement);
+        }
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      console.error('[saveInventaire] Erreur:', error);
+      return { success: false, error: error.message || 'Erreur lors de la sauvegarde de l\'inventaire' };
     }
   }
 }

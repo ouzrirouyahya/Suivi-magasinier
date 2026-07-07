@@ -55,7 +55,7 @@ export const canAccessPage = (
     return true;
   }
   if (userRole === 'MAGASINIER') {
-    return requiredRole === 'MAGASINIER' || requiredRole === 'RESPONSABLE_CHANTIER';
+    return requiredRole === 'MAGASINIER';
   }
   if (userRole === 'RESPONSABLE_CHANTIER') {
     return requiredRole === 'RESPONSABLE_CHANTIER';

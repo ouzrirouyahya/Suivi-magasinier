@@ -10,9 +10,27 @@ interface MouvementHistoryProps {
   articles: Article[];
 }
 
+const getPageNumbers = (currentPage: number, totalPages: number): (number | '...')[] => {
+  if (totalPages <= 7) return Array.from({ length: totalPages }, (_, i) => i + 1);
+  
+  const pages: (number | '...')[] = [1];
+  
+  if (currentPage > 3) pages.push('...');
+  
+  const start = Math.max(2, currentPage - 1);
+  const end = Math.min(totalPages - 1, currentPage + 1);
+  
+  for (let i = start; i <= end; i++) pages.push(i);
+  
+  if (currentPage < totalPages - 2) pages.push('...');
+  pages.push(totalPages);
+  
+  return pages;
+};
+
 export const MouvementHistory = React.memo(function MouvementHistory({ site, mouvements, articles }: MouvementHistoryProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [typeFilter, setTypeFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'RETOUR' | 'TRANSFERT_IN' | 'TRANSFERT_OUT'>('ALL');
+  const [typeFilter, setTypeFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'RETOUR' | 'TRANSFERT_IN' | 'TRANSFERT_OUT' | 'AJUSTEMENT'>('ALL');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   const [selectedMouvement, setSelectedMouvement] = useState<Mouvement | null>(null);
@@ -23,7 +41,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
 
   const itemsPerPage = 15;
 
-  const handleFilterTypeChange = (type: 'ALL' | 'ENTREE' | 'SORTIE' | 'RETOUR' | 'TRANSFERT_IN' | 'TRANSFERT_OUT') => {
+  const handleFilterTypeChange = (type: 'ALL' | 'ENTREE' | 'SORTIE' | 'RETOUR' | 'TRANSFERT_IN' | 'TRANSFERT_OUT' | 'AJUSTEMENT') => {
     setTypeFilter(type);
     setCurrentPage(1);
     setShowMoreActive(false);
@@ -69,6 +87,14 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                           safeContains(m.demandeur) ||
                           safeContains(m.beneficiaire) ||
                           safeContains(m.reference) ||
+                          safeContains(m.mecanicien) ||
+                          safeContains(m.foreur) ||
+                          safeContains(m.engin) ||
+                          safeContains(m.perforateur) ||
+                          safeContains(m.service) ||
+                          safeContains(m.createdBy) ||
+                          safeContains(m.notes) ||
+                          safeContains(m.motif) ||
                           matchesItems;
     
     const matchesType = typeFilter === 'ALL' || m.type === typeFilter;
@@ -76,7 +102,8 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
     const mDate = m.date ? new Date(m.date as any).getTime() : 0;
     const validMDate = isNaN(mDate) ? 0 : mDate;
     const matchesStart = !dateStart || validMDate >= new Date(dateStart).getTime();
-    const matchesEnd = !dateEnd || validMDate <= new Date(dateEnd).getTime();
+    const matchesEnd = !dateEnd || 
+      validMDate <= (new Date(dateEnd).getTime() + 86399999);
     
     return matchesSite && matchesSearch && matchesType && matchesStart && matchesEnd;
   }).sort((a, b) => {
@@ -150,6 +177,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
     RETOUR: "Bon de Retour Chantier",
     TRANSFERT_OUT: "Bon de Transfert Inter-Sites — Expédition",
     TRANSFERT_IN: "Bon de Transfert Inter-Sites — Réception",
+    AJUSTEMENT: "Bon d'Inventaire — Ajustement de Stock",
   };
 
   const getSignatureLabels = (type: string) => {
@@ -224,7 +252,8 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
               { type: 'SORTIE', label: 'Sortie', colorClass: 'bg-rose-700 text-white shadow-sm ring-1 ring-rose-800' },
               { type: 'RETOUR', label: 'Retours', colorClass: 'bg-teal-600 text-white shadow-sm ring-1 ring-teal-750' },
               { type: 'TRANSFERT_IN', label: 'Recu', colorClass: 'bg-sky-500 text-white shadow-sm ring-1 ring-sky-600' },
-              { type: 'TRANSFERT_OUT', label: 'Exped.', colorClass: 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-700' }
+              { type: 'TRANSFERT_OUT', label: 'Exped.', colorClass: 'bg-amber-600 text-white shadow-sm ring-1 ring-amber-700' },
+              { type: 'AJUSTEMENT', label: 'Ajust.', colorClass: 'bg-violet-600 text-white shadow-sm ring-1 ring-violet-700' }
             ] as const).map(({ type, label, colorClass }) => (
               <button
                 key={type}
@@ -404,23 +433,23 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
               Précédent
             </button>
 
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
-              <button
-                key={pageNum}
-                onClick={() => {
-                  setCurrentPage(pageNum);
-                  setShowMoreActive(false);
-                }}
-                className={cn(
-                  "w-7 h-7 rounded-lg text-[9px] font-black transition-all flex items-center justify-center border",
-                  currentPage === pageNum 
-                    ? "bg-slate-900 border-slate-950 text-white shadow-sm"
-                    : "bg-white border-slate-200 hover:bg-slate-50 text-slate-500 cursor-pointer"
-                )}
-              >
-                {pageNum}
-              </button>
-            ))}
+            {getPageNumbers(currentPage, totalPages).map((pageNum, idx) => 
+              pageNum === '...' ? (
+                <span key={`ellipsis-${idx}`} 
+                      className="w-7 h-7 flex items-center justify-center text-slate-400 text-[9px]">
+                  ...
+                </span>
+              ) : (
+                <button key={pageNum} onClick={() => { setCurrentPage(pageNum); setShowMoreActive(false); }}
+                  className={cn("w-7 h-7 rounded-lg text-[9px] font-black transition-all flex items-center justify-center border",
+                    currentPage === pageNum 
+                      ? "bg-slate-900 border-slate-950 text-white shadow-sm"
+                      : "bg-white border-slate-200 hover:bg-slate-50 text-slate-500 cursor-pointer"
+                  )}>
+                  {pageNum}
+                </button>
+              )
+            )}
 
             <button
               onClick={() => {

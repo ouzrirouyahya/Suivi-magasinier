@@ -1,7 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { signInWithPopup } from 'firebase/auth';
-import { auth, googleProvider, db } from '../lib/firebase';
+import { auth, googleProvider, db, signInWithPopup } from '../lib/firebase';
 import { setDoc, doc } from '../lib/db';
 import { cleanObject } from '../lib/utils';
 import { toast } from 'sonner';

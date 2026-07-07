@@ -17,13 +17,11 @@ export class NotificationsService {
     const notification: AppNotification = {
       id,
       siteId: notif.siteId,
-      type: notif.type || 'INFO',
       category: notif.category || 'SYSTEM',
       message: notif.message || '',
       timestamp: notif.timestamp || new Date().toISOString(),
       isRead: false,
       severity: notif.severity || 'INFO',
-      status: 'unread',
       actionRoute: notif.actionRoute || ''
     };
 
@@ -45,7 +43,7 @@ export class NotificationsService {
       return;
     }
 
-    await firestoreRepository.update('notifications', id, { isRead: true, status: 'read' });
+    await firestoreRepository.update('notifications', id, { isRead: true });
     useNotificationsStore.getState().markReadLocal(id);
   }
 
@@ -66,7 +64,7 @@ export class NotificationsService {
     const batch = firestoreRepository.createBatch();
     unread.forEach(notif => {
       const ref = doc(db, 'notifications', notif.id);
-      batch.update(ref, { isRead: true, status: 'read' });
+      batch.update(ref, { isRead: true });
     });
     await batch.commit();
 

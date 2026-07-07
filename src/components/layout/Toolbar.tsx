@@ -66,17 +66,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   }, [siteNotifications]);
 
   const hasUnreadCritical = React.useMemo(() => {
-    return siteNotifications.some(n => (n.severity === 'CRITICAL' || n.type === 'CRITICAL') && !n.isRead);
+    return siteNotifications.some(n => n.severity === 'CRITICAL' && !n.isRead);
   }, [siteNotifications]);
 
   const filteredNotifications = React.useMemo(() => {
     const list = filterType === 'ALL'
       ? siteNotifications
-      : siteNotifications.filter(n => n.type === filterType || n.severity === filterType);
+      : siteNotifications.filter(n => n.severity === filterType);
     
     // Priority valuation helper
     const getPriorityScore = (n: any) => {
-      const severity = n.severity || n.type || 'INFO';
+      const severity = n.severity || 'INFO';
       if (severity === 'CRITICAL') return 3;
       if (severity === 'WARNING') return 2;
       return 1;
@@ -368,11 +368,11 @@ export const Toolbar: React.FC<ToolbarProps> = ({
                         >
                            {/* Left severity indicator icon */}
                           <div className="mt-0.5">
-                            {notif.severity === 'CRITICAL' || notif.type === 'CRITICAL' ? (
+                            {notif.severity === 'CRITICAL' ? (
                               <div className="p-1.5 bg-rose-100 text-rose-600 rounded-lg shadow-sm border border-rose-250 animate-pulse">
                                 <ShieldAlert className="w-4 h-4 animate-bounce" />
                               </div>
-                            ) : notif.severity === 'WARNING' || notif.type === 'WARNING' ? (
+                            ) : notif.severity === 'WARNING' ? (
                               <div className="p-1.5 bg-amber-100 text-amber-600 rounded-lg shadow-sm border border-amber-250">
                                 <AlertTriangle className="w-4 h-4" />
                               </div>

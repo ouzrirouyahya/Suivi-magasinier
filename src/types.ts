@@ -118,7 +118,7 @@ export interface CatalogItem {
   
   // Advanced Level 3 Intelligent BOM Parameters
   bomLevel?: 0 | 1 | 2 | 3;
-  unit?: 'PIECE' | 'KIT' | 'ASSEMBLY' | 'SET' | 'JEU' | 'LITRE' | 'METRE';
+  unit?: 'PIECE' | 'KIT' | 'ASSEMBLY' | 'SET' | 'JEU' | 'LITRE' | 'METRE' | 'KG';
   criticalityScore?: number;        // Score from 1 to 100
   mtbfHours?: number;               // Mean Time Between Failures in operational hours
   overhaulIntervalHours?: number;   // Recommended interval before rebuild
@@ -250,14 +250,13 @@ export interface AgentMaster {
 }
 
 export type TransfertStatus = 
-  | 'BROUILLON' 
-  | 'DEMANDE' 
-  | 'APPROUVE' 
-  | 'EXPEDIE' 
-  | 'RECEPTIONNE' 
-  | 'ACCEPTE' 
-  | 'LITIGE'
-  | 'PENDING_APPROVAL' | 'IN_TRANSIT' | 'RECEIVED' | 'DISPUTED' | 'CLOSED' | 'EN_TRANSIT' | 'RECU'; // Compatibilité descendante
+  | 'PENDING_APPROVAL' 
+  | 'IN_TRANSIT' 
+  | 'RECEIVED' 
+  | 'DISPUTED' 
+  | 'CLOSED'
+  | 'EN_TRANSIT' | 'RECU' // garder UNIQUEMENT pour compatibilité descendante avec commentaire
+  | 'BROUILLON' | 'DEMANDE' | 'APPROUVE' | 'EXPEDIE' | 'RECEPTIONNE' | 'ACCEPTE' | 'LITIGE'; // Autres statuts historiques pour compatibilité descendante
 
 export interface TransfertHistoryEntry {
   status: TransfertStatus;
@@ -344,12 +343,15 @@ export interface PurchaseRequest {
   reference?: string;
 }
 
+export type AlertSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+export type NotificationSeverity = 'INFO' | 'WARNING' | 'CRITICAL' | 'SYSTEM';
+
 export interface AnomalyReport {
   id: string;
   site: SiteCode;
   timestamp: FirestoreDate;
   type: 'CONSUMPTION_PATTERN' | 'STOCK_INCOHERENCE' | 'FREQUENT_CHANGE';
-  severity: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
+  severity: AlertSeverity;
   description: string;
   articleId?: string;
   machineId?: string;
@@ -361,15 +363,13 @@ export interface AppNotification {
   id: string;
   siteId: string;
   userId?: string;
-  type: 'CRITICAL' | 'WARNING' | 'INFO';
   category: 'STOCK' | 'TRANSFER' | 'SYNC' | 'SYSTEM' | 'DAILY';
   message: string;
   timestamp: string;
   relatedEntityId?: string;
   actionRoute: string;
   isRead: boolean;
-  severity: 'INFO' | 'WARNING' | 'CRITICAL' | 'SYSTEM';
-  status: 'read' | 'unread';
+  severity: NotificationSeverity;
 }
 
 export interface DeletionRequest {

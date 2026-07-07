@@ -63,9 +63,10 @@ interface MouvementFormProps {
   onArticleCreate?: (article: Article) => void;
   initialArticleId?: string;
   isReadOnly?: boolean;
+  resetKey?: number;
 }
 
-export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId, isReadOnly = false }: MouvementFormProps) {
+export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId, isReadOnly = false, resetKey }: MouvementFormProps) {
   const { isOnline } = useOfflineSync();
   const { hydrominesCatalog = [], saveHydrominesCatalogItem, importFromHydrominesCatalog } = useInventory();
 
@@ -662,6 +663,22 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       setValidationError(`ERREUR : Stock épuisé pour "${article.designation}".`);
       return;
     }
+
+    // Vérifier si l'article est déjà dans le bon
+    const existingLine = items.find(i => i.articleId === article.id);
+    if (existingLine) {
+      // Incrémenter la quantité de la ligne existante
+      const maxQty = type === 'SORTIE' ? article.quantity : 999999;
+      const newQty = Math.min(existingLine.quantity + 1, maxQty);
+      setItems(prev => prev.map(i =>
+        i.articleId === article.id ? { ...i, quantity: newQty } : i
+      ));
+      toast.info(`Quantité mise à jour : "${article.designation}" → ${newQty}`);
+      setSearch('');
+      setShowResults(false);
+      return;
+    }
+
     const newLineId = generateId();
     const resolvedGlobalAgent = agents.find(a => a.id === globalBeneficiaryId);
     const defaultBeneficiaryProps = resolvedGlobalAgent ? {
@@ -685,6 +702,14 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     setShowResults(false);
     setLastAddedLineId(newLineId);
     toast.success(`Ajouté au bon : "${article.designation}"`);
+
+    // Scroll doux vers la liste des articles après ajout
+    setTimeout(() => {
+      const itemsSection = document.getElementById('mouvement-items-section');
+      if (itemsSection) {
+        itemsSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+    }, 100);
   };
 
   const removeItem = (lineId: string) => setItems(items.filter(i => i.lineId !== lineId));
@@ -791,6 +816,23 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       }
     }
 
+    if (type === 'SORTIE' && isMachineRelated) {
+      if (!mecanicien || mecanicien.trim() === '') {
+        setValidationError(
+          "Le mécanicien responsable est obligatoire pour une sortie sur engin ou perforateur."
+        );
+        return;
+      }
+      if (categoryFilter === 'ENGINS' && (!targetEngin || targetEngin.trim() === '')) {
+        setValidationError("L'engin concerné est obligatoire pour une sortie ENGINS.");
+        return;
+      }
+      if (categoryFilter === 'PERFORATEURS' && (!targetPerfo || targetPerfo.trim() === '')) {
+        setValidationError("Le perforateur concerné est obligatoire pour une sortie PERFORATEURS.");
+        return;
+      }
+    }
+
     if (type === 'ENTREE' && !reference.trim()) {
       setValidationError("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
       return;
@@ -832,6 +874,9 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     const finalReference = reference.trim() || 
       generateReference(type === 'ENTREE' ? 'BE' : 'BS', (site as string) === 'ALL' ? 'HYDRO' : site);
 
+    const resolvedGlobalAgent = agents.find(a => a.id === globalBeneficiaryId);
+    const globalAgentName = resolvedGlobalAgent ? `${resolvedGlobalAgent.lastname} ${resolvedGlobalAgent.firstname}` : '';
+
     const mouvement: Mouvement = {
       id: generateId(),
       site: site,
@@ -839,7 +884,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       type,
       reference: finalReference,
       vendeur: type === 'ENTREE' ? resolvedEntityName : undefined,
-      demandeur: (type === 'SORTIE' && isEpiOrOutils) ? entityName : undefined,
+      demandeur: (type === 'SORTIE' && isEpiOrOutils) ? (globalAgentName || finalBeneficiaireRef || entityName) : undefined,
       beneficiaire: finalBeneficiaireRef,
       mecanicien: isMachineRelated ? (resolvedMecanicien ? `${resolvedMecanicien.firstname} ${resolvedMecanicien.lastname}` : mecanicien) : undefined,
       engin: (isMachineRelated && categoryFilter === 'ENGINS') ? (resolvedEngin ? resolvedEngin.code : targetEngin) : undefined,
@@ -1086,7 +1131,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             </div>
           )}
 
-          {type === 'SORTIE' && !isMachineRelated && (
+          {type === 'SORTIE' && categoryFilter === 'EPI' && (
             <div className="md:col-span-2 p-6 bg-slate-50 border border-slate-100 rounded-2xl grid grid-cols-1 md:grid-cols-2 gap-6 animate-in slide-in-from-top-2 duration-300">
               <div className="space-y-2 md:col-span-2">
                 <div className="flex items-center gap-2">
@@ -1463,7 +1508,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
             )}
           </div>
 
-          <div className="overflow-x-auto">
+          <div id="mouvement-items-section" className="space-y-3">
+            <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100 text-slate-400 uppercase text-xs font-black tracking-widest">
@@ -1563,6 +1609,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
               </tbody>
             </table>
           </div>
+        </div>
 
           {/* Bloc d'avertissement de Prix d'Achat Anomalies (Alerte ERP Qualité) */}
           {type === 'ENTREE' && priceWarnings.length > 0 && (

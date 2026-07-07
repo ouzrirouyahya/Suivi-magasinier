@@ -111,7 +111,7 @@ export class TransfersService {
           targetSite: transfert.targetSite,
           items: transfert.items.map(i => ({ articleId: i.articleId, quantity: i.quantity, price: i.price || 0 })),
           notes: `Expédition de transfert réf: ${transfert.reference} vers ${transfert.targetSite}`,
-          status: 'EN_TRANSIT'
+          status: 'VALIDE'
         }));
 
         // Write transfer document
@@ -307,7 +307,7 @@ export class TransfersService {
               price: work.transferItem.price || 0
             }],
             notes: `Réception de transfert réf: ${transfert.reference} de ${transfert.sourceSite}${isDivergent ? ' [AVEC DIVERGENCE SIGNE]' : ''}`,
-            status: 'COMPLETE'
+            status: 'VALIDE'
           }));
         }
 

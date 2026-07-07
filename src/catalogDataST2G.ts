@@ -149,7 +149,7 @@ type RawItem = [
   number, // subCatIndex
   string, // component
   string, // subComponent
-  'PIECE' | 'JEU' | 'LITRE' | 'METRE' | 'KIT', // unit
+  'PIECE' | 'JEU' | 'LITRE' | 'METRE' | 'KIT' | 'KG', // unit
   number, // price
   'CRITIQUE' | 'HAUTE' | 'MOYENNE' | 'BASSE' // criticality
 ];
@@ -206,6 +206,11 @@ const RAW_ITEMS: RawItem[] = [
   ["mot_48", "5580 0460 02", "Sonde de température d'eau radiateur", 1, 5, "Sonde température d'eau", "NTC", "PIECE", 320, "HAUTE"],
   ["mot_49", "5580 0460 03", "Capteur de pression d'huile moteur", 1, 5, "Sonde pression d'huile", "0-10 Bar", "PIECE", 410, "HAUTE"],
   ["mot_50", "5580 0460 04", "Capteur de régime moteur vilebrequin", 1, 5, "Capteur de régime", "Magnétique", "PIECE", 580, "HAUTE"],
+  ["mot_53", "5580 0461 00", "Huile moteur Cummins Premium Blue 15W-40 CES 20078 (Fût 20L)", 1, 4, "Huile moteur 15W-40", "Cummins", "LITRE", 42, "CRITIQUE"],
+  ["mot_54", "5580 0462 00", "Liquide de refroidissement OAT longue durée pré-dilué 50/50 (Bidon 20L)", 1, 3, "Liquide refroidissement OAT", "Cummins", "LITRE", 38, "CRITIQUE"],
+  ["mot_55", "3803838", "Kit de joints supérieur Cummins QSM11 (Upper Gasket Set)", 1, 0, "Kit joints supérieur moteur", "Cummins QSM11", "KIT", 5200, "CRITIQUE"],
+  ["mot_56", "3803839", "Kit de joints inférieur Cummins QSM11 (Lower Gasket Set)", 1, 0, "Kit joints inférieur moteur", "Cummins QSM11", "KIT", 4200, "HAUTE"],
+  ["mot_57", "LF9080", "Filtre à huile by-pass haute efficacité Cummins QSM11", 1, 4, "Filtre by-pass huile", "Fleetguard LF9080", "PIECE", 310, "HAUTE"],
 
   // SOU-SYSTÈME 2 : SYSTÈME HYDRAULIQUE & VÉRINS (65 pièces)
   ["hyd_01", "3115 2040 01", "Pompe hydraulique principale à engrenages (Bennage/Direction)", 2, 7, "Pompe principale", "À engrenages", "PIECE", 26500, "CRITIQUE"],
@@ -271,6 +276,8 @@ const RAW_ITEMS: RawItem[] = [
   ["hyd_63", "3115 2050 15", "Soupape de décharge rapide de bloc pilotage", 2, 9, "Soupape décharge", "Standard", "PIECE", 1450, "HAUTE"],
   ["hyd_64", "3115 2190 01", "Diviseur de débit prioritaire compensé direction", 2, 9, "Diviseur de débit", "Prioritaire compensé", "PIECE", 3900, "CRITIQUE"],
   ["hyd_65", "3115 2140 01", "Huile hydraulique minérale HV46 (bidon 20L)", 2, 12, "Huile hydraulique", "HV46", "LITRE", 420, "HAUTE"],
+  ["hyd_66", "5580 3067 00", "Huile hydraulique minérale ISO VG 46 (Fût 20L)", 2, 11, "Huile hydraulique VG46", "Epiroc", "LITRE", 28, "CRITIQUE"],
+  ["hyd_67", "5580 3068 00", "Huile hydraulique biodégradable Panolin HLPD 46 (Fût 20L)", 2, 11, "Huile hydraulique biodégradable", "Panolin", "LITRE", 45, "HAUTE"],
 
   // SOU-SYSTÈME 3 : TRANSMISSION & CONVERTISSEUR (35 pièces)
   ["tra_01", "3115 3001 00", "Convertisseur de couple complet Dana C-270 d'origine", 3, 14, "Convertisseur", "Dana C-270", "PIECE", 29500, "CRITIQUE"],
@@ -308,6 +315,7 @@ const RAW_ITEMS: RawItem[] = [
   ["tra_33", "3115 3028 10", "Bride d'accouplement cannelée pour cardan central", 3, 15, "Bride cardan", "Acier forgé", "PIECE", 1200, "HAUTE"],
   ["tra_34", "3115 3028 11", "Boulon de fixation haute résistance pour cardan M12", 3, 15, "Boulon cardan", "Classe 12.9", "PIECE", 45, "BASSE"],
   ["tra_35", "3115 3028 01", "Croisillon de cardan d'origine avec graisseur R32000", 3, 15, "Croisillon cardan", "Avec graisseur", "PIECE", 850, "HAUTE"],
+  ["tra_36", "5580 6036 00", "Huile de transmission ATF Allison C-4 Dexron VI (Fût 20L)", 3, 15, "Huile de transmission ATF", "Clark R32000", "LITRE", 35, "CRITIQUE"],
 
   // SOU-SYSTÈME 4 : PONTS, ESSIEUX & ROUES (40 pièces)
   ["pon_01", "3115 4001 00", "Carter d'essieu avant Dana 14D d'origine ST2G", 4, 16, "Carter d'essieu AV", "Dana 14D", "PIECE", 18500, "CRITIQUE"],
@@ -350,6 +358,7 @@ const RAW_ITEMS: RawItem[] = [
   ["pon_38", "3115 4004 08", "Roulement conique d'arbre de boîte différentiel", 4, 16, "Roulement différentiel", "Acier de précision", "PIECE", 1800, "HAUTE"],
   ["pon_39", "3115 4021 00", "Pivot de direction oscillant d'essieu directionnel", 4, 16, "Pivot de direction", "Acier forgé", "PIECE", 4200, "HAUTE"],
   ["pon_40", "3115 4021 05", "Joint d'étanchéité à lèvre de pivot de pont", 4, 16, "Joint pivot de pont", "Double lèvre NBR", "PIECE", 420, "MOYENNE"],
+  ["pon_41", "5580 7041 00", "Huile de pont GL-5 85W-140 haute pression (Fût 20L)", 4, 16, "Huile de pont GL-5 85W-140", "Epiroc", "LITRE", 32, "CRITIQUE"],
 
   // SOU-SYSTÈME 5 : FREINAGE & SÉCURITÉ (25 pièces)
   ["fre_01", "3115 5001 00", "Disque de frein de service wet avant ST2G", 5, 18, "Disque wet AV", "Bain d'huile", "PIECE", 2400, "CRITIQUE"],
@@ -377,6 +386,7 @@ const RAW_ITEMS: RawItem[] = [
   ["fre_23", "5580 5019 00", "Cartouche d'azote Ansul pressurisée LT-30-R", 5, 20, "Cartouche azote", "LT-30-R", "PIECE", 950, "HAUTE"],
   ["fre_24", "5580 5020 00", "Câble d'acier de tirage d'extinction à distance L:5m", 5, 20, "Câble d'extinction", "Inox gainé L:5m", "PIECE", 280, "MOYENNE"],
   ["fre_25", "3115 5021 00", "Joint torique de piston de frein wet de roue", 5, 18, "Joint de piston frein", "NBR profilé Sh 90", "PIECE", 240, "CRITIQUE"],
+  ["fre_26", "5580 8031 00", "Graisse compatible freins humides multidisques NLGI 2 sans MoS2 (Cartouche 400g)", 5, 18, "Graisse freins wet NLGI 2", "Epiroc", "PIECE", 280, "HAUTE"],
 
   // SOU-SYSTÈME 6 : ÉLECTRICITÉ & CANOPY (35 pièces)
   ["ele_01", "5580 6001 00", "Projecteur de travail LED avant étanche IP69K", 6, 21, "Phare LED AV", "24V 45W IP69K", "PIECE", 1250, "HAUTE"],
@@ -410,6 +420,9 @@ const RAW_ITEMS: RawItem[] = [
   ["ele_32", "5580 6032 00", "Grille de sécurité métallique arrière pour canopy", 6, 26, "Grille de sécurité", "Acier zingué", "PIECE", 2600, "HAUTE"],
   ["ele_34", "5580 6034 00", "Support métallique articulé noir pour miroir", 6, 26, "Support miroir", "Acier noir articulé", "PIECE", 190, "BASSE"],
   ["ele_35", "5580 6035 00", "Courroie d'alternateur Cummins ventilateur", 6, 22, "Courroie d'alternateur", "Cummins", "PIECE", 450, "HAUTE"],
+  ["ele_42", "5580 9046 00", "Câble de masse batterie 70mm² renforcé longueur 1.5m", 6, 22, "Câble de masse batterie", "Epiroc", "PIECE", 580, "HAUTE"],
+  ["ele_43", "5580 9047 00", "Câble de démarrage positif 70mm² renforcé longueur 1.2m", 6, 22, "Câble démarrage positif", "Epiroc", "PIECE", 540, "HAUTE"],
+  ["ele_44", "5580 9048 00", "Cosses de batterie en plomb renforcées (Jeu de 2)", 6, 22, "Cosses de batterie", "Epiroc", "JEU", 120, "MOYENNE"],
 
   // SOU-SYSTÈME 7 : CHÂSSIS, STRUCTURE & LIAISON (40 pièces)
   ["cha_01", "0428 7011 00", "Axe d'articulation centrale supérieur ST2G", 7, 27, "Axe central supérieur", "Acier trempé rectifié", "PIECE", 6800, "CRITIQUE"],
@@ -451,7 +464,13 @@ const RAW_ITEMS: RawItem[] = [
   ["cha_37", "0428 7025 00", "Support d'aile de garde-boue arrière gauche/droit", 7, 28, "Support garde-boue AR", "Acier", "PIECE", 1200, "BASSE"],
   ["cha_38", "0428 7007 00", "Traverse de renforcement de cadre de châssis", 7, 28, "Traverse châssis", "Acier lourd", "PIECE", 4500, "HAUTE"],
   ["cha_39", "0428 7001 12", "Goupille de verrouillage d'axe de pivotement", 7, 28, "Goupille d'axe", "Acier doux", "PIECE", 120, "MOYENNE"],
-  ["cha_40", "0428 7015 15", "Graisseur droit à tête sphérique M10 articulation", 7, 27, "Graisseur M10", "Acier zingué droit", "PIECE", 15, "BASSE"]
+  ["cha_40", "0428 7015 15", "Graisseur droit à tête sphérique M10 articulation", 7, 27, "Graisseur M10", "Acier zingué droit", "PIECE", 15, "BASSE"],
+  ["cha_45", "0428 7046 00", "Graisse lithium EP NLGI 2 pour articulations (Fût 20kg)", 7, 27, "Graisse NLGI 2 articulations", "Lincoln", "KG", 85, "CRITIQUE"],
+  ["cha_46", "0428 7047 00", "Graisse lithium EP NLGI 2 pour articulations (Cartouche 400g)", 7, 27, "Graisse NLGI 2 cartouche", "Lincoln", "PIECE", 45, "CRITIQUE"],
+  ["cha_47", "0428 7048 00", "Dent de godet GET type minier compatible ST2G (pièce)", 7, 28, "Dent de godet GET", "Epiroc", "PIECE", 1400, "CRITIQUE"],
+  ["cha_48", "0428 7049 00", "Adaptateur de dent de godet GET compatible ST2G", 7, 28, "Adaptateur GET godet", "Epiroc", "PIECE", 2200, "CRITIQUE"],
+  ["cha_49", "0428 7050 00", "Verrou de fixation de dent GET (Jeu de 10)", 7, 28, "Verrous GET godet", "Epiroc", "JEU", 420, "HAUTE"],
+  ["cha_50", "0428 7051 00", "Lame frontale de godet en acier Hardox ST2G", 7, 28, "Lame de godet Hardox", "Epiroc", "PIECE", 6500, "HAUTE"]
 ];
 
 export const ST2G_CATALOG: CatalogItem[] = RAW_ITEMS.map(([idSuffix, reference, designationRaw, catIndex, subCatIndex, component, subComponent, unit, price, criticality]) => {

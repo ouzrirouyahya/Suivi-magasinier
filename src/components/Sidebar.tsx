@@ -32,7 +32,7 @@ import {
 } from 'lucide-react';
 import { cn, generateSecureUUID } from '../lib/utils';
 import { SITES } from '../demoData';
-import { SiteCode } from '../types';
+import { SiteCode, AppNotification } from '../types';
 import { User } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useInventory } from '../context/InventoryContext';
@@ -74,7 +74,7 @@ interface SidebarProps {
   setSite: (site: SiteCode) => void;
   user: User | null;
   isAdmin: boolean;
-  notifications?: {id: string, type: string, message: string, timestamp: string}[];
+  notifications?: AppNotification[];
   isOpen?: boolean;
   onClose?: () => void;
   onSignOut: () => void;
@@ -205,12 +205,10 @@ export const Sidebar = React.memo(function Sidebar({
 
       await addNotification({
         siteId: currentSite,
-        type: 'WARNING',
         category: 'SYSTEM',
         message: `🔧 Demande de remplacement : ${currentUser.name} veut remplacer le magasinier (${days} jours). Motif: ${reason}`,
         actionRoute: 'USER_MGMT',
         severity: 'WARNING',
-        status: 'unread',
         isRead: false,
         timestamp: new Date().toISOString()
       });
@@ -223,8 +221,8 @@ export const Sidebar = React.memo(function Sidebar({
     }
   };
   
-  const criticalCount = notifications.filter(n => n.type === 'CRITICAL').length;
-  const warningCount = notifications.filter(n => n.type === 'WARNING').length;
+  const criticalCount = notifications.filter(n => n.severity === 'CRITICAL').length;
+  const warningCount = notifications.filter(n => n.severity === 'WARNING').length;
 
   // Determine active item based on route
   const getCurrentPage = (): string => {

@@ -39,8 +39,7 @@ export function useNotifications() {
         const serialized = serializeFirestoreData({ id: doc.id, ...doc.data() }) as AppNotification;
         return {
           ...serialized,
-          severity: serialized.severity || serialized.type || 'INFO',
-          status: serialized.status || (serialized.isRead ? 'read' : 'unread')
+          severity: serialized.severity || 'INFO'
         };
       });
       setNotifications(list);

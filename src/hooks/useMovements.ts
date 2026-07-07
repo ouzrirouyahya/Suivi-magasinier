@@ -5,7 +5,7 @@ import { useAuthStore } from '../stores/auth.store';
 import { movementsService } from '../services/movement.service';
 import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
-import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article } from '../types';
+import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article, Inventaire } from '../types';
 import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 import { calculatePriceUpdates } from '../context/InventoryContext';
 import { offlineQueue } from '../lib/offlineQueue';
@@ -20,10 +20,12 @@ export function useMovements() {
     distributions,
     purchaseRequests,
     anomalyReports,
+    inventaires,
     setMouvements,
     setDistributions,
     setPurchaseRequests,
     setAnomalyReports,
+    setInventaires,
   } = useMovementsStore();
 
   // Hydrate from IndexedDB on load/offline
@@ -37,9 +39,17 @@ export function useMovements() {
       } catch (err) {
         console.warn('Error hydrating movements from IndexedDB:', err);
       }
+      try {
+        const cachedInventaires = await offlineService.getCollection<Inventaire>('inventaires');
+        if (cachedInventaires && cachedInventaires.length > 0 && inventaires.length === 0) {
+          setInventaires(cachedInventaires);
+        }
+      } catch (err) {
+        console.warn('Error hydrating inventaires from IndexedDB:', err);
+      }
     };
     hydrate();
-  }, [setMouvements]);
+  }, [setMouvements, setInventaires]);
 
   // Subscribe to movements (filter by site and last 90 days for better performance & accuracy)
   useEffect(() => {
@@ -129,6 +139,24 @@ export function useMovements() {
     });
     return unsub;
   }, [setAnomalyReports, currentSite, currentUser]);
+
+  // Subscribe to inventaires
+  useEffect(() => {
+    if (!currentUser || !currentUser.active || !currentSite) return;
+    const q = currentSite === 'ALL'
+      ? query(collection(db, 'inventaires'))
+      : query(collection(db, 'inventaires'), where('site', '==', currentSite));
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Inventaire);
+      setInventaires(list);
+      offlineService.saveCollection('inventaires', list)
+        .then(() => snapshotManager.markCollectionSaved('inventaires'))
+        .catch(err => console.warn('[IDB] inventaires save error:', err));
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'inventaires');
+    });
+    return unsub;
+  }, [setInventaires, currentSite, currentUser]);
 
   const addMouvement = useCallback(async (mouvement: Mouvement) => {
     // Injecter createdBy depuis l'utilisateur connecté
@@ -284,15 +312,65 @@ export function useMovements() {
     }
   }, []);
 
+  const saveInventaire = useCallback(async (inv: Inventaire) => {
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await movementsService.saveInventaire(inv, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'inv_' + crypto.randomUUID();
+      const payload = { intentId, type: 'saveInventaire', payload: inv };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'saveInventaire',
+        payload: inv,
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.info("Mode hors-ligne : inventaire enregistré localement. Il sera synchronisé dès le retour du réseau.");
+      return;
+    }
+
+    try {
+      const res = await movementsService.saveInventaire(inv);
+      if (!res.success) throw new Error(res.error);
+    } catch (err: any) {
+      console.warn('[useMovements] Save inventaire failed, queuing offline fallback', err);
+      const res = await movementsService.saveInventaire(inv, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'inv_' + crypto.randomUUID();
+      const payload = { intentId, type: 'saveInventaire', payload: inv };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'saveInventaire',
+        payload: inv,
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      
+      toast.warning("Échec réseau : inventaire enregistré localement pour synchronisation future.");
+    }
+  }, []);
+
   return {
     mouvements,
     distributions,
     purchaseRequests,
     anomalyReports,
+    inventaires,
     addMouvement,
     calculatePriceUpdates, // Preserve function reference
     addPurchaseRequest,
     updatePRStatus,
+    saveInventaire,
   };
 }
 export default useMovements;

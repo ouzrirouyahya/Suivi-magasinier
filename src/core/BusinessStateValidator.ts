@@ -58,6 +58,17 @@ export function validateMouvementInvariants(
       };
     }
 
+    // AJOUTER CE CHECK :
+    if (article.site !== mouvement.site && article.site !== undefined) {
+      return {
+        isValid: false,
+        classification: 'STATE_INCONSISTENCY',
+        errorMsg: `Incohérence de chantier : l'article "${article.designation}" (${article.ref}) 
+                   appartient au chantier ${article.site} mais le mouvement est pour ${mouvement.site}.`,
+        inconsistentField: 'site',
+      };
+    }
+
     // Verify negative stock limits for stock reduction operations
     const isReduction = mouvement.type === 'SORTIE' || mouvement.type === 'TRANSFERT_OUT';
     if (isReduction) {
