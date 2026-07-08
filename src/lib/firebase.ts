@@ -70,4 +70,4 @@ if (typeof window !== 'undefined' && import.meta.env.VITE_RECAPTCHA_KEY) {
 */
 
 export default app;
-export { signInWithPopup, signOut, GoogleAuthProvider } from 'firebase/auth';
+export { signInWithPopup, signInWithRedirect, signOut, GoogleAuthProvider } from 'firebase/auth';
