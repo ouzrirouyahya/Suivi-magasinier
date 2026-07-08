@@ -18,6 +18,17 @@ export class MovementsService {
     const { articles } = useArticlesStore.getState();
     const { mouvements } = useMovementsStore.getState();
 
+    // Enrichir chaque item avec les infos de l'article au moment du bon
+    mouvement.items = mouvement.items.map(item => {
+      const article = articles.find(a => a.id === item.articleId);
+      return {
+        ...item,
+        articleDesignation: article?.designation || item.articleDesignation || '',
+        articleRef: article?.ref || item.articleRef || '',
+        articleUnit: article?.unit || item.articleUnit || 'PIECE',
+      };
+    });
+
     // 1. BSV checking of invariants
     const validation = validateMouvementInvariants(mouvement, articles, mouvements);
     if (!validation.isValid) {

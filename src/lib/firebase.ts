@@ -33,7 +33,8 @@ const firebaseConfig = {
   messagingSenderId: requireEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
 };
 
-const DATABASE_ID = requireEnv('VITE_FIREBASE_DATABASE_ID');
+const rawDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID;
+const DATABASE_ID = (rawDatabaseId && rawDatabaseId.trim() !== '') ? rawDatabaseId : 'ai-studio-8a211b3e-d9c6-4439-b61e-9282b9488046';
 
 const app = initializeApp(firebaseConfig);
 

@@ -193,6 +193,9 @@ export interface MouvementItem {
   quantityReceived?: number; // Saisie à la réception (Phase 7)
   quantityDamaged?: number; // Saisie à la réception (Phase 7)
   comment?: string; // Commentaire par article (Phase 7)
+  articleDesignation?: string;
+  articleRef?: string;
+  articleUnit?: string;
 }
 
 export interface Mouvement {

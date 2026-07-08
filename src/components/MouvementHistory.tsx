@@ -76,9 +76,10 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
 
     const matchesItems = m.items?.some(it => {
       const art = articles.find(a => a.id === it.articleId);
-      if (!art) return false;
-      return (art.designation || '').toLowerCase().includes(sTerm) || 
-             (art.ref || '').toLowerCase().includes(sTerm);
+      const designation = art?.designation || it.articleDesignation || '';
+      const ref = art?.ref || it.articleRef || '';
+      return designation.toLowerCase().includes(sTerm) || 
+             ref.toLowerCase().includes(sTerm);
     }) || false;
 
     const matchesSearch = !searchTerm || 
@@ -149,7 +150,8 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
       escape(m.beneficiaire || ''),
       escape(m.items.map(item => {
         const article = articles.find(a => a.id === item.articleId);
-        return `${article?.designation || 'Art. Inconnu'} (${item.quantity})`;
+        const designation = article?.designation || item.articleDesignation || 'Art. Inconnu';
+        return `${designation} (${item.quantity})`;
       }).join(' | ')),
       escape(m.service || ''),
       escape(m.engin || m.perforateur || ''),
@@ -364,7 +366,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                     <div className="flex flex-wrap gap-1.5 max-w-sm">
                       {m.items.slice(0, 3).map((item) => (
                         <span key={item.articleId} className="px-2.5 py-1 bg-slate-50 border border-slate-100 rounded-lg text-[10px] font-black text-slate-500 uppercase tracking-tight">
-                          {articles.find(a => a.id === item.articleId)?.designation || 'Art.'} <span className={cn("ml-1 font-black", (m.type === 'ENTREE' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR') ? "text-emerald-500" : "text-rose-500")}>{(m.type === 'ENTREE' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR') ? '+' : '-'}{item.quantity}</span>
+                          {articles.find(a => a.id === item.articleId)?.designation || item.articleDesignation || 'Art.'} <span className={cn("ml-1 font-black", (m.type === 'ENTREE' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR') ? "text-emerald-500" : "text-rose-500")}>{(m.type === 'ENTREE' || m.type === 'TRANSFERT_IN' || m.type === 'RETOUR') ? '+' : '-'}{item.quantity}</span>
                         </span>
                       ))}
                       {m.items.length > 3 && (
@@ -587,11 +589,14 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                   <tbody className="divide-y divide-slate-150">
                     {selectedMouvement.items.map((item) => {
                       const article = articles.find(a => a.id === item.articleId);
+                      const designation = article?.designation || item.articleDesignation || 'Article Inconnu';
+                      const ref = article?.ref || item.articleRef || 'N/A';
+                      const unit = article?.unit || item.articleUnit || '';
                       return (
                         <tr key={item.articleId} className="text-xs text-slate-800">
                           <td className="py-4 px-6 font-bold">
-                            <span className="text-slate-950 block font-extrabold">{article?.designation || 'Article Inconnu'}</span>
-                            <span className="text-[10px] font-mono text-slate-400 mt-0.5 block">{article?.ref || 'N/A'}</span>
+                            <span className="text-slate-950 block font-extrabold">{designation}</span>
+                            <span className="text-[10px] font-mono text-slate-400 mt-0.5 block">{ref}</span>
                           </td>
                           <td className="py-4 px-6 text-center font-black text-slate-950 text-sm">
                             {item.quantity}

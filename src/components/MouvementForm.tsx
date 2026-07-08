@@ -121,6 +121,17 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [manualIsCritical, setManualIsCritical] = useState(false);
 
   const [date, setDate] = useState(() => new Date().toISOString());
+
+  // Date validation boundaries
+  const maxDate = new Date();
+  maxDate.setSeconds(maxDate.getSeconds() + 300); // +5min de marge
+  const maxDateStr = new Date(maxDate.getTime() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16);
+
+  // Pour ENTREE : autoriser jusqu'à 30 jours en arrière (BL antidaté)
+  const minDate = new Date();
+  minDate.setDate(minDate.getDate() - 30);
+  const minDateStr = new Date(minDate.getTime() - new Date().getTimezoneOffset() * 60000).toISOString().substring(0, 16);
+
   const [reference, setReference] = useState('');
   const [entityName, setEntityName] = useState(''); 
   const [receptionSource, setReceptionSource] = useState<'CENTRAL' | 'ACHAT_EXTERNE'>('CENTRAL');
@@ -1029,6 +1040,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                     setDate(new Date(e.target.value).toISOString());
                   }
                 }}
+                max={maxDateStr}
+                min={type === 'SORTIE' ? undefined : minDateStr}
                 className="input-field h-10 px-3 text-xs bg-white font-mono font-bold border border-slate-205 rounded-lg w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
