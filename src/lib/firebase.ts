@@ -24,11 +24,26 @@ const requireEnv = (key: string): string => {
   return val;
 };
 
+const getAuthDomain = (): string => {
+  const envVal = import.meta.env.VITE_FIREBASE_AUTH_DOMAIN;
+  if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+    const hostname = window.location.hostname;
+    // Ne pas utiliser localhost ou 127.0.0.1 comme authDomain (ils n'hébergent pas le handler de redirection / popups)
+    if (hostname && hostname !== 'localhost' && hostname !== '127.0.0.1') {
+      if (hostname.endsWith('.web.app') || hostname.endsWith('.firebaseapp.com')) {
+        console.log(`[Firebase] Domaine de production hébergé détecté : ${hostname}. Utilisation en tant qu'authDomain pour éviter les blocages de cookies tiers.`);
+        return hostname;
+      }
+    }
+  }
+  return envVal || '';
+};
+
 const firebaseConfig = {
   apiKey: requireEnv('VITE_FIREBASE_API_KEY'),
   projectId: requireEnv('VITE_FIREBASE_PROJECT_ID'),
   appId: requireEnv('VITE_FIREBASE_APP_ID'),
-  authDomain: requireEnv('VITE_FIREBASE_AUTH_DOMAIN'),
+  authDomain: getAuthDomain() || requireEnv('VITE_FIREBASE_AUTH_DOMAIN'),
   storageBucket: requireEnv('VITE_FIREBASE_STORAGE_BUCKET'),
   messagingSenderId: requireEnv('VITE_FIREBASE_MESSAGING_SENDER_ID'),
 };

@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { onAuthStateChanged } from 'firebase/auth';
+import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
 import { doc, onSnapshot, collection, setDoc, db } from '../lib/db';
 import { auth } from '../lib/firebase';
 import { useAuthStore } from '../stores/auth.store';
@@ -22,6 +22,20 @@ export function useAuth() {
 
   useEffect(() => {
     let unsubUser: (() => void) | null = null;
+
+    // Récupérer le résultat d'une éventuelle redirection d'authentification
+    getRedirectResult(auth)
+      .then((result) => {
+        if (result) {
+          console.log("✅ [useAuth] Redirection d'authentification terminée avec succès !", result.user ? { email: result.user.email, uid: result.user.uid } : "aucun");
+        } else {
+          console.log("ℹ️ [useAuth] getRedirectResult appelé : pas de redirection en attente d'évaluation.");
+        }
+      })
+      .catch((error) => {
+        console.error("❌ [useAuth] Erreur lors de la récupération du résultat de la redirection :", error);
+        toast.error(`Erreur lors de la redirection : ${error.message || error.code}`);
+      });
 
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       console.log("🔄 [useAuth] onAuthStateChanged déclenché. Utilisateur connecté :", user ? { email: user.email, uid: user.uid, displayName: user.displayName } : "aucun");
