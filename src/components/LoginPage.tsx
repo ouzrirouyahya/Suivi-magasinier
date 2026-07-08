@@ -22,12 +22,15 @@ const LoginPage: React.FC = () => {
 
   const handleLogin = async () => {
     try {
+      console.log("🔄 [LoginPage] handleLogin cliqué, tentative de connexion...");
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithPopup(auth, googleProvider);
+      const result = await signInWithPopup(auth, googleProvider);
+      console.log("✅ [LoginPage] signInWithPopup réussi ! Utilisateur :", result.user ? { email: result.user.email, uid: result.user.uid } : "aucun");
       // useAuth prend le relais automatiquement via onAuthStateChanged
       // Pas besoin de getDoc() ici — useAuth le fait déjà
     } catch (error: any) {
+      console.error("❌ [LoginPage] Erreur lors de signInWithPopup :", error);
       if (error.code === 'auth/cancelled-popup-request' || 
           error.code === 'auth/popup-closed-by-user') return;
       

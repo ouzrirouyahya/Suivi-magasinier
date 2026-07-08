@@ -24,22 +24,29 @@ export function useAuth() {
     let unsubUser: (() => void) | null = null;
 
     const unsubAuth = onAuthStateChanged(auth, (user) => {
+      console.log("🔄 [useAuth] onAuthStateChanged déclenché. Utilisateur connecté :", user ? { email: user.email, uid: user.uid, displayName: user.displayName } : "aucun");
       if (unsubUser) {
+        console.log("🔄 [useAuth] Nettoyage de l'écouteur précédent");
         unsubUser();
         unsubUser = null;
       }
 
       if (!user) {
+        console.log("🔄 [useAuth] Aucun utilisateur, redirection / mise à jour à null");
         setCurrentUser(null);
         setIsLoaded(true);
         return;
       }
 
       const uid = user.uid;
+      console.log("🔄 [useAuth] Configuration de l'écouteur Firestore onSnapshot pour l'utilisateur UID :", uid);
       unsubUser = onSnapshot(doc(db, 'accounts', uid), async (snap) => {
+        console.log("🔄 [useAuth] onSnapshot reçu pour l'utilisateur UID :", uid, "Existe ?", snap.exists(), "Données brutes :", snap.data());
         if (snap.exists()) {
           const userData = serializeFirestoreData({ id: snap.id, ...snap.data() }) as UserAccount;
+          console.log("🔄 [useAuth] Utilisateur trouvé dans Firestore :", userData);
           if (user.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
+            console.log("🔄 [useAuth] Utilisateur détecté comme SUPER_ADMIN par email.");
             userData.role = 'SUPER_ADMIN';
             userData.active = true;
             userData.status = 'APPROVED';
@@ -47,22 +54,30 @@ export function useAuth() {
             // S'assurer que les données en base sont synchronisées si elles diffèrent
             const dbData = snap.data();
             if (dbData && (dbData.role !== 'SUPER_ADMIN' || dbData.active !== true || dbData.status !== 'APPROVED')) {
+              console.log("🔄 [useAuth] Synchronisation des données SUPER_ADMIN en base de données...");
               setDoc(doc(db, 'accounts', uid), {
                 role: 'SUPER_ADMIN',
                 active: true,
                 status: 'APPROVED'
-              }, { merge: true }).catch(err => {
-                console.error("Erreur lors de la mise à jour asynchrone du statut Super Admin :", err);
+              }, { merge: true }).then(() => {
+                console.log("✅ [useAuth] Synchronisation SUPER_ADMIN réussie.");
+              }).catch(err => {
+                console.error("❌ [useAuth] Erreur lors de la mise à jour asynchrone du statut Super Admin :", err);
               });
             }
           }
+          console.log("🔄 [useAuth] setCurrentUser avec l'utilisateur :", userData);
           setCurrentUser(userData);
           if ((userData.role === 'MAGASINIER' || userData.role === 'RESPONSABLE_CHANTIER') && userData.assignedSite) {
+            console.log("🔄 [useAuth] Définition du chantier courant :", userData.assignedSite);
             setCurrentSite(userData.assignedSite);
           }
+          console.log("🔄 [useAuth] Définition de isLoaded à true");
           setIsLoaded(true);
         } else {
+          console.log("🔄 [useAuth] Document inexistant pour l'utilisateur UID :", uid);
           if (user.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
+            console.log("🔄 [useAuth] Création automatique du document SUPER_ADMIN...");
             const newUser: UserAccount = {
               id: uid,
               email: user.email || '',
@@ -73,9 +88,15 @@ export function useAuth() {
               createdAt: new Date().toISOString()
             };
             setCurrentUser(newUser);
-            await setDoc(doc(db, 'accounts', uid), cleanObject(newUser));
+            try {
+              await setDoc(doc(db, 'accounts', uid), cleanObject(newUser));
+              console.log("✅ [useAuth] Document SUPER_ADMIN créé avec succès.");
+            } catch (err) {
+              console.error("❌ [useAuth] Erreur de création du document SUPER_ADMIN :", err);
+            }
             setIsLoaded(true);
           } else {
+            console.log("🔄 [useAuth] Nouvel utilisateur standard (en attente d'inscription)");
             // Utilisateur Google authentifié mais pas encore de compte Hydromines
             // Créer un UserAccount temporaire "EN_ATTENTE_INSCRIPTION"
             // pour que App.tsx ne redirige PAS vers /login
@@ -89,12 +110,13 @@ export function useAuth() {
               status: 'PENDING_REGISTRATION', // nouveau statut temporaire
               createdAt: new Date().toISOString()
             };
+            console.log("🔄 [useAuth] setCurrentUser à PENDING_REGISTRATION");
             setCurrentUser(pendingFirebaseUser);
             setIsLoaded(true);
           }
         }
       }, (error) => {
-        console.error("❌ [Auth] Erreur Firestore:", error);
+        console.error("❌ [Auth] Erreur Firestore onSnapshot:", error);
         setIsLoaded(true);
       });
     });
