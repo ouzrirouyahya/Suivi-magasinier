@@ -93,7 +93,10 @@ export function useAuth() {
             setIsLoaded(true);
           }
         }
-      }, () => setIsLoaded(true));
+      }, (error) => {
+        console.error("❌ [Auth] Erreur Firestore:", error);
+        setIsLoaded(true);
+      });
     });
 
     return () => {
