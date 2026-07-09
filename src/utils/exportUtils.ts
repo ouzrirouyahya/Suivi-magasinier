@@ -1,6 +1,7 @@
 import XLSX from 'xlsx-js-style';
 import { Article, Mouvement, Transfert, SiteCode } from '../types';
 import { PriceChangeRecord } from '../types/priceHistory';
+import { SITE_CODES } from '../lib/constants';
 
 export interface SheetConfig {
   name: string;
@@ -739,7 +740,7 @@ function buildRawPriceRow(r: PriceChangeRecord) {
  * Creates a professional general stock inventory overview dashboard comparing all 5 sites
  */
 export function formatArticlesSummaryDashboard(articles: Article[]): any[] {
-  const sites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+  const sites: SiteCode[] = [...SITE_CODES];
   const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
   
   const siteKPIs = sites.map(site => {
@@ -784,7 +785,7 @@ export function formatArticlesSummaryDashboard(articles: Article[]): any[] {
  * Creates a professional stock movements overview dashboard comparing flow metrics for all 5 sites
  */
 export function formatMovementsSummaryDashboard(movements: Mouvement[], articles: Article[]): any[] {
-  const sites: SiteCode[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+  const sites: SiteCode[] = [...SITE_CODES];
   const articleMap = new Map(articles.map(a => [a.id, a]));
 
   const siteKPIs = sites.map(site => {

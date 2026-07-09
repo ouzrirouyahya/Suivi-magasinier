@@ -9,7 +9,7 @@ import {
 import { useInventory } from '../context/InventoryContext';
 import { HydrominesCatalogItem, CatalogItem, Article, SiteCode, EquipmentFamily, CatalogSelectorConfig } from '../types';
 import { MASTER_CATALOG } from '../catalogData';
-import { generateId, formatCurrency, cn } from '../lib/utils';
+import { generateId, formatCurrency, cn, logger } from '../lib/utils';
 import { toast } from 'sonner';
 import { useCatalogFilter, getCatalogByFamily } from '../hooks/useCatalog';
 import { SITE_CODES } from '../lib/constants';
@@ -590,9 +590,9 @@ export function HydrominesCatalog() {
     
     const categories = Array.from(uniq);
     if (categories.length === 0) {
-      console.warn(`[HydrominesCatalog] No categories found for ${selectedFamily}`);
+      logger.warn(`[HydrominesCatalog] No categories found for ${selectedFamily}`);
     } else {
-      console.log(`[HydrominesCatalog] Found ${categories.length} categories for ${selectedFamily}:`, categories);
+      logger.log(`[HydrominesCatalog] Found ${categories.length} categories for ${selectedFamily}:`, categories);
     }
     
     // Sort by predefined order instead of alphabetical

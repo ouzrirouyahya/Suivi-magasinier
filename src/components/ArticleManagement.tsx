@@ -85,6 +85,13 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
   const [importProgressMessage, setImportProgressMessage] = useState('');
   const [importStatus, setImportStatus] = useState<'IDLE' | 'ANALYZING' | 'GENERATING' | 'COMPLETED' | 'ERROR'>('IDLE');
 
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel?: () => void;
+  } | null>(null);
+
   const existingRefs = React.useMemo(() => {
     return new Set(
       articles
@@ -227,15 +234,20 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       return;
     }
     if (selectedGhostIds.length === 0) return;
-    if (confirm(`Voulez-vous vraiment supprimer définitivement les ${selectedGhostIds.length} articles fantômes sélectionnés ?`)) {
-      try {
-        await deleteArticles(selectedGhostIds);
-        setSelectedGhostIds([]);
-        toast.success("Articles fantômes sélectionnés supprimés avec succès !");
-      } catch (error: any) {
-        toast.error(`Erreur lors de la suppression : ${error.message || error}`);
+    setConfirmDialog({
+      open: true,
+      message: `Voulez-vous vraiment supprimer définitivement les ${selectedGhostIds.length} articles fantômes sélectionnés ?`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        try {
+          await deleteArticles(selectedGhostIds);
+          setSelectedGhostIds([]);
+          toast.success("Articles fantômes sélectionnés supprimés avec succès !");
+        } catch (error: any) {
+          toast.error(`Erreur lors de la suppression : ${error.message || error}`);
+        }
       }
-    }
+    });
   };
 
   const filteredGhostArticles = React.useMemo(() => {
@@ -658,15 +670,22 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       const file = event.target.files?.[0];
       if (!file) return;
 
-      const confirmReplacement = confirm(
-        `AVERTISSEMENT : L'importation d'un nouveau fichier va ajouter ces données au catalogue ${activeCatalogType === 'ENGINS' ? 'ST2G/ST2D' : 'Perforateurs'}.\n\nVoulez-vous continuer ?`
-      );
+      const target = event.target;
 
-      if (!confirmReplacement) {
-        if (event.target) event.target.value = '';
-        return;
-      }
+      setConfirmDialog({
+        open: true,
+        message: `AVERTISSEMENT : L'importation d'un nouveau fichier va ajouter ces données au catalogue ${activeCatalogType === 'ENGINS' ? 'ST2G/ST2D' : 'Perforateurs'}.\n\nVoulez-vous continuer ?`,
+        onConfirm: () => {
+          setConfirmDialog(null);
+          startCsvImport(file, target);
+        },
+        onCancel: () => {
+          if (target) target.value = '';
+        }
+      });
+    };
 
+    const startCsvImport = async (file: File, target: HTMLInputElement) => {
       setIsImporting(true);
       setImportProgress(0);
       
@@ -816,13 +835,13 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                  setIsImporting(false);
                  setImportProgress(0);
                  addNotification(`IMPORTATION RÉUSSIE : ${newItems.length} références synchronisées.`, 'success');
-                 if (event.target) event.target.value = '';
+                 if (target) target.value = '';
                }, 500);
              } else {
                setIsImporting(false);
                setImportProgress(0);
                addNotification("Le fichier n'a pas pu être lu correctement. Vérifiez le format.", 'error');
-               if (event.target) event.target.value = '';
+               if (target) target.value = '';
              }
           };
 
@@ -838,29 +857,40 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
     };
 
   const handleDeleteCatalogBranch = async (scope: 'CATEGORY' | 'SUBCATEGORY' | 'COMPONENT', value: string) => {
-    if (!confirm(`Êtes-vous sûr de vouloir supprimer toute la branche "${value}" ?`)) return;
+    setConfirmDialog({
+      open: true,
+      message: `Êtes-vous sûr de vouloir supprimer toute la branche "${value}" ?`,
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        const itemsToDelete = catalog.filter(item => {
+          if (scope === 'CATEGORY') return item.functionalCategory === value;
+          if (scope === 'SUBCATEGORY') return item.subCategory === value && item.functionalCategory === navPath[0]?.value;
+          if (scope === 'COMPONENT') return item.component === value && item.subCategory === navPath[1]?.value && item.functionalCategory === navPath[0]?.value;
+          return false;
+        });
 
-    const itemsToDelete = catalog.filter(item => {
-      if (scope === 'CATEGORY') return item.functionalCategory === value;
-      if (scope === 'SUBCATEGORY') return item.subCategory === value && item.functionalCategory === navPath[0]?.value;
-      if (scope === 'COMPONENT') return item.component === value && item.subCategory === navPath[1]?.value && item.functionalCategory === navPath[0]?.value;
-      return false;
-    });
-
-    if (deleteCatalogItem) {
-      for (const item of itemsToDelete) {
-        await deleteCatalogItem(item.id);
+        if (deleteCatalogItem) {
+          for (const item of itemsToDelete) {
+            await deleteCatalogItem(item.id);
+          }
+          addNotification(`${itemsToDelete.length} références supprimées`, "success");
+        }
       }
-      addNotification(`${itemsToDelete.length} références supprimées`, "success");
-    }
+    });
   };
 
   const handleDeleteCatalogItem = async (id: string) => {
-    if (!confirm('Supprimer cette référence du catalogue ?')) return;
-    if (deleteCatalogItem) {
-      await deleteCatalogItem(id);
-      addNotification("Référence supprimée du master", "success");
-    }
+    setConfirmDialog({
+      open: true,
+      message: 'Supprimer cette référence du catalogue ?',
+      onConfirm: async () => {
+        setConfirmDialog(null);
+        if (deleteCatalogItem) {
+          await deleteCatalogItem(id);
+          addNotification("Référence supprimée du master", "success");
+        }
+      }
+    });
   };
 
   const handleSaveCatalogItem = async () => {
@@ -2962,6 +2992,24 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       </AnimatePresence>
 
       <NotificationCenter notifications={notifications} />
+
+      {confirmDialog?.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 max-w-sm w-full">
+            <p className="text-white text-sm mb-6 whitespace-pre-line">{confirmDialog.message}</p>
+            <div className="flex gap-3">
+              <button onClick={() => { confirmDialog.onCancel?.(); setConfirmDialog(null); }}
+                className="flex-1 px-4 py-2 bg-slate-700 hover:bg-slate-600 transition-colors text-white rounded-lg font-medium cursor-pointer">
+                Annuler
+              </button>
+              <button onClick={confirmDialog.onConfirm}
+                className="flex-1 px-4 py-2 bg-red-600 hover:bg-red-500 transition-colors text-white rounded-lg font-black cursor-pointer">
+                Confirmer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

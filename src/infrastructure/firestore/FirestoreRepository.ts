@@ -65,6 +65,7 @@ export class FirestoreRepository {
       await setDoc(docRef, data);
     } catch (error) {
       handleFirestoreError(error, OperationType.WRITE, `${path}/${id}`);
+      throw error;
     }
   }
 
@@ -77,6 +78,7 @@ export class FirestoreRepository {
       await updateDoc(docRef, data);
     } catch (error) {
       handleFirestoreError(error, OperationType.UPDATE, `${path}/${id}`);
+      throw error;
     }
   }
 
@@ -89,6 +91,7 @@ export class FirestoreRepository {
       await deleteDoc(docRef);
     } catch (error) {
       handleFirestoreError(error, OperationType.DELETE, `${path}/${id}`);
+      throw error;
     }
   }
 

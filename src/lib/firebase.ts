@@ -53,6 +53,12 @@ export const auth = getAuth(app);
 export const googleProvider = new GoogleAuthProvider();
 auth.languageCode = 'fr';
 
+const isDev = import.meta.env.DEV;
+const localLogger = {
+  log: (...args: any[]) => isDev && console.log(...args),
+  warn: (...args: any[]) => isDev && console.warn(...args),
+};
+
 // TODO: Réactiver App Check après configuration complète
 // dans Google Cloud Console et Firebase Console
 /*
@@ -62,12 +68,21 @@ if (typeof window !== 'undefined' && import.meta.env.VITE_RECAPTCHA_KEY) {
       provider: new ReCaptchaEnterpriseProvider(import.meta.env.VITE_RECAPTCHA_KEY),
       isTokenAutoRefreshEnabled: true
     });
-    console.log('[Firebase] App Check initialisé avec succès.');
+    localLogger.log('[Firebase] App Check initialisé avec succès.');
   } catch (err) {
-    console.warn('[Firebase] Impossible d\'initialiser App Check:', err);
+    localLogger.warn('[Firebase] Impossible d\'initialiser App Check:', err);
   }
 }
 */
 
 export default app;
-export { signInWithPopup, signInWithRedirect, signOut, GoogleAuthProvider } from 'firebase/auth';
+export { 
+  onAuthStateChanged,
+  signOut,
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
+  GoogleAuthProvider,
+  type User,
+  type UserCredential
+} from 'firebase/auth';

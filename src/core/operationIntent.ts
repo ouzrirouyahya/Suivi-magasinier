@@ -7,6 +7,8 @@
  * completely stable across offline queues, app reboots, and hot UI re-renders.
  */
 
+import { logger } from '../lib/utils';
+
 const STORAGE_PREFIX = 'hydromines_intent:';
 const ACK_REGISTRY_PREFIX = 'hydromines_ack_reg:';
 const INTENT_TTL_MS = 24 * 60 * 60 * 1000; // 24 heures
@@ -47,7 +49,7 @@ export function purgeStaleIntents(): void {
       }
     }
   } catch (err) {
-    console.warn('[OperationIntent] Erreur lors du scan localStorage:', err);
+    logger.warn('[OperationIntent] Erreur lors du scan localStorage:', err);
   }
   
   keysToDelete.forEach(key => {
@@ -55,7 +57,7 @@ export function purgeStaleIntents(): void {
   });
   
   if (keysToDelete.length > 0) {
-    console.log(
+    logger.log(
       `[OperationIntent] Purgé ${keysToDelete.length} intents périmés`
     );
   }

@@ -5,7 +5,7 @@ import { catalogService } from '../services/catalog.service';
 import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
 import { CatalogItem, HydrominesCatalogItem, EquipmentFamily } from '../types';
-import { serializeFirestoreData, generateId, handleFirestoreError, OperationType } from '../lib/utils';
+import { serializeFirestoreData, generateId, handleFirestoreError, OperationType, logger } from '../lib/utils';
 import { useAuthStore } from '../stores/auth.store';
 import { toast } from 'sonner';
 
@@ -31,7 +31,7 @@ export const getCatalogByFamily = (family: string): CatalogItem[] => {
         item.compatibility.toLowerCase().includes('consommables')
       ))
     );
-    console.log(`[getCatalogByFamily] family: CONSOMMABLES, items matching count: ${results.length}`);
+    logger.log(`[getCatalogByFamily] family: CONSOMMABLES, items matching count: ${results.length}`);
     return results;
   }
 
@@ -44,14 +44,14 @@ export const getCatalogByFamily = (family: string): CatalogItem[] => {
   };
   const targetCompatibility = familyMap[family];
   if (!targetCompatibility) {
-    console.warn(`[getCatalogByFamily] No compatibility mapping found for family: ${family}`);
+    logger.warn(`[getCatalogByFamily] No compatibility mapping found for family: ${family}`);
     return [];
   }
   const results = MASTER_CATALOG.filter(item => {
     const itemComp = (item.compatibility || '').toLowerCase();
     return itemComp === targetCompatibility.toLowerCase() || itemComp.includes(family.toLowerCase());
   });
-  console.log(`[getCatalogByFamily] family: ${family}, targetCompatibility: ${targetCompatibility}, items matching count: ${results.length}`);
+  logger.log(`[getCatalogByFamily] family: ${family}, targetCompatibility: ${targetCompatibility}, items matching count: ${results.length}`);
   return results;
 };
 
@@ -64,11 +64,11 @@ export function useCatalogFilter() {
   const [searchQuery, setSearchQuery] = useState('');
   
   const filteredItems = useMemo(() => {
-    console.log('[useCatalogFilter] selectedFamily:', selectedFamily);
+    logger.log('[useCatalogFilter] selectedFamily:', selectedFamily);
     let items = MASTER_CATALOG;
     if (selectedFamily) {
       items = getCatalogByFamily(selectedFamily);
-      console.log('[useCatalogFilter] filtered count by family:', items.length);
+      logger.log('[useCatalogFilter] filtered count by family:', items.length);
     }
     if (searchQuery.length >= 2) {
       const q = searchQuery.toLowerCase();
@@ -77,7 +77,7 @@ export function useCatalogFilter() {
         item.reference?.toLowerCase().includes(q) ||
         item.component?.toLowerCase().includes(q)
       );
-      console.log('[useCatalogFilter] filtered count with searchQuery:', items.length);
+      logger.log('[useCatalogFilter] filtered count with searchQuery:', items.length);
     }
     return items;
   }, [selectedFamily, searchQuery]);
@@ -150,7 +150,7 @@ export function useCatalog() {
       setCatalog(list);
       offlineService.saveCollection('catalog', list)
         .then(() => snapshotManager.markCollectionSaved('catalog'))
-        .catch(err => console.warn('[IDB] catalog save error:', err));
+        .catch(err => logger.warn('[IDB] catalog save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'catalog');
     });
@@ -166,7 +166,7 @@ export function useCatalog() {
       setHydrominesCatalog(list);
       offlineService.saveCollection('hydrominesCatalog', list)
         .then(() => snapshotManager.markCollectionSaved('hydrominesCatalog'))
-        .catch(err => console.warn('[IDB] hydrominesCatalog save error:', err));
+        .catch(err => logger.warn('[IDB] hydrominesCatalog save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'hydromines_catalog');
     });

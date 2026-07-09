@@ -169,21 +169,26 @@ export class RadarAnalyzer {
     
     articleCount.forEach((count, articleId) => {
       if (count >= 5) {
-        anomalies.push({
-          id: `anom_vamp_${articleId}`,
-          type: 'PATTERN_SORTIE',
-          severity: 'HIGH',
-          title: 'Pattern suspect de sorties',
-          description: `${count} sorties de 1 unité détectées sur cette pièce`,
-          entityId: articleId,
-          entityName: articleId,
-          metric: `${count} sorties unitaires`,
-          threshold: '5 sorties unitaires / 30 jours',
-          suggestedAction: 'Vérifier les bénéficiaires. Possible vampirisme de stock.',
-          confidence: 75,
-          site: smallMoves[0]?.site || 'SMI',
-          detectedAt: new Date().toISOString()
-        });
+        const anomalySite = smallMoves[0]?.site;
+        if (!anomalySite) {
+          console.warn('[RadarAnalyzer] Anomalie ignorée : site inconnu');
+        } else {
+          anomalies.push({
+            id: `anom_vamp_${articleId}`,
+            type: 'PATTERN_SORTIE',
+            severity: 'HIGH',
+            title: 'Pattern suspect de sorties',
+            description: `${count} sorties de 1 unité détectées sur cette pièce`,
+            entityId: articleId,
+            entityName: articleId,
+            metric: `${count} sorties unitaires`,
+            threshold: '5 sorties unitaires / 30 jours',
+            suggestedAction: 'Vérifier les bénéficiaires. Possible vampirisme de stock.',
+            confidence: 75,
+            site: anomalySite,
+            detectedAt: new Date().toISOString()
+          });
+        }
       }
     });
     

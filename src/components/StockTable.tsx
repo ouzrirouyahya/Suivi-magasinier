@@ -374,7 +374,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
           },
           { 
             label: 'Valeur Totale', 
-            value: formatCurrency(sortedAndFilteredArticles.reduce((sum, a) => sum + (a.quantity * a.price), 0)).split(',')[0], 
+            value: formatCurrency(sortedAndFilteredArticles.reduce((sum, a) => sum + ((Number(a.quantity) || 0) * (Number(a.price) || 0)), 0)).split(',')[0], 
             unit: 'MAD', 
             color: 'text-slate-900', 
             bg: 'bg-white',
@@ -633,7 +633,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
           >
             {paginatedArticles.map((article, idx) => {
               const status = getStockStatus(article);
-              const totalValue = article.quantity * article.price;
+              const totalValue = (Number(article.quantity) || 0) * (Number(article.price) || 0);
               
               return (
                 <motion.div 

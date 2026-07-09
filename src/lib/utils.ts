@@ -64,15 +64,24 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
+      userId: isDev 
+        ? auth.currentUser?.uid 
+        : auth.currentUser?.uid 
+          ? auth.currentUser.uid.slice(0, 8) + '***' 
+          : null,
+      email: isDev 
+        ? auth.currentUser?.email 
+        : auth.currentUser?.email 
+          ? auth.currentUser.email.replace(/(.{2}).*@/, '$1***@') 
+          : null,
       emailVerified: auth.currentUser?.emailVerified,
       isAnonymous: auth.currentUser?.isAnonymous,
       tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData?.map(provider => ({
-        providerId: provider.providerId,
-        email: provider.email,
-      })) || []
+      ...(isDev && {
+        providerInfo: auth.currentUser?.providerData?.map(provider => ({
+          providerId: provider.providerId,
+        })) || []
+      })
     },
     operationType,
     path
@@ -174,3 +183,13 @@ export function serializeFirestoreData(data: any): any {
 export function generateSecureUUID(): string {
   return generateId();
 }
+
+const isDev = import.meta.env.DEV;
+
+export const logger = {
+  log: (...args: any[]) => isDev && console.log(...args),
+  warn: (...args: any[]) => isDev && console.warn(...args),
+  error: (...args: any[]) => console.error(...args), // errors toujours visibles
+  info: (...args: any[]) => isDev && console.info(...args),
+};
+

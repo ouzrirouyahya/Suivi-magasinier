@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { Search, Download, Calendar, ArrowDownLeft, ArrowUpRight, Clock, HardDrive, User, Printer, Eye, X, BookOpen, LayoutGrid, RotateCcw } from 'lucide-react';
+import { Search, Download, Calendar, ArrowDownLeft, ArrowUpRight, Clock, HardDrive, User, Printer, Eye, X, BookOpen, LayoutGrid, RotateCcw, Trash2, ShieldAlert } from 'lucide-react';
 import { Mouvement, Article, SiteCode } from '../types';
 import { cn, formatDate, formatCurrency } from '../lib/utils';
 import hydrominesLogo from '../assets/images/hydromines_logo.png';
+import { useAuthStore } from '../stores/auth.store';
+import { db, runTransaction, doc, collection } from '../lib/db';
+import { toast } from 'sonner';
 
 interface MouvementHistoryProps {
   site: SiteCode;
@@ -29,11 +32,74 @@ const getPageNumbers = (currentPage: number, totalPages: number): (number | '...
 };
 
 export const MouvementHistory = React.memo(function MouvementHistory({ site, mouvements, articles }: MouvementHistoryProps) {
+  const { currentUser } = useAuthStore();
   const [searchTerm, setSearchTerm] = useState('');
   const [typeFilter, setTypeFilter] = useState<'ALL' | 'ENTREE' | 'SORTIE' | 'RETOUR' | 'TRANSFERT_IN' | 'TRANSFERT_OUT' | 'AJUSTEMENT'>('ALL');
   const [dateStart, setDateStart] = useState('');
   const [dateEnd, setDateEnd] = useState('');
   const [selectedMouvement, setSelectedMouvement] = useState<Mouvement | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string|null>(null);
+
+  const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirmId) return;
+    const mouvement = mouvements.find(m => m.id === deleteConfirmId);
+    if (!mouvement) return;
+    
+    try {
+      await runTransaction(db, async (tx) => {
+        // 1. Vérifier que le mouvement existe encore
+        const mRef = doc(db, 'mouvements', deleteConfirmId);
+        const mSnap = await tx.get(mRef);
+        if (!mSnap.exists()) throw new Error('Bon déjà supprimé');
+        
+        // 2. Annuler l'effet stock pour chaque article
+        for (const item of mouvement.items) {
+          const artRef = doc(db, 'articles', item.articleId);
+          const artSnap = await tx.get(artRef);
+          if (!artSnap.exists()) continue;
+          const art = artSnap.data();
+          
+          // Inverser le mouvement sur le stock
+          const isAddition = ['ENTREE', 'TRANSFERT_IN', 'RETOUR'].includes(mouvement.type);
+          const isAdjustment = mouvement.type === 'AJUSTEMENT';
+          let newQty: number;
+          if (isAdjustment) {
+            // On ne peut pas annuler un AJUSTEMENT de façon déterministe
+            // → laisser le stock tel quel, juste supprimer le document
+            newQty = art.quantity;
+          } else if (isAddition) {
+            newQty = Math.max(0, (art.quantity || 0) - item.quantity);
+          } else {
+            newQty = (art.quantity || 0) + item.quantity;
+          }
+          tx.update(artRef, { quantity: newQty });
+        }
+        
+        // 3. Supprimer le bon
+        tx.delete(mRef);
+        
+        // 4. Audit log
+        const auditRef = doc(collection(db, 'auditLogs'));
+        tx.set(auditRef, {
+          id: auditRef.id,
+          timestamp: new Date().toISOString(),
+          userEmail: currentUser?.email || 'unknown',
+          site: mouvement.site,
+          action: 'MOUVEMENT_SUPPRIME',
+          details: `Suppression du bon ${mouvement.reference} (${mouvement.type}) — ${mouvement.items.length} article(s)`,
+        });
+      });
+      
+      toast.success(`Bon ${mouvement.reference} supprimé et stock corrigé`);
+      if (selectedMouvement?.id === deleteConfirmId) setSelectedMouvement(null);
+    } catch (err: any) {
+      toast.error(`Erreur : ${err.message}`);
+    } finally {
+      setDeleteConfirmId(null);
+    }
+  };
 
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
@@ -377,7 +443,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                     </div>
                   </td>
                   <td className="px-6 py-4 text-center">
-                    <div className="flex items-center justify-center">
+                    <div className="flex items-center justify-center gap-2">
                        <button 
                          onClick={() => setSelectedMouvement(m)}
                          className="w-9 h-9 flex items-center justify-center bg-white border border-slate-150 text-slate-400 hover:text-sky-600 hover:border-sky-200 hover:shadow-lg rounded-xl transition-all group/btn"
@@ -385,6 +451,15 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                        >
                          <Eye className="w-5 h-5 group-hover/btn:scale-105 transition-transform" />
                        </button>
+                       {isAdmin && (
+                         <button
+                           onClick={(e) => { e.stopPropagation(); setDeleteConfirmId(m.id); }}
+                           title="Supprimer ce bon (Admin)"
+                           className="opacity-0 group-hover:opacity-100 transition-opacity w-9 h-9 flex items-center justify-center bg-white border border-slate-150 rounded-xl text-slate-400 hover:text-red-500 hover:bg-red-50 hover:border-red-200 hover:shadow-lg cursor-pointer"
+                         >
+                           <Trash2 className="w-4 h-4" />
+                         </button>
+                       )}
                     </div>
                   </td>
                 </tr>
@@ -670,6 +745,37 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
           .no-print { display: none !important; }
         }
       `}} />
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-red-700/50 rounded-2xl p-6 max-w-sm w-full">
+            <h3 className="text-white font-black text-lg mb-2 flex items-center gap-2">
+              <ShieldAlert className="w-5 h-5 text-red-400" />
+              Supprimer ce bon ?
+            </h3>
+            <p className="text-slate-400 text-sm mb-2">
+              Référence : <span className="text-white font-mono font-bold">
+                {mouvements.find(m => m.id === deleteConfirmId)?.reference || mouvements.find(m => m.id === deleteConfirmId)?.id}
+              </span>
+            </p>
+            <p className="text-amber-400 text-xs mb-6">
+              ⚠️ Le stock sera automatiquement corrigé. 
+              Les AJUSTEMENTS ne peuvent pas être annulés automatiquement.
+              Cette action est irréversible.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg font-medium cursor-pointer">
+                Annuler
+              </button>
+              <button onClick={handleConfirmDelete}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-black cursor-pointer">
+                Supprimer & Corriger stock
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

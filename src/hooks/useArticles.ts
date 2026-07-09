@@ -10,6 +10,7 @@ import { Article, CatalogItem, DeletionRequest, HydrominesCatalogItem, SiteCode 
 import { CatalogUsageStats } from '../context/InventoryContext';
 import { MASTER_CATALOG } from '../catalogData';
 import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID, handleFirestoreError, OperationType } from '../lib/utils';
+import { migrateDocument } from '../lib/migrations';
 import { toast } from 'sonner';
 import { offlineQueue } from '../lib/offlineQueue';
 import { useSystemStore } from '../stores/system.store';
@@ -55,7 +56,7 @@ export function useArticles() {
 
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs
-        .map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Article)
+        .map(doc => migrateDocument('articles', serializeFirestoreData({ id: doc.id, ...doc.data() })) as Article)
         .filter(a => !(a as any).deleted);
       setArticles(list);
       offlineService.saveCollection('articles', list)

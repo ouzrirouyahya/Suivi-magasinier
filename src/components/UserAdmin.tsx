@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Shield, CheckCircle2, XCircle, Mail, Clock, Search, Truck, Drill, LayoutGrid, Plus, Trash2, Tag, Hash, Eye, Globe, Languages, Monitor, Cpu, History, Compass, Activity, MapPin, Smartphone, Laptop, Tablet, ChevronRight, AlertTriangle, Filter, Calendar, X, Wrench } from 'lucide-react';
 import { UserAccount, EnginMaster, AgentMaster, PerfoMaster, SiteCode } from '../types';
-import { cn, generateId } from '../lib/utils';
+import { cn, generateId, logger } from '../lib/utils';
 import { SITES, SERVICES } from '../demoData';
 import { collection, onSnapshot, query, doc, updateDoc, db } from '../lib/db';
 import { toast } from 'sonner';
@@ -80,10 +80,10 @@ export const UserAdmin = React.memo(function UserAdmin({
     currentUser
   } = useInventory();
 
-  console.log("AGENTS:", agents)
-  console.log("ENGINS:", engins)
-  console.log("PERFOS:", perfos)
-  console.log("CURRENT SITE:", currentSite)
+  logger.log("AGENTS:", agents)
+  logger.log("ENGINS:", engins)
+  logger.log("PERFOS:", perfos)
+  logger.log("CURRENT SITE:", currentSite)
 
   const siteAgents = agents.filter(a => a.site === currentSite);
   const siteEngins = engins.filter(e => e.site === currentSite);
@@ -103,7 +103,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       list.sort((a, b) => new Date(b.requestedAt).getTime() - new Date(a.requestedAt).getTime());
       setReplacementRequests(list);
     }, (error) => {
-      console.warn("replacementRequests snapshot error:", error);
+      logger.warn("replacementRequests snapshot error:", error);
     });
     return unsub;
   }, [isAdminUser]);
@@ -335,9 +335,20 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleApproveUser = async (user: UserAccount) => {
+    const targetRole = user.requestedRole || 'MAGASINIER';
+    
+    // MAGASINIER et RESPONSABLE_CHANTIER DOIVENT avoir un chantier
+    if ((targetRole === 'MAGASINIER' || targetRole === 'RESPONSABLE_CHANTIER') 
+        && !user.assignedSite) {
+      toast.error(
+        `Impossible d'approuver ${user.name} : ` +
+        `un chantier doit être assigné avant l'approbation pour le rôle ${targetRole}.`
+      );
+      return;
+    }
+
     try {
       const userRef = doc(db, 'accounts', user.id);
-      const targetRole = user.requestedRole || 'MAGASINIER';
       const isReadOnlyByDefault = targetRole === 'ADMIN' || targetRole === 'RESPONSABLE_CHANTIER';
       await updateDoc(userRef, {
         status: 'APPROVED',
@@ -359,8 +370,8 @@ export const UserAdmin = React.memo(function UserAdmin({
       await updateDoc(userRef, {
         status: 'REJECTED',
         active: false,
-        role: 'ADMIN',
-        assignedSite: null,
+        role: user.requestedRole || user.role || 'MAGASINIER',
+        assignedSite: user.assignedSite || null,
         canWrite: false
       });
       toast.success(`Accès refusé pour ${user.name}`);

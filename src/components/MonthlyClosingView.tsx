@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 import { doc, setDoc, onSnapshot, collection, deleteDoc, db } from '../lib/db';
 import { useInventory } from '../context/InventoryContext';
-import { SITE_CODES } from '../lib/constants';
+import { SITE_CODES, SITE_LABELS, SiteCode } from '../lib/constants';
 import { MonthlyClosing, Article } from '../types';
 import { formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
@@ -161,7 +161,7 @@ export function MonthlyClosingView() {
 
       return {
         site: siteCode,
-        name: siteCode === 'SMI' ? 'SMI (Chantier principal)' : siteCode,
+        name: SITE_LABELS[siteCode as SiteCode] || siteCode,
         value: siteValue,
         count: siteArts.length,
         critical: criticalCount

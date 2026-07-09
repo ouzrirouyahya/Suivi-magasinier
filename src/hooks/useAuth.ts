@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
-import { onAuthStateChanged, getRedirectResult } from 'firebase/auth';
+import { onAuthStateChanged, getRedirectResult } from '../lib/firebase';
 import { doc, onSnapshot, collection, setDoc, db } from '../lib/db';
 import { auth } from '../lib/firebase';
 import { useAuthStore } from '../stores/auth.store';
 import { authService } from '../services/auth.service';
 import { UserAccount, SiteCode } from '../types';
-import { serializeFirestoreData, cleanObject } from '../lib/utils';
+import { serializeFirestoreData, cleanObject, logger } from '../lib/utils';
+import { migrateDocument } from '../lib/migrations';
 import { toast } from 'sonner';
 
 export function useAuth() {
@@ -23,44 +24,41 @@ export function useAuth() {
   useEffect(() => {
     let unsubUser: (() => void) | null = null;
 
-    // Récupérer le résultat d'une éventuelle redirection d'authentification
-    getRedirectResult(auth)
-      .then((result) => {
-        if (result) {
-          console.log("✅ [useAuth] Redirection d'authentification terminée avec succès !", result.user ? { email: result.user.email, uid: result.user.uid } : "aucun");
-        } else {
-          console.log("ℹ️ [useAuth] getRedirectResult appelé : pas de redirection en attente d'évaluation.");
-        }
-      })
-      .catch((error) => {
-        console.error("❌ [useAuth] Erreur lors de la récupération du résultat de la redirection :", error);
-        toast.error(`Erreur lors de la redirection : ${error.message || error.code}`);
-      });
+    // Vérifier si l'URL contient un paramètre de retour Firebase Auth
+    const isRedirectCallback = window.location.hash.includes('__firebase') || 
+      sessionStorage.getItem('pendingRedirectAuth') === 'true';
+
+    if (isRedirectCallback) {
+      sessionStorage.removeItem('pendingRedirectAuth');
+      getRedirectResult(auth)
+        .then(result => { if (result) logger.log('[useAuth] Redirect auth OK', result.user?.email); })
+        .catch(error => { toast.error(`Erreur connexion : ${error.message}`); });
+    }
 
     const unsubAuth = onAuthStateChanged(auth, (user) => {
-      console.log("🔄 [useAuth] onAuthStateChanged déclenché. Utilisateur connecté :", user ? { email: user.email, uid: user.uid, displayName: user.displayName } : "aucun");
+      logger.log("🔄 [useAuth] onAuthStateChanged déclenché. Utilisateur connecté :", user ? { email: user.email, uid: user.uid, displayName: user.displayName } : "aucun");
       if (unsubUser) {
-        console.log("🔄 [useAuth] Nettoyage de l'écouteur précédent");
+        logger.log("🔄 [useAuth] Nettoyage de l'écouteur précédent");
         unsubUser();
         unsubUser = null;
       }
 
       if (!user) {
-        console.log("🔄 [useAuth] Aucun utilisateur, redirection / mise à jour à null");
+        logger.log("🔄 [useAuth] Aucun utilisateur, redirection / mise à jour à null");
         setCurrentUser(null);
         setIsLoaded(true);
         return;
       }
 
       const uid = user.uid;
-      console.log("🔄 [useAuth] Configuration de l'écouteur Firestore onSnapshot pour l'utilisateur UID :", uid);
+      logger.log("🔄 [useAuth] Configuration de l'écouteur Firestore onSnapshot pour l'utilisateur UID :", uid);
       unsubUser = onSnapshot(doc(db, 'accounts', uid), async (snap) => {
-        console.log("🔄 [useAuth] onSnapshot reçu pour l'utilisateur UID :", uid, "Existe ?", snap.exists(), "Données brutes :", snap.data());
+        logger.log("🔄 [useAuth] onSnapshot reçu pour l'utilisateur UID :", uid, "Existe ?", snap.exists(), "Données brutes :", snap.data());
         if (snap.exists()) {
-          const userData = serializeFirestoreData({ id: snap.id, ...snap.data() }) as UserAccount;
-          console.log("🔄 [useAuth] Utilisateur trouvé dans Firestore :", userData);
+          const userData = migrateDocument('accounts', serializeFirestoreData({ id: snap.id, ...snap.data() })) as UserAccount;
+          logger.log("🔄 [useAuth] Utilisateur trouvé dans Firestore :", userData);
           if (user.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
-            console.log("🔄 [useAuth] Utilisateur détecté comme SUPER_ADMIN par email.");
+            logger.log("🔄 [useAuth] Utilisateur détecté comme SUPER_ADMIN par email.");
             userData.role = 'SUPER_ADMIN';
             userData.active = true;
             userData.status = 'APPROVED';
@@ -68,30 +66,30 @@ export function useAuth() {
             // S'assurer que les données en base sont synchronisées si elles diffèrent
             const dbData = snap.data();
             if (dbData && (dbData.role !== 'SUPER_ADMIN' || dbData.active !== true || dbData.status !== 'APPROVED')) {
-              console.log("🔄 [useAuth] Synchronisation des données SUPER_ADMIN en base de données...");
+              logger.log("🔄 [useAuth] Synchronisation des données SUPER_ADMIN en base de données...");
               setDoc(doc(db, 'accounts', uid), {
                 role: 'SUPER_ADMIN',
                 active: true,
                 status: 'APPROVED'
               }, { merge: true }).then(() => {
-                console.log("✅ [useAuth] Synchronisation SUPER_ADMIN réussie.");
+                logger.log("✅ [useAuth] Synchronisation SUPER_ADMIN réussie.");
               }).catch(err => {
                 console.error("❌ [useAuth] Erreur lors de la mise à jour asynchrone du statut Super Admin :", err);
               });
             }
           }
-          console.log("🔄 [useAuth] setCurrentUser avec l'utilisateur :", userData);
+          logger.log("🔄 [useAuth] setCurrentUser avec l'utilisateur :", userData);
           setCurrentUser(userData);
           if ((userData.role === 'MAGASINIER' || userData.role === 'RESPONSABLE_CHANTIER') && userData.assignedSite) {
-            console.log("🔄 [useAuth] Définition du chantier courant :", userData.assignedSite);
+            logger.log("🔄 [useAuth] Définition du chantier courant :", userData.assignedSite);
             setCurrentSite(userData.assignedSite);
           }
-          console.log("🔄 [useAuth] Définition de isLoaded à true");
+          logger.log("🔄 [useAuth] Définition de isLoaded à true");
           setIsLoaded(true);
         } else {
-          console.log("🔄 [useAuth] Document inexistant pour l'utilisateur UID :", uid);
+          logger.log("🔄 [useAuth] Document inexistant pour l'utilisateur UID :", uid);
           if (user.email?.toLowerCase() === 'ouzrirouyahya@gmail.com') {
-            console.log("🔄 [useAuth] Création automatique du document SUPER_ADMIN...");
+            logger.log("🔄 [useAuth] Création automatique du document SUPER_ADMIN...");
             const newUser: UserAccount = {
               id: uid,
               email: user.email || '',
@@ -104,13 +102,13 @@ export function useAuth() {
             setCurrentUser(newUser);
             try {
               await setDoc(doc(db, 'accounts', uid), cleanObject(newUser));
-              console.log("✅ [useAuth] Document SUPER_ADMIN créé avec succès.");
+              logger.log("✅ [useAuth] Document SUPER_ADMIN créé avec succès.");
             } catch (err) {
               console.error("❌ [useAuth] Erreur de création du document SUPER_ADMIN :", err);
             }
             setIsLoaded(true);
           } else {
-            console.log("🔄 [useAuth] Nouvel utilisateur standard (en attente d'inscription)");
+            logger.log("🔄 [useAuth] Nouvel utilisateur standard (en attente d'inscription)");
             // Utilisateur Google authentifié mais pas encore de compte Hydromines
             // Créer un UserAccount temporaire "EN_ATTENTE_INSCRIPTION"
             // pour que App.tsx ne redirige PAS vers /login
@@ -124,7 +122,7 @@ export function useAuth() {
               status: 'PENDING_REGISTRATION', // nouveau statut temporaire
               createdAt: new Date().toISOString()
             };
-            console.log("🔄 [useAuth] setCurrentUser à PENDING_REGISTRATION");
+            logger.log("🔄 [useAuth] setCurrentUser à PENDING_REGISTRATION");
             setCurrentUser(pendingFirebaseUser);
             setIsLoaded(true);
           }
@@ -150,7 +148,7 @@ export function useAuth() {
     if (!isUserAdmin) return;
 
     const unsubAccounts = onSnapshot(collection(db, 'accounts'), (snap) => {
-      const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as UserAccount);
+      const list = snap.docs.map(doc => migrateDocument('accounts', serializeFirestoreData({ id: doc.id, ...doc.data() })) as UserAccount);
       setAccounts(list);
     });
 

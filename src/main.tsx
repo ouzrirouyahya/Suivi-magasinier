@@ -7,6 +7,7 @@ import { InventoryProvider } from './context/InventoryContext.tsx';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { purgeStaleIntents } from './core/operationIntent';
+import { logger } from './lib/utils';
 
 // Purge des intents transactionnels orphelins ou périmés au démarrage de l'application
 purgeStaleIntents();
@@ -16,13 +17,13 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
       .then((registration) => {
-        console.log('[Service Worker] Enregistré avec succès ! Scope:', registration.scope);
+        logger.log('[Service Worker] Enregistré avec succès ! Scope:', registration.scope);
         
         // Enregistrer la synchronisation d'arrière-plan si prise en charge
         if ('sync' in registration) {
           (registration as any).sync.register('hydromines-sync')
-            .then(() => console.log('[Service Worker] Synchronisation d\'arrière-plan enregistrée avec succès !'))
-            .catch((err: any) => console.warn('[Service Worker] Échec d\'enregistrement de la synchro d\'arrière-plan :', err));
+            .then(() => logger.log('[Service Worker] Synchronisation d\'arrière-plan enregistrée avec succès !'))
+            .catch((err: any) => logger.warn('[Service Worker] Échec d\'enregistrement de la synchro d\'arrière-plan :', err));
         }
       })
       .catch((error) => {
@@ -33,7 +34,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   // Écouter les notifications de synchronisation d'arrière-plan pour déclencher la réconciliation
   navigator.serviceWorker.addEventListener('message', (event) => {
     if (event.data && event.data.type === 'BACKGROUND_SYNC_TRIGGERED') {
-      console.log('[Service Worker] Notification de synchronisation d\'arrière-plan reçue !');
+      logger.log('[Service Worker] Notification de synchronisation d\'arrière-plan reçue !');
       window.dispatchEvent(new CustomEvent('sw-sync-triggered'));
     }
   });
@@ -43,7 +44,7 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (refreshing) return;
     refreshing = true;
-    console.log('[Service Worker] Nouvelle version détectée, rechargement de l\'application...');
+    logger.log('[Service Worker] Nouvelle version détectée, rechargement de l\'application...');
     window.location.reload();
   });
 }

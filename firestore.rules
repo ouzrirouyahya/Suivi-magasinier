@@ -419,7 +419,7 @@ service cloud.firestore {
       allow create: if canWriteOnSite(['ADMIN', 'MAGASINIER'], incoming().site) 
                     && isValidId(id) && isValidMouvement(incoming());
       allow update: if canWrite(['ADMIN']) && isValidId(id) && isValidMouvement(incoming());
-      allow delete: if false;
+      allow delete: if canWrite(['ADMIN']) && isValidId(id);
     }
 
     // Audit logs: Strictly append-only. Immutable once recorded.

@@ -2,7 +2,7 @@ import React from 'react';
 import { motion } from 'motion/react';
 import { auth, googleProvider, db, signInWithPopup, signInWithRedirect } from '../lib/firebase';
 import { setDoc, doc } from '../lib/db';
-import { cleanObject } from '../lib/utils';
+import { cleanObject, logger } from '../lib/utils';
 import { toast } from 'sonner';
 import { Package, Shield, ArrowRight, Briefcase } from 'lucide-react';
 import { SITES } from '../demoData';
@@ -22,11 +22,11 @@ const LoginPage: React.FC = () => {
 
   const handleLogin = async () => {
     try {
-      console.log("🔄 [LoginPage] handleLogin cliqué, tentative de connexion...");
+      logger.log("🔄 [LoginPage] handleLogin cliqué, tentative de connexion...");
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
       const result = await signInWithPopup(auth, googleProvider);
-      console.log("✅ [LoginPage] signInWithPopup réussi ! Utilisateur :", result.user ? { email: result.user.email, uid: result.user.uid } : "aucun");
+      logger.log("✅ [LoginPage] signInWithPopup réussi ! Utilisateur :", result.user ? { email: result.user.email, uid: result.user.uid } : "aucun");
       // useAuth prend le relais automatiquement via onAuthStateChanged
     } catch (error: any) {
       console.error("❌ [LoginPage] Erreur lors de signInWithPopup :", error);
@@ -47,9 +47,10 @@ const LoginPage: React.FC = () => {
 
   const handleLoginRedirect = async () => {
     try {
-      console.log("🔄 [LoginPage] handleLoginRedirect cliqué, tentative de redirection...");
+      logger.log("🔄 [LoginPage] handleLoginRedirect cliqué, tentative de redirection...");
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
+      sessionStorage.setItem('pendingRedirectAuth', 'true');
       await signInWithRedirect(auth, googleProvider);
     } catch (error: any) {
       console.error("❌ [LoginPage] Erreur lors de signInWithRedirect :", error);

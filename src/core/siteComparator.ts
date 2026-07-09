@@ -127,26 +127,38 @@ export class SiteComparator {
   }
   
   static getEnginCount(site: SiteCode): number {
-    const config: Record<SiteCode, number> = {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[SiteComparator] getEnginCount('${site}') appelé avec valeur hardcodée. ` +
+        `Passer les données live à compareSites() pour des KPIs précis.`
+      );
+    }
+    const config: Record<string, number> = {
       'SMI': 6,
       'OUMEJRANE': 2,
       'BOU-AZZER': 4,
       'OUANSIMI': 3,
       'KOUDIA': 2,
       'ALL': 17
-    } as any;
+    };
     return config[site] || 1;
   }
   
   static getPerforateurCount(site: SiteCode): number {
-    const config: Record<SiteCode, number> = {
+    if (import.meta.env.DEV) {
+      console.warn(
+        `[SiteComparator] getPerforateurCount('${site}') appelé avec valeur hardcodée. ` +
+        `Passer les données live à compareSites() pour des KPIs précis.`
+      );
+    }
+    const config: Record<string, number> = {
       'SMI': 4,
       'OUMEJRANE': 1,
       'BOU-AZZER': 2,
       'OUANSIMI': 2,
       'KOUDIA': 1,
       'ALL': 10
-    } as any;
+    };
     return config[site] || 1;
   }
   
