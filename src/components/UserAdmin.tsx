@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { Users, Shield, CheckCircle2, XCircle, Mail, Clock, Search, Truck, Drill, LayoutGrid, Plus, Trash2, Tag, Hash, Eye, Globe, Languages, Monitor, Cpu, History, Compass, Activity, MapPin, Smartphone, Laptop, Tablet, ChevronRight, AlertTriangle, Filter, Calendar, X, Wrench } from 'lucide-react';
+import { Users, Shield, CheckCircle2, XCircle, Mail, Clock, Search, Truck, Drill, LayoutGrid, Plus, Trash2, Tag, Hash, Eye, Globe, Languages, Monitor, Cpu, History, Compass, Activity, MapPin, Smartphone, Laptop, Tablet, ChevronRight, AlertTriangle, Filter, Calendar, X, Wrench, Database } from 'lucide-react';
 import { UserAccount, EnginMaster, AgentMaster, PerfoMaster, SiteCode } from '../types';
 import { cn, generateId, logger } from '../lib/utils';
 import { SITES, SERVICES } from '../demoData';
 import { collection, onSnapshot, query, doc, updateDoc, db } from '../lib/db';
 import { toast } from 'sonner';
 import { useInventory } from '../context/InventoryContext';
+import { ARCHIVE_POLICY, estimateCollectionGrowth } from '../lib/archivePolicy';
 
 export const FONCTIONS = [
   'Responsable de chantier',
@@ -805,6 +806,115 @@ export const UserAdmin = React.memo(function UserAdmin({
                 </div>
               )}
             </div>
+            
+            {isSuperAdmin && (
+              <div className="mt-8 pt-6 border-t border-slate-100 space-y-4">
+                <div className="flex items-center gap-2">
+                  <Database className="w-4.5 h-4.5 text-sky-600 animate-pulse" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">
+                    Politique d'Archivage & Croissance (SuperAdmin)
+                  </h3>
+                </div>
+                
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 bg-slate-50/50 p-5 rounded-2xl border border-slate-100">
+                  {/* Politique de Rétention Active */}
+                  <div className="space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-450">Rétention Active En Ligne</h4>
+                    <div className="bg-white rounded-xl border border-slate-100 overflow-hidden text-xs">
+                      <table className="w-full text-left border-collapse">
+                        <thead>
+                          <tr className="bg-slate-50 text-[9px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100">
+                            <th className="px-3 py-2">Collection</th>
+                            <th className="px-3 py-2 text-right">Rétention</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-50 font-medium text-slate-650">
+                          {Object.entries(ARCHIVE_POLICY.online).map(([collectionName, days]) => (
+                            <tr key={collectionName} className="hover:bg-slate-50/30">
+                              <td className="px-3 py-1.5 font-mono text-[10px] uppercase font-bold text-slate-500">{collectionName}</td>
+                              <td className="px-3 py-1.5 text-right font-black text-slate-800">{days} jours <span className="text-slate-400 text-[10px] font-medium">({Math.round(days / 30)}m)</span></td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  {/* Estimation de Croissance sur 5 Ans */}
+                  <div className="space-y-4">
+                    <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-450">Projection de Croissance à 5 Ans</h4>
+                    
+                    <div className="space-y-3">
+                      {/* Mouvements */}
+                      {(() => {
+                        const mProjection = estimateCollectionGrowth(10, 5);
+                        return (
+                          <div className="bg-white p-4 rounded-xl border border-slate-100 space-y-2">
+                            <div className="flex justify-between items-center border-b border-slate-50 pb-1.5">
+                              <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Mouvements de Stock</span>
+                              <span className="text-[9px] font-mono text-slate-400">10 docs/jour/chantier</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-center font-mono text-[11px]">
+                              <div className="p-1.5 bg-sky-50/50 rounded-lg">
+                                <p className="text-[8px] font-black uppercase tracking-wider text-sky-650">En Ligne</p>
+                                <p className="font-bold text-sky-850 mt-0.5">{mProjection.onlineDocs.toLocaleString()}</p>
+                              </div>
+                              <div className="p-1.5 bg-amber-50/50 rounded-lg">
+                                <p className="text-[8px] font-black uppercase tracking-wider text-amber-650">Archivé</p>
+                                <p className="font-bold text-amber-850 mt-0.5">{mProjection.archivedDocs.toLocaleString()}</p>
+                              </div>
+                              <div className="p-1.5 bg-slate-100/50 rounded-lg">
+                                <p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Total 5 ans</p>
+                                <p className="font-bold text-slate-800 mt-0.5">{mProjection.totalDocs.toLocaleString()}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      {/* Audit Logs */}
+                      {(() => {
+                        const aProjection = estimateCollectionGrowth(25, 5);
+                        return (
+                          <div className="bg-white p-4 rounded-xl border border-slate-100 space-y-2">
+                            <div className="flex justify-between items-center border-b border-slate-50 pb-1.5">
+                              <span className="text-xs font-black text-slate-800 uppercase tracking-tight">Logs d'Audit Système</span>
+                              <span className="text-[9px] font-mono text-slate-400">25 docs/jour/chantier</span>
+                            </div>
+                            <div className="grid grid-cols-3 gap-2 text-center font-mono text-[11px]">
+                              <div className="p-1.5 bg-sky-50/50 rounded-lg">
+                                <p className="text-[8px] font-black uppercase tracking-wider text-sky-650">En Ligne</p>
+                                <p className="font-bold text-sky-850 mt-0.5">{aProjection.onlineDocs.toLocaleString()}</p>
+                              </div>
+                              <div className="p-1.5 bg-amber-50/50 rounded-lg">
+                                <p className="text-[8px] font-black uppercase tracking-wider text-amber-650">Archivé</p>
+                                <p className="font-bold text-amber-850 mt-0.5">{aProjection.archivedDocs.toLocaleString()}</p>
+                              </div>
+                              <div className="p-1.5 bg-slate-100/50 rounded-lg">
+                                <p className="text-[8px] font-black uppercase tracking-wider text-slate-500">Total 5 ans</p>
+                                <p className="font-bold text-slate-800 mt-0.5">{aProjection.totalDocs.toLocaleString()}</p>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })()}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Collections Permanentes */}
+                <div className="bg-slate-50/50 p-4 rounded-2xl border border-slate-100 space-y-2.5">
+                  <h4 className="text-[10px] font-black uppercase tracking-widest text-slate-450">Collections Permanentes (Non Archivables — Audit Minier & Conformité)</h4>
+                  <div className="flex flex-wrap gap-1.5">
+                    {ARCHIVE_POLICY.permanent.map((col) => (
+                      <span key={col} className="px-2.5 py-1 bg-white text-slate-700 text-[10px] font-mono font-bold rounded-lg border border-slate-200/50 shadow-xs uppercase tracking-tight">
+                        🛡️ {col}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         )}
 

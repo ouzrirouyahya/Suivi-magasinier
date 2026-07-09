@@ -4,7 +4,7 @@ import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRep
 import { useMovementsStore } from './movements.store';
 import { useArticlesStore } from '../articles/articles.store';
 import { validateMouvementInvariants } from '../../core/BusinessStateValidator';
-import { generateSecureUUID, cleanObject } from '../../lib/utils';
+import { generateSecureUUID, cleanObject, logger } from '../../lib/utils';
 import { calculatePriceUpdates } from '../../context/InventoryContext';
 
 export class MovementsService {
@@ -306,8 +306,8 @@ export class MovementsService {
 
       return { success: true };
     } catch (error: any) {
-      console.error('[saveInventaire] Erreur:', error);
-      return { success: false, error: error.message || 'Erreur lors de la sauvegarde de l\'inventaire' };
+      logger.error('[saveInventaire] Erreur:', error);
+      return { success: false, error: error.message || 'Erreur inconnue' };
     }
   }
 }

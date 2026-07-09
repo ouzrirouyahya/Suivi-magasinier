@@ -27,6 +27,7 @@ import { Article, SiteCode, Transfert, MouvementItem, TransfertStatus, UserAccou
 import { SITES } from '../demoData';
 import { cn, formatCurrency } from '../lib/utils';
 import { useInventory } from '../context/InventoryContext';
+import { toast } from 'sonner';
 
 interface TransfertPageProps {
   currentSite: SiteCode;
@@ -232,6 +233,25 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
         comment: inspect.comment || undefined
       };
     });
+
+    const totalReceived = submittedItems.reduce(
+      (sum, it) => sum + (it.quantityReceived || 0), 0
+    );
+
+    if (totalReceived === 0) {
+      toast.error(
+        'Impossible de valider une réception avec 0 unités reçues. ' +
+        'Si le transfert est entièrement refusé, utilisez le bouton "Litige".'
+      );
+      return;
+    }
+
+    // Vérifier que received >= 0 pour chaque item
+    const invalidItem = submittedItems.find(it => (it.quantityReceived || 0) < 0);
+    if (invalidItem) {
+      toast.error('Une quantité reçue ne peut pas être négative.');
+      return;
+    }
 
     await receptionnerTransfert(
       t.id, 

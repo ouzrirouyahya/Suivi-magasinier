@@ -7,6 +7,7 @@ import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
 import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article, Inventaire } from '../types';
 import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
+import { migrateDocument } from '../lib/migrations';
 import { calculatePriceUpdates } from '../context/InventoryContext';
 import { offlineQueue } from '../lib/offlineQueue';
 import { useSystemStore } from '../stores/system.store';
@@ -73,7 +74,7 @@ export function useMovements() {
         );
 
     const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Mouvement);
+      const list = snap.docs.map(doc => migrateDocument('mouvements', serializeFirestoreData({ id: doc.id, ...doc.data() })) as Mouvement);
       setMouvements(list);
       offlineService.saveCollection('mouvements', list)
         .then(() => snapshotManager.markCollectionSaved('mouvements'))

@@ -22,6 +22,7 @@ import { Article, SiteCode, Inventaire } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { toast } from 'sonner';
 import { useInventory } from '../context/InventoryContext';
+import { movementsService } from '../modules/movements/movements.service';
 
 interface InventairePageProps {
   currentSite: SiteCode;
@@ -159,29 +160,41 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     });
   };
 
-  const handleValidate = () => {
+  const handleValidate = async () => {
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule.");
       return;
     }
     if (!activeSession) return;
     if (confirm('Voulez-vous valider cet inventaire ? Les stocks seront mis à jour définitivement.')) {
-      onSaveInventaire({ 
+      const inv: Inventaire = { 
          ...activeSession, 
          status: 'VALIDE',
          validePar: currentUser?.name || currentUser?.email || 'Admin'
-      });
+      };
+      const result = await movementsService.saveInventaire(inv);
+      if (!result.success) {
+        toast.error(`Erreur inventaire : ${result.error}`);
+        return;
+      }
+      onSaveInventaire(inv);
       setActiveSession(null);
     }
   };
 
-  const handleSaveDraft = () => {
+  const handleSaveDraft = async () => {
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule.");
       return;
     }
     if (!activeSession) return;
-    onSaveInventaire({ ...activeSession });
+    const inv: Inventaire = { ...activeSession };
+    const result = await movementsService.saveInventaire(inv);
+    if (!result.success) {
+      toast.error(`Erreur inventaire : ${result.error}`);
+      return;
+    }
+    onSaveInventaire(inv);
     setActiveSession(null);
     toast.success('Inventaire sauvegardé en brouillon.');
   };

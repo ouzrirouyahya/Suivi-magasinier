@@ -28,6 +28,29 @@ export const migrations: Record<string, (doc: any, fromVersion: number) => any> 
       }
     }
     return doc;
+  },
+  mouvements: (doc, from) => {
+    if (from < 1) {
+      // Migration items : ajouter condition si absent (rétrocompat ReturnsManagement)
+      if (doc.items && Array.isArray(doc.items)) {
+        doc.items = doc.items.map((item: any) => ({
+          ...item,
+          // articleDesignation/Ref/Unit : snapshot ajouté en v41
+          articleDesignation: item.articleDesignation || '',
+          articleRef: item.articleRef || '',
+          articleUnit: item.articleUnit || 'PIECE',
+        }));
+      }
+    }
+    return doc;
+  },
+  transferts: (doc, from) => {
+    if (from < 1) {
+      // Normaliser les statuts bilingues
+      if (doc.status === 'EN_TRANSIT') doc.status = 'IN_TRANSIT';
+      if (doc.status === 'RECU') doc.status = 'RECEIVED';
+    }
+    return doc;
   }
 };
 

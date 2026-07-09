@@ -2,14 +2,37 @@ import React, { useState } from 'react';
 import { ShieldCheck, Search, Filter, Calendar, User, MapPin, DollarSign } from 'lucide-react';
 import { AuditLog, SiteCode } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
+import { useInventory } from '../context/InventoryContext';
 
 interface AuditLogViewProps {
   logs: AuditLog[];
+  dateFilter?: string;
+  setDateFilter?: (val: string) => void;
+  loadMoreAuditLogs?: () => void;
+  hasMoreAuditLogs?: boolean;
 }
 
-export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogViewProps) {
+export const AuditLogView = React.memo(function AuditLogView({ 
+  logs,
+  dateFilter: propDateFilter,
+  setDateFilter: propSetDateFilter,
+  loadMoreAuditLogs: propLoadMoreAuditLogs,
+  hasMoreAuditLogs: propHasMoreAuditLogs
+}: AuditLogViewProps) {
   const [search, setSearch] = useState('');
   const [filterSite, setFilterSite] = useState<SiteCode | 'ALL'>('ALL');
+
+  let inventoryContext;
+  try {
+    inventoryContext = useInventory();
+  } catch (err) {
+    // Non-breaking fallback if context provider is not available
+  }
+
+  const dateFilter = propDateFilter ?? inventoryContext?.dateFilter;
+  const setDateFilter = propSetDateFilter ?? inventoryContext?.setDateFilter;
+  const loadMoreAuditLogs = propLoadMoreAuditLogs ?? inventoryContext?.loadMoreAuditLogs;
+  const hasMoreAuditLogs = propHasMoreAuditLogs ?? inventoryContext?.hasMoreAuditLogs;
 
   const filteredLogs = logs.filter(log => {
     const sTerm = search.toLowerCase();
@@ -76,6 +99,24 @@ export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogV
               ▼
             </div>
           </div>
+          {setDateFilter && dateFilter !== undefined && (
+            <div className="w-full md:w-64 relative">
+              <Calendar className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 z-10" />
+              <select
+                className="w-full bg-slate-50 h-10 pl-10 pr-8 rounded-xl text-xs outline-none border border-slate-200 focus:border-sky-500 focus:ring-4 focus:ring-sky-500/10 transition-all font-semibold appearance-none"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+              >
+                <option value="30">30 derniers jours</option>
+                <option value="90">90 derniers jours</option>
+                <option value="365">1 an (365 jours)</option>
+                <option value="policy">Politique de rétention (365 j)</option>
+              </select>
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                ▼
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="table-container shadow-inner bg-slate-50/20">
@@ -154,6 +195,19 @@ export const AuditLogView = React.memo(function AuditLogView({ logs }: AuditLogV
             </tbody>
           </table>
         </div>
+
+        {hasMoreAuditLogs && (
+          <div className="flex justify-center py-4 border-t border-slate-100 mt-4">
+            <button
+              onClick={loadMoreAuditLogs}
+              className="px-6 py-2 bg-slate-100 hover:bg-slate-200 
+                         text-slate-600 rounded-lg font-medium text-sm 
+                         transition-colors"
+            >
+              Charger plus d'entrées
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

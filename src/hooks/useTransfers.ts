@@ -7,6 +7,7 @@ import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
 import { Transfert, MouvementItem } from '../types';
 import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
+import { migrateDocument } from '../lib/migrations';
 import { offlineQueue } from '../lib/offlineQueue';
 import { useSystemStore } from '../stores/system.store';
 import { toast } from 'sonner';
@@ -30,7 +31,7 @@ export function useTransfers() {
         );
 
     const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Transfert);
+      const list = snap.docs.map(doc => migrateDocument('transferts', serializeFirestoreData({ id: doc.id, ...doc.data() })) as Transfert);
       setTransferts(list);
       offlineService.saveCollection('transferts', list)
         .then(() => snapshotManager.markCollectionSaved('transferts'))

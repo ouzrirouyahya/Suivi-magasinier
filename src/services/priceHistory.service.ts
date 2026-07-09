@@ -1,6 +1,6 @@
-import { collection, query, orderBy, getDocs, doc, setDoc, db } from '../lib/db';
+import { collection, query, orderBy, getDocs, doc, setDoc, db, where, limit, QueryConstraint } from '../lib/db';
 import { PriceChangeRecord } from '../types/priceHistory';
-import { generateSecureUUID } from '../lib/utils';
+import { generateSecureUUID, logger } from '../lib/utils';
 
 const COLLECTION_NAME = 'priceHistory';
 
@@ -13,7 +13,7 @@ export async function logPriceChange(record: Omit<PriceChangeRecord, 'id'>): Pro
     };
     await setDoc(doc(db, COLLECTION_NAME, id), fullRecord);
   } catch (error) {
-    console.error('[logPriceChange] Erreur:', error);
+    logger.error('[logPriceChange] Erreur:', error);
   }
 }
 
@@ -23,30 +23,23 @@ export async function getPriceHistory(
   limitVal: number = 50
 ): Promise<PriceChangeRecord[]> {
   try {
-    // We order by changedAt desc (single property order works out of the box in Firestore without composite index).
-    // To remain 100% robust and bypass potential index issues when mixing where and orderBy,
-    // we filter the results in memory.
-    const q = query(
-      collection(db, COLLECTION_NAME),
-      orderBy('changedAt', 'desc')
-    );
+    const constraints: QueryConstraint[] = [
+      orderBy('changedAt', 'desc'),
+      limit(limitVal)
+    ];
     
-    const snap = await getDocs(q);
-    let records = snap.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-    })) as PriceChangeRecord[];
-
+    // Filtrer dans Firestore si itemId ou category fourni
     if (itemId) {
-      records = records.filter(r => r.itemId === itemId);
+      constraints.unshift(where('itemId', '==', itemId));
+    } else if (category) {
+      constraints.unshift(where('category', '==', category));
     }
-    if (category) {
-      records = records.filter(r => r.category === category);
-    }
-
-    return records.slice(0, limitVal);
+    
+    const q = query(collection(db, COLLECTION_NAME), ...constraints);
+    const snap = await getDocs(q);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PriceChangeRecord[];
   } catch (error) {
-    console.error('[getPriceHistory] Erreur:', error);
+    logger.error('[getPriceHistory] Erreur:', error);
     return [];
   }
 }

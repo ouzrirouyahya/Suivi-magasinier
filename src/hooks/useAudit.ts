@@ -5,6 +5,7 @@ import { auditService } from '../services/audit.service';
 import { AuditLog } from '../types';
 import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 import { useAuthStore } from '../stores/auth.store';
+import { getArchiveThreshold } from '../lib/archivePolicy';
 
 const getTimestampString = (raw: any): string => {
   if (!raw) return '';
@@ -26,8 +27,9 @@ export function useAudit() {
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - Number(dateFilter));
+    const startDate = dateFilter === 'policy' 
+      ? getArchiveThreshold('auditLogs')
+      : (() => { const d = new Date(); d.setDate(d.getDate() - Number(dateFilter)); return d; })();
 
     const q = currentSite === 'ALL'
       ? query(

@@ -21,7 +21,7 @@ export class FirestoreRepository {
   /**
    * Fetch a single document by path
    */
-  async getDocument<T = DocumentData>(path: string, id: string): Promise<T | null> {
+  async getDocument<T = DocumentData>(path: string, id: string, throwOnError = false): Promise<T | null> {
     const docRef = doc(db, path, id);
     try {
       const snap = await getDoc(docRef);
@@ -29,6 +29,7 @@ export class FirestoreRepository {
       return { id: snap.id, ...snap.data() } as T;
     } catch (error) {
       handleFirestoreError(error, OperationType.GET, `${path}/${id}`);
+      if (throwOnError) throw error;
       return null;
     }
   }

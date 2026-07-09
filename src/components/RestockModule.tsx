@@ -2,6 +2,7 @@ import React from 'react';
 import { ShoppingCart, Plus, ClipboardList, Send, CheckCircle2, Package, Search, Filter, Trash2, Printer, History, ChevronDown, ChevronUp } from 'lucide-react';
 import { SiteCode, Article, PurchaseRequest } from '../types';
 import { cn } from '../lib/utils';
+import { toast } from 'sonner';
 
 interface RestockModuleProps {
   site: SiteCode;
@@ -45,15 +46,29 @@ export function RestockModule({ site, articles, purchaseRequests, onCreatePR, on
   };
 
   const updateQuantity = (id: string, qty: number) => {
-    setSelectedItems({ ...selectedItems, [id]: qty });
+    if (qty <= 0 || isNaN(qty)) {
+      // Si 0 ou négatif → désélectionner l'article
+      const { [id]: _, ...rest } = selectedItems;
+      setSelectedItems(rest);
+      return;
+    }
+    setSelectedItems({ ...selectedItems, [id]: Math.round(qty * 1000) / 1000 });
   };
 
   const handleCreate = () => {
-    const items = Object.entries(selectedItems).map(([id, quantity]) => ({
-      articleId: id,
-      quantity,
-      lastPrice: articles.find(a => a.id === id)?.price || 0
-    }));
+    const items = Object.entries(selectedItems)
+      .filter(([_, qty]) => qty > 0 && !isNaN(qty))  // ← guard
+      .map(([id, quantity]) => ({
+        articleId: id,
+        quantity,
+        lastPrice: articles.find(a => a.id === id)?.price || 0
+      }));
+    
+    if (items.length === 0) {
+      toast.error('Aucun article valide sélectionné. Vérifiez les quantités.');
+      return;
+    }
+    
     onCreatePR(items);
     setSelectedItems({});
     setView('HISTORY');
