@@ -80,6 +80,11 @@ export function useInventory() {
     completeTransfert: transfers.completeTransfert,
     cancelTransfert: transfers.closeTransfert,
     closeTransfert: transfers.closeTransfert,
+    expedierTransfert: transfers.expedierTransfert,
+    receptionnerTransfert: transfers.receptionnerTransfert,
+    accepterEtCloturerTransfert: transfers.accepterEtCloturerTransfert,
+    deleteTransfert: transfers.deleteTransfert,
+    getArticleTransitQty: transfers.getArticleTransitQty,
 
     // MAINTENANCE
     maintenanceLogs: maintenance.maintenanceLogs,

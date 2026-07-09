@@ -37,8 +37,17 @@ export const offlineService = {
       case 'addTransfert':
         await transfersService.addTransfert(payload);
         break;
+      case 'approveTransfert':
+        await transfersService.approveTransfert(payload.id, payload.approver, payload.comment);
+        break;
+      case 'expedierTransfert':
+        await transfersService.expedierTransfert(payload.id, payload.expediteur, payload.comment);
+        break;
       case 'completeTransfert':
         await transfersService.completeTransfert(payload.id, payload.recepteur, payload.receivedItems, payload.disputeReason);
+        break;
+      case 'closeTransfert':
+        await transfersService.closeTransfert(payload.id, payload.comment);
         break;
       case 'addMaintenanceLog':
         await maintenanceService.addMaintenanceLog(payload);

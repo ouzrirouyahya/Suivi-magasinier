@@ -793,7 +793,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       return;
     }
 
-    if (type === 'ENTREE' && (!entityName || entityName.trim() === '')) {
+    if (type === 'ENTREE' && receptionSource !== 'CENTRAL' && (!entityName || entityName.trim() === '')) {
       setValidationError(
         "Le nom du fournisseur est obligatoire pour un bon d'entrée. " +
         "Saisissez le nom du vendeur ou du fournisseur."

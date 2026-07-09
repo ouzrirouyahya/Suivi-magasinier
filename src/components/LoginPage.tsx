@@ -238,20 +238,7 @@ const LoginPage: React.FC = () => {
                         <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                         <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                      </svg>
-                     Connexion (Popup)
-                  </button>
-
-                  <button 
-                    onClick={handleLoginRedirect}
-                    className="w-full py-3.5 bg-slate-50 hover:bg-slate-100/80 text-slate-700 rounded-2xl flex items-center justify-center gap-3 font-bold text-xs uppercase tracking-widest shadow-sm border border-slate-200 transition-all hover:-translate-y-0.5 active:scale-95 group relative overflow-hidden"
-                  >
-                     <svg className="w-5 h-5 opacity-75 group-hover:scale-110 transition-transform" viewBox="0 0 24 24">
-                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#1e293b"/>
-                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#1e293b"/>
-                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#1e293b"/>
-                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#1e293b"/>
-                     </svg>
-                     Connexion (Redirection)
+                     Connexion sécurisée Google
                   </button>
                 </div>
 
@@ -259,14 +246,14 @@ const LoginPage: React.FC = () => {
                   <div className="mt-4 bg-rose-50/90 border border-rose-200 p-4 rounded-2xl text-left space-y-2 text-xs leading-normal">
                     <div className="flex items-center gap-2 text-rose-700 font-extrabold uppercase tracking-wider text-[10px]">
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                      Problème d'Authentification Google
+                      Problème de connexion Google
                     </div>
                     <p className="text-slate-600 font-bold text-[9px] tracking-wide uppercase">
-                      Les navigateurs bloquent souvent la communication entre popups et iframe (comme Safari ou le mode Navigation Privée de Chrome).
+                      Les bloqueurs de popups ou certaines restrictions de navigation (Safari, Navigation Privée) peuvent bloquer l'authentification.
                     </p>
                     <div className="space-y-1.5 bg-white/80 p-2.5 rounded-xl border border-slate-100 font-medium text-[10px] text-slate-500 uppercase tracking-tight">
-                      <p>1. <strong className="text-sky-600">Solution Simple</strong> : Cliquez sur le bouton <strong className="text-sky-600">"Connexion (Redirection)"</strong> ci-dessus pour vous authentifier de manière robuste sans fenêtres popups.</p>
-                      <p>2. <strong className="text-emerald-600">Alternative</strong> : Ouvrez le site dans un nouvel onglet standard (pas en navigation privée) pour permettre aux cookies de fonctionner.</p>
+                      <p>1. <strong className="text-sky-600">Nouvel onglet</strong> : Ouvrez le site dans un nouvel onglet standard (pas en navigation privée).</p>
+                      <p>2. <strong className="text-emerald-600">Popups</strong> : Autorisez les popups de connexion de Google pour cette page si demandé.</p>
                     </div>
                   </div>
                 )}

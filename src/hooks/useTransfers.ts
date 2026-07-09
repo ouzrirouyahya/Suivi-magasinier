@@ -1,7 +1,8 @@
 import { useEffect, useCallback } from 'react';
-import { collection, onSnapshot, query, where, or, db } from '../lib/db';
+import { collection, onSnapshot, query, where, or, db, doc, deleteDoc } from '../lib/db';
 import { useTransfersStore } from '../stores/transfer.store';
 import { useAuthStore } from '../stores/auth.store';
+import { useArticlesStore } from '../modules/articles/articles.store';
 import { transfersService } from '../services/transfer.service';
 import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
@@ -143,12 +144,141 @@ export function useTransfers() {
     }
   }, []);
 
-  const approveTransfert = useCallback(async (id: string, approver: string) => {
-    const res = await transfersService.approveTransfert(id, approver);
-    if (!res.success) {
-      throw new Error(res.error);
+  const approveTransfert = useCallback(async (id: string, approver: string, comment?: string) => {
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await transfersService.approveTransfert(id, approver, comment, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'app_' + crypto.randomUUID();
+      const payload = { intentId, type: 'approveTransfert', payload: { id, approver, comment } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'approveTransfert',
+        payload: { id, approver, comment },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      toast.info("Mode hors-ligne : approbation enregistrée localement.");
+      return;
+    }
+
+    try {
+      const res = await transfersService.approveTransfert(id, approver, comment);
+      if (!res.success) throw new Error(res.error);
+      toast.success("Transfert approuvé avec succès.");
+    } catch (err: any) {
+      toast.error(`Erreur d'approbation : ${err.message}`);
     }
   }, []);
+
+  const expedierTransfert = useCallback(async (id: string, expediteur: string, comment?: string) => {
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await transfersService.expedierTransfert(id, expediteur, comment, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'exp_' + crypto.randomUUID();
+      const payload = { intentId, type: 'expedierTransfert', payload: { id, expediteur, comment } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'expedierTransfert',
+        payload: { id, expediteur, comment },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      toast.info("Mode hors-ligne : expédition enregistrée localement.");
+      return;
+    }
+
+    try {
+      const res = await transfersService.expedierTransfert(id, expediteur, comment);
+      if (!res.success) throw new Error(res.error);
+      toast.success("Transfert expédié avec succès.");
+    } catch (err: any) {
+      toast.error(`Erreur d'expédition : ${err.message}`);
+    }
+  }, []);
+
+  const receptionnerTransfert = useCallback(async (
+    id: string,
+    recepteur: string,
+    receivedItems?: MouvementItem[],
+    disputeReason?: string,
+    comment?: string
+  ) => {
+    await completeTransfert(id, recepteur, receivedItems, disputeReason);
+  }, [completeTransfert]);
+
+  const accepterEtCloturerTransfert = useCallback(async (id: string, accountant: string, comment?: string) => {
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await transfersService.closeTransfert(id, comment || 'Clôture du transfert', true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'cls_' + crypto.randomUUID();
+      const payload = { intentId, type: 'closeTransfert', payload: { id, comment: comment || 'Clôture' } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'closeTransfert',
+        payload: { id, comment: comment || 'Clôture' },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      toast.info("Mode hors-ligne : clôture enregistrée localement.");
+      return;
+    }
+
+    try {
+      const res = await transfersService.closeTransfert(id, comment || 'Clôture du transfert');
+      if (!res.success) throw new Error(res.error);
+      toast.success("Transfert clôturé avec succès.");
+    } catch (err: any) {
+      toast.error(`Erreur de clôture : ${err.message}`);
+    }
+  }, []);
+
+  const deleteTransfert = useCallback(async (id: string) => {
+    try {
+      await deleteDoc(doc(db, 'transferts', id));
+      setTransferts(transferts.filter(t => t.id !== id));
+      toast.success("Bordereau de transfert supprimé.");
+    } catch (err: any) {
+      toast.error(`Erreur de suppression : ${err.message}`);
+    }
+  }, [transferts, setTransferts]);
+
+  const getArticleTransitQty = useCallback((articleRef: string, site: string) => {
+    let transitQty = 0;
+    const { articles } = useArticlesStore.getState();
+    transferts.forEach(t => {
+      const isInTransit = t.status === 'IN_TRANSIT' || t.status === 'EN_TRANSIT' || t.status === 'EXPEDIE';
+      if (isInTransit && t.targetSite === site) {
+        t.items.forEach(item => {
+          let ref = item.articleRef;
+          if (!ref) {
+            const art = articles.find(a => a.id === item.articleId);
+            if (art) {
+              ref = art.ref;
+            }
+          }
+          if (ref === articleRef) {
+            transitQty += item.quantity;
+          }
+        });
+      }
+    });
+    return transitQty;
+  }, [transferts]);
 
   const closeTransfert = useCallback(async (id: string, reason: string) => {
     const res = await transfersService.closeTransfert(id, reason);
@@ -163,6 +293,11 @@ export function useTransfers() {
     completeTransfert,
     approveTransfert,
     closeTransfert,
+    expedierTransfert,
+    receptionnerTransfert,
+    accepterEtCloturerTransfert,
+    deleteTransfert,
+    getArticleTransitQty,
   };
 }
 export default useTransfers;

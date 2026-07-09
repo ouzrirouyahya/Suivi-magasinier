@@ -4,6 +4,7 @@ import { Dashboard } from '../components/Dashboard';
 import { useInventory } from '../context/InventoryContext';
 import { SiteComparator } from '../core/siteComparator';
 import { RadarAnalyzer } from '../core/radarAnalyzer';
+import { SITE_CODES, SiteCode } from '../lib/constants';
 
 const pageRouteMap: Record<string, string> = {
   'COCKPIT': '/',
@@ -34,7 +35,7 @@ export const CockpitPage: React.FC = () => {
 
   // Compute live site comparison metrics
   const metrics = useMemo(() => {
-    const validSites: ('SMI' | 'OUMEJRANE' | 'BOU-AZZER' | 'OUANSIMI' | 'KOUDIA')[] = ['SMI', 'OUMEJRANE', 'BOU-AZZER', 'OUANSIMI', 'KOUDIA'];
+    const validSites: SiteCode[] = [...SITE_CODES];
     const radarReports = validSites.map(site => {
       return RadarAnalyzer.generateReport(
         site,

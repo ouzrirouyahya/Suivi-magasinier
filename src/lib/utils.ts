@@ -86,6 +86,12 @@ export function handleFirestoreError(error: unknown, operationType: OperationTyp
     operationType,
     path
   }
+
+  if (operationType === OperationType.LIST) {
+    console.warn('[Firestore Sync Warning] Non-blocking list query failed:', errInfo);
+    return;
+  }
+
   throw new Error(JSON.stringify(errInfo));
 }
 

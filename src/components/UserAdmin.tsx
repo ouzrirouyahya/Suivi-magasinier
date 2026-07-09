@@ -91,6 +91,7 @@ export const UserAdmin = React.memo(function UserAdmin({
   const sitePerfos = perfos.filter(p => p.site === currentSite);
 
   const isAdminUser = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
+  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
 
   const [activeTab, setActiveTab] = useState<AdminTab>('EFFECTIF');
   const [search, setSearch] = useState('');
@@ -158,6 +159,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleSaveEngin = async () => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
+      return;
+    }
     setEnginSubmitted(true);
     if (!enginCode.trim() || !enginLabel.trim() || !enginType || !enginWorkingLocation) {
       return;
@@ -190,6 +195,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const updateEngin = async (id: string, updates: Partial<EnginMaster>) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de modifier.");
+      return;
+    }
     try {
       await onSetEngin(id, updates);
       toast.success("Mise à jour de l'engin réussie");
@@ -200,6 +209,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const deleteEngin = async (id: string) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de supprimer.");
+      return;
+    }
     if (confirm('Supprimer cet engin ?')) {
       try {
         await onSetEngin(id, null);
@@ -224,6 +237,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleSaveAgent = async () => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
+      return;
+    }
     setAgentSubmitted(true);
     if (!agentMatricule.trim() || !agentFirstname.trim() || !agentLastname.trim() || !agentService.trim()) {
       return;
@@ -258,6 +275,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const updateAgent = async (id: string, updates: Partial<AgentMaster>) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de modifier.");
+      return;
+    }
     try {
       await onSetAgent(id, updates);
       toast.success("Mise à jour du personnel réussie");
@@ -268,6 +289,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const deleteAgent = async (id: string) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de supprimer.");
+      return;
+    }
     if (confirm('Supprimer cet agent ?')) {
       try {
         await onSetAgent(id, null);
@@ -289,6 +314,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleSavePerfo = async () => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
+      return;
+    }
     setPerfoSubmitted(true);
     if (!perfoCode.trim() || !perfoLocation || !perfoSectorManager) {
       return;
@@ -314,6 +343,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const updatePerfo = async (id: string, updates: Partial<PerfoMaster>) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de modifier.");
+      return;
+    }
     try {
       await onSetPerfo(id, updates);
       toast.success("Mise à jour du perforateur réussie");
@@ -324,6 +357,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const deletePerfo = async (id: string) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de supprimer.");
+      return;
+    }
     if (confirm('Supprimer ce perforateur ?')) {
       try {
         await onSetPerfo(id, null);
@@ -336,6 +373,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleApproveUser = async (user: UserAccount) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de modifier les droits.");
+      return;
+    }
     const targetRole = user.requestedRole || 'MAGASINIER';
     
     // MAGASINIER et RESPONSABLE_CHANTIER DOIVENT avoir un chantier
@@ -366,6 +407,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleRejectUser = async (user: UserAccount) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de modifier les droits.");
+      return;
+    }
     try {
       const userRef = doc(db, 'accounts', user.id);
       await updateDoc(userRef, {
@@ -383,6 +428,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleApproveReplacement = async (req: any) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible d'approuver le remplacement.");
+      return;
+    }
     try {
       const reqRef = doc(db, 'replacementRequests', req.id);
       await updateDoc(reqRef, {
@@ -409,6 +458,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleRejectReplacement = async (req: any) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de refuser le remplacement.");
+      return;
+    }
     try {
       const reqRef = doc(db, 'replacementRequests', req.id);
       await updateDoc(reqRef, {
@@ -431,6 +484,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   };
 
   const handleToggleAdminWriteAccess = async (user: UserAccount) => {
+    if (isReadOnly) {
+      toast.error("Le compte est en lecture seule. Impossible de modifier les accès d'écriture.");
+      return;
+    }
     try {
       const userRef = doc(db, 'accounts', user.id);
       await updateDoc(userRef, { 

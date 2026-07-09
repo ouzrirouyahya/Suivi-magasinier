@@ -82,6 +82,14 @@ export class MovementsService {
     // 2. Run transactional database update
     try {
       const localArticlesToUpdate: { id: string; quantity: number }[] = [];
+      const articleUpdates: { 
+        id: string;
+        ref: any; 
+        newQty: number; 
+        newPMP: number; 
+        lastPurchasePrice: number; 
+        priceHistory: any[] 
+      }[] = [];
 
       await runTransaction(db, async (transaction) => {
         const movementRef = doc(db, 'mouvements', movementId);
@@ -91,14 +99,6 @@ export class MovementsService {
         }
 
         let totalValue = 0;
-        const articleUpdates: { 
-          id: string;
-          ref: any; 
-          newQty: number; 
-          newPMP: number; 
-          lastPurchasePrice: number; 
-          priceHistory: any[] 
-        }[] = [];
 
         for (const item of mouvement.items) {
           const articleRef = doc(db, 'articles', item.articleId);
@@ -209,7 +209,17 @@ export class MovementsService {
 
       // Sync state locally ONLY after successful transaction commit
       localArticlesToUpdate.forEach(upd => {
-        useArticlesStore.getState().updateArticleLocal(upd.id, { quantity: upd.quantity });
+        const matchingUpdate = articleUpdates.find(u => u.id === upd.id);
+        if (matchingUpdate) {
+          useArticlesStore.getState().updateArticleLocal(upd.id, { 
+            quantity: matchingUpdate.newQty,
+            price: matchingUpdate.newPMP,
+            lastPurchasePrice: matchingUpdate.lastPurchasePrice,
+            priceHistory: matchingUpdate.priceHistory
+          });
+        } else {
+          useArticlesStore.getState().updateArticleLocal(upd.id, { quantity: upd.quantity });
+        }
       });
       useMovementsStore.getState().addMouvementLocal(mouvement);
 

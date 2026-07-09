@@ -71,6 +71,12 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     path
   };
   console.error('Firestore Error inside Communication Module: ', JSON.stringify(errInfo));
+  
+  if (operationType === OperationType.LIST) {
+    console.warn('[Firestore Sync Warning] Non-blocking list query inside Communication Module failed:', errInfo);
+    return;
+  }
+  
   throw new Error(JSON.stringify(errInfo));
 }
 

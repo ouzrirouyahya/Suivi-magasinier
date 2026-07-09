@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { X, ArrowLeft, ArrowRight, Printer, Package, Drill, Wrench, Calendar, ClipboardList } from 'lucide-react';
+import { X, ArrowLeft, ArrowRight, Printer, Package, Drill, Wrench, Calendar, ClipboardList, AlertTriangle } from 'lucide-react';
 import { SiteCode, Mouvement, Article, EnginMaster, PerfoMaster } from '../types';
 import { cn } from '../lib/utils';
 import { useInventory } from '../context/InventoryContext';
@@ -228,6 +228,17 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
     }
   };
 
+  const isOutOfWindow = useMemo(() => {
+    if (periodFilter === 'CE_MOIS' || periodFilter === 'CE_TRIMESTRE') return false;
+    if (periodFilter === 'CETTE_ANNEE') {
+      const janThisYear = new Date(new Date().getFullYear(), 0, 1);
+      const ninetyDaysAgo = new Date();
+      ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+      return janThisYear < ninetyDaysAgo;
+    }
+    return periodFilter === 'TOUT'; // TOUT est toujours hors fenêtre potentiellement
+  }, [periodFilter]);
+
   if (!isOpen) return null;
 
   return (
@@ -433,6 +444,16 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
                     </button>
                   ))}
                 </div>
+
+                {isOutOfWindow && (
+                  <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs no-print">
+                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" />
+                    <span>
+                      Données limitées aux 90 derniers jours. 
+                      Les périodes plus anciennes peuvent être incomplètes.
+                    </span>
+                  </div>
+                )}
 
                 {/* PRINTER TRIGGER */}
                 <button

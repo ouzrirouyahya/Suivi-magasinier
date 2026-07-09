@@ -1,5 +1,5 @@
 import { doc, runTransaction, db } from '../../lib/db';
-import { Article, Transfert, MouvementItem } from '../../types';
+import { Article, Transfert, MouvementItem, TransfertHistoryEntry } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useTransfersStore } from './transfers.store';
 import { useArticlesStore } from '../articles/articles.store';
@@ -197,6 +197,8 @@ export class TransfersService {
 
     try {
       const localArticlesToUpdate: { id: string; quantity: number; newArticle?: Article }[] = [];
+      let isDivergent = false;
+      let finalReceivedItems: MouvementItem[] = [];
 
       await runTransaction(db, async (transaction) => {
         const tRef = doc(db, 'transferts', id);
@@ -210,8 +212,7 @@ export class TransfersService {
           throw new Error("TRANSFERT_DEJA_RECEPTIONNE");
         }
 
-        let isDivergent = false;
-        const finalReceivedItems = receivedItems || transfert.items;
+        finalReceivedItems = receivedItems || transfert.items;
 
         transfert.items.forEach((sentItem) => {
           const recItem = finalReceivedItems.find(r => r.articleId === sentItem.articleId);
@@ -312,12 +313,21 @@ export class TransfersService {
         }
 
         const nextStatus = isDivergent ? 'DISPUTED' : 'RECEIVED';
+        const finalDisputeReason = disputeReason || (isDivergent ? "Quantités reçues non conformes au bon d'expédition." : '');
+        const historyEntry: TransfertHistoryEntry = {
+          status: nextStatus,
+          date: new Date().toISOString(),
+          userEmail: recepteur,
+          comment: finalDisputeReason || 'Réception confirmée sans divergence'
+        };
+
         transaction.update(tRef, {
           status: nextStatus,
           dateReception: new Date().toISOString(),
           recepteur,
           receivedItems: finalReceivedItems,
-          disputeReason: disputeReason || (isDivergent ? "Quantités reçues non conformes au bon d'expédition." : '')
+          disputeReason: finalDisputeReason,
+          history: [...(transfert.history || []), historyEntry]
         });
 
         // Audit Log
@@ -358,11 +368,23 @@ export class TransfersService {
           useArticlesStore.getState().updateArticleLocal(work.id, { quantity: work.quantity });
         }
       });
+
+      const nextStatus = isDivergent ? 'DISPUTED' : 'RECEIVED';
+      const finalDisputeReason = disputeReason || (isDivergent ? "Quantités reçues non conformes au bon d'expédition." : '');
+      const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+      const historyEntry: TransfertHistoryEntry = {
+        status: nextStatus,
+        date: new Date().toISOString(),
+        userEmail: recepteur,
+        comment: finalDisputeReason || 'Réception confirmée sans divergence'
+      };
+
       useTransfersStore.getState().updateTransfertLocal(id, {
-        status: disputeReason ? 'DISPUTED' : 'RECEIVED',
+        status: nextStatus,
         recepteur,
-        receivedItems,
-        disputeReason
+        receivedItems: finalReceivedItems,
+        disputeReason: finalDisputeReason,
+        history: t ? [...(t.history || []), historyEntry] : [historyEntry]
       });
 
       return { success: true };
@@ -373,23 +395,44 @@ export class TransfersService {
   }
 
   /**
-   * Approve a Transfert
+   * Approve a Transfert (transitions PENDING_APPROVAL -> APPROUVE)
    */
-  async approveTransfert(id: string, approver: string, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
+  async approveTransfert(id: string, approver: string, comment?: string, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
     try {
+      const historyEntry: TransfertHistoryEntry = {
+        status: 'APPROUVE',
+        date: new Date().toISOString(),
+        userEmail: approver,
+        comment: comment || 'Bordereau approuvé'
+      };
+
       if (isSimulation) {
-        useTransfersStore.getState().updateTransfertLocal(id, { status: 'IN_TRANSIT' });
+        const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+        const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
+        useTransfersStore.getState().updateTransfertLocal(id, { 
+          status: 'APPROUVE',
+          history: updatedHistory
+        });
         return { success: true };
       }
 
-      await firestoreRepository.update('transferts', id, {
-        status: 'IN_TRANSIT',
-        expediteur: approver
+      const tRef = doc(db, 'transferts', id);
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(tRef);
+        if (!snap.exists()) throw new Error("TRANSFERT_INTROUVABLE");
+        const t = snap.data() as Transfert;
+        const updatedHistory = [...(t.history || []), historyEntry];
+        transaction.update(tRef, {
+          status: 'APPROUVE',
+          history: updatedHistory
+        });
       });
 
+      const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+      const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
       useTransfersStore.getState().updateTransfertLocal(id, {
-        status: 'IN_TRANSIT',
-        expediteur: approver
+        status: 'APPROUVE',
+        history: updatedHistory
       });
       return { success: true };
     } catch (error: any) {
@@ -399,23 +442,97 @@ export class TransfersService {
   }
 
   /**
-   * Close a transfer with justification
+   * Ship/expedite a transfer (transitions APPROUVE -> IN_TRANSIT)
    */
-  async closeTransfert(id: string, reason: string, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
+  async expedierTransfert(id: string, expediteur: string, comment?: string, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
     try {
+      const historyEntry: TransfertHistoryEntry = {
+        status: 'IN_TRANSIT',
+        date: new Date().toISOString(),
+        userEmail: expediteur,
+        comment: comment || 'Convoi expédié'
+      };
+
       if (isSimulation) {
-        useTransfersStore.getState().updateTransfertLocal(id, { status: 'CLOSED', disputeReason: reason });
+        const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+        const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
+        useTransfersStore.getState().updateTransfertLocal(id, { 
+          status: 'IN_TRANSIT',
+          expediteur,
+          history: updatedHistory
+        });
         return { success: true };
       }
 
-      await firestoreRepository.update('transferts', id, {
-        status: 'CLOSED',
-        disputeReason: reason
+      const tRef = doc(db, 'transferts', id);
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(tRef);
+        if (!snap.exists()) throw new Error("TRANSFERT_INTROUVABLE");
+        const t = snap.data() as Transfert;
+        const updatedHistory = [...(t.history || []), historyEntry];
+        transaction.update(tRef, {
+          status: 'IN_TRANSIT',
+          expediteur,
+          history: updatedHistory
+        });
       });
 
+      const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+      const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
+      useTransfersStore.getState().updateTransfertLocal(id, {
+        status: 'IN_TRANSIT',
+        expediteur,
+        history: updatedHistory
+      });
+      return { success: true };
+    } catch (error: any) {
+      console.error('[expedierTransfert] Erreur:', error);
+      return { success: false, error: error.message || 'Erreur lors de l\'expédition du transfert' };
+    }
+  }
+
+  /**
+   * Close a transfer with justification (transitions RECEIVED/DISPUTED -> CLOSED)
+   */
+  async closeTransfert(id: string, reason: string, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
+    try {
+      const historyEntry: TransfertHistoryEntry = {
+        status: 'CLOSED',
+        date: new Date().toISOString(),
+        userEmail: 'Système/Comptabilité',
+        comment: reason || 'Clôture du convoi inter-sites'
+      };
+
+      if (isSimulation) {
+        const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+        const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
+        useTransfersStore.getState().updateTransfertLocal(id, { 
+          status: 'CLOSED', 
+          disputeReason: reason,
+          history: updatedHistory
+        });
+        return { success: true };
+      }
+
+      const tRef = doc(db, 'transferts', id);
+      await runTransaction(db, async (transaction) => {
+        const snap = await transaction.get(tRef);
+        if (!snap.exists()) throw new Error("TRANSFERT_INTROUVABLE");
+        const t = snap.data() as Transfert;
+        const updatedHistory = [...(t.history || []), historyEntry];
+        transaction.update(tRef, {
+          status: 'CLOSED',
+          disputeReason: reason,
+          history: updatedHistory
+        });
+      });
+
+      const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+      const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
       useTransfersStore.getState().updateTransfertLocal(id, {
         status: 'CLOSED',
-        disputeReason: reason
+        disputeReason: reason,
+        history: updatedHistory
       });
       return { success: true };
     } catch (error: any) {

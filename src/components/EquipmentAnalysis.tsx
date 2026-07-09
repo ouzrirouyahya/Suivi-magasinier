@@ -190,13 +190,15 @@ export function EquipmentAnalysis() {
         mCost += lineCost;
 
         // Add to parts list
-        const existingPart = costs[key].parts.find(p => p.name === it.articleId);
+        const artObj = articles?.find(a => a.id === it.articleId || a.ref === it.articleId);
+        const resolvedName = artObj?.designation || artObj?.ref || it.articleRef || it.articleId;
+        const existingPart = costs[key].parts.find(p => p.name === resolvedName);
         if (existingPart) {
           existingPart.qty += it.quantity;
           existingPart.cost += lineCost;
         } else {
           costs[key].parts.push({
-            name: it.articleId,
+            name: resolvedName,
             qty: it.quantity,
             cost: lineCost
           });
@@ -227,7 +229,7 @@ export function EquipmentAnalysis() {
     });
 
     return costs;
-  }, [siteSortieMovements, allEnginsList, period]);
+  }, [siteSortieMovements, allEnginsList, period, articles]);
 
   const rawPerfoCosts = useMemo<Record<string, { total: number, count: number, parts: { name: string, qty: number, cost: number }[] }>>(() => {
     const costs: Record<string, { total: number, count: number, parts: { name: string, qty: number, cost: number }[] }> = {};
@@ -255,13 +257,15 @@ export function EquipmentAnalysis() {
         const lineCost = (it.quantity || 0) * (it.price || 0);
         mCost += lineCost;
 
-        const existingPart = costs[key].parts.find(p => p.name === it.articleId);
+        const artObj = articles?.find(a => a.id === it.articleId || a.ref === it.articleId);
+        const resolvedName = artObj?.designation || artObj?.ref || it.articleRef || it.articleId;
+        const existingPart = costs[key].parts.find(p => p.name === resolvedName);
         if (existingPart) {
           existingPart.qty += it.quantity;
           existingPart.cost += lineCost;
         } else {
           costs[key].parts.push({
-            name: it.articleId,
+            name: resolvedName,
             qty: it.quantity,
             cost: lineCost
           });
@@ -288,7 +292,7 @@ export function EquipmentAnalysis() {
     });
 
     return costs;
-  }, [siteSortieMovements, allPerfosList, period]);
+  }, [siteSortieMovements, allPerfosList, period, articles]);
 
   // Aggregate Consommables costs
   const rawConsommableCosts = useMemo<Record<string, { total: number, count: number, parts: { name: string, qty: number, cost: number }[] }>>(() => {
@@ -318,13 +322,14 @@ export function EquipmentAnalysis() {
           costs[key].total += lineCost;
           costs[key].count += 1;
           
-          const existing = costs[key].parts.find(p => p.name === it.articleId);
+          const resolvedName = artObj?.designation || artObj?.ref || it.articleRef || it.articleId;
+          const existing = costs[key].parts.find(p => p.name === resolvedName);
           if (existing) {
             existing.qty += it.quantity;
             existing.cost += lineCost;
           } else {
             costs[key].parts.push({
-              name: it.articleId,
+              name: resolvedName,
               qty: it.quantity,
               cost: lineCost
             });
@@ -376,13 +381,14 @@ export function EquipmentAnalysis() {
           costs[key].total += lineCost;
           costs[key].count += 1;
           
-          const existing = costs[key].parts.find(p => p.name === it.articleId);
+          const resolvedName = artObj?.designation || artObj?.ref || it.articleRef || it.articleId;
+          const existing = costs[key].parts.find(p => p.name === resolvedName);
           if (existing) {
             existing.qty += it.quantity;
             existing.cost += lineCost;
           } else {
             costs[key].parts.push({
-              name: it.articleId,
+              name: resolvedName,
               qty: it.quantity,
               cost: lineCost
             });

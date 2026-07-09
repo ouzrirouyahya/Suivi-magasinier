@@ -6,7 +6,8 @@ import { useArticlesStore } from '../articles/articles.store';
 import { useSystemStore } from '../system/system.store';
 import { useAuthStore } from '../auth/auth.store';
 import { validateMaintenanceInvariants } from '../../core/BusinessStateValidator';
-import { generateSecureUUID, cleanObject } from '../../lib/utils';
+import { generateSecureUUID, cleanObject, logger } from '../../lib/utils';
+import { SITE_CODES } from '../../lib/constants';
 
 export class MaintenanceService {
   /**
@@ -76,13 +77,24 @@ export class MaintenanceService {
       }
 
       // Resolve the machine's site
-      let machineSite: SiteCode = currentSite || 'SMI';
+      let machineSite: SiteCode = (currentSite && currentSite !== 'ALL') 
+        ? currentSite 
+        : SITE_CODES[0]; // SMI par défaut uniquement
+
       if (log.machineType === 'ENGIN') {
         const matchedEngin = engins.find(e => e.id === log.machineId);
         if (matchedEngin) machineSite = matchedEngin.site;
       } else if (log.machineType === 'PERFO') {
         const matchedPerfo = perfos.find(p => p.id === log.machineId);
         if (matchedPerfo) machineSite = matchedPerfo.site;
+      }
+
+      // Après la recherche engin/perfo, si toujours pas trouvé :
+      if (machineSite === SITE_CODES[0] && currentSite === 'ALL') {
+        logger.warn(
+          `[MaintenanceService] Site de l'engin ${log.machineId} non trouvé. ` +
+          `Enregistrement sur ${SITE_CODES[0]} par défaut.`
+        );
       }
 
       // Record associated movements if parts are used
