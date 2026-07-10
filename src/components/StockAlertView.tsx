@@ -1,17 +1,35 @@
 import React, { useState } from 'react';
 import { AlertCircle, ArrowRight, Package, MapPin, Truck, Droplets, Drill, Shield, ChevronDown, ChevronUp } from 'lucide-react';
-import { Article, SiteCode } from '../types';
+import { Article, SiteCode, Mouvement } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 
 interface StockAlertViewProps {
   articles: Article[];
   currentSite: SiteCode;
+  mouvements?: Mouvement[];
   onAction: (id: string, action: 'IN' | 'OUT') => void;
 }
 
-export function StockAlertView({ articles, currentSite, onAction }: StockAlertViewProps) {
+export function StockAlertView({ articles, currentSite, mouvements = [], onAction }: StockAlertViewProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+
+  const usedArticleIds = React.useMemo(() => {
+    const siteMouvements = currentSite === 'ALL' ? mouvements : mouvements.filter(m => m.site === currentSite);
+    const ids = new Set<string>();
+    siteMouvements.forEach(m => {
+      if (m.items) {
+        m.items.forEach(item => {
+          if (item.articleId) ids.add(item.articleId);
+        });
+      }
+    });
+    return ids;
+  }, [mouvements, currentSite]);
+
+  const isRealStock = (a: Article) => 
+    (a.quantity || 0) > 0 || 
+    (usedArticleIds.has(a.id) && a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+
   const lowStockArticles = articles.filter(a => a.active && a.site === currentSite && isRealStock(a) && (a.minStock || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0));
   
   const getTypeIcon = (type: string) => {

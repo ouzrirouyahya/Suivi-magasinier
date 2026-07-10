@@ -107,7 +107,22 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
       }, 0);
   }, [mouvements, site, selectedStockType, articles]);
 
-  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+  const usedArticleIds = useMemo(() => {
+    const siteMouvements = site === 'ALL' ? mouvements : mouvements.filter(m => m.site === site);
+    const ids = new Set<string>();
+    siteMouvements.forEach(m => {
+      if (m.items) {
+        m.items.forEach(item => {
+          if (item.articleId) ids.add(item.articleId);
+        });
+      }
+    });
+    return ids;
+  }, [mouvements, site]);
+
+  const isRealStock = (a: Article) => 
+    (a.quantity || 0) > 0 || 
+    (usedArticleIds.has(a.id) && a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
 
   const availableCount = useMemo(() => {
     return articles.filter(a => {
@@ -133,7 +148,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
 
       return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesLocation && isRealStock(a) && a.quantity === 0;
     }).length;
-  }, [articles, site, selectedStockType, search, categoryFilter, locationFilter]);
+  }, [articles, site, selectedStockType, search, categoryFilter, locationFilter, usedArticleIds]);
 
   const filteredArticles = useMemo(() => {
     return articles.filter(a => {
@@ -156,7 +171,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
 
       return matchesActive && matchesSite && matchesType && matchesSearch && matchesCategory && matchesStatus && matchesLocation && isRealStock(a);
     });
-  }, [articles, site, selectedStockType, search, categoryFilter, statusFilter, locationFilter, stockAvailabilityTab]);
+  }, [articles, site, selectedStockType, search, categoryFilter, statusFilter, locationFilter, stockAvailabilityTab, usedArticleIds]);
 
   const sortedAndFilteredArticles = useMemo(() => {
     const list = [...filteredArticles];

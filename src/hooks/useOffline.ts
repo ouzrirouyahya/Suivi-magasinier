@@ -22,7 +22,7 @@ export function useOffline() {
 
   const isSyncingRef = useRef(false);
 
-  // Sync from IndexedDB offlineQueue to store's retryQueue on load
+  // Sync from IndexedDB offlineQueue to store's retryQueue and dlq on load
   useEffect(() => {
     const syncFromIndexedDB = async () => {
       // Éviter une sync parallèle si le réseau revient pendant le chargement IndexedDB
@@ -38,9 +38,15 @@ export function useOffline() {
           dbId: item.id,
           retryCount: item.retryCount || 0,
           maxRetries: item.maxRetries || 3,
-          lastError: item.lastError
+          lastError: item.lastError,
+          nextAttemptTime: item.nextAttemptTime
         }));
-        setRetryQueue(mappedQueue);
+        
+        const activeQueue = mappedQueue.filter(item => item.retryCount < item.maxRetries);
+        const dlqItems = mappedQueue.filter(item => item.retryCount >= item.maxRetries);
+        
+        setRetryQueue(activeQueue);
+        setDlq(dlqItems);
       } catch (err) {
         console.error(
           '[useOffline] Failed to load offline queue from IndexedDB:',
@@ -52,12 +58,15 @@ export function useOffline() {
       }
     };
     syncFromIndexedDB();
-  }, [setRetryQueue]);
+  }, [setRetryQueue, setDlq]);
 
   const triggerProcessing = useCallback(async () => {
-    const { retryQueue, dlq, txStats, avgTxDuration, setRetryQueue, setDlq, setAvgTxDuration, setTxStats } = useSystemStore.getState();
+    const { retryQueue, dlq, txStats, avgTxDuration, setRetryQueue, setDlq, setAvgTxDuration, setTxStats, setNetworkQuality } = useSystemStore.getState();
     if (retryQueue.length === 0 || isSyncingRef.current) return;
     isSyncingRef.current = true;
+    
+    // Transitionner visuellement vers le mode RECOVERING pendant la synchronisation
+    setNetworkQuality('RECOVERING');
     
     const queue = [...retryQueue];
     const processedIds: string[] = [];
@@ -67,7 +76,23 @@ export function useOffline() {
     let totalFailed = txStats.failed;
     let accumulatedAvgDuration = avgTxDuration;
     
+    const nowTime = new Date();
+    let fifoBlocked = false;
+    
     for (const item of queue) {
+      if (fifoBlocked) {
+        // En mode strict FIFO, si un élément précédent est bloqué en backoff,
+        // on n'exécute pas les éléments suivants pour préserver l'ordre d'exécution
+        continue;
+      }
+
+      if (item.nextAttemptTime && new Date(item.nextAttemptTime) > nowTime) {
+        // Cet élément est en période de temporisation (backoff)
+        // On active le verrou FIFO pour bloquer les éléments dépendants suivants
+        fifoBlocked = true;
+        continue;
+      }
+      
       try {
         const startTx = Date.now();
         await offlineService.processItem(item);
@@ -104,13 +129,23 @@ export function useOffline() {
         }
         
         const nextRetryCount = (item.retryCount || 0) + 1;
-        failedItems.push({
+        const backoffSec = Math.pow(2, nextRetryCount) * 5;
+        const jitter = Math.random() * 3;
+        const nextAttempt = new Date(Date.now() + (backoffSec + jitter) * 1000).toISOString();
+
+        const failedItemWithBackoff = {
           ...item,
           retryCount: nextRetryCount,
-          lastError: errorMsg
-        });
+          lastError: errorMsg,
+          nextAttemptTime: nextAttempt
+        };
 
+        failedItems.push(failedItemWithBackoff);
         totalFailed += 1;
+        
+        // En cas d'erreur sur l'élément courant, on bloque également le reste de la file d'attente
+        // pour cette passe afin de maintenir l'intégrité séquentielle
+        fifoBlocked = true;
       }
     }
     
@@ -152,15 +187,24 @@ export function useOffline() {
       toast.error(`${newDeadLetters.length} opération(s) ont échoué définitivement et déplacées dans la file d'erreurs (DLQ)`);
     }
     
+    // Rétablir la qualité réseau d'origine une fois fini
+    setNetworkQuality('ONLINE');
     isSyncingRef.current = false;
   }, []);
 
   // Network monitoring
   useEffect(() => {
     const checkNetwork = async () => {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 4000);
       try {
         const start = Date.now();
-        await fetch(`/favicon.ico?ping=${start}`, { method: 'HEAD', cache: 'no-store' });
+        await fetch(`/favicon.ico?ping=${start}`, { 
+          method: 'HEAD', 
+          cache: 'no-store',
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
         const latency = Date.now() - start;
         
         if (latency > 2000) {
@@ -171,6 +215,7 @@ export function useOffline() {
           setIsDegradedNetwork(false);
         }
       } catch {
+        clearTimeout(timeoutId);
         setNetworkQuality('OFFLINE');
         setIsDegradedNetwork(true);
       }
@@ -206,9 +251,64 @@ export function useOffline() {
     await triggerProcessing();
   }, [triggerProcessing]);
 
-  const clearDLQ = useCallback(() => {
+  const retryDLQItem = useCallback(async (item: any) => {
+    if (item.dbId) {
+      await offlineQueue.resetRetry(item.dbId);
+    } else {
+      const items = await offlineQueue.load();
+      const match = items.find(i => i.payload.intentId === item.intentId);
+      if (match) {
+        await offlineQueue.resetRetry(match.id);
+      }
+    }
+    
+    // update store
+    const updatedItem = {
+      ...item,
+      retryCount: 0,
+      lastError: undefined,
+      nextAttemptTime: undefined
+    };
+    
+    const currentQueue = useSystemStore.getState().retryQueue;
+    const currentDlq = useSystemStore.getState().dlq;
+    
+    setRetryQueue([...currentQueue, updatedItem]);
+    setDlq(currentDlq.filter((i: any) => i.intentId !== item.intentId));
+    toast.success("Opération replacée dans la file de synchronisation active !");
+  }, [setRetryQueue, setDlq]);
+
+  const deleteDLQItem = useCallback(async (item: any) => {
+    if (item.dbId) {
+      await offlineQueue.remove(item.dbId);
+    } else {
+      const items = await offlineQueue.load();
+      const match = items.find(i => i.payload.intentId === item.intentId);
+      if (match) {
+        await offlineQueue.remove(match.id);
+      }
+    }
+    
+    const currentDlq = useSystemStore.getState().dlq;
+    setDlq(currentDlq.filter((i: any) => i.intentId !== item.intentId));
+    toast.success("Opération rejetée définitivement.");
+  }, [setDlq]);
+
+  const clearDLQ = useCallback(async () => {
+    const currentDlq = useSystemStore.getState().dlq;
+    for (const item of currentDlq) {
+      if (item.dbId) {
+        await offlineQueue.remove(item.dbId);
+      } else {
+        const items = await offlineQueue.load();
+        const match = items.find(i => i.payload.intentId === item.intentId);
+        if (match) {
+          await offlineQueue.remove(match.id);
+        }
+      }
+    }
     setDlq([]);
-    toast.success("File d'erreurs vidée");
+    toast.success("File d'erreurs entièrement vidée.");
   }, [setDlq]);
 
   const simulateRuleFailure = useCallback(async () => {
@@ -234,6 +334,8 @@ export function useOffline() {
     txStats,
     forceRunQueue,
     clearDLQ,
+    retryDLQItem,
+    deleteDLQItem,
     simulateRuleFailure,
     simulateConcurrentConflicts
   };

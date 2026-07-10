@@ -138,11 +138,25 @@ export function ReportPage() {
     return SiteComparator.compareSites(reports, articles || [], mouvements || [], engins, perfos);
   }, [mouvements, articles, maintenanceLogs, engins, perfos]);
 
-  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+  const usedArticleIds = useMemo(() => {
+    const ids = new Set<string>();
+    (mouvements || []).forEach(m => {
+      if (m.items) {
+        m.items.forEach(item => {
+          if (item.articleId) ids.add(item.articleId);
+        });
+      }
+    });
+    return ids;
+  }, [mouvements]);
+
+  const isRealStock = (a: Article) => 
+    (a.quantity || 0) > 0 || 
+    (usedArticleIds.has(a.id) && a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
 
   const criticalAlertsCount = useMemo(() => {
     return articles.filter(a => isRealStock(a) && (Number(a.quantity) || 0) <= (Number(a.minStock) || 0)).length;
-  }, [articles]);
+  }, [articles, usedArticleIds]);
 
   const enTransitCount = useMemo(() => {
     const activeTransfers = transferts.filter(t => t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT');

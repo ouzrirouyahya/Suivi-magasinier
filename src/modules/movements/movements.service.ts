@@ -1,5 +1,5 @@
 import { doc, runTransaction, db } from '../../lib/db';
-import { Article, Mouvement, PurchaseRequest, Inventaire } from '../../types';
+import { Article, Mouvement, PurchaseRequest, Inventaire, toDateString } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useMovementsStore } from './movements.store';
 import { useArticlesStore } from '../articles/articles.store';
@@ -33,9 +33,7 @@ export class MovementsService {
     const validation = validateMouvementInvariants(mouvement, articles, mouvements);
     if (!validation.isValid) {
       return { success: false, error: `Violation des règles métier : ${validation.errorMsg}` };
-    }
-
-    if (isSimulation) {
+    }    if (isSimulation) {
       try {
         // Simulate locally
         mouvement.date = mouvement.date || new Date().toISOString();
@@ -46,6 +44,7 @@ export class MovementsService {
           if (index !== -1) {
             const article = updatedArticles[index];
             const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
+            const isPMPUpdatable = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN';
             const isAdjustment = mouvement.type === 'AJUSTEMENT';
             const newQty = isAdjustment
               ? item.quantity
@@ -63,9 +62,72 @@ export class MovementsService {
               };
             }
 
+            // PMP Calculation in simulation
+            let newPMP = article.price || 0;
+            let lastPurchasePrice = article.lastPurchasePrice || 0;
+            let updatedHistory = article.priceHistory || [];
+
+            if (isPMPUpdatable) {
+              const updates = calculatePriceUpdates(
+                article,
+                item.quantity,
+                item.price || 0,
+                movementId,
+                mouvement.createdBy,
+                mouvement.date as any
+              );
+              newPMP = updates.price;
+              lastPurchasePrice = updates.lastPurchasePrice;
+              
+              const compactHistory = updates.priceHistory.map((h: any) => {
+                if (h && typeof h === 'object' && 'p' in h) {
+                  return h;
+                }
+                return {
+                  p: h.price ?? 0,
+                  d: toDateString(h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
+                  q: h.quantityAttached ?? 0
+                };
+              });
+              updatedHistory = compactHistory;
+            } else if (isAddition) {
+              // RETOUR : stock augmente mais PMP reste inchangé
+              newPMP = article.price || 0;
+              lastPurchasePrice = article.lastPurchasePrice || 0;
+              const compactHistory = updatedHistory.map((h: any) => {
+                if (h && typeof h === 'object' && 'p' in h) {
+                  return h;
+                }
+                return {
+                  p: h.price ?? 0,
+                  d: toDateString(h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
+                  q: h.quantityAttached ?? 0
+                };
+              });
+              const retourEntry = {
+                p: article.price || 0,
+                d: toDateString(mouvement.date || new Date().toISOString()).slice(0, 10),
+                q: item.quantity
+              };
+              updatedHistory = [...compactHistory, retourEntry];
+            } else {
+              // Compacter l'historique existant (sans ajout de nouvelle entrée)
+              updatedHistory = (article.priceHistory || []).map((h: any) => {
+                if (h && typeof h === 'object' && 'p' in h) return h;
+                return {
+                  p: h.price ?? 0,
+                  d: toDateString(h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
+                  q: h.quantityAttached ?? 0
+                };
+              });
+            }
+
             updatedArticles[index] = { 
               ...article, 
-              quantity: isAdjustment ? newQty : Math.max(0, newQty) 
+              quantity: isAdjustment ? newQty : Math.max(0, newQty),
+              price: newPMP,
+              lastPurchasePrice,
+              priceHistory: updatedHistory.slice(-50)
             };
           }
         }
@@ -74,7 +136,7 @@ export class MovementsService {
         useMovementsStore.getState().addMouvementLocal(mouvement);
         return { success: true };
       } catch (error: any) {
-        console.error('[addMouvement (Simulation)] Erreur:', error);
+        logger.error('[addMouvement (Simulation)] Erreur:', error);
         return { success: false, error: error.message || 'Erreur lors de la simulation' };
       }
     }
@@ -111,6 +173,7 @@ export class MovementsService {
           totalValue += item.quantity * (article.price || 0);
           
           const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
+          const isPMPUpdatable = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN';
           const isAdjustment = mouvement.type === 'AJUSTEMENT';
           const newQty = isAdjustment
             ? item.quantity
@@ -127,7 +190,7 @@ export class MovementsService {
           let lastPurchasePrice = article.lastPurchasePrice || 0;
           let updatedHistory = article.priceHistory || [];
 
-          if (isAddition) {
+          if (isPMPUpdatable) {
             const updates = calculatePriceUpdates(
               article,
               item.quantity,
@@ -146,20 +209,40 @@ export class MovementsService {
               }
               return {
                 p: h.price ?? 0,
-                d: (h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
+                d: toDateString(h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
                 q: h.quantityAttached ?? 0
               };
             });
             updatedHistory = compactHistory;
-          } else {
-            // S'assurer que l'historique existant est aussi compacté si nécessaire
-            updatedHistory = updatedHistory.map((h: any) => {
+          } else if (isAddition) {
+            // RETOUR : stock augmente mais PMP reste inchangé
+            newPMP = article.price || 0;  // PMP inchangé
+            lastPurchasePrice = article.lastPurchasePrice || 0;
+            // S'assurer de compacter l'historique existant
+            const compactHistory = updatedHistory.map((h: any) => {
               if (h && typeof h === 'object' && 'p' in h) {
                 return h;
               }
               return {
                 p: h.price ?? 0,
-                d: (h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
+                d: toDateString(h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
+                q: h.quantityAttached ?? 0
+              };
+            });
+            // Ajouter juste une entrée dans l'historique sans modifier le PMP
+            const retourEntry = {
+              p: article.price || 0,
+              d: toDateString(mouvement.date || new Date().toISOString()).slice(0, 10),
+              q: item.quantity
+            };
+            updatedHistory = [...compactHistory, retourEntry];
+          } else {
+            // Compacter l'historique existant (sans ajout de nouvelle entrée)
+            updatedHistory = (article.priceHistory || []).map((h: any) => {
+              if (h && typeof h === 'object' && 'p' in h) return h;
+              return {
+                p: h.price ?? 0,
+                d: toDateString(h.date || mouvement.date || new Date().toISOString()).slice(0, 10),
                 q: h.quantityAttached ?? 0
               };
             });
@@ -196,14 +279,48 @@ export class MovementsService {
         // In-transaction audit log
         const logId = generateSecureUUID();
         const auditLogRef = doc(db, 'auditLogs', logId);
+
+        // Construire les détails enrichis
+        const articles = useArticlesStore.getState().articles;
+        let auditDetails = `Réf: ${mouvement.reference || 'Aucune'}`;
+
+        if (mouvement.type === 'AJUSTEMENT') {
+          // Pour chaque article ajusté, enregistrer avant/après
+          const adjustDetails = articleUpdates.map(upd => {
+            const originalArticle = articles.find((a: Article) => a.id === upd.id);
+            const stockBefore = originalArticle?.quantity ?? '?';
+            return `${originalArticle?.ref || upd.id}: ${stockBefore} → ${upd.newQty}`;
+          }).join(' | ');
+          auditDetails = `Inventaire ${mouvement.reference || 'Aucune'} — Ajustements: ${adjustDetails}`;
+        } else if (mouvement.type === 'SORTIE') {
+          const sortieParts = articleUpdates.map(upd => {
+            const originalArticle = articles.find((a: Article) => a.id === upd.id);
+            const item = mouvement.items.find(i => i.articleId === upd.id);
+            return `${originalArticle?.ref || upd.id}: -${item?.quantity || 0} (→ ${upd.newQty})`;
+          }).join(' | ');
+          auditDetails = `Réf: ${mouvement.reference || 'Aucune'} | ${sortieParts}`;
+        } else {
+          // Pour ENTREE, RETOUR, TRANSFERT_IN, TRANSFERT_OUT, etc.
+          const parts = articleUpdates.map(upd => {
+            const originalArticle = articles.find((a: Article) => a.id === upd.id);
+            const stockBefore = originalArticle?.quantity ?? 0;
+            const diff = upd.newQty - stockBefore;
+            const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
+            return `${originalArticle?.ref || upd.id}: ${diffStr} (→ ${upd.newQty})`;
+          }).join(' | ');
+          auditDetails = `Réf: ${mouvement.reference || 'Aucune'} | ${parts}`;
+        }
+
         transaction.set(auditLogRef, cleanObject({
           id: logId,
           timestamp: new Date().toISOString(),
           userEmail: mouvement.createdBy || 'system_service_account',
           site: mouvement.site,
           action: mouvement.type,
-          details: `Réf: ${mouvement.reference || 'Aucune'}`,
-          amount: totalValue
+          details: auditDetails,
+          amount: totalValue,
+          itemCount: mouvement.items.length,
+          reference: mouvement.reference
         }));
       });
 
@@ -225,7 +342,7 @@ export class MovementsService {
 
       return { success: true };
     } catch (error: any) {
-      console.error('[addMouvement] Transaction échouée:', error);
+      logger.error('[addMouvement] Transaction échouée:', error);
       return { 
         success: false, 
         error: error.message || 'Erreur lors de l\'enregistrement du mouvement' 
@@ -250,7 +367,7 @@ export class MovementsService {
       useMovementsStore.getState().addPRLocal(entry);
       return { success: true };
     } catch (error: any) {
-      console.error('[addPurchaseRequest] Erreur:', error);
+      logger.error('[addPurchaseRequest] Erreur:', error);
       return { success: false, error: error.message || 'Erreur lors de la demande d\'achat' };
     }
   }
@@ -269,7 +386,7 @@ export class MovementsService {
       useMovementsStore.getState().updatePRStatusLocal(id, status);
       return { success: true };
     } catch (error: any) {
-      console.error('[updatePRStatus] Erreur:', error);
+      logger.error('[updatePRStatus] Erreur:', error);
       return { success: false, error: error.message || 'Erreur lors du changement de statut de la demande' };
     }
   }

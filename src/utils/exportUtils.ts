@@ -739,11 +739,24 @@ function buildRawPriceRow(r: PriceChangeRecord) {
 /**
  * Creates a professional general stock inventory overview dashboard comparing all 5 sites
  */
-export function formatArticlesSummaryDashboard(articles: Article[]): any[] {
+export function formatArticlesSummaryDashboard(articles: Article[], movements: Mouvement[] = []): any[] {
   const sites: SiteCode[] = [...SITE_CODES];
-  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
   
   const siteKPIs = sites.map(site => {
+    // Build a Set of article IDs that have movements on this site
+    const usedArticleIds = new Set<string>();
+    movements.filter(m => m.site === site).forEach(m => {
+      if (m.items) {
+        m.items.forEach(item => {
+          if (item.articleId) usedArticleIds.add(item.articleId);
+        });
+      }
+    });
+
+    const isRealStock = (a: Article) => 
+      (a.quantity || 0) > 0 || 
+      (usedArticleIds.has(a.id) && a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+
     const siteArts = articles.filter(a => a.site === site && isRealStock(a));
     const activeRefs = siteArts.filter(a => (a.quantity || 0) > 0);
     const totalQty = siteArts.reduce((acc, a) => acc + (a.quantity || 0), 0);
@@ -762,7 +775,20 @@ export function formatArticlesSummaryDashboard(articles: Article[]): any[] {
   });
 
   // Calculate totals across all sites
-  const realArticles = articles.filter(isRealStock);
+  const globalUsedArticleIds = new Set<string>();
+  movements.forEach(m => {
+    if (m.items) {
+      m.items.forEach(item => {
+        if (item.articleId) globalUsedArticleIds.add(item.articleId);
+      });
+    }
+  });
+
+  const isRealStockGlobal = (a: Article) => 
+    (a.quantity || 0) > 0 || 
+    (globalUsedArticleIds.has(a.id) && a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+
+  const realArticles = articles.filter(isRealStockGlobal);
   const totalRefs = realArticles.filter(a => (a.quantity || 0) > 0).length;
   const grandQty = realArticles.reduce((acc, a) => acc + (a.quantity || 0), 0);
   const grandVal = realArticles.reduce((acc, a) => acc + (a.quantity || 0) * (a.price || 0), 0);

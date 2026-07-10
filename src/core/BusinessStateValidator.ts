@@ -69,6 +69,22 @@ export function validateMouvementInvariants(
       };
     }
 
+    // Article existe mais est inactif (soft-deleted)
+    if (article.active === false) {
+      // Pour ENTREE/RETOUR/TRANSFERT_IN : bloquer si article inactif
+      const isAdditionType = ['ENTREE', 'RETOUR', 'TRANSFERT_IN'].includes(mouvement.type);
+      if (isAdditionType) {
+        return {
+          isValid: false,
+          classification: 'STATE_INCONSISTENCY',
+          errorMsg: `L'article "${article.designation}" (${article.ref}) est désactivé et ne peut plus recevoir de stock. Réactivez l'article dans la gestion des articles.`,
+          inconsistentField: 'active',
+        };
+      }
+      // Pour SORTIE/AJUSTEMENT sur article inactif : autoriser (pour vider le stock)
+      // avec un avertissement dans les logs
+    }
+
     // Verify negative stock limits for stock reduction operations
     const isReduction = mouvement.type === 'SORTIE' || mouvement.type === 'TRANSFERT_OUT';
     if (isReduction) {

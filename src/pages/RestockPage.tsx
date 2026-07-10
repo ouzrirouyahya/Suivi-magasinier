@@ -5,15 +5,16 @@ import { useInventory } from '../context/InventoryContext';
 import { PurchaseRequest } from '../types';
 
 export const RestockPage: React.FC = () => {
-  const { currentSite, articles, purchaseRequests, addPurchaseRequest, updatePRStatus, navigateToMouvement, currentUser } = useInventory();
+  const { currentSite, articles, mouvements, purchaseRequests, addPurchaseRequest, updatePRStatus, navigateToMouvement, currentUser } = useInventory();
 
   return (
     <div className="space-y-12">
-      <StockAlertView currentSite={currentSite} articles={articles} onAction={navigateToMouvement} />
+      <StockAlertView currentSite={currentSite} articles={articles} mouvements={mouvements} onAction={navigateToMouvement} />
       <div className="border-t border-slate-100 pt-12">
         <RestockModule 
           site={currentSite}
           articles={articles}
+          mouvements={mouvements}
           purchaseRequests={purchaseRequests}
           onCreatePR={(items) => {
             const pr: PurchaseRequest = {

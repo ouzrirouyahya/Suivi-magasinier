@@ -34,6 +34,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
   const { 
     totalArticles, 
+    refsWithStock,
     stockValue, 
     lowStockCount, 
     lastSortieText,
@@ -44,10 +45,23 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
     const siteArticles = site === 'ALL' ? articles : articles.filter(a => a.site === site);
     const siteMouvements = site === 'ALL' ? mouvements : mouvements.filter(m => m.site === site);
 
-    const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
-    const realStockArticles = siteArticles.filter(isRealStock);
+    // Build a Set of article IDs that have at least one movement/transaction on the selected site
+    const usedArticleIds = new Set<string>();
+    siteMouvements.forEach(m => {
+      if (m.items) {
+        m.items.forEach(item => {
+          if (item.articleId) usedArticleIds.add(item.articleId);
+        });
+      }
+    });
+
+    const isRealStock = (a: Article) => 
+      (a.quantity || 0) > 0 || 
+      (usedArticleIds.has(a.id) && a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+    const realStockArticles = siteArticles.filter(a => a.active !== false && isRealStock(a));
 
     const totalArticles = realStockArticles.length;
+    const refsWithStock = realStockArticles.filter(a => (a.quantity || 0) > 0).length;
     const stockValue = realStockArticles.reduce((acc, curr) => acc + ((curr.quantity || 0) * (curr.price || 0)), 0);
     const lowStockCount = realStockArticles.filter(a => (a.minStock || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0)).length;
 
@@ -82,6 +96,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
     return { 
       totalArticles, 
+      refsWithStock,
       stockValue, 
       lowStockCount, 
       lastSortieText,
@@ -143,7 +158,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
       id: 'valeur',
       label: 'Valeur Totale Stock', 
       value: formatCurrency(stockValue), 
-      sub: `${totalArticles} références actives`, 
+      sub: `${refsWithStock} de ${totalArticles} réf. avec stock physique`, 
       icon: DollarSign, 
       color: 'text-rose-600', 
       bg: 'bg-rose-50',

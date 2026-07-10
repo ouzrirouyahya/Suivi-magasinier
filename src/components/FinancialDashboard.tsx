@@ -33,14 +33,16 @@ export function FinancialDashboard() {
   const { articles, auditLogs, mouvements, currentSite, maintenanceLogs } = useInventory();
 
   // Financial Stats Calculation
-  const totalStockValue = articles.reduce((sum, a) => {
-    const qty = Number(a.quantity) || 0;
-    const price = Number(a.price) || 0;
-    return sum + (qty * price);
-  }, 0);
+  const totalStockValue = articles
+    .filter(a => a.active !== false)
+    .reduce((sum, a) => {
+      const qty = Number(a.quantity) || 0;
+      const price = Number(a.price) || 0;
+      return sum + (qty * price);
+    }, 0);
 
   const siteStockValue = articles
-    .filter(a => a.site === currentSite)
+    .filter(a => a.active !== false && a.site === currentSite)
     .reduce((sum, a) => {
       const qty = Number(a.quantity) || 0;
       const price = Number(a.price) || 0;
@@ -65,11 +67,13 @@ export function FinancialDashboard() {
   const sites = SITE_CODES;
   const stockBySiteData = sites.map(s => ({
     name: s,
-    value: articles.filter(a => a.site === s).reduce((sum, a) => {
-      const qty = Number(a.quantity) || 0;
-      const price = Number(a.price) || 0;
-      return sum + (qty * price);
-    }, 0)
+    value: articles
+      .filter(a => a.active !== false && a.site === s)
+      .reduce((sum, a) => {
+        const qty = Number(a.quantity) || 0;
+        const price = Number(a.price) || 0;
+        return sum + (qty * price);
+      }, 0)
   }));
 
   const trendData = useMemo(() => {

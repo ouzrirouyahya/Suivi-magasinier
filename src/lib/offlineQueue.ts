@@ -8,6 +8,7 @@ export interface QueuedOperation {
   retryCount: number;      // ← nouveau : compter les échecs
   maxRetries: number;      // ← nouveau : 3 par défaut
   lastError?: string;      // ← nouveau : garder le dernier message d'erreur
+  nextAttemptTime?: string; // ← nouveau : pour la temporisation (backoff exponentiel)
   payload: any;
 }
 
@@ -66,6 +67,27 @@ export const offlineQueue = {
     if (!item) return;
     item.retryCount += 1;
     item.lastError = errorMsg;
+    
+    // Backoff exponentiel : attend 2^retryCount * 5 secondes + jitter aléatoire (0-3s)
+    const backoffSec = Math.pow(2, item.retryCount) * 5;
+    const jitter = Math.random() * 3;
+    item.nextAttemptTime = new Date(Date.now() + (backoffSec + jitter) * 1000).toISOString();
+    
+    try {
+      await IndexedDBStorage.saveItem('offlineQueue', item);
+    } catch {
+      this.saveToLocalStorage(items);
+    }
+  },
+
+  async resetRetry(id: string): Promise<void> {
+    const items = await this.load();
+    const item = items.find(i => i.id === id);
+    if (!item) return;
+    item.retryCount = 0;
+    delete item.lastError;
+    delete item.nextAttemptTime;
+    
     try {
       await IndexedDBStorage.saveItem('offlineQueue', item);
     } catch {

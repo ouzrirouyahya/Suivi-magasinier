@@ -1,6 +1,6 @@
 import React from 'react';
 import { ShoppingCart, Plus, ClipboardList, Send, CheckCircle2, Package, Search, Filter, Trash2, Printer, History, ChevronDown, ChevronUp } from 'lucide-react';
-import { SiteCode, Article, PurchaseRequest } from '../types';
+import { SiteCode, Article, PurchaseRequest, Mouvement } from '../types';
 import { cn } from '../lib/utils';
 import { toast } from 'sonner';
 
@@ -8,17 +8,33 @@ interface RestockModuleProps {
   site: SiteCode;
   articles: Article[];
   purchaseRequests: PurchaseRequest[];
+  mouvements?: Mouvement[];
   onCreatePR: (items: any[]) => void;
   onUpdatePRStatus: (prId: string, status: PurchaseRequest['status']) => void;
 }
 
-export function RestockModule({ site, articles, purchaseRequests, onCreatePR, onUpdatePRStatus }: RestockModuleProps) {
+export function RestockModule({ site, articles, purchaseRequests, mouvements = [], onCreatePR, onUpdatePRStatus }: RestockModuleProps) {
   const [view, setView] = React.useState<'ALERTS' | 'HISTORY' | 'CREATE'>('ALERTS');
   const [search, setSearch] = React.useState('');
   const [selectedItems, setSelectedItems] = React.useState<Record<string, number>>({});
   const [isExpanded, setIsExpanded] = React.useState(false);
 
-  const isRealStock = (a: Article) => (a.quantity || 0) > 0 || (a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
+  const usedArticleIds = React.useMemo(() => {
+    const siteMouvements = site === 'ALL' ? mouvements : mouvements.filter(m => m.site === site);
+    const ids = new Set<string>();
+    siteMouvements.forEach(m => {
+      if (m.items) {
+        m.items.forEach(item => {
+          if (item.articleId) ids.add(item.articleId);
+        });
+      }
+    });
+    return ids;
+  }, [mouvements, site]);
+
+  const isRealStock = (a: Article) => 
+    (a.quantity || 0) > 0 || 
+    (usedArticleIds.has(a.id) && a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
 
   const lowStockArticles = articles.filter(a => 
     a.active === true &&                          // strictement true

@@ -224,7 +224,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
       switch (type) {
         case 'articles': {
           if (siteFilter === 'ALL' && format === 'excel') {
-            const summaryData = formatArticlesSummaryDashboard(articles);
+            const summaryData = formatArticlesSummaryDashboard(articles, movements);
             sheets.push({
               name: '📊 Synthèse Générale',
               data: summaryData,
