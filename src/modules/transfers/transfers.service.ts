@@ -4,7 +4,7 @@ import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRep
 import { useTransfersStore } from './transfers.store';
 import { useArticlesStore } from '../articles/articles.store';
 import { validateTransferInvariants, validateCompleteTransferInvariants } from '../../core/BusinessStateValidator';
-import { generateSecureUUID, cleanObject } from '../../lib/utils';
+import { generateSecureUUID, cleanObject, logger } from '../../lib/utils';
 
 const sanitizeForFirestoreId = (str: string): string => {
   return str
@@ -54,7 +54,7 @@ export class TransfersService {
         });
         return { success: true };
       } catch (error: any) {
-        console.error('[addTransfert (Simulation)] Erreur:', error);
+        logger.error('[addTransfert (Simulation)] Erreur:', error);
         return { success: false, error: error.message || 'Erreur lors de la simulation' };
       }
     }
@@ -143,7 +143,7 @@ export class TransfersService {
 
       return { success: true };
     } catch (error: any) {
-      console.error('[addTransfert] Transaction échouée:', error);
+      logger.error('[addTransfert] Transaction échouée:', error);
       return { success: false, error: error.message || 'Erreur lors du transfert' };
     }
   }
@@ -190,7 +190,7 @@ export class TransfersService {
         }
         return { success: true };
       } catch (error: any) {
-        console.error('[completeTransfert (Simulation)] Erreur:', error);
+        logger.error('[completeTransfert (Simulation)] Erreur:', error);
         return { success: false, error: error.message || 'Erreur lors de la simulation de réception' };
       }
     }
@@ -216,7 +216,8 @@ export class TransfersService {
 
         transfert.items.forEach((sentItem) => {
           const recItem = finalReceivedItems.find(r => r.articleId === sentItem.articleId);
-          if (!recItem || recItem.quantity !== sentItem.quantity) {
+          const receivedQty = recItem?.quantityReceived ?? recItem?.quantity ?? 0;
+          if (!recItem || receivedQty !== sentItem.quantity) {
             isDivergent = true;
           }
         });
@@ -225,10 +226,15 @@ export class TransfersService {
           isDivergent = true;
         }
 
-        const targetArticleWork: any[] = [];
+        const targetArticleWork: (any & { actualReceivedQty: number })[] = [];
         let totalValue = 0;
 
         for (const item of finalReceivedItems) {
+          const actualReceivedQty = item.quantityReceived ?? item.quantity;
+          
+          // Ignorer les items où RIEN n'a été reçu (0 unité)
+          if (actualReceivedQty <= 0) continue;
+
           const sourceArticleRef = doc(db, 'articles', item.articleId);
           const sourceArticleSnap = await transaction.get(sourceArticleRef);
           if (!sourceArticleSnap.exists()) {
@@ -248,16 +254,17 @@ export class TransfersService {
             currentQty = targetArticle.quantity;
           }
 
-          totalValue += item.quantity * (item.price || 0);
+          totalValue += actualReceivedQty * (item.price || 0);  // ← quantité réelle
 
           targetArticleWork.push({
             ref: targetArticleRef,
             exists,
             currentQty,
-            newQty: currentQty + item.quantity,
+            newQty: currentQty + actualReceivedQty,  // ← FIX : quantité réellement reçue
             sourceArticle,
             deterministicId: targetDeterministicId,
-            transferItem: item
+            transferItem: item,
+            actualReceivedQty  // ← stocker pour usage plus bas
           });
         }
 
@@ -281,7 +288,7 @@ export class TransfersService {
               component: work.sourceArticle.component || '',
               subComponent: work.sourceArticle.subComponent || '',
               unit: work.sourceArticle.unit,
-              quantity: work.transferItem.quantity,
+              quantity: work.actualReceivedQty,  // ← FIX : quantité réellement reçue
               minStock: work.sourceArticle.minStock || 0,
               location: 'A affecter',
               price: work.sourceArticle.price || 0,
@@ -289,7 +296,7 @@ export class TransfersService {
               notes: `Créé par transfert depuis ${transfert.sourceSite}`
             };
             transaction.set(work.ref, cleanObject(newArticle));
-            localArticlesToUpdate.push({ id: work.deterministicId, quantity: work.transferItem.quantity, newArticle });
+            localArticlesToUpdate.push({ id: work.deterministicId, quantity: work.actualReceivedQty, newArticle });
           }
 
           // Create entry movement log on target site
@@ -304,10 +311,11 @@ export class TransfersService {
             createdBy: recepteur,
             items: [{
               articleId: work.deterministicId,
-              quantity: work.transferItem.quantity,
+              quantity: work.actualReceivedQty,  // ← FIX : quantité réellement reçue
               price: work.transferItem.price || 0
             }],
-            notes: `Réception de transfert réf: ${transfert.reference} de ${transfert.sourceSite}${isDivergent ? ' [AVEC DIVERGENCE SIGNE]' : ''}`,
+            notes: `Réception de transfert réf: ${transfert.reference} de ${transfert.sourceSite}` +
+              (isDivergent ? ` [DIVERGENCE : ${work.transferItem.quantity} envoyé(s), ${work.actualReceivedQty} reçu(s)]` : ''),
             status: 'VALIDE'
           }));
         }
@@ -389,7 +397,7 @@ export class TransfersService {
 
       return { success: true };
     } catch (error: any) {
-      console.error('[completeTransfert] Transaction échouée:', error);
+      logger.error('[completeTransfert] Transaction échouée:', error);
       return { success: false, error: error.message || 'Erreur lors de la réception du transfert' };
     }
   }
@@ -436,7 +444,7 @@ export class TransfersService {
       });
       return { success: true };
     } catch (error: any) {
-      console.error('[approveTransfert] Erreur:', error);
+      logger.error('[approveTransfert] Erreur:', error);
       return { success: false, error: error.message || 'Erreur lors de l\'approbation du transfert' };
     }
   }
@@ -486,7 +494,7 @@ export class TransfersService {
       });
       return { success: true };
     } catch (error: any) {
-      console.error('[expedierTransfert] Erreur:', error);
+      logger.error('[expedierTransfert] Erreur:', error);
       return { success: false, error: error.message || 'Erreur lors de l\'expédition du transfert' };
     }
   }
@@ -536,7 +544,7 @@ export class TransfersService {
       });
       return { success: true };
     } catch (error: any) {
-      console.error('[closeTransfert] Erreur:', error);
+      logger.error('[closeTransfert] Erreur:', error);
       return { success: false, error: error.message || 'Erreur lors de la clôture du transfert' };
     }
   }

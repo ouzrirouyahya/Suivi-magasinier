@@ -150,7 +150,9 @@ export class MovementsService {
         newQty: number; 
         newPMP: number; 
         lastPurchasePrice: number; 
-        priceHistory: any[] 
+        priceHistory: any[];
+        stockBefore: number;
+        articleRefLabel: string;
       }[] = [];
 
       await runTransaction(db, async (transaction) => {
@@ -254,7 +256,9 @@ export class MovementsService {
             newQty, 
             newPMP, 
             lastPurchasePrice, 
-            priceHistory: updatedHistory.slice(-50) 
+            priceHistory: updatedHistory.slice(-50),
+            stockBefore: article.quantity || 0,
+            articleRefLabel: article.ref || item.articleId
           });
         }
 
@@ -281,32 +285,24 @@ export class MovementsService {
         const auditLogRef = doc(db, 'auditLogs', logId);
 
         // Construire les détails enrichis
-        const articles = useArticlesStore.getState().articles;
         let auditDetails = `Réf: ${mouvement.reference || 'Aucune'}`;
 
         if (mouvement.type === 'AJUSTEMENT') {
-          // Pour chaque article ajusté, enregistrer avant/après
           const adjustDetails = articleUpdates.map(upd => {
-            const originalArticle = articles.find((a: Article) => a.id === upd.id);
-            const stockBefore = originalArticle?.quantity ?? '?';
-            return `${originalArticle?.ref || upd.id}: ${stockBefore} → ${upd.newQty}`;
+            return `${upd.articleRefLabel}: ${upd.stockBefore} → ${upd.newQty}`;
           }).join(' | ');
           auditDetails = `Inventaire ${mouvement.reference || 'Aucune'} — Ajustements: ${adjustDetails}`;
         } else if (mouvement.type === 'SORTIE') {
           const sortieParts = articleUpdates.map(upd => {
-            const originalArticle = articles.find((a: Article) => a.id === upd.id);
             const item = mouvement.items.find(i => i.articleId === upd.id);
-            return `${originalArticle?.ref || upd.id}: -${item?.quantity || 0} (→ ${upd.newQty})`;
+            return `${upd.articleRefLabel}: -${item?.quantity || 0} (→ ${upd.newQty})`;
           }).join(' | ');
           auditDetails = `Réf: ${mouvement.reference || 'Aucune'} | ${sortieParts}`;
         } else {
-          // Pour ENTREE, RETOUR, TRANSFERT_IN, TRANSFERT_OUT, etc.
           const parts = articleUpdates.map(upd => {
-            const originalArticle = articles.find((a: Article) => a.id === upd.id);
-            const stockBefore = originalArticle?.quantity ?? 0;
-            const diff = upd.newQty - stockBefore;
+            const diff = upd.newQty - upd.stockBefore;
             const diffStr = diff >= 0 ? `+${diff}` : `${diff}`;
-            return `${originalArticle?.ref || upd.id}: ${diffStr} (→ ${upd.newQty})`;
+            return `${upd.articleRefLabel}: ${diffStr} (→ ${upd.newQty})`;
           }).join(' | ');
           auditDetails = `Réf: ${mouvement.reference || 'Aucune'} | ${parts}`;
         }
@@ -394,23 +390,29 @@ export class MovementsService {
   /**
    * Save or validate an inventory session
    */
-  async saveInventaire(inventaire: Inventaire, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
+  async saveInventaire(
+    inventaire: Inventaire, 
+    isSimulation: boolean = false
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const invId = inventaire.id || generateSecureUUID();
       const entry = { ...inventaire, id: invId };
 
       if (isSimulation) {
+        // Sauvegarder l'inventaire localement
         useMovementsStore.getState().addInventaireLocal(entry);
-        return { success: true };
+      } else {
+        // Écriture Firestore réelle
+        await firestoreRepository.write('inventaires', invId, cleanObject(entry));
+        useMovementsStore.getState().addInventaireLocal(entry);
       }
 
-      // Write to Firestore
-      await firestoreRepository.write('inventaires', invId, cleanObject(entry));
-      useMovementsStore.getState().addInventaireLocal(entry);
-
-      // If validated, trigger an AJUSTEMENT movement for any item with differences
+      // Dans TOUS les cas (online ET offline), si l'inventaire est validé,
+      // déclencher les AJUSTEMENTs pour mettre à jour le stock local immédiatement
       if (entry.status === 'VALIDE') {
-        const itemsWithDifference = entry.items.filter(item => item.countedQuantity !== item.theoricQuantity);
+        const itemsWithDifference = entry.items.filter(item => 
+          item.countedQuantity !== item.theoricQuantity
+        );
         if (itemsWithDifference.length > 0) {
           const adjustmentMovement: Mouvement = {
             id: generateSecureUUID(),
@@ -420,14 +422,21 @@ export class MovementsService {
             reference: `Inventaire ${entry.compteur || entry.id}`,
             items: itemsWithDifference.map(item => ({
               articleId: item.articleId,
-              quantity: item.countedQuantity, // Recall AJUSTEMENT sets final stock quantity
+              quantity: item.countedQuantity,
               price: 0
             })),
             status: 'VALIDE',
             createdBy: entry.validePar || 'Admin'
           };
           
-          await this.addMouvement(adjustmentMovement);
+          // Passer isSimulation en cascade : offline → simulation locale,
+          // online → vraie transaction Firestore
+          const adjResult = await this.addMouvement(adjustmentMovement, isSimulation);
+          if (!adjResult.success) {
+            logger.error('[saveInventaire] Échec AJUSTEMENT:', adjResult.error);
+            // Ne pas faire échouer tout l'inventaire si l'ajustement échoue,
+            // mais logger clairement pour investigation
+          }
         }
       }
 

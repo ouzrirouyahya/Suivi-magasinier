@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { Mouvement, Article } from '../types';
-import { cn, formatDate, generateId, formatCurrency } from '../lib/utils';
+import { cn, formatDate, generateId, formatCurrency, logger } from '../lib/utils';
 import { toast } from 'sonner';
 
 export function ReturnsManagement() {
@@ -130,7 +130,7 @@ export function ReturnsManagement() {
       resetForm();
     } catch (err) {
       toast.error("Erreur technique lors de la validation du retour.");
-      console.error(err);
+      logger.error('[ReturnsManagement] handleReturn:', err);
     }
   };
 
