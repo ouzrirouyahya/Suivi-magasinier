@@ -3,6 +3,7 @@ import { articleService } from './article.service';
 import { movementsService } from './movement.service';
 import { transfersService } from './transfer.service';
 import { maintenanceService } from './maintenance.service';
+import { logger } from '../lib/utils';
 
 export const offlineService = {
   async saveCollection(colName: string, data: any[]): Promise<void> {
@@ -53,7 +54,7 @@ export const offlineService = {
         await maintenanceService.addMaintenanceLog(payload);
         break;
       default:
-        console.warn(`Unknown offline retry intent type: ${type}`);
+        logger.warn(`Unknown offline retry intent type: ${type}`);
     }
   }
 };

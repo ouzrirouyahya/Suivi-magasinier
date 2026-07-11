@@ -139,6 +139,16 @@ export function validateMaintenanceInvariants(
       };
     }
 
+    // AJOUT : vérifier que l'article est actif
+    if (article.active === false) {
+      return {
+        isValid: false,
+        classification: 'STATE_INCONSISTENCY',
+        errorMsg: `La pièce "${article.designation}" (${article.ref}) est désactivée et ne peut pas être utilisée en maintenance.`,
+        inconsistentField: 'active',
+      };
+    }
+
     const projectedQty = article.quantity - part.quantity;
     if (projectedQty < 0) {
       return {

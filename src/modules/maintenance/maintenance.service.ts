@@ -53,7 +53,7 @@ export class MaintenanceService {
         throw new Error("OPERATION_DEJA_EXECUTE");
       }
 
-      const articleUpdates: { ref: any, newQty: number, price: number }[] = [];
+      const articleUpdates: { ref: any, newQty: number, price: number, article: Article }[] = [];
 
       if (log.partsUsed && log.partsUsed.length > 0) {
         for (const part of log.partsUsed) {
@@ -67,7 +67,7 @@ export class MaintenanceService {
           if (newQty < 0) {
             throw new Error("STOCK_INSUFFISANT");
           }
-          articleUpdates.push({ ref: articleRef, newQty, price: article.price || 0 });
+          articleUpdates.push({ ref: articleRef, newQty, price: article.price || 0, article });
         }
       }
 
@@ -97,12 +97,27 @@ export class MaintenanceService {
         );
       }
 
+      // Vérifier que toutes les pièces utilisées appartiennent 
+      // bien au chantier de l'engin/perforateur
+      if (log.partsUsed && log.partsUsed.length > 0) {
+        for (const update of articleUpdates) {
+          if (update.article.site && update.article.site !== machineSite) {
+            throw new Error(
+              `INVARIANT_VIOLATION: La pièce "${update.article.ref}" appartient au ` +
+              `chantier ${update.article.site} mais la maintenance est enregistrée ` +
+              `sur ${machineSite}.`
+            );
+          }
+        }
+      }
+
       // Record associated movements if parts are used
       if (log.partsUsed && log.partsUsed.length > 0) {
         log.partsUsed.forEach((part, index) => {
           const update = articleUpdates[index];
           const mId = generateSecureUUID();
           const movementRef = doc(db, 'mouvements', mId);
+          const partArticle = update?.article;
 
           transaction.set(movementRef, cleanObject({
             id: mId,
@@ -110,7 +125,15 @@ export class MaintenanceService {
             date: log.date || new Date().toISOString(),
             type: 'SORTIE',
             reference: `MAINT-${id}`,
-            items: [{ articleId: part.articleId, quantity: part.quantity, price: update.price }],
+            createdBy: log.performer || 'system_service_account',
+            items: [{ 
+              articleId: part.articleId, 
+              quantity: part.quantity, 
+              price: update.price,
+              articleDesignation: partArticle?.designation || '',
+              articleRef: partArticle?.ref || '',
+              articleUnit: partArticle?.unit || 'PIECE',
+            }],
             notes: `Utilisé pour maintenance ${log.type} sur ${log.machineId}`,
             status: 'COMPLETE'
           }));

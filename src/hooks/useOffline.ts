@@ -3,6 +3,7 @@ import { useSystemStore } from '../stores/system.store';
 import { offlineService } from '../services/offline.service';
 import { offlineQueue } from '../lib/offlineQueue';
 import { toast } from 'sonner';
+import { logger } from '../lib/utils';
 
 export function useOffline() {
   const {
@@ -48,7 +49,7 @@ export function useOffline() {
         setRetryQueue(activeQueue);
         setDlq(dlqItems);
       } catch (err) {
-        console.error(
+        logger.error(
           '[useOffline] Failed to load offline queue from IndexedDB:',
           err
         );
