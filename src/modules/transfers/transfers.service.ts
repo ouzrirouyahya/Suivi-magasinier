@@ -1,8 +1,9 @@
 import { doc, runTransaction, db } from '../../lib/db';
-import { Article, Transfert, MouvementItem, TransfertHistoryEntry } from '../../types';
+import { Article, Transfert, MouvementItem, TransfertHistoryEntry, Mouvement } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useTransfersStore } from './transfers.store';
 import { useArticlesStore } from '../articles/articles.store';
+import { useMovementsStore } from '../movements/movements.store';
 import { validateTransferInvariants, validateCompleteTransferInvariants } from '../../core/BusinessStateValidator';
 import { generateSecureUUID, cleanObject, logger } from '../../lib/utils';
 
@@ -48,10 +49,38 @@ export class TransfersService {
         });
 
         useArticlesStore.getState().setArticles(updatedArticles);
-        useTransfersStore.getState().addTransfertLocal({
+        
+        const enrichedTransfert = {
           ...transfert,
           dateEnvoi: new Date().toISOString()
-        });
+        };
+        useTransfersStore.getState().addTransfertLocal(enrichedTransfert);
+
+        // Add local outbound movement for tracking in offline mode
+        const localOutboundMvt: Mouvement = {
+          id: 'mvt_local_' + generateSecureUUID(),
+          site: enrichedTransfert.sourceSite,
+          date: enrichedTransfert.dateEnvoi,
+          type: 'TRANSFERT_OUT',
+          reference: enrichedTransfert.reference,
+          targetSite: enrichedTransfert.targetSite,
+          items: enrichedTransfert.items.map(item => {
+            const sourceArticle = articles.find(a => a.id === item.articleId);
+            return {
+              articleId: item.articleId,
+              quantity: item.quantity,
+              price: item.price || 0,
+              articleDesignation: sourceArticle?.designation || item.articleDesignation || '',
+              articleRef: sourceArticle?.ref || item.articleRef || '',
+              articleUnit: sourceArticle?.unit || item.articleUnit || 'PIECE',
+            };
+          }),
+          notes: `Expédition de transfert réf: ${enrichedTransfert.reference} vers ${enrichedTransfert.targetSite}`,
+          status: 'VALIDE',
+          createdBy: enrichedTransfert.expediteur
+        };
+        useMovementsStore.getState().addMouvementLocal(localOutboundMvt);
+
         return { success: true };
       } catch (error: any) {
         logger.error('[addTransfert (Simulation)] Erreur:', error);
@@ -73,24 +102,40 @@ export class TransfersService {
 
         // Check stock and update source articles
         let totalValue = 0;
-        const articleUpdates: { id: string; ref: any; newQty: number }[] = [];
+        const articleUpdates: { id: string; ref: any; newQty: number; article: Article }[] = [];
 
         for (const item of transfert.items) {
           const articleRef = doc(db, 'articles', item.articleId);
-          const articleSnap = await transaction.get(articleRef);
-          if (!articleSnap.exists()) {
-            throw new Error("ARTICLE_INTROUVABLE");
+          
+          const existingIndex = articleUpdates.findIndex(u => u.id === item.articleId);
+          let currentQty = 0;
+          let article: Article;
+
+          if (existingIndex !== -1) {
+            currentQty = articleUpdates[existingIndex].newQty;
+            article = articleUpdates[existingIndex].article;
+          } else {
+            const articleSnap = await transaction.get(articleRef);
+            if (!articleSnap.exists()) {
+              throw new Error("ARTICLE_INTROUVABLE");
+            }
+            article = articleSnap.data() as Article;
+            currentQty = article.quantity || 0;
           }
 
-          const article = articleSnap.data() as Article;
           totalValue += item.quantity * (article.price || 0);
 
-          const newQty = article.quantity - item.quantity;
+          const newQty = currentQty - item.quantity;
           if (newQty < 0) {
-            throw new Error(`Stock insuffisant pour l'article ${article.ref}. Disponible: ${article.quantity}, Demandé: ${item.quantity}`);
+            throw new Error(`Stock insuffisant pour l'article ${article.ref}. Disponible: ${currentQty}, Demandé: ${item.quantity}`);
           }
 
-          articleUpdates.push({ id: item.articleId, ref: articleRef, newQty });
+          const updateObj = { id: item.articleId, ref: articleRef, newQty, article };
+          if (existingIndex !== -1) {
+            articleUpdates[existingIndex] = updateObj;
+          } else {
+            articleUpdates.push(updateObj);
+          }
         }
 
         // Write updates
@@ -172,21 +217,84 @@ export class TransfersService {
         const tIndex = updatedTransferts.findIndex(tx => tx.id === id);
         if (tIndex !== -1) {
           const tx = updatedTransferts[tIndex];
-          updatedTransferts[tIndex] = { ...tx, status: 'RECEIVED', recepteur, receivedItems, disputeReason };
+          const nextStatus = disputeReason ? 'DISPUTED' : 'RECEIVED';
+          updatedTransferts[tIndex] = { ...tx, status: nextStatus, recepteur, receivedItems, disputeReason };
 
           const updatedArticles = [...articles];
           const finalReceivedItems = receivedItems || tx.items;
+          const localMouvementItems: MouvementItem[] = [];
           
           finalReceivedItems.forEach((item) => {
-            const index = updatedArticles.findIndex(a => a.id === item.articleId);
+            const actualReceivedQty = item.quantityReceived ?? item.quantity;
+            if (actualReceivedQty <= 0) return; // rien reçu → pas de mise à jour stock
+            
+            // Trouver l'article source localement pour obtenir sa référence
+            const sourceArticle = articles.find(a => a.id === item.articleId);
+            if (!sourceArticle) {
+              logger.warn(`[completeTransfert (Simulation)] Article source introuvable pour ID : ${item.articleId}`);
+              return;
+            }
+
+            // Calculer l'ID déterministe de destination
+            const targetDeterministicId = `${tx.targetSite}_${sanitizeForFirestoreId(sourceArticle.ref)}`;
+            const index = updatedArticles.findIndex(a => a.id === targetDeterministicId);
+            
             if (index !== -1) {
               const art = updatedArticles[index];
-              updatedArticles[index] = { ...art, quantity: art.quantity + item.quantity };
+              updatedArticles[index] = { ...art, quantity: art.quantity + actualReceivedQty, active: true };
+            } else {
+              // Créer l'article sur le site cible s'il n'existe pas localement
+              const newArticle: Article = {
+                id: targetDeterministicId,
+                site: tx.targetSite,
+                ref: sourceArticle.ref,
+                designation: sourceArticle.designation,
+                type: sourceArticle.type,
+                category: sourceArticle.category,
+                functionalCategory: sourceArticle.functionalCategory || '',
+                subCategory: sourceArticle.subCategory || '',
+                component: sourceArticle.component || '',
+                subComponent: sourceArticle.subComponent || '',
+                unit: sourceArticle.unit,
+                quantity: actualReceivedQty,
+                minStock: sourceArticle.minStock || 0,
+                location: 'A affecter',
+                price: sourceArticle.price || 0,
+                active: true,
+                notes: `Créé par transfert depuis ${tx.sourceSite} (Hors-ligne)`
+              };
+              updatedArticles.push(newArticle);
             }
+
+            localMouvementItems.push({
+              articleId: targetDeterministicId,
+              quantity: actualReceivedQty,
+              price: item.price || sourceArticle.price || 0,
+              articleDesignation: sourceArticle.designation,
+              articleRef: sourceArticle.ref,
+              articleUnit: sourceArticle.unit || 'PIECE'
+            });
           });
           
           useArticlesStore.getState().setArticles(updatedArticles);
           useTransfersStore.getState().setTransferts(updatedTransferts);
+
+          // Add local inbound movement for tracking in offline mode
+          if (localMouvementItems.length > 0) {
+            const localInboundMvt: Mouvement = {
+              id: 'mvt_local_' + generateSecureUUID(),
+              site: tx.targetSite,
+              date: new Date().toISOString(),
+              type: 'TRANSFERT_IN',
+              reference: tx.reference,
+              createdBy: recepteur,
+              items: localMouvementItems,
+              notes: `Réception de transfert réf: ${tx.reference} de ${tx.sourceSite}` +
+                (disputeReason ? ` [DIVERGENCE : ${disputeReason}]` : ''),
+              status: 'VALIDE'
+            };
+            useMovementsStore.getState().addMouvementLocal(localInboundMvt);
+          }
         }
         return { success: true };
       } catch (error: any) {
@@ -226,7 +334,7 @@ export class TransfersService {
           isDivergent = true;
         }
 
-        const targetArticleWork: (any & { actualReceivedQty: number })[] = [];
+        const targetArticleWork: (any & { actualReceivedQty: number; sentQty: number })[] = [];
         let totalValue = 0;
 
         for (const item of finalReceivedItems) {
@@ -244,29 +352,46 @@ export class TransfersService {
 
           const targetDeterministicId = `${transfert.targetSite}_${sanitizeForFirestoreId(sourceArticle.ref)}`;
           const targetArticleRef = doc(db, 'articles', targetDeterministicId);
-          const targetArticleSnap = await transaction.get(targetArticleRef);
-
+          
+          const existingWorkIndex = targetArticleWork.findIndex(w => w.deterministicId === targetDeterministicId);
+          
           let exists = false;
           let currentQty = 0;
-          if (targetArticleSnap.exists()) {
-            exists = true;
-            const targetArticle = targetArticleSnap.data() as Article;
-            currentQty = targetArticle.quantity;
+          
+          if (existingWorkIndex !== -1) {
+            exists = targetArticleWork[existingWorkIndex].exists;
+            currentQty = targetArticleWork[existingWorkIndex].newQty;
+          } else {
+            const targetArticleSnap = await transaction.get(targetArticleRef);
+            if (targetArticleSnap.exists()) {
+              exists = true;
+              const targetArticle = targetArticleSnap.data() as Article;
+              currentQty = targetArticle.quantity;
+            }
           }
 
           totalValue += actualReceivedQty * (item.price || 0);  // ← quantité réelle
 
-          targetArticleWork.push({
+          const workObj = {
             ref: targetArticleRef,
             exists,
-            currentQty,
-            newQty: currentQty + actualReceivedQty,  // ← FIX : quantité réellement reçue
+            currentQty: existingWorkIndex !== -1 ? targetArticleWork[existingWorkIndex].currentQty : currentQty,
+            newQty: currentQty + actualReceivedQty,
             sourceArticle,
             deterministicId: targetDeterministicId,
             transferItem: item,
-            actualReceivedQty  // ← stocker pour usage plus bas
-          });
+            actualReceivedQty: (existingWorkIndex !== -1 ? targetArticleWork[existingWorkIndex].actualReceivedQty : 0) + actualReceivedQty,
+            sentQty: (existingWorkIndex !== -1 ? targetArticleWork[existingWorkIndex].sentQty : 0) + item.quantity
+          };
+
+          if (existingWorkIndex !== -1) {
+            targetArticleWork[existingWorkIndex] = workObj;
+          } else {
+            targetArticleWork.push(workObj);
+          }
         }
+
+        const inboundMouvementItems: MouvementItem[] = [];
 
         for (const work of targetArticleWork) {
           if (work.exists) {
@@ -299,9 +424,30 @@ export class TransfersService {
             localArticlesToUpdate.push({ id: work.deterministicId, quantity: work.actualReceivedQty, newArticle });
           }
 
-          // Create entry movement log on target site
+          inboundMouvementItems.push({
+            articleId: work.deterministicId,
+            quantity: work.actualReceivedQty,  // ← FIX : quantité réellement reçue
+            price: work.transferItem.price || work.sourceArticle.price || 0,
+            articleDesignation: work.sourceArticle.designation,
+            articleRef: work.sourceArticle.ref,
+            articleUnit: work.sourceArticle.unit || 'PIECE'
+          });
+        }
+
+        // Create a single consolidated TRANSFERT_IN movement log on target site
+        if (inboundMouvementItems.length > 0) {
           const inboundMovementId = generateSecureUUID();
           const inboundMovementRef = doc(db, 'mouvements', inboundMovementId);
+          
+          let divergenceSummary = '';
+          if (isDivergent) {
+            const divergenceDetails = targetArticleWork
+              .filter(w => w.sentQty !== w.actualReceivedQty)
+              .map(w => `${w.sourceArticle.ref}: ${w.sentQty} envoyé(s), ${w.actualReceivedQty} reçu(s)`)
+              .join(', ');
+            divergenceSummary = divergenceDetails ? ` [DIVERGENCE : ${divergenceDetails}]` : ' [DIVERGENCE détectée]';
+          }
+
           transaction.set(inboundMovementRef, cleanObject({
             id: inboundMovementId,
             site: transfert.targetSite,
@@ -309,13 +455,8 @@ export class TransfersService {
             type: 'TRANSFERT_IN',
             reference: transfert.reference,
             createdBy: recepteur,
-            items: [{
-              articleId: work.deterministicId,
-              quantity: work.actualReceivedQty,  // ← FIX : quantité réellement reçue
-              price: work.transferItem.price || 0
-            }],
-            notes: `Réception de transfert réf: ${transfert.reference} de ${transfert.sourceSite}` +
-              (isDivergent ? ` [DIVERGENCE : ${work.transferItem.quantity} envoyé(s), ${work.actualReceivedQty} reçu(s)]` : ''),
+            items: inboundMouvementItems,
+            notes: `Réception de transfert réf: ${transfert.reference} de ${transfert.sourceSite}${divergenceSummary}`,
             status: 'VALIDE'
           }));
         }

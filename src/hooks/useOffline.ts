@@ -115,7 +115,7 @@ export function useOffline() {
         accumulatedAvgDuration = accumulatedAvgDuration > 0 ? (accumulatedAvgDuration + duration) / 2 : duration;
         totalSuccess += 1;
       } catch (err: any) {
-        console.error(`[useOffline] Error processing queued operation ${item.intentId}:`, err);
+        logger.error(`[useOffline] Error processing queued operation ${item.intentId}:`, err);
         const errorMsg = err.message || String(err);
         
         // Record retry failure in IndexedDB

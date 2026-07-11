@@ -53,21 +53,39 @@ export class MaintenanceService {
         throw new Error("OPERATION_DEJA_EXECUTE");
       }
 
-      const articleUpdates: { ref: any, newQty: number, price: number, article: Article }[] = [];
+      const articleUpdates: { id: string; ref: any; newQty: number; price: number; article: Article }[] = [];
 
       if (log.partsUsed && log.partsUsed.length > 0) {
         for (const part of log.partsUsed) {
           const articleRef = doc(db, 'articles', part.articleId);
-          const articleSnap = await transaction.get(articleRef);
-          if (!articleSnap.exists()) {
-            throw new Error("ARTICLE_INTROUVABLE");
+          
+          const existingIndex = articleUpdates.findIndex(u => u.id === part.articleId);
+          let currentQty = 0;
+          let article: Article;
+
+          if (existingIndex !== -1) {
+            currentQty = articleUpdates[existingIndex].newQty;
+            article = articleUpdates[existingIndex].article;
+          } else {
+            const articleSnap = await transaction.get(articleRef);
+            if (!articleSnap.exists()) {
+              throw new Error("ARTICLE_INTROUVABLE");
+            }
+            article = articleSnap.data() as Article;
+            currentQty = article.quantity || 0;
           }
-          const article = articleSnap.data() as Article;
-          const newQty = article.quantity - part.quantity;
+
+          const newQty = currentQty - part.quantity;
           if (newQty < 0) {
             throw new Error("STOCK_INSUFFISANT");
           }
-          articleUpdates.push({ ref: articleRef, newQty, price: article.price || 0, article });
+
+          const updateObj = { id: part.articleId, ref: articleRef, newQty, price: article.price || 0, article };
+          if (existingIndex !== -1) {
+            articleUpdates[existingIndex] = updateObj;
+          } else {
+            articleUpdates.push(updateObj);
+          }
         }
       }
 
@@ -111,33 +129,35 @@ export class MaintenanceService {
         }
       }
 
-      // Record associated movements if parts are used
+      // Record associated movements if parts are used (grouped in a single SORTIE movement)
       if (log.partsUsed && log.partsUsed.length > 0) {
-        log.partsUsed.forEach((part, index) => {
-          const update = articleUpdates[index];
-          const mId = generateSecureUUID();
-          const movementRef = doc(db, 'mouvements', mId);
+        const mId = generateSecureUUID();
+        const movementRef = doc(db, 'mouvements', mId);
+        
+        const movementItems = log.partsUsed.map(part => {
+          const update = articleUpdates.find(u => u.id === part.articleId);
           const partArticle = update?.article;
-
-          transaction.set(movementRef, cleanObject({
-            id: mId,
-            site: machineSite,
-            date: log.date || new Date().toISOString(),
-            type: 'SORTIE',
-            reference: `MAINT-${id}`,
-            createdBy: log.performer || 'system_service_account',
-            items: [{ 
-              articleId: part.articleId, 
-              quantity: part.quantity, 
-              price: update.price,
-              articleDesignation: partArticle?.designation || '',
-              articleRef: partArticle?.ref || '',
-              articleUnit: partArticle?.unit || 'PIECE',
-            }],
-            notes: `Utilisé pour maintenance ${log.type} sur ${log.machineId}`,
-            status: 'COMPLETE'
-          }));
+          return {
+            articleId: part.articleId,
+            quantity: part.quantity,
+            price: update ? update.price : 0,
+            articleDesignation: partArticle?.designation || '',
+            articleRef: partArticle?.ref || '',
+            articleUnit: partArticle?.unit || 'PIECE',
+          };
         });
+
+        transaction.set(movementRef, cleanObject({
+          id: mId,
+          site: machineSite,
+          date: log.date || new Date().toISOString(),
+          type: 'SORTIE',
+          reference: `MAINT-${id}`,
+          createdBy: log.performer || 'system_service_account',
+          items: movementItems,
+          notes: `Pièces utilisées pour maintenance ${log.type} sur ${log.machineId}`,
+          status: 'COMPLETE'
+        }));
       }
 
       // Set maintenance log

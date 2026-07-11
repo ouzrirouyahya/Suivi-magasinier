@@ -68,7 +68,7 @@ interface MouvementFormProps {
 
 export function MouvementForm({ type, site, articles, catalog, engins, perfos, agents, onSubmit, onArticleCreate, initialArticleId, isReadOnly = false, resetKey }: MouvementFormProps) {
   const { isOnline } = useOfflineSync();
-  const { hydrominesCatalog = [], saveHydrominesCatalogItem, importFromHydrominesCatalog } = useInventory();
+  const { hydrominesCatalog = [], saveHydrominesCatalogItem, importFromHydrominesCatalog, updatePRStatus } = useInventory();
 
   // Automatic selection after import state & effect
   const [pendingImports, setPendingImports] = useState<string[]>([]);
@@ -160,6 +160,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [localCreatedArticles, setLocalCreatedArticles] = useState<Article[]>([]);
   const [forceSubmitPrices, setForceSubmitPrices] = useState(false);
   const [priceWarnings, setPriceWarnings] = useState<string[]>([]);
+  const [pendingPRId, setPendingPRId] = useState<string | null>(null);
 
   // Real-time recalculation of anomalous price entries
   useEffect(() => {
@@ -187,6 +188,25 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     });
     setPriceWarnings(warnings);
   }, [items, type, articles, localCreatedArticles]);
+
+  useEffect(() => {
+    const pending = sessionStorage.getItem('pendingPRReception');
+    if (pending && type === 'ENTREE') {
+      try {
+        const { prId, items: prItems } = JSON.parse(pending);
+        const newItems = prItems.map((prItem: any) => ({
+          lineId: generateId(),
+          articleId: prItem.articleId,
+          quantity: prItem.quantity,
+          price: prItem.lastPrice || 0
+        }));
+        setItems(newItems);
+        setReference(`Réception DA`);
+        sessionStorage.removeItem('pendingPRReception');
+        setPendingPRId(prId);
+      } catch {}
+    }
+  }, [type]);
 
   // Ergonomic UX Keyboard States
   const [focusedIndex, setFocusedIndex] = useState<number>(0);
@@ -927,6 +947,9 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     };
 
     onSubmit(mouvement);
+    if (pendingPRId && updatePRStatus) {
+      updatePRStatus(pendingPRId, 'RECU');
+    }
   };
 
   const dropdownRef = React.useRef<HTMLDivElement>(null);

@@ -174,27 +174,40 @@ export class MovementsService {
           const article = articleSnap.data() as Article;
           totalValue += item.quantity * (article.price || 0);
           
+          const existingUpdateIndex = articleUpdates.findIndex(u => u.id === item.articleId);
+          const baseQty = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].newQty : (article.quantity || 0);
+          const basePMP = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].newPMP : (article.price || 0);
+          const baseLastPurchasePrice = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].lastPurchasePrice : (article.lastPurchasePrice || 0);
+          const baseHistory = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].priceHistory : (article.priceHistory || []);
+
           const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
           const isPMPUpdatable = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN';
           const isAdjustment = mouvement.type === 'AJUSTEMENT';
           const newQty = isAdjustment
             ? item.quantity
             : isAddition 
-              ? (article.quantity || 0) + item.quantity 
-              : (article.quantity || 0) - item.quantity;
+              ? baseQty + item.quantity 
+              : baseQty - item.quantity;
           
           if (newQty < 0 && !isAdjustment) {
-            throw new Error(`Stock insuffisant pour l'article ${article.ref}. Disponible: ${article.quantity || 0}, Demandé: ${item.quantity}`);
+            throw new Error(`Stock insuffisant pour l'article ${article.ref}. Disponible: ${baseQty}, Demandé: ${item.quantity}`);
           }
 
           // PMP Calculation
-          let newPMP = article.price || 0;
-          let lastPurchasePrice = article.lastPurchasePrice || 0;
-          let updatedHistory = article.priceHistory || [];
+          let newPMP = basePMP;
+          let lastPurchasePrice = baseLastPurchasePrice;
+          let updatedHistory = baseHistory;
 
           if (isPMPUpdatable) {
+            const tempArticleForPMP: Article = {
+              ...article,
+              quantity: baseQty,
+              price: basePMP,
+              lastPurchasePrice: baseLastPurchasePrice,
+              priceHistory: baseHistory
+            };
             const updates = calculatePriceUpdates(
-              article,
+              tempArticleForPMP,
               item.quantity,
               item.price || 0,
               movementId,
@@ -218,8 +231,8 @@ export class MovementsService {
             updatedHistory = compactHistory;
           } else if (isAddition) {
             // RETOUR : stock augmente mais PMP reste inchangé
-            newPMP = article.price || 0;  // PMP inchangé
-            lastPurchasePrice = article.lastPurchasePrice || 0;
+            newPMP = basePMP;  // PMP inchangé
+            lastPurchasePrice = baseLastPurchasePrice;
             // S'assurer de compacter l'historique existant
             const compactHistory = updatedHistory.map((h: any) => {
               if (h && typeof h === 'object' && 'p' in h) {
@@ -233,14 +246,14 @@ export class MovementsService {
             });
             // Ajouter juste une entrée dans l'historique sans modifier le PMP
             const retourEntry = {
-              p: article.price || 0,
+              p: basePMP,
               d: toDateString(mouvement.date || new Date().toISOString()).slice(0, 10),
               q: item.quantity
             };
             updatedHistory = [...compactHistory, retourEntry];
           } else {
             // Compacter l'historique existant (sans ajout de nouvelle entrée)
-            updatedHistory = (article.priceHistory || []).map((h: any) => {
+            updatedHistory = updatedHistory.map((h: any) => {
               if (h && typeof h === 'object' && 'p' in h) return h;
               return {
                 p: h.price ?? 0,
@@ -250,16 +263,22 @@ export class MovementsService {
             });
           }
 
-          articleUpdates.push({ 
+          const updateObj = { 
             id: item.articleId,
             ref: articleRef, 
             newQty, 
             newPMP, 
             lastPurchasePrice, 
             priceHistory: updatedHistory.slice(-50),
-            stockBefore: article.quantity || 0,
+            stockBefore: existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].stockBefore : (article.quantity || 0),
             articleRefLabel: article.ref || item.articleId
-          });
+          };
+
+          if (existingUpdateIndex !== -1) {
+            articleUpdates[existingUpdateIndex] = updateObj;
+          } else {
+            articleUpdates.push(updateObj);
+          }
         }
 
         // Update articles fields

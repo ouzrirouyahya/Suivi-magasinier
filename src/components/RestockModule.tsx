@@ -11,13 +11,16 @@ interface RestockModuleProps {
   mouvements?: Mouvement[];
   onCreatePR: (items: any[]) => void;
   onUpdatePRStatus: (prId: string, status: PurchaseRequest['status']) => void;
+  onReceivePR: (pr: PurchaseRequest) => void;
+  onDeletePR: (id: string) => void;
 }
 
-export function RestockModule({ site, articles, purchaseRequests, mouvements = [], onCreatePR, onUpdatePRStatus }: RestockModuleProps) {
+export function RestockModule({ site, articles, purchaseRequests, mouvements = [], onCreatePR, onUpdatePRStatus, onReceivePR, onDeletePR }: RestockModuleProps) {
   const [view, setView] = React.useState<'ALERTS' | 'HISTORY' | 'CREATE'>('ALERTS');
   const [search, setSearch] = React.useState('');
   const [selectedItems, setSelectedItems] = React.useState<Record<string, number>>({});
   const [isExpanded, setIsExpanded] = React.useState(false);
+  const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
 
   const usedArticleIds = React.useMemo(() => {
     const siteMouvements = site === 'ALL' ? mouvements : mouvements.filter(m => m.site === site);
@@ -275,6 +278,7 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                       "px-4 py-2 rounded-xl text-[10px] font-black uppercase tracking-widest border",
                       pr.status === 'RECU' ? "bg-emerald-50 text-emerald-600 border-emerald-100" : 
                       pr.status === 'COMMANDE' ? "bg-sky-50 text-sky-600 border-sky-100" :
+                      pr.status === 'BROUILLON' ? "bg-slate-100 text-slate-500 border-slate-200" :
                       "bg-amber-50 text-amber-600 border-amber-100"
                     )}>
                       {pr.status}
@@ -302,14 +306,59 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
 
                   <div className="flex items-center justify-between pt-6 border-t border-slate-100">
                     <div className="flex gap-2">
-                      <button className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-sky-50 hover:text-sky-600 transition-all active:scale-95 shadow-sm">
+                      <button 
+                        onClick={() => {
+                          const printWindow = window.open('', '_blank');
+                          if (!printWindow) return;
+                          const itemsHtml = pr.items.map(item => {
+                            const art = articles.find(a => a.id === item.articleId);
+                            return `<tr>
+                              <td>${art?.ref || item.articleId}</td>
+                              <td>${art?.designation || 'Article inconnu'}</td>
+                              <td style="text-align:right">${item.quantity}</td>
+                            </tr>`;
+                          }).join('');
+                          printWindow.document.write(`
+                            <html><head><title>DA ${pr.reference || pr.id}</title>
+                            <style>
+                              body { font-family: Arial, sans-serif; padding: 40px; }
+                              table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+                              th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+                              th { background: #f5f5f5; }
+                            </style></head>
+                            <body>
+                              <h2>Demande d'Achat — ${pr.reference || `DA-${pr.id.slice(0,8)}`}</h2>
+                              <p>Date : ${new Date(pr.date).toLocaleDateString('fr-MA')}</p>
+                              <p>Statut : ${pr.status}</p>
+                              <table>
+                                <thead><tr><th>Référence</th><th>Désignation</th><th>Quantité</th></tr></thead>
+                                <tbody>${itemsHtml}</tbody>
+                              </table>
+                            </body></html>
+                          `);
+                          printWindow.document.close();
+                          printWindow.print();
+                        }}
+                        className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-sky-50 hover:text-sky-600 transition-all active:scale-95 shadow-sm"
+                      >
                         <Printer className="w-5 h-5" />
                       </button>
-                      <button className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 shadow-sm">
+                      <button 
+                        onClick={() => setDeleteConfirmId(pr.id)}
+                        className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 shadow-sm"
+                      >
                         <Trash2 className="w-5 h-5" />
                       </button>
                     </div>
                     <div className="flex gap-3">
+                      {pr.status === 'BROUILLON' && (
+                        <button 
+                          onClick={() => onUpdatePRStatus(pr.id, 'ENVOYE')}
+                          className="px-6 h-10 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-amber-600 transition-all active:scale-95"
+                        >
+                          Envoyer la demande
+                        </button>
+                      )}
                       {pr.status === 'ENVOYE' && (
                         <button 
                           onClick={() => onUpdatePRStatus(pr.id, 'COMMANDE')}
@@ -320,10 +369,10 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                       )}
                       {pr.status === 'COMMANDE' && (
                         <button 
-                          onClick={() => onUpdatePRStatus(pr.id, 'RECU')}
+                          onClick={() => onReceivePR(pr)}
                           className="px-6 h-10 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95"
                         >
-                          Réception Totale
+                          Réceptionner (créer bon d'entrée)
                         </button>
                       )}
                     </div>
@@ -332,6 +381,36 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {deleteConfirmId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
+            <h3 className="text-white font-black text-lg mb-2">
+              Supprimer cette demande ?
+            </h3>
+            <p className="text-slate-400 text-sm mb-6">
+              Cette demande d'achat sera supprimée définitivement.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => setDeleteConfirmId(null)}
+                className="flex-1 px-4 py-2 bg-slate-800 text-slate-300 hover:text-white rounded-xl font-medium text-sm transition-all active:scale-95 border border-slate-700"
+              >
+                Annuler
+              </button>
+              <button 
+                onClick={() => { 
+                  onDeletePR(deleteConfirmId); 
+                  setDeleteConfirmId(null); 
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-xl font-black text-sm shadow-lg shadow-red-900/30 transition-all active:scale-95"
+              >
+                Supprimer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

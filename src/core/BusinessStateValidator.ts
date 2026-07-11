@@ -44,6 +44,7 @@ export function validateMouvementInvariants(
   }
 
   const articleMap = new Map<string, Article>(articles.map((a) => [a.id, a]));
+  const simulatedQuantities = new Map<string, number>();
 
   for (const item of mouvement.items) {
     const article = articleMap.get(item.articleId);
@@ -57,6 +58,11 @@ export function validateMouvementInvariants(
         inconsistentField: item.articleId,
       };
     }
+
+    if (!simulatedQuantities.has(item.articleId)) {
+      simulatedQuantities.set(item.articleId, article.quantity || 0);
+    }
+    const currentSimulatedQty = simulatedQuantities.get(item.articleId)!;
 
     // AJOUTER CE CHECK :
     if (article.site !== mouvement.site && article.site !== undefined) {
@@ -87,16 +93,20 @@ export function validateMouvementInvariants(
 
     // Verify negative stock limits for stock reduction operations
     const isReduction = mouvement.type === 'SORTIE' || mouvement.type === 'TRANSFERT_OUT';
+    const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
     if (isReduction) {
-      const projectedQty = article.quantity - item.quantity;
+      const projectedQty = currentSimulatedQty - item.quantity;
       if (projectedQty < 0) {
         return {
           isValid: false,
           classification: 'STATE_INCONSISTENCY',
-          errorMsg: `Opération bloquée par le validateur : stock insuffisant pour ${article.designation} (${article.ref}). Requis: ${item.quantity}, Disponible: ${article.quantity}.`,
+          errorMsg: `Opération bloquée par le validateur : stock insuffisant pour ${article.designation} (${article.ref}). Requis: ${item.quantity}, Disponible: ${currentSimulatedQty}.`,
           inconsistentField: 'quantity',
         };
       }
+      simulatedQuantities.set(item.articleId, projectedQty);
+    } else if (isAddition) {
+      simulatedQuantities.set(item.articleId, currentSimulatedQty + item.quantity);
     }
   }
 
@@ -126,6 +136,7 @@ export function validateMaintenanceInvariants(
   }
 
   const articleMap = new Map<string, Article>(articles.map((a) => [a.id, a]));
+  const simulatedQuantities = new Map<string, number>();
 
   for (const part of log.partsUsed) {
     const article = articleMap.get(part.articleId);
@@ -149,15 +160,21 @@ export function validateMaintenanceInvariants(
       };
     }
 
-    const projectedQty = article.quantity - part.quantity;
+    if (!simulatedQuantities.has(part.articleId)) {
+      simulatedQuantities.set(part.articleId, article.quantity || 0);
+    }
+    const currentSimulatedQty = simulatedQuantities.get(part.articleId)!;
+
+    const projectedQty = currentSimulatedQty - part.quantity;
     if (projectedQty < 0) {
       return {
         isValid: false,
         classification: 'STATE_INCONSISTENCY',
-        errorMsg: `Pièce indisponible : ${article.designation}. Requis: ${part.quantity}, Disponible: ${article.quantity}.`,
+        errorMsg: `Pièce indisponible : ${article.designation}. Requis: ${part.quantity}, Disponible: ${currentSimulatedQty}.`,
         inconsistentField: 'quantity',
       };
     }
+    simulatedQuantities.set(part.articleId, projectedQty);
   }
 
   return { isValid: true, classification: 'VALID' };
@@ -189,6 +206,7 @@ export function validateTransferInvariants(
   }
 
   const articleMap = new Map<string, Article>(articles.map((a) => [a.id, a]));
+  const simulatedQuantities = new Map<string, number>();
 
   for (const item of transfer.items) {
     const article = articleMap.get(item.articleId);
@@ -202,15 +220,21 @@ export function validateTransferInvariants(
       };
     }
 
-    const projectedQty = article.quantity - item.quantity;
+    if (!simulatedQuantities.has(item.articleId)) {
+      simulatedQuantities.set(item.articleId, article.quantity || 0);
+    }
+    const currentSimulatedQty = simulatedQuantities.get(item.articleId)!;
+
+    const projectedQty = currentSimulatedQty - item.quantity;
     if (projectedQty < 0) {
       return {
         isValid: false,
         classification: 'STATE_INCONSISTENCY',
-        errorMsg: `Quantité insuffisante pour envoi de transfert : ${article.designation}. Restant: ${article.quantity}, Demandé: ${item.quantity}`,
+        errorMsg: `Quantité insuffisante pour envoi de transfert : ${article.designation}. Restant: ${currentSimulatedQty}, Demandé: ${item.quantity}`,
         inconsistentField: 'quantity',
       };
     }
+    simulatedQuantities.set(item.articleId, projectedQty);
   }
 
   return { isValid: true, classification: 'VALID' };

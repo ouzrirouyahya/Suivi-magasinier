@@ -3,6 +3,8 @@ import { StockAlertView } from '../components/StockAlertView';
 import { RestockModule } from '../components/RestockModule';
 import { useInventory } from '../context/InventoryContext';
 import { PurchaseRequest } from '../types';
+import { deleteDoc, doc, db } from '../lib/db';
+import { toast } from 'sonner';
 
 export const RestockPage: React.FC = () => {
   const { currentSite, articles, mouvements, purchaseRequests, addPurchaseRequest, updatePRStatus, navigateToMouvement, currentUser } = useInventory();
@@ -28,6 +30,21 @@ export const RestockPage: React.FC = () => {
             addPurchaseRequest(pr);
           }}
           onUpdatePRStatus={updatePRStatus}
+          onReceivePR={(pr) => {
+            sessionStorage.setItem('pendingPRReception', JSON.stringify({
+              prId: pr.id,
+              items: pr.items
+            }));
+            navigateToMouvement('ENTREE');
+          }}
+          onDeletePR={async (id) => {
+            try {
+              await deleteDoc(doc(db, 'purchaseRequests', id));
+              toast.success('Demande supprimée avec succès');
+            } catch (err: any) {
+              toast.error(`Erreur de suppression : ${err.message}`);
+            }
+          }}
         />
       </div>
     </div>

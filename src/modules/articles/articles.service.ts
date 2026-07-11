@@ -2,7 +2,7 @@ import { doc, setDoc, db } from '../../lib/db';
 import { Article, CatalogItem, SiteCode } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useArticlesStore } from './articles.store';
-import { generateId, cleanObject } from '../../lib/utils';
+import { generateId, cleanObject, logger } from '../../lib/utils';
 
 export class ArticlesService {
   /**
@@ -22,7 +22,7 @@ export class ArticlesService {
       useArticlesStore.getState().addArticleLocal(item);
       return { success: true };
     } catch (error: any) {
-      console.error('[saveArticle] Erreur:', error);
+      logger.error('[saveArticle] Erreur:', error);
       return { success: false, error: error.message || "Erreur lors de la sauvegarde de l'article" };
     }
   }
@@ -50,7 +50,7 @@ export class ArticlesService {
       useArticlesStore.getState().deleteArticlesLocal(ids);
       return { success: true };
     } catch (error: any) {
-      console.error('[deleteArticles] Erreur:', error);
+      logger.error('[deleteArticles] Erreur:', error);
       return { success: false, error: error.message || "Erreur lors de la suppression des articles" };
     }
   }
