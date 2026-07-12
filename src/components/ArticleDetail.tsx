@@ -137,7 +137,50 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                       includeMargin
                     />
                   </div>
-                  <button className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors">
+                  <button 
+                    onClick={() => {
+                      const printWindow = window.open('', '_blank', 'width=400,height=300');
+                      if (!printWindow) return;
+                      
+                      const qrData = JSON.stringify({ id: article.id, ref: article.ref, site: article.site });
+                      
+                      printWindow.document.write(`
+                        <html><head><title>Étiquette — ${article.ref}</title>
+                        <style>
+                          body { 
+                            font-family: Arial, sans-serif; 
+                            padding: 20px; 
+                            display: flex; 
+                            flex-direction: column; 
+                            align-items: center; 
+                            text-align: center;
+                          }
+                          h2 { margin: 8px 0 2px; font-size: 16px; }
+                          p { margin: 2px 0; font-size: 12px; color: #555; }
+                          #qr { margin: 12px 0; }
+                        </style>
+                        </head>
+                        <body>
+                          <div id="qr"></div>
+                          <h2>${article.ref}</h2>
+                          <p>${article.designation}</p>
+                          <p>Chantier : ${article.site}</p>
+                          <p>Emplacement : ${article.location || 'Non défini'}</p>
+                          <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+                          <script>
+                            new QRCode(document.getElementById("qr"), {
+                              text: '${qrData.replace(/'/g, "\\'")}',
+                              width: 150,
+                              height: 150
+                            });
+                            window.onload = () => setTimeout(() => window.print(), 300);
+                          </script>
+                        </body></html>
+                      `);
+                      printWindow.document.close();
+                    }}
+                    className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-blue-600 hover:text-blue-700 transition-colors"
+                  >
                     <Printer className="w-3.5 h-3.5" /> Imprimer l'étiquette
                   </button>
                 </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { MouvementForm } from '../components/MouvementForm';
 import { useInventory } from '../context/InventoryContext';
 import { toast } from 'sonner';
+import { logger } from '../lib/utils';
 
 export const BonSortiePage: React.FC = () => {
   const [formKey, setFormKey] = useState(0);
@@ -31,7 +32,8 @@ export const BonSortiePage: React.FC = () => {
           setSelectedArticleId(null);
           setFormKey(k => k + 1);
         } catch (e) {
-          console.error(e);
+          logger.error('[BonSortiePage] Erreur soumission:', e);
+          throw e;
         }
       }}
     />

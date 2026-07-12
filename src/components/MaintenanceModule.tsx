@@ -632,6 +632,18 @@ export function MaintenanceModule() {
                   </p>
                 </div>
 
+                <div className="flex items-center gap-3 p-4 mb-6 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                  <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <div>
+                    <p className="text-amber-300 font-black text-xs uppercase tracking-wide">
+                      Module de démonstration — Non connecté à des capteurs réels
+                    </p>
+                    <p className="text-amber-400/70 text-[11px] mt-0.5">
+                      Les données de corrélation carburant/huile affichées ici sont simulées à des fins de démonstration. Elles ne reflètent PAS l'état réel des engins. Ne pas utiliser pour des décisions de maintenance.
+                    </p>
+                  </div>
+                </div>
+
                 <div className="space-y-4">
                   {fuelSpikeCorrelations.map(flow => (
                     <div 
@@ -783,6 +795,18 @@ export function MaintenanceModule() {
                       </select>
                     </div>
 
+                    <div className="flex items-center gap-3 p-4 mb-6 rounded-xl bg-amber-500/10 border border-amber-500/30">
+                      <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                      <div>
+                        <p className="text-amber-300 font-black text-xs uppercase tracking-wide">
+                          Simulateur pédagogique — Aucun diagnostic réel
+                        </p>
+                        <p className="text-amber-400/70 text-[11px] mt-0.5">
+                          Cette console génère des scénarios de diagnostic fictifs à titre d'exemple. Les causes, scores de risque et pièces recommandées ne sont PAS basés sur l'état réel de l'engin sélectionné. Pour un vrai diagnostic, effectuez une inspection physique.
+                        </p>
+                      </div>
+                    </div>
+
                     <div>
                       <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Symptôme Mécanique Principal</label>
                       <select 
@@ -862,12 +886,17 @@ export function MaintenanceModule() {
                       <div>
                         <div className="flex items-center justify-between gap-1.5">
                           <span className="font-mono text-[10px] font-black text-indigo-400">RAPPORT PRESCRIPTIF IA</span>
-                          <span className={cn(
-                            "text-[9px] font-black uppercase px-2 py-0.5 rounded",
-                            expertReport.imminentThreat ? "bg-rose-500/20 text-rose-500 border border-rose-500/20" : "bg-emerald-500/20 text-emerald-500"
-                          )}>
-                            {expertReport.imminentThreat ? 'RISQUE PANNE TRÈS ÉLEVÉ' : 'CONSEIL MAINTENANCE'}
-                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="px-2 py-0.5 rounded-md bg-amber-500/20 text-amber-400 text-[9px] font-black uppercase tracking-widest border border-amber-500/30">
+                              Simulation
+                            </span>
+                            <span className={cn(
+                              "text-[9px] font-black uppercase px-2 py-0.5 rounded",
+                              expertReport.imminentThreat ? "bg-rose-500/20 text-rose-500 border border-rose-500/20" : "bg-emerald-500/20 text-emerald-500"
+                            )}>
+                              {expertReport.imminentThreat ? 'RISQUE PANNE TRÈS ÉLEVÉ' : 'CONSEIL MAINTENANCE'}
+                            </span>
+                          </div>
                         </div>
                         <h4 className="text-base font-black text-slate-100 uppercase tracking-tight mt-1">
                           Cause probable : <span className="text-slate-150">{expertReport.probableCause}</span>
@@ -887,7 +916,7 @@ export function MaintenanceModule() {
 
                       {expertReport.requiredParts.length > 0 && (
                         <div className="space-y-2 pt-2 border-t border-slate-800">
-                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">PIÈCES REQUISES SUR CATALOGUE SRE :</span>
+                          <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block">PIÈCES SUGGÉRÉES (EXEMPLE — À VÉRIFIER MANUELLEMENT) :</span>
                           <div className="flex flex-wrap gap-2">
                             {expertReport.requiredParts.map((part, i) => {
                               // Match actual inventory SKU if possible

@@ -15,6 +15,12 @@ import {
 import { useInventory } from '../context/InventoryContext';
 import { formatCurrency, cn } from '../lib/utils';
 import { SITE_CODES } from '../lib/constants';
+import { toast } from 'sonner';
+import { 
+  exportToExcel, 
+  formatArticlesSummaryDashboard, 
+  formatMovementsSummaryDashboard 
+} from '../utils/exportUtils';
 import { 
   BarChart, 
   Bar, 
@@ -110,6 +116,25 @@ export function FinancialDashboard() {
     return weeks;
   }, [mouvements, currentSite]);
 
+  const handleExportExcel = () => {
+    const siteLabel = currentSite === 'ALL' ? 'Tous chantiers' : currentSite;
+    
+    exportToExcel([
+      {
+        name: 'Résumé Stock',
+        title: `Valorisation Comptable — ${siteLabel}`,
+        data: formatArticlesSummaryDashboard(articles, mouvements)
+      },
+      {
+        name: 'Mouvements',
+        title: `Mouvements de Stock — ${siteLabel}`,
+        data: formatMovementsSummaryDashboard(mouvements, articles)
+      }
+    ], `Rapport_Financier_${siteLabel}`);
+    
+    toast.success('Export Excel généré');
+  };
+
   return (
     <div className="space-y-6">
       {/* HEADER BANNER - DESIGN PARFAIT UNIQUE INSPIRÉ DU DASHBOARD */}
@@ -151,7 +176,10 @@ export function FinancialDashboard() {
               <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">VALORISATION COMPTABLE</span>
             </div>
             
-            <button className="btn bg-white border border-slate-200 text-slate-700 px-3 h-8 rounded-lg font-black uppercase text-[9px] tracking-wider flex items-center gap-1.5 cursor-pointer mt-1">
+            <button 
+              onClick={handleExportExcel}
+              className="btn bg-white border border-slate-200 text-slate-700 px-3 h-8 rounded-lg font-black uppercase text-[9px] tracking-wider flex items-center gap-1.5 cursor-pointer mt-1"
+            >
               <FileSpreadsheet className="w-4 h-4 text-emerald-600" /> Export Excel
             </button>
           </div>

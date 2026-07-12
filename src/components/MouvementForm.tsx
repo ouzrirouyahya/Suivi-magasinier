@@ -31,7 +31,7 @@ import {
   WifiOff
 } from 'lucide-react';
 import { Article, Mouvement, MouvementItem, SiteCode, EnginMaster, PerfoMaster, AgentMaster, CatalogItem, HydrominesCatalogItem, StockType } from '../types';
-import { cn, formatCurrency, generateId } from '../lib/utils';
+import { cn, formatCurrency, generateId, logger } from '../lib/utils';
 import { SITES } from '../demoData';
 import { MASTER_CATALOG } from '../catalogData';
 import { useInventory } from '../context/InventoryContext';
@@ -59,7 +59,7 @@ interface MouvementFormProps {
   engins: EnginMaster[];
   perfos: PerfoMaster[];
   agents: AgentMaster[];
-  onSubmit: (mouvement: Mouvement) => void;
+  onSubmit: (mouvement: Mouvement) => Promise<void> | void;
   onArticleCreate?: (article: Article) => void;
   initialArticleId?: string;
   isReadOnly?: boolean;
@@ -781,7 +781,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const totalValue = items.reduce((sum, item) => sum + (item.quantity * item.price), 0);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible de valider.");
@@ -946,9 +946,18 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       }))
     };
 
-    onSubmit(mouvement);
-    if (pendingPRId && updatePRStatus) {
-      updatePRStatus(pendingPRId, 'RECU');
+    try {
+      await onSubmit(mouvement);
+      // updatePRStatus n'est appelé QUE si onSubmit a réussi 
+      // (n'a pas levé d'exception)
+      if (pendingPRId && updatePRStatus) {
+        updatePRStatus(pendingPRId, 'RECU');
+        setPendingPRId(null);
+      }
+    } catch (err) {
+      // onSubmit a déjà géré l'affichage de l'erreur (toast.promise côté appelant)
+      // Ne PAS marquer la PR comme reçue si le bon a échoué
+      logger.error('[MouvementForm] Soumission échouée, PR non marquée RECU:', err);
     }
   };
 

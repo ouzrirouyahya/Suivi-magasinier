@@ -132,7 +132,7 @@ export class ArticlesService {
 
       return { success: true, imported, skipped };
     } catch (error: any) {
-      console.error('[importAllCatalogToArticles] Erreur:', error);
+      logger.error('[importAllCatalogToArticles] Erreur:', error);
       return { success: false, error: error.message || "Erreur lors de l'importation du catalogue", imported: 0, skipped: 0 };
     }
   }
