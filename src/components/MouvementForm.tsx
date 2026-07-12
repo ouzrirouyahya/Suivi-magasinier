@@ -891,7 +891,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       if (receptionSource === 'CENTRAL') {
         resolvedEntityName = 'MAGASIN CENTRAL HYDROMINES';
       } else {
-        resolvedEntityName = buyerName ? `ACHAT EXTERNE (Acheteur: ${buyerName})` : 'ACHAT EXTERNE';
+        resolvedEntityName = `${entityName.trim()}${buyerName ? ` (Acheteur: ${buyerName})` : ''}`;
       }
     }
 
@@ -1319,41 +1319,58 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   </div>
                 </div>
               ) : (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Acheteur de la pièce ("Qui l'a acheté ?")</label>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
-                    <select 
-                      className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full"
-                      value={buyerName === '' || agents.some(a => `${a.firstname} ${a.lastname}` === buyerName) ? buyerName : 'AUTRE_PERSONNE'}
-                      onChange={(e) => {
-                        const val = e.target.value;
-                        if (val === 'AUTRE_PERSONNE') {
-                          setBuyerName('AUTRE');
-                        } else {
-                          setBuyerName(val);
-                        }
-                      }}
-                      required
-                    >
-                      <option value="">SÉLECTIONNER L'ACHETEUR...</option>
-                      {agents.filter(a => a.site === site).map(a => (
-                        <option key={a.id} value={`${a.firstname} ${a.lastname}`}>{a.lastname} {a.firstname} ({a.service})</option>
-                      ))}
-                      <option value="AUTRE_PERSONNE">AUTRE (Taper manuellement...)</option>
-                    </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:col-span-2 col-span-1">
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Acheteur de la pièce ("Qui l'a acheté ?")</label>
+                    <div className="relative">
+                      <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                      <select 
+                        className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white w-full"
+                        value={buyerName === '' || agents.some(a => `${a.firstname} ${a.lastname}` === buyerName) ? buyerName : 'AUTRE_PERSONNE'}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          if (val === 'AUTRE_PERSONNE') {
+                            setBuyerName('AUTRE');
+                          } else {
+                            setBuyerName(val);
+                          }
+                        }}
+                        required
+                      >
+                        <option value="">SÉLECTIONNER L'ACHETEUR...</option>
+                        {agents.filter(a => a.site === site).map(a => (
+                          <option key={a.id} value={`${a.firstname} ${a.lastname}`}>{a.lastname} {a.firstname} ({a.service})</option>
+                        ))}
+                        <option value="AUTRE_PERSONNE">AUTRE (Taper manuellement...)</option>
+                      </select>
+                    </div>
+                    {/* Allow manual type if "AUTRE_PERSONNE" selected or custom */}
+                    {(!agents.some(a => `${a.firstname} ${a.lastname}` === buyerName) && buyerName !== '') && (
+                      <input 
+                        type="text"
+                        className="input-field h-12 text-sm font-black px-4 bg-white uppercase mt-2 w-full"
+                        placeholder="Saisir le nom de l'acheteur..."
+                        value={buyerName === 'AUTRE' ? '' : buyerName}
+                        onChange={(e) => setBuyerName(e.target.value.toUpperCase())}
+                        required
+                      />
+                    )}
                   </div>
-                  {/* Allow manual type if "AUTRE_PERSONNE" selected or custom */}
-                  {(!agents.some(a => `${a.firstname} ${a.lastname}` === buyerName) && buyerName !== '') && (
-                    <input 
-                      type="text"
-                      className="input-field h-12 text-sm font-black px-4 bg-white uppercase mt-2 w-full"
-                      placeholder="Saisir le nom de l'acheteur..."
-                      value={buyerName === 'AUTRE' ? '' : buyerName}
-                      onChange={(e) => setBuyerName(e.target.value.toUpperCase())}
-                      required
-                    />
-                  )}
+
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-emerald-600 uppercase tracking-widest ml-1">Nom du Fournisseur / Vendeur (ex: SODIAM, CAT, etc.)</label>
+                    <div className="relative">
+                      <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
+                      <input 
+                        type="text"
+                        className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase w-full"
+                        placeholder="EX: SODIAM, CATERPILLAR, COMAT, ETC."
+                        value={entityName}
+                        onChange={(e) => setEntityName(e.target.value.toUpperCase())}
+                        required
+                      />
+                    </div>
+                  </div>
                 </div>
               )}
 

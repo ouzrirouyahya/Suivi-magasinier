@@ -25,38 +25,47 @@ const LoginPage: React.FC = () => {
       logger.log("🔄 [LoginPage] handleLogin cliqué, tentative de connexion...");
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
+      
+      // Essai de connexion via popup (rapide et sans rechargement de page si supporté)
       const result = await signInWithPopup(auth, googleProvider);
       logger.log("✅ [LoginPage] signInWithPopup réussi ! Utilisateur :", result.user ? { email: result.user.email, uid: result.user.uid } : "aucun");
       // useAuth prend le relais automatiquement via onAuthStateChanged
     } catch (error: any) {
-      console.error("❌ [LoginPage] Erreur lors de signInWithPopup :", error);
+      console.warn("⚠️ [LoginPage] Échec de la connexion via popup.", error);
+      
       if (error.code === 'auth/cancelled-popup-request') return;
       
-      let message = `Connexion échouée (${error.code || 'Erreur inconnue'})`;
-      if (error.code === 'auth/unauthorized-domain') {
-        message = `Domaine non autorisé : ${window.location.hostname}. Ajoutez-le dans Firebase Console → Authentication → Domaines autorisés.`;
-      } else if (error.code === 'auth/popup-blocked') {
-        message = 'Popup bloquée par le navigateur. Autorisez les popups pour ce site.';
-      } else if (error.code === 'auth/popup-closed-by-user') {
-        message = 'La fenêtre s\'est fermée ou la communication a été bloquée (cookies tiers bloqués en Navigation Privée ou sur Safari). Essayez la "Connexion par Redirection" ci-dessous.';
+      const errorMsg = error.message || '';
+      const isRefererBlocked = errorMsg.includes('requests-from-referer-') || error.code?.includes('referer') || errorMsg.includes('blocked');
+      
+      if (isRefererBlocked) {
+        const hostname = window.location.hostname;
+        setAuthError('API_KEY_REFERER_BLOCKED');
+        toast.error(`Accès bloqué par les restrictions de clé API Google Cloud. Veuillez ajouter le domaine "${hostname}" aux restrictions de votre clé API dans Google Cloud Console.`, { duration: 15000 });
+        return;
       }
-      setAuthError(error.code || 'unknown');
-      toast.error(message, { duration: 10000 });
-    }
-  };
 
-  const handleLoginRedirect = async () => {
-    try {
-      logger.log("🔄 [LoginPage] handleLoginRedirect cliqué, tentative de redirection...");
-      setAuthError(null);
-      googleProvider.setCustomParameters({ prompt: 'select_account' });
-      sessionStorage.setItem('pendingRedirectAuth', 'true');
-      await signInWithRedirect(auth, googleProvider);
-    } catch (error: any) {
-      console.error("❌ [LoginPage] Erreur lors de signInWithRedirect :", error);
-      let message = `Connexion échouée via redirection (${error.code || 'Erreur inconnue'})`;
-      setAuthError(error.code || 'unknown');
-      toast.error(message, { duration: 10000 });
+      try {
+        sessionStorage.setItem('pendingRedirectAuth', 'true');
+        toast.info("Ajustement de la connexion... Redirection sécurisée vers Google.", { duration: 4000 });
+        
+        // Connexion par redirection : 100% robuste sur tous les navigateurs, Safari, et navigation privée
+        await signInWithRedirect(auth, googleProvider);
+      } catch (redirectError: any) {
+        console.error("❌ [LoginPage] Échec du fallback par redirection :", redirectError);
+        const redirectErrorMsg = redirectError.message || '';
+        const isRedirectRefererBlocked = redirectErrorMsg.includes('requests-from-referer-') || redirectError.code?.includes('referer') || redirectErrorMsg.includes('blocked');
+        
+        if (isRedirectRefererBlocked) {
+          const hostname = window.location.hostname;
+          setAuthError('API_KEY_REFERER_BLOCKED');
+          toast.error(`Accès bloqué par les restrictions de clé API Google Cloud. Ajoutez le domaine "${hostname}" aux restrictions de votre clé API.`, { duration: 15000 });
+        } else {
+          setAuthError(redirectError.code || 'unknown');
+          toast.error(`Erreur de connexion : ${redirectError.message || redirectError}`);
+        }
+        sessionStorage.removeItem('pendingRedirectAuth');
+      }
     }
   };
 
@@ -230,7 +239,7 @@ const LoginPage: React.FC = () => {
                 <div className="space-y-3">
                   <button 
                     onClick={handleLogin}
-                    className="w-full py-4 bg-white hover:bg-slate-50/50 text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-slate-150 transition-all hover:-translate-y-0.5 active:scale-95 group relative overflow-hidden"
+                    className="w-full py-4 bg-white hover:bg-slate-50/50 text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-slate-150 transition-all hover:-translate-y-0.5 active:scale-95 group relative overflow-hidden cursor-pointer"
                   >
                      <svg className="w-5 h-5 transition-transform duration-500 group-hover:rotate-[360deg]" viewBox="0 0 24 24">
                         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -243,18 +252,28 @@ const LoginPage: React.FC = () => {
                 </div>
 
                 {authError && (
-                  <div className="mt-4 bg-rose-50/90 border border-rose-200 p-4 rounded-2xl text-left space-y-2 text-xs leading-normal">
+                  <div className="mt-4 bg-rose-50/90 border border-rose-200 p-3.5 rounded-2xl text-left space-y-1.5 text-xs">
                     <div className="flex items-center gap-2 text-rose-700 font-extrabold uppercase tracking-wider text-[10px]">
                       <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                      Problème de connexion Google
+                      {authError === 'API_KEY_REFERER_BLOCKED' ? 'Clé API Google Cloud restreinte' : 'Erreur de connexion'}
                     </div>
-                    <p className="text-slate-600 font-bold text-[9px] tracking-wide uppercase">
-                      Les bloqueurs de popups ou certaines restrictions de navigation (Safari, Navigation Privée) peuvent bloquer l'authentification.
-                    </p>
-                    <div className="space-y-1.5 bg-white/80 p-2.5 rounded-xl border border-slate-100 font-medium text-[10px] text-slate-500 uppercase tracking-tight">
-                      <p>1. <strong className="text-sky-600">Nouvel onglet</strong> : Ouvrez le site dans un nouvel onglet standard (pas en navigation privée).</p>
-                      <p>2. <strong className="text-emerald-600">Popups</strong> : Autorisez les popups de connexion de Google pour cette page si demandé.</p>
-                    </div>
+                    {authError === 'API_KEY_REFERER_BLOCKED' ? (
+                      <div className="space-y-1.5 text-slate-600">
+                        <p className="font-bold text-[10px] leading-relaxed uppercase">
+                          Votre clé API Google Cloud limite l'utilisation aux domaines spécifiés et bloque le domaine de développement d'AI Studio :
+                        </p>
+                        <p className="font-mono text-[9px] bg-white p-1.5 rounded border border-rose-100 break-all select-all text-rose-600 font-bold">
+                          {window.location.origin}
+                        </p>
+                        <p className="font-medium text-[9.5px] leading-relaxed">
+                          <strong>Solution :</strong> Ouvrez votre console Google Cloud, modifiez la clé API concernée et ajoutez ce domaine ci-dessus aux <i>Restrictions de sites Web</i> (ou retirez temporairement les restrictions).
+                        </p>
+                      </div>
+                    ) : (
+                      <p className="text-slate-600 font-bold text-[9px] tracking-wide uppercase">
+                        Code : {authError}. Veuillez réessayer. Si le problème persiste, ouvrez le site dans un nouvel onglet standard.
+                      </p>
+                    )}
                   </div>
                 )}
 

@@ -32,7 +32,16 @@ export function useAuth() {
       sessionStorage.removeItem('pendingRedirectAuth');
       getRedirectResult(auth)
         .then(result => { if (result) logger.log('[useAuth] Redirect auth OK', result.user?.email); })
-        .catch(error => { toast.error(`Erreur connexion : ${error.message}`); });
+        .catch(error => { 
+          const errorMsg = error.message || '';
+          const isRefererBlocked = errorMsg.includes('requests-from-referer-') || error.code?.includes('referer') || errorMsg.includes('blocked');
+          if (isRefererBlocked) {
+            const hostname = window.location.hostname;
+            toast.error(`Accès bloqué par les restrictions de clé API Google Cloud. Veuillez ajouter le domaine "${hostname}" aux "Restrictions de sites Web" dans votre console Google Cloud.`, { duration: 15000 });
+          } else {
+            toast.error(`Erreur connexion : ${error.message}`); 
+          }
+        });
     }
 
     const unsubAuth = onAuthStateChanged(auth, (user) => {
