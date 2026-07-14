@@ -16,45 +16,52 @@ export const offlineService = {
 
   async processItem(item: { intentId: string; type: string; payload: any }): Promise<void> {
     const { type, payload } = item;
+    let res: { success: boolean; error?: string } = { success: true };
+
     switch (type) {
       case 'addMouvement':
-        await movementsService.addMouvement(payload);
+        res = await movementsService.addMouvement(payload);
         break;
       case 'saveInventaire':
-        await movementsService.saveInventaire(payload);
+        res = await movementsService.saveInventaire(payload);
         break;
       case 'addPurchaseRequest':
-        await movementsService.addPurchaseRequest(payload);
+        res = await movementsService.addPurchaseRequest(payload);
         break;
       case 'updatePRStatus':
-        await movementsService.updatePRStatus(payload.id, payload.status);
+        res = await movementsService.updatePRStatus(payload.id, payload.status);
         break;
       case 'saveArticle':
-        await articleService.saveArticle(payload);
+        res = await articleService.saveArticle(payload);
         break;
       case 'deleteArticles':
-        await articleService.deleteArticles(payload.ids);
+        res = await articleService.deleteArticles(payload.ids);
         break;
       case 'addTransfert':
-        await transfersService.addTransfert(payload);
+        res = await transfersService.addTransfert(payload);
         break;
       case 'approveTransfert':
-        await transfersService.approveTransfert(payload.id, payload.approver, payload.comment);
+        res = await transfersService.approveTransfert(payload.id, payload.approver, payload.comment);
         break;
       case 'expedierTransfert':
-        await transfersService.expedierTransfert(payload.id, payload.expediteur, payload.comment);
+        res = await transfersService.expedierTransfert(payload.id, payload.expediteur, payload.comment);
         break;
       case 'completeTransfert':
-        await transfersService.completeTransfert(payload.id, payload.recepteur, payload.receivedItems, payload.disputeReason);
+        res = await transfersService.completeTransfert(payload.id, payload.recepteur, payload.receivedItems, payload.disputeReason);
         break;
       case 'closeTransfert':
-        await transfersService.closeTransfert(payload.id, payload.comment);
+        res = await transfersService.closeTransfert(payload.id, payload.comment);
         break;
       case 'addMaintenanceLog':
         await maintenanceService.addMaintenanceLog(payload);
-        break;
+        return;
       default:
         logger.warn(`Unknown offline retry intent type: ${type}`);
+        return;
+    }
+
+    if (!res.success) {
+      throw new Error(res.error || `Offline execution failed for ${type}`);
     }
   }
 };

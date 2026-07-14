@@ -796,111 +796,129 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       return;
     }
     
+    // VALIDATIONS SYNCHRONES AVANT SOUUMISSION
+    if (site === 'ALL') {
+      setValidationError("Veuillez sélectionner un chantier avant de valider.");
+      return;
+    }
+
+    if (items.length === 0) { 
+      setValidationError('Ajoutez des articles.'); 
+      return; 
+    }
+
+    // Vérifier que toutes les quantités sont valides et > 0
+    const invalidQtyItem = items.find(item => 
+      !item.quantity || 
+      isNaN(item.quantity) || 
+      item.quantity <= 0 ||
+      item.quantity > 999999 ||  // plafond raisonnable
+      Math.round(item.quantity * 1000) / 1000 !== item.quantity  // max 3 décimales
+    );
+
+    if (invalidQtyItem) {
+      const art = articles.find(a => a.id === invalidQtyItem.articleId) || localCreatedArticles.find(a => a.id === invalidQtyItem.articleId);
+      setValidationError(
+        `Quantité invalide pour "${art?.designation || 'un article'}" : la quantité doit être supérieure à 0 et comporter au maximum 3 décimales.`
+      );
+      return;
+    }
+
+    if (type === 'ENTREE' && receptionSource !== 'CENTRAL' && (!entityName || entityName.trim() === '')) {
+      setEntityNameError(true);
+      setValidationError(
+        "Le nom du fournisseur est obligatoire pour un bon d'entrée. " +
+        "Renseignez-le dans le champ 'Nom du Fournisseur / Vendeur' (surligné en rouge ci-dessous)."
+      );
+      // Scroll automatique vers le champ concerné
+      setTimeout(() => {
+        document.getElementById('entityName-input')?.scrollIntoView({ 
+          behavior: 'smooth', block: 'center' 
+        });
+      }, 100);
+      return;
+    }
+    // Si validation passée, réinitialiser l'erreur visuelle :
+    setEntityNameError(false);
+
+    if (type === 'ENTREE') {
+      const negativePriceItem = items.find(item => 
+        item.price !== undefined && item.price < 0
+      );
+      if (negativePriceItem) {
+        const art = articles.find(a => a.id === negativePriceItem.articleId) || localCreatedArticles.find(a => a.id === negativePriceItem.articleId);
+        setValidationError(
+          `Prix négatif détecté pour "${art?.designation}" : un prix ne peut pas être négatif.`
+        );
+        return;
+      }
+    }
+
+    // NOUVELLE VÉRIFICATION : tous les articles doivent appartenir au chantier sélectionné
+    const mismatchedItem = items.find(item => {
+      const art = articles.find(a => a.id === item.articleId) || localCreatedArticles.find(a => a.id === item.articleId);
+      return art && art.site !== site;
+    });
+    if (mismatchedItem) {
+      const art = articles.find(a => a.id === mismatchedItem.articleId) || localCreatedArticles.find(a => a.id === mismatchedItem.articleId);
+      setValidationError(
+        `Incohérence détectée : l'article "${art?.designation}" appartient au chantier ${art?.site}, mais vous avez sélectionné le chantier ${site}. Retirez cette ligne ou changez de chantier.`
+      );
+      return;
+    }
+
+    if (type === 'SORTIE' && !isMachineRelated) {
+      const missingBeneficiary = items.some(item => !item.beneficiaryId);
+      if (missingBeneficiary) {
+        setValidationError("Veuillez sélectionner un bénéficiaire individuel pour chaque ligne d'article.");
+        return;
+      }
+    }
+
+    if (type === 'SORTIE' && isMachineRelated) {
+      if (!mecanicien || mecanicien.trim() === '') {
+        setValidationError(
+          "Le mécanicien responsable est obligatoire pour une sortie sur engin ou perforateur."
+        );
+        return;
+      }
+      if (categoryFilter === 'ENGINS' && (!targetEngin || targetEngin.trim() === '')) {
+        setValidationError("L'engin concerné est obligatoire pour une sortie ENGINS.");
+        return;
+      }
+      if (categoryFilter === 'PERFORATEURS' && (!targetPerfo || targetPerfo.trim() === '')) {
+        setValidationError("Le perforateur concerné est obligatoire pour une sortie PERFORATEURS.");
+        return;
+      }
+    }
+
+    if (type === 'ENTREE' && !reference.trim()) {
+      setValidationError("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
+      return;
+    }
+
+    if (type === 'ENTREE' && priceWarnings.length > 0 && !forceSubmitPrices) {
+      setValidationError("ATTENTION : Certains prix saisis sont jugés anormaux ou nuls par le système qualité. Veuillez confirmer l'exactitude des prix en cochant la case d'approbation et réessayez.");
+      return;
+    }
+
+    // Vérification de la clôture mensuelle pour verrouiller la période
+    const targetMonth = date.slice(0, 7); // "YYYY-MM"
+    try {
+      const { doc, getDoc, db } = await import('../lib/db');
+      const closingSnap = await getDoc(doc(db, 'monthlyClosings', targetMonth));
+      if (closingSnap.exists()) {
+        setValidationError(`La période ${targetMonth} est close et scellée comptablement. Impossible d'enregistrer des mouvements dans cette période.`);
+        return;
+      }
+    } catch (err) {
+      console.warn("Vérification de clôture ignorée (possible mode hors-ligne):", err);
+    }
+
+    // VALIDATION TERMINÉE - SÉCURISATION DE LA TRANSITION DE SOUUMISSION
     setIsSubmitting(true);
     
     try {
-      if (site === 'ALL') {
-        setValidationError("Veuillez sélectionner un chantier avant de valider.");
-        return;
-      }
-
-      if (items.length === 0) { setValidationError('Ajoutez des articles.'); return; }
-
-      // Vérifier que toutes les quantités sont valides et > 0
-      const invalidQtyItem = items.find(item => 
-        !item.quantity || 
-        isNaN(item.quantity) || 
-        item.quantity <= 0 ||
-        item.quantity > 999999 ||  // plafond raisonnable
-        Math.round(item.quantity * 1000) / 1000 !== item.quantity  // max 3 décimales
-      );
-
-      if (invalidQtyItem) {
-        const art = articles.find(a => a.id === invalidQtyItem.articleId) || localCreatedArticles.find(a => a.id === invalidQtyItem.articleId);
-        setValidationError(
-          `Quantité invalide pour "${art?.designation || 'un article'}" : la quantité doit être supérieure à 0 et comporter au maximum 3 décimales.`
-        );
-        return;
-      }
-
-      if (type === 'ENTREE' && receptionSource !== 'CENTRAL' && (!entityName || entityName.trim() === '')) {
-        setEntityNameError(true);
-        setValidationError(
-          "Le nom du fournisseur est obligatoire pour un bon d'entrée. " +
-          "Renseignez-le dans le champ 'Nom du Fournisseur / Vendeur' (surligné en rouge ci-dessous)."
-        );
-        // Scroll automatique vers le champ concerné
-        setTimeout(() => {
-          document.getElementById('entityName-input')?.scrollIntoView({ 
-            behavior: 'smooth', block: 'center' 
-          });
-        }, 100);
-        return;
-      }
-      // Si validation passée, réinitialiser l'erreur visuelle :
-      setEntityNameError(false);
-
-      if (type === 'ENTREE') {
-        const negativePriceItem = items.find(item => 
-          item.price !== undefined && item.price < 0
-        );
-        if (negativePriceItem) {
-          const art = articles.find(a => a.id === negativePriceItem.articleId) || localCreatedArticles.find(a => a.id === negativePriceItem.articleId);
-          setValidationError(
-            `Prix négatif détecté pour "${art?.designation}" : un prix ne peut pas être négatif.`
-          );
-          return;
-        }
-      }
-
-      // NOUVELLE VÉRIFICATION : tous les articles doivent appartenir au chantier sélectionné
-      const mismatchedItem = items.find(item => {
-        const art = articles.find(a => a.id === item.articleId) || localCreatedArticles.find(a => a.id === item.articleId);
-        return art && art.site !== site;
-      });
-      if (mismatchedItem) {
-        const art = articles.find(a => a.id === mismatchedItem.articleId) || localCreatedArticles.find(a => a.id === mismatchedItem.articleId);
-        setValidationError(
-          `Incohérence détectée : l'article "${art?.designation}" appartient au chantier ${art?.site}, mais vous avez sélectionné le chantier ${site}. Retirez cette ligne ou changez de chantier.`
-        );
-        return;
-      }
-
-      if (type === 'SORTIE' && !isMachineRelated) {
-        const missingBeneficiary = items.some(item => !item.beneficiaryId);
-        if (missingBeneficiary) {
-          setValidationError("Veuillez sélectionner un bénéficiaire individuel pour chaque ligne d'article.");
-          return;
-        }
-      }
-
-      if (type === 'SORTIE' && isMachineRelated) {
-        if (!mecanicien || mecanicien.trim() === '') {
-          setValidationError(
-            "Le mécanicien responsable est obligatoire pour une sortie sur engin ou perforateur."
-          );
-          return;
-        }
-        if (categoryFilter === 'ENGINS' && (!targetEngin || targetEngin.trim() === '')) {
-          setValidationError("L'engin concerné est obligatoire pour une sortie ENGINS.");
-          return;
-        }
-        if (categoryFilter === 'PERFORATEURS' && (!targetPerfo || targetPerfo.trim() === '')) {
-          setValidationError("Le perforateur concerné est obligatoire pour une sortie PERFORATEURS.");
-          return;
-        }
-      }
-
-      if (type === 'ENTREE' && !reference.trim()) {
-        setValidationError("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
-        return;
-      }
-
-      if (type === 'ENTREE' && priceWarnings.length > 0 && !forceSubmitPrices) {
-        setValidationError("ATTENTION : Certains prix saisis sont jugés anormaux ou nuls par le système qualité. Veuillez confirmer l'exactitude des prix en cochant la case d'approbation et réessayez.");
-        return;
-      }
-
       const resolvedMecanicien = agents.find(a => a.id === mecanicien);
       const resolvedEngin = engins.find(e => e.id === targetEngin);
       const resolvedPerfo = perfos.find(p => p.id === targetPerfo);

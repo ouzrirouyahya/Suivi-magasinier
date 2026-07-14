@@ -93,7 +93,7 @@ export function validateMouvementInvariants(
 
     // Verify negative stock limits for stock reduction operations
     const isReduction = mouvement.type === 'SORTIE' || mouvement.type === 'TRANSFERT_OUT';
-    const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
+    const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || (mouvement.type === 'RETOUR' && (!mouvement.condition || mouvement.condition === 'NEUF' || mouvement.condition === 'BON'));
     if (isReduction) {
       const projectedQty = currentSimulatedQty - item.quantity;
       if (projectedQty < 0) {

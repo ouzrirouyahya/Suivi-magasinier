@@ -192,6 +192,17 @@ export function useMovements() {
       const res = await movementsService.addMouvement(enrichedMouvement);
       if (!res.success) throw new Error(res.error);
     } catch (err: any) {
+      const errorMsg = err.message || String(err);
+      const isBusinessError = errorMsg.includes('PERIODE_CLOTUREE') || 
+                              errorMsg.includes('Violation des règles') || 
+                              errorMsg.includes('Stock insuffisant') || 
+                              errorMsg.includes('MOUVEMENT_DEJA_TRAITE') ||
+                              errorMsg.includes('ARTICLE_INTROUVABLE');
+      if (isBusinessError) {
+        toast.error(`Erreur de mouvement : ${errorMsg}`);
+        throw err;
+      }
+
       console.warn('[useMovements] Transaction failed, queuing offline fallback', err);
       const res = await movementsService.addMouvement(enrichedMouvement, true);
       if (!res.success) throw new Error(res.error);
@@ -340,6 +351,16 @@ export function useMovements() {
       const res = await movementsService.saveInventaire(inv);
       if (!res.success) throw new Error(res.error);
     } catch (err: any) {
+      const errorMsg = err.message || String(err);
+      const isBusinessError = errorMsg.includes('PERIODE_CLOTUREE') || 
+                              errorMsg.includes('Violation des règles') || 
+                              errorMsg.includes('Stock insuffisant') || 
+                              errorMsg.includes('ARTICLE_INTROUVABLE');
+      if (isBusinessError) {
+        toast.error(`Erreur d'inventaire : ${errorMsg}`);
+        throw err;
+      }
+
       console.warn('[useMovements] Save inventaire failed, queuing offline fallback', err);
       const res = await movementsService.saveInventaire(inv, true);
       if (!res.success) throw new Error(res.error);

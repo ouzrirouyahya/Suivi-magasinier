@@ -438,7 +438,7 @@ service cloud.firestore {
 
     // Monthly Closings
     match /monthlyClosings/{id} {
-      allow read: if isAdmin();  // Seulement ADMIN et SUPER_ADMIN
+      allow read: if canReadIfActive();  // Autorise les magasiniers actifs à lire l'état de clôture
       allow create, update: if isSuperAdmin() && isValidId(id);
       allow delete: if isSuperAdmin() && isValidId(id);
     }

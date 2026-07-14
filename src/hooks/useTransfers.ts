@@ -70,6 +70,17 @@ export function useTransfers() {
       const res = await transfersService.addTransfert(t);
       if (!res.success) throw new Error(res.error);
     } catch (err: any) {
+      const errorMsg = err.message || String(err);
+      const isBusinessError = errorMsg.includes('PERIODE_CLOTUREE') || 
+                              errorMsg.includes('Violation des règles') || 
+                              errorMsg.includes('TRANSFERT_DEJA') || 
+                              errorMsg.includes('Stock insuffisant') || 
+                              errorMsg.includes('ARTICLE_INTROUVABLE');
+      if (isBusinessError) {
+        toast.error(`Erreur de transfert : ${errorMsg}`);
+        throw err;
+      }
+
       console.warn('[useTransfers] Add Transfert failed, queuing offline fallback', err);
       const res = await transfersService.addTransfert(t, true);
       if (!res.success) throw new Error(res.error);
@@ -123,6 +134,17 @@ export function useTransfers() {
       const res = await transfersService.completeTransfert(id, recepteur, receivedItems, disputeReason);
       if (!res.success) throw new Error(res.error);
     } catch (err: any) {
+      const errorMsg = err.message || String(err);
+      const isBusinessError = errorMsg.includes('PERIODE_CLOTUREE') || 
+                              errorMsg.includes('Violation des règles') || 
+                              errorMsg.includes('TRANSFERT_DEJA') || 
+                              errorMsg.includes('Stock insuffisant') || 
+                              errorMsg.includes('ARTICLE_INTROUVABLE');
+      if (isBusinessError) {
+        toast.error(`Erreur de réception : ${errorMsg}`);
+        throw err;
+      }
+
       console.warn('[useTransfers] Complete Transfert failed, queuing offline fallback', err);
       const res = await transfersService.completeTransfert(id, recepteur, receivedItems, disputeReason, true);
       if (!res.success) throw new Error(res.error);

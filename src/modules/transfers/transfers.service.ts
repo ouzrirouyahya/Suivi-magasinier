@@ -93,6 +93,14 @@ export class TransfersService {
       const localArticlesToUpdate: { id: string; quantity: number }[] = [];
 
       await runTransaction(db, async (transaction) => {
+        // Vérification de la clôture mensuelle pour verrouiller la période
+        const targetMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+        const closingRef = doc(db, 'monthlyClosings', targetMonth);
+        const closingSnap = await transaction.get(closingRef);
+        if (closingSnap.exists()) {
+          throw new Error(`PERIODE_CLOTUREE: La période ${targetMonth} est close et comptablement scellée. Impossible d'expédier un transfert.`);
+        }
+
         // Deduplicate
         const transferRef = doc(db, 'transferts', tid);
         const transferSnap = await transaction.get(transferRef);
@@ -309,6 +317,14 @@ export class TransfersService {
       let finalReceivedItems: MouvementItem[] = [];
 
       await runTransaction(db, async (transaction) => {
+        // Vérification de la clôture mensuelle pour verrouiller la période
+        const targetMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+        const closingRef = doc(db, 'monthlyClosings', targetMonth);
+        const closingSnap = await transaction.get(closingRef);
+        if (closingSnap.exists()) {
+          throw new Error(`PERIODE_CLOTUREE: La période ${targetMonth} est close et comptablement scellée. Impossible de réceptionner un transfert.`);
+        }
+
         const tRef = doc(db, 'transferts', id);
         const tSnap = await transaction.get(tRef);
         if (!tSnap.exists()) {

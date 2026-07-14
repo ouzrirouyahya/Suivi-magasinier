@@ -16,9 +16,12 @@ export function useSessionTimeout() {
   const { currentUser } = useAuthStore();
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const warningRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastResetRef = useRef<number>(0);
 
   const resetTimeout = useCallback(() => {
     if (!currentUser) return;
+    lastResetRef.current = Date.now();
+    
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
     if (warningRef.current) clearTimeout(warningRef.current);
 
@@ -49,6 +52,9 @@ export function useSessionTimeout() {
     
     const events = ['mousedown', 'mousemove', 'keydown', 'touchstart', 'scroll', 'click'];
     const handleActivity = () => {
+      const now = Date.now();
+      // Throttle de 10 secondes pour éviter de surcharger l'évent loop avec mousemove / scroll
+      if (now - lastResetRef.current < 10000) return;
       resetTimeout();
     };
 

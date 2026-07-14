@@ -108,6 +108,19 @@ export function ReturnsManagement() {
       return;
     }
 
+    // Vérification de la clôture mensuelle pour verrouiller la période
+    const targetMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+    try {
+      const { doc, getDoc, db } = await import('../lib/db');
+      const closingSnap = await getDoc(doc(db, 'monthlyClosings', targetMonth));
+      if (closingSnap.exists()) {
+        toast.error(`La période ${targetMonth} est close et scellée comptablement. Impossible d'enregistrer des retours dans cette période.`);
+        return;
+      }
+    } catch (err) {
+      console.warn("Vérification de clôture ignorée (possible mode hors-ligne):", err);
+    }
+
     setIsSubmittingReturn(true);
     try {
       // Build notes block to include supervisor agent tracking clearly

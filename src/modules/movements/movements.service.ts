@@ -43,14 +43,17 @@ export class MovementsService {
           const index = updatedArticles.findIndex(a => a.id === item.articleId);
           if (index !== -1) {
             const article = updatedArticles[index];
-            const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
+            const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || (mouvement.type === 'RETOUR' && (!mouvement.condition || mouvement.condition === 'NEUF' || mouvement.condition === 'BON'));
+            const isReduction = mouvement.type === 'SORTIE' || mouvement.type === 'TRANSFERT_OUT';
             const isPMPUpdatable = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN';
             const isAdjustment = mouvement.type === 'AJUSTEMENT';
             const newQty = isAdjustment
               ? item.quantity
               : isAddition 
                 ? (article.quantity || 0) + item.quantity 
-                : (article.quantity || 0) - item.quantity;
+                : isReduction
+                  ? (article.quantity || 0) - item.quantity
+                  : (article.quantity || 0);
             
             // Guard supplémentaire pour simulation :
             if (newQty < 0 && !isAdjustment) {
@@ -162,6 +165,14 @@ export class MovementsService {
           throw new Error("MOUVEMENT_DEJA_TRAITE");
         }
 
+        // Vérification de la clôture mensuelle pour verrouiller la période
+        const targetMonth = toDateString(mouvement.date || new Date().toISOString()).slice(0, 7);
+        const closingRef = doc(db, 'monthlyClosings', targetMonth);
+        const closingSnap = await transaction.get(closingRef);
+        if (closingSnap.exists()) {
+          throw new Error(`PERIODE_CLOTUREE: La période ${targetMonth} est close et comptablement scellée.`);
+        }
+
         let totalValue = 0;
 
         for (const item of mouvement.items) {
@@ -180,14 +191,17 @@ export class MovementsService {
           const baseLastPurchasePrice = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].lastPurchasePrice : (article.lastPurchasePrice || 0);
           const baseHistory = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].priceHistory : (article.priceHistory || []);
 
-          const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || mouvement.type === 'RETOUR';
+          const isAddition = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN' || (mouvement.type === 'RETOUR' && (!mouvement.condition || mouvement.condition === 'NEUF' || mouvement.condition === 'BON'));
+          const isReduction = mouvement.type === 'SORTIE' || mouvement.type === 'TRANSFERT_OUT';
           const isPMPUpdatable = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN';
           const isAdjustment = mouvement.type === 'AJUSTEMENT';
           const newQty = isAdjustment
             ? item.quantity
             : isAddition 
               ? baseQty + item.quantity 
-              : baseQty - item.quantity;
+              : isReduction
+                ? baseQty - item.quantity
+                : baseQty;
           
           if (newQty < 0 && !isAdjustment) {
             throw new Error(`Stock insuffisant pour l'article ${article.ref}. Disponible: ${baseQty}, Demandé: ${item.quantity}`);
