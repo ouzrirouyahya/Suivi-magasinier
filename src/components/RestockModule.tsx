@@ -21,6 +21,7 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
   const [selectedItems, setSelectedItems] = React.useState<Record<string, number>>({});
   const [isExpanded, setIsExpanded] = React.useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = React.useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const usedArticleIds = React.useMemo(() => {
     const siteMouvements = site === 'ALL' ? mouvements : mouvements.filter(m => m.site === site);
@@ -395,19 +396,29 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
             </p>
             <div className="flex gap-3">
               <button 
-                onClick={() => setDeleteConfirmId(null)}
-                className="flex-1 px-4 py-2 bg-slate-800 text-slate-300 hover:text-white rounded-xl font-medium text-sm transition-all active:scale-95 border border-slate-700"
+                onClick={() => !isDeleting && setDeleteConfirmId(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-slate-800 text-slate-300 hover:text-white rounded-xl font-medium text-sm transition-all border border-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Annuler
               </button>
               <button 
-                onClick={() => { 
-                  onDeletePR(deleteConfirmId); 
-                  setDeleteConfirmId(null); 
+                onClick={async () => { 
+                  if (!deleteConfirmId || isDeleting) return;
+                  setIsDeleting(true);
+                  try {
+                    await onDeletePR(deleteConfirmId); 
+                  } catch (err) {
+                    console.error(err);
+                  } finally {
+                    setIsDeleting(false);
+                    setDeleteConfirmId(null); 
+                  }
                 }}
-                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-xl font-black text-sm shadow-lg shadow-red-900/30 transition-all active:scale-95"
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white hover:bg-red-700 rounded-xl font-black text-sm shadow-lg shadow-red-900/30 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
               >
-                Supprimer
+                {isDeleting ? 'Suppression...' : 'Supprimer'}
               </button>
             </div>
           </div>

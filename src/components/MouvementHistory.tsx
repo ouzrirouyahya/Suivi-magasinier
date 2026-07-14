@@ -39,14 +39,16 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
   const [dateEnd, setDateEnd] = useState('');
   const [selectedMouvement, setSelectedMouvement] = useState<Mouvement | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string|null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
 
   const handleConfirmDelete = async () => {
-    if (!deleteConfirmId) return;
+    if (!deleteConfirmId || isDeleting) return;
     const mouvement = mouvements.find(m => m.id === deleteConfirmId);
     if (!mouvement) return;
     
+    setIsDeleting(true);
     try {
       await runTransaction(db, async (tx) => {
         // 1. Vérifier que le mouvement existe encore
@@ -97,6 +99,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
     } catch (err: any) {
       toast.error(`Erreur : ${err.message}`);
     } finally {
+      setIsDeleting(false);
       setDeleteConfirmId(null);
     }
   };
@@ -764,13 +767,15 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
               Cette action est irréversible.
             </p>
             <div className="flex gap-3">
-              <button onClick={() => setDeleteConfirmId(null)}
-                className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg font-medium cursor-pointer">
+              <button onClick={() => !isDeleting && setDeleteConfirmId(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
                 Annuler
               </button>
               <button onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-black cursor-pointer">
-                Supprimer & Corriger stock
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-black cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1">
+                {isDeleting ? 'Suppression...' : 'Supprimer & Corriger stock'}
               </button>
             </div>
           </div>

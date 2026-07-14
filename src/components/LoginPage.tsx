@@ -16,7 +16,8 @@ const LoginPage: React.FC = () => {
   const { currentUser } = useAuthStore();
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [selectedRequestedRole, setSelectedRequestedRole] = React.useState<'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' | ''>('');
-  const [requestedSite, setRequestedSite] = React.useState<SiteCode | ''>('');
+  const [requestedSite, setRequestedSite] = React.useState<SiteCode | ''>( '');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const showRoleSelection = currentUser?.status === 'PENDING_REGISTRATION';
 
@@ -71,6 +72,9 @@ const LoginPage: React.FC = () => {
 
   const handleSubmitRequest = async () => {
     if (!currentUser || !selectedRequestedRole) return;
+    if (isSubmitting) return;
+
+    setIsSubmitting(true);
     
     const newUser: Partial<UserAccount> = {
       id: currentUser.id,
@@ -96,6 +100,8 @@ const LoginPage: React.FC = () => {
       // App.tsx redirigera vers /pending automatiquement
     } catch (err: any) {
       toast.error(`Erreur : ${err.message || err}`);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -418,13 +424,14 @@ const LoginPage: React.FC = () => {
                 <button
                   type="button"
                   disabled={
+                    isSubmitting ||
                     !selectedRequestedRole ||
                     ((selectedRequestedRole === 'MAGASINIER' || selectedRequestedRole === 'RESPONSABLE_CHANTIER') && !requestedSite)
                   }
                   onClick={handleSubmitRequest}
                   className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:-translate-y-0.5 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
                 >
-                  Envoyer ma demande
+                  {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma demande'}
                   <ArrowRight className="w-4 h-4" />
                 </button>
               </div>

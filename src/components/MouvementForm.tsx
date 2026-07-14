@@ -134,11 +134,12 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const [reference, setReference] = useState('');
   const [entityName, setEntityName] = useState(''); 
+  const [entityNameError, setEntityNameError] = useState(false);
   const [receptionSource, setReceptionSource] = useState<'CENTRAL' | 'ACHAT_EXTERNE'>('CENTRAL');
   const [buyerName, setBuyerName] = useState('');
   const [mecanicien, setMecanicien] = useState(''); 
   const [mecanicienFreeText, setMecanicienFreeText] = useState(false);
-  const [formSubmitted, setFormSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [targetEngin, setTargetEngin] = useState(''); 
   const [targetPerfo, setTargetPerfo] = useState('');
   const [interventionType, setInterventionType] = useState<'CORRECTIF' | 'PREVENTIF' | 'ROUTINE' | 'PROPRIO'>('ROUTINE');
@@ -783,181 +784,204 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Verrou anti-double-soumission — vérifié EN PREMIER, 
+    // avant toute autre logique
+    if (isSubmitting) {
+      return; // Ignorer silencieusement les clics/soumissions répétés
+    }
+    
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible de valider.");
       return;
     }
-    setFormSubmitted(true);
+    
+    setIsSubmitting(true);
+    
+    try {
+      if (site === 'ALL') {
+        setValidationError("Veuillez sélectionner un chantier avant de valider.");
+        return;
+      }
 
-    if (site === 'ALL') {
-      setValidationError("Veuillez sélectionner un chantier avant de valider.");
-      return;
-    }
+      if (items.length === 0) { setValidationError('Ajoutez des articles.'); return; }
 
-    if (items.length === 0) { setValidationError('Ajoutez des articles.'); return; }
-
-    // Vérifier que toutes les quantités sont valides et > 0
-    const invalidQtyItem = items.find(item => 
-      !item.quantity || 
-      isNaN(item.quantity) || 
-      item.quantity <= 0 ||
-      item.quantity > 999999 ||  // plafond raisonnable
-      Math.round(item.quantity * 1000) / 1000 !== item.quantity  // max 3 décimales
-    );
-
-    if (invalidQtyItem) {
-      const art = articles.find(a => a.id === invalidQtyItem.articleId) || localCreatedArticles.find(a => a.id === invalidQtyItem.articleId);
-      setValidationError(
-        `Quantité invalide pour "${art?.designation || 'un article'}" : la quantité doit être supérieure à 0 et comporter au maximum 3 décimales.`
+      // Vérifier que toutes les quantités sont valides et > 0
+      const invalidQtyItem = items.find(item => 
+        !item.quantity || 
+        isNaN(item.quantity) || 
+        item.quantity <= 0 ||
+        item.quantity > 999999 ||  // plafond raisonnable
+        Math.round(item.quantity * 1000) / 1000 !== item.quantity  // max 3 décimales
       );
-      return;
-    }
 
-    if (type === 'ENTREE' && receptionSource !== 'CENTRAL' && (!entityName || entityName.trim() === '')) {
-      setValidationError(
-        "Le nom du fournisseur est obligatoire pour un bon d'entrée. " +
-        "Saisissez le nom du vendeur ou du fournisseur."
-      );
-      return;
-    }
-
-    if (type === 'ENTREE') {
-      const negativePriceItem = items.find(item => 
-        item.price !== undefined && item.price < 0
-      );
-      if (negativePriceItem) {
-        const art = articles.find(a => a.id === negativePriceItem.articleId) || localCreatedArticles.find(a => a.id === negativePriceItem.articleId);
+      if (invalidQtyItem) {
+        const art = articles.find(a => a.id === invalidQtyItem.articleId) || localCreatedArticles.find(a => a.id === invalidQtyItem.articleId);
         setValidationError(
-          `Prix négatif détecté pour "${art?.designation}" : un prix ne peut pas être négatif.`
+          `Quantité invalide pour "${art?.designation || 'un article'}" : la quantité doit être supérieure à 0 et comporter au maximum 3 décimales.`
         );
         return;
       }
-    }
 
-    // NOUVELLE VÉRIFICATION : tous les articles doivent appartenir au chantier sélectionné
-    const mismatchedItem = items.find(item => {
-      const art = articles.find(a => a.id === item.articleId) || localCreatedArticles.find(a => a.id === item.articleId);
-      return art && art.site !== site;
-    });
-    if (mismatchedItem) {
-      const art = articles.find(a => a.id === mismatchedItem.articleId) || localCreatedArticles.find(a => a.id === mismatchedItem.articleId);
-      setValidationError(
-        `Incohérence détectée : l'article "${art?.designation}" appartient au chantier ${art?.site}, mais vous avez sélectionné le chantier ${site}. Retirez cette ligne ou changez de chantier.`
-      );
-      return;
-    }
-
-    if (type === 'SORTIE' && !isMachineRelated) {
-      const missingBeneficiary = items.some(item => !item.beneficiaryId);
-      if (missingBeneficiary) {
-        setValidationError("Veuillez sélectionner un bénéficiaire individuel pour chaque ligne d'article.");
-        return;
-      }
-    }
-
-    if (type === 'SORTIE' && isMachineRelated) {
-      if (!mecanicien || mecanicien.trim() === '') {
+      if (type === 'ENTREE' && receptionSource !== 'CENTRAL' && (!entityName || entityName.trim() === '')) {
+        setEntityNameError(true);
         setValidationError(
-          "Le mécanicien responsable est obligatoire pour une sortie sur engin ou perforateur."
+          "Le nom du fournisseur est obligatoire pour un bon d'entrée. " +
+          "Renseignez-le dans le champ 'Nom du Fournisseur / Vendeur' (surligné en rouge ci-dessous)."
         );
+        // Scroll automatique vers le champ concerné
+        setTimeout(() => {
+          document.getElementById('entityName-input')?.scrollIntoView({ 
+            behavior: 'smooth', block: 'center' 
+          });
+        }, 100);
         return;
       }
-      if (categoryFilter === 'ENGINS' && (!targetEngin || targetEngin.trim() === '')) {
-        setValidationError("L'engin concerné est obligatoire pour une sortie ENGINS.");
-        return;
-      }
-      if (categoryFilter === 'PERFORATEURS' && (!targetPerfo || targetPerfo.trim() === '')) {
-        setValidationError("Le perforateur concerné est obligatoire pour une sortie PERFORATEURS.");
-        return;
-      }
-    }
+      // Si validation passée, réinitialiser l'erreur visuelle :
+      setEntityNameError(false);
 
-    if (type === 'ENTREE' && !reference.trim()) {
-      setValidationError("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
-      return;
-    }
-
-    if (type === 'ENTREE' && priceWarnings.length > 0 && !forceSubmitPrices) {
-      setValidationError("ATTENTION : Certains prix saisis sont jugés anormaux ou nuls par le système qualité. Veuillez confirmer l'exactitude des prix en cochant la case d'approbation et réessayez.");
-      return;
-    }
-
-    const resolvedMecanicien = agents.find(a => a.id === mecanicien);
-    const resolvedEngin = engins.find(e => e.id === targetEngin);
-    const resolvedPerfo = perfos.find(p => p.id === targetPerfo);
-
-    let resolvedEntityName = entityName;
-    if (type === 'ENTREE') {
-      if (receptionSource === 'CENTRAL') {
-        resolvedEntityName = 'MAGASIN CENTRAL HYDROMINES';
-      } else {
-        resolvedEntityName = `${entityName.trim()}${buyerName ? ` (Acheteur: ${buyerName})` : ''}`;
-      }
-    }
-
-    let finalBeneficiaireRef: string | undefined = undefined;
-    if (type === 'SORTIE') {
-      if (isMachineRelated) {
-        finalBeneficiaireRef = resolvedMecanicien ? `${resolvedMecanicien.lastname} ${resolvedMecanicien.firstname}` : mecanicien;
-      } else {
-        const uniqueBeneficiaryNames = Array.from(new Set(items.map(it => it.beneficiaryName).filter(Boolean))) as string[];
-        if (uniqueBeneficiaryNames.length === 1) {
-          finalBeneficiaireRef = uniqueBeneficiaryNames[0];
-        } else if (uniqueBeneficiaryNames.length > 1) {
-          finalBeneficiaireRef = "Plusieurs bénéficiaires";
+      if (type === 'ENTREE') {
+        const negativePriceItem = items.find(item => 
+          item.price !== undefined && item.price < 0
+        );
+        if (negativePriceItem) {
+          const art = articles.find(a => a.id === negativePriceItem.articleId) || localCreatedArticles.find(a => a.id === negativePriceItem.articleId);
+          setValidationError(
+            `Prix négatif détecté pour "${art?.designation}" : un prix ne peut pas être négatif.`
+          );
+          return;
         }
       }
-    }
 
-    // S'assurer que la référence est toujours présente
-    const finalReference = reference.trim() || 
-      generateReference(type === 'ENTREE' ? 'BE' : 'BS', (site as string) === 'ALL' ? 'HYDRO' : site);
-
-    const resolvedGlobalAgent = agents.find(a => a.id === globalBeneficiaryId);
-    const globalAgentName = resolvedGlobalAgent ? `${resolvedGlobalAgent.lastname} ${resolvedGlobalAgent.firstname}` : '';
-
-    const mouvement: Mouvement = {
-      id: generateId(),
-      site: site,
-      date,
-      type,
-      reference: finalReference,
-      vendeur: type === 'ENTREE' ? resolvedEntityName : undefined,
-      demandeur: (type === 'SORTIE' && isEpiOrOutils) ? (globalAgentName || finalBeneficiaireRef || entityName) : undefined,
-      beneficiaire: finalBeneficiaireRef,
-      mecanicien: isMachineRelated ? (resolvedMecanicien ? `${resolvedMecanicien.firstname} ${resolvedMecanicien.lastname}` : mecanicien) : undefined,
-      engin: (isMachineRelated && categoryFilter === 'ENGINS') ? (resolvedEngin ? resolvedEngin.code : targetEngin) : undefined,
-      perforateur: (isMachineRelated && categoryFilter === 'PERFORATEURS') ? (resolvedPerfo ? resolvedPerfo.code : targetPerfo) : undefined,
-      category: categoryFilter,
-      service: service || resolvedMecanicien?.service || '',
-      motif: notes,
-      notes,
-      interventionType: isMachineRelated ? interventionType : undefined,
-      status: 'VALIDE',
-      items: items.map(({ lineId, ...rest }) => ({
-        articleId: rest.articleId,
-        quantity: rest.quantity,
-        price: rest.price,
-        lotNumber: rest.lotNumber,
-        expiryDate: rest.expiryDate,
-        beneficiaryId: rest.beneficiaryId || undefined,
-        beneficiaryName: rest.beneficiaryName || undefined,
-        beneficiaryService: rest.beneficiaryService || undefined,
-      }))
-    };
-
-    try {
-      await onSubmit(mouvement);
-      // updatePRStatus n'est appelé QUE si onSubmit a réussi 
-      // (n'a pas levé d'exception)
-      if (pendingPRId && updatePRStatus) {
-        updatePRStatus(pendingPRId, 'RECU');
-        setPendingPRId(null);
+      // NOUVELLE VÉRIFICATION : tous les articles doivent appartenir au chantier sélectionné
+      const mismatchedItem = items.find(item => {
+        const art = articles.find(a => a.id === item.articleId) || localCreatedArticles.find(a => a.id === item.articleId);
+        return art && art.site !== site;
+      });
+      if (mismatchedItem) {
+        const art = articles.find(a => a.id === mismatchedItem.articleId) || localCreatedArticles.find(a => a.id === mismatchedItem.articleId);
+        setValidationError(
+          `Incohérence détectée : l'article "${art?.designation}" appartient au chantier ${art?.site}, mais vous avez sélectionné le chantier ${site}. Retirez cette ligne ou changez de chantier.`
+        );
+        return;
       }
-    } catch (err) {
-      // onSubmit a déjà géré l'affichage de l'erreur (toast.promise côté appelant)
-      // Ne PAS marquer la PR comme reçue si le bon a échoué
-      logger.error('[MouvementForm] Soumission échouée, PR non marquée RECU:', err);
+
+      if (type === 'SORTIE' && !isMachineRelated) {
+        const missingBeneficiary = items.some(item => !item.beneficiaryId);
+        if (missingBeneficiary) {
+          setValidationError("Veuillez sélectionner un bénéficiaire individuel pour chaque ligne d'article.");
+          return;
+        }
+      }
+
+      if (type === 'SORTIE' && isMachineRelated) {
+        if (!mecanicien || mecanicien.trim() === '') {
+          setValidationError(
+            "Le mécanicien responsable est obligatoire pour une sortie sur engin ou perforateur."
+          );
+          return;
+        }
+        if (categoryFilter === 'ENGINS' && (!targetEngin || targetEngin.trim() === '')) {
+          setValidationError("L'engin concerné est obligatoire pour une sortie ENGINS.");
+          return;
+        }
+        if (categoryFilter === 'PERFORATEURS' && (!targetPerfo || targetPerfo.trim() === '')) {
+          setValidationError("Le perforateur concerné est obligatoire pour une sortie PERFORATEURS.");
+          return;
+        }
+      }
+
+      if (type === 'ENTREE' && !reference.trim()) {
+        setValidationError("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
+        return;
+      }
+
+      if (type === 'ENTREE' && priceWarnings.length > 0 && !forceSubmitPrices) {
+        setValidationError("ATTENTION : Certains prix saisis sont jugés anormaux ou nuls par le système qualité. Veuillez confirmer l'exactitude des prix en cochant la case d'approbation et réessayez.");
+        return;
+      }
+
+      const resolvedMecanicien = agents.find(a => a.id === mecanicien);
+      const resolvedEngin = engins.find(e => e.id === targetEngin);
+      const resolvedPerfo = perfos.find(p => p.id === targetPerfo);
+
+      let resolvedEntityName = entityName;
+      if (type === 'ENTREE') {
+        if (receptionSource === 'CENTRAL') {
+          resolvedEntityName = 'MAGASIN CENTRAL HYDROMINES';
+        } else {
+          resolvedEntityName = `${entityName.trim()}${buyerName ? ` (Acheteur: ${buyerName})` : ''}`;
+        }
+      }
+
+      let finalBeneficiaireRef: string | undefined = undefined;
+      if (type === 'SORTIE') {
+        if (isMachineRelated) {
+          finalBeneficiaireRef = resolvedMecanicien ? `${resolvedMecanicien.lastname} ${resolvedMecanicien.firstname}` : mecanicien;
+        } else {
+          const uniqueBeneficiaryNames = Array.from(new Set(items.map(it => it.beneficiaryName).filter(Boolean))) as string[];
+          if (uniqueBeneficiaryNames.length === 1) {
+            finalBeneficiaireRef = uniqueBeneficiaryNames[0];
+          } else if (uniqueBeneficiaryNames.length > 1) {
+            finalBeneficiaireRef = "Plusieurs bénéficiaires";
+          }
+        }
+      }
+
+      // S'assurer que la référence est toujours présente
+      const finalReference = reference.trim() || 
+        generateReference(type === 'ENTREE' ? 'BE' : 'BS', (site as string) === 'ALL' ? 'HYDRO' : site);
+
+      const resolvedGlobalAgent = agents.find(a => a.id === globalBeneficiaryId);
+      const globalAgentName = resolvedGlobalAgent ? `${resolvedGlobalAgent.lastname} ${resolvedGlobalAgent.firstname}` : '';
+
+      const mouvement: Mouvement = {
+        id: generateId(),
+        site: site,
+        date,
+        type,
+        reference: finalReference,
+        vendeur: type === 'ENTREE' ? resolvedEntityName : undefined,
+        demandeur: (type === 'SORTIE' && isEpiOrOutils) ? (globalAgentName || finalBeneficiaireRef || entityName) : undefined,
+        beneficiaire: finalBeneficiaireRef,
+        mecanicien: isMachineRelated ? (resolvedMecanicien ? `${resolvedMecanicien.firstname} ${resolvedMecanicien.lastname}` : mecanicien) : undefined,
+        engin: (isMachineRelated && categoryFilter === 'ENGINS') ? (resolvedEngin ? resolvedEngin.code : targetEngin) : undefined,
+        perforateur: (isMachineRelated && categoryFilter === 'PERFORATEURS') ? (resolvedPerfo ? resolvedPerfo.code : targetPerfo) : undefined,
+        category: categoryFilter,
+        service: service || resolvedMecanicien?.service || '',
+        motif: notes,
+        notes,
+        interventionType: isMachineRelated ? interventionType : undefined,
+        status: 'VALIDE',
+        items: items.map(({ lineId, ...rest }) => ({
+          articleId: rest.articleId,
+          quantity: rest.quantity,
+          price: rest.price,
+          lotNumber: rest.lotNumber,
+          expiryDate: rest.expiryDate,
+          beneficiaryId: rest.beneficiaryId || undefined,
+          beneficiaryName: rest.beneficiaryName || undefined,
+          beneficiaryService: rest.beneficiaryService || undefined,
+        }))
+      };
+
+      try {
+        await onSubmit(mouvement);
+        // updatePRStatus n'est appelé QUE si onSubmit a réussi 
+        // (n'a pas levé d'exception)
+        if (pendingPRId && updatePRStatus) {
+          updatePRStatus(pendingPRId, 'RECU');
+          setPendingPRId(null);
+        }
+      } catch (err) {
+        // onSubmit a déjà géré l'affichage de l'erreur (toast.promise côté appelant)
+        // Ne PAS marquer la PR comme reçue si le bon a échoué
+        logger.error('[MouvementForm] Soumission échouée, PR non marquée RECU:', err);
+      }
+    } finally {
+      // Le verrou est TOUJOURS libéré, succès ou échec,
+      // pour permettre une nouvelle tentative si besoin
+      setIsSubmitting(false);
     }
   };
 
@@ -1362,14 +1386,25 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                     <div className="relative">
                       <Store className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-emerald-500" />
                       <input 
+                        id="entityName-input"
                         type="text"
-                        className="input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase w-full"
+                        className={cn(
+                          "input-field h-12 text-sm font-black pl-12 pr-4 bg-white uppercase w-full",
+                          entityNameError && !entityName ? "border-2 border-red-500 ring-2 ring-red-200" : ""
+                        )}
                         placeholder="EX: SODIAM, CATERPILLAR, COMAT, ETC."
                         value={entityName}
-                        onChange={(e) => setEntityName(e.target.value.toUpperCase())}
+                        onChange={(e) => { 
+                          setEntityName(e.target.value.toUpperCase()); 
+                          if (entityNameError) setEntityNameError(false);
+                        }}
                         required
                       />
                     </div>
+                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wide mt-1">
+                      Nom de l'entreprise fournisseur (différent de "Acheteur" ci-dessus, 
+                      qui est la personne interne ayant effectué l'achat)
+                    </p>
                   </div>
                 </div>
               )}
@@ -1722,19 +1757,22 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                 <button 
                   id="mouvement-submit-btn"
                   type="submit" 
-                  disabled={items.length === 0 || site === 'ALL'} 
+                  disabled={items.length === 0 || site === 'ALL' || isSubmitting}
                   className={cn(
                     "flex-1 sm:flex-none px-12 h-16 rounded-2xl text-xs font-black uppercase tracking-widest shadow-xl transition-all cursor-pointer",
-                    (items.length === 0 || site === 'ALL')
+                    (items.length === 0 || site === 'ALL' || isSubmitting)
                       ? "bg-slate-300 text-slate-500 cursor-not-allowed opacity-50 border-none"
                       : "bg-slate-950 text-white hover:bg-sky-600 border-none"
                   )}
                 >
-                  {site === 'ALL' 
-                    ? 'Sélectionnez un chantier dans le menu' 
-                    : isOnline 
-                      ? 'Enregistrer' 
-                      : 'Enregistrer (sera sync quand online)'}
+                  {isSubmitting 
+                    ? 'Enregistrement en cours...' 
+                    : site === 'ALL' 
+                      ? 'Sélectionnez un chantier dans le menu' 
+                      : isOnline 
+                        ? 'Enregistrer' 
+                        : 'Enregistrer (sera sync quand online)'
+                  }
                 </button>
               </div>
               {!isOnline && type === 'SORTIE' && (

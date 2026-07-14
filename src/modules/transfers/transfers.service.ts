@@ -557,6 +557,12 @@ export class TransfersService {
 
       if (isSimulation) {
         const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+        if (t && t.status !== 'PENDING_APPROVAL') {
+          return {
+            success: false,
+            error: `TRANSFERT_DEJA_TRAITE: Ce transfert a déjà été traité (statut actuel : ${t.status}). Rechargez la page.`
+          };
+        }
         const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
         useTransfersStore.getState().updateTransfertLocal(id, { 
           status: 'APPROUVE',
@@ -570,6 +576,15 @@ export class TransfersService {
         const snap = await transaction.get(tRef);
         if (!snap.exists()) throw new Error("TRANSFERT_INTROUVABLE");
         const t = snap.data() as Transfert;
+        
+        // Garde : n'approuver que si le statut est bien PENDING_APPROVAL
+        if (t.status !== 'PENDING_APPROVAL') {
+          throw new Error(
+            `TRANSFERT_DEJA_TRAITE: Ce transfert a déjà été traité ` +
+            `(statut actuel : ${t.status}). Rechargez la page.`
+          );
+        }
+
         const updatedHistory = [...(t.history || []), historyEntry];
         transaction.update(tRef, {
           status: 'APPROUVE',
@@ -604,6 +619,12 @@ export class TransfersService {
 
       if (isSimulation) {
         const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+        if (t && t.status !== 'APPROUVE') {
+          return {
+            success: false,
+            error: `TRANSFERT_DEJA_TRAITE: Ce transfert a déjà été traité (statut actuel : ${t.status}). Rechargez la page.`
+          };
+        }
         const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
         useTransfersStore.getState().updateTransfertLocal(id, { 
           status: 'IN_TRANSIT',
@@ -618,6 +639,15 @@ export class TransfersService {
         const snap = await transaction.get(tRef);
         if (!snap.exists()) throw new Error("TRANSFERT_INTROUVABLE");
         const t = snap.data() as Transfert;
+        
+        // Garde : n'expédier que si le statut est bien APPROUVE
+        if (t.status !== 'APPROUVE') {
+          throw new Error(
+            `TRANSFERT_DEJA_TRAITE: Ce transfert a déjà été traité ` +
+            `(statut actuel : ${t.status}). Rechargez la page.`
+          );
+        }
+
         const updatedHistory = [...(t.history || []), historyEntry];
         transaction.update(tRef, {
           status: 'IN_TRANSIT',

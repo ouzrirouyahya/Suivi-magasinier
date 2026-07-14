@@ -25,6 +25,7 @@ import {
   FileText
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
+import { useAuthStore } from '../stores/auth.store';
 import { MaintenanceLog, EnginMaster, Article } from '../types';
 import { cn, formatDate, generateId, formatCurrency } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
@@ -43,6 +44,8 @@ interface AIExpertReport {
 
 export function MaintenanceModule() {
   const { engins, maintenanceLogs, addMaintenanceLog, articles } = useInventory();
+  const currentUser = useAuthStore(s => s.currentUser);
+  const [isRecordingLog, setIsRecordingLog] = useState(false);
   
   // Custom module tabs
   const [activeTab, setActiveTab] = useState<'DASHBOARD' | 'FUEL_CORRELATION' | 'AI_CONSOLE' | 'LOG_HISTORY'>('DASHBOARD');
@@ -261,28 +264,31 @@ export function MaintenanceModule() {
   }, [fuelSpikeCorrelations, selectedFuelMachine]);
 
   const handleRecordMaintenanceLog = async () => {
+    if (isRecordingLog) return; // verrou anti-double-clic
+    
     if (!recordMachine || !description) {
       toast.error("Veuillez remplir les spécifications obligatoires");
       return;
     }
 
-    const calculatedCost = (cost ? parseFloat(cost) : 0) + selectedParts.reduce((s, p) => s + (p.quantity * p.price), 0);
-    const targetEngin = engins.find(e => e.id === recordMachine);
-
-    const newLog: MaintenanceLog = {
-      id: generateId(),
-      machineId: targetEngin ? targetEngin.code : recordMachine,
-      machineType: 'ENGIN',
-      date: new Date().toISOString(),
-      type: logType,
-      description,
-      hoursCounter: hours ? parseInt(hours) : undefined,
-      partsUsed: selectedParts.map(p => ({ articleId: p.articleId, quantity: p.quantity })),
-      performer: 'Chef de Quart / ADMIN Expert',
-      cost: calculatedCost
-    };
-
+    setIsRecordingLog(true);
     try {
+      const calculatedCost = (cost ? parseFloat(cost) : 0) + selectedParts.reduce((s, p) => s + (p.quantity * p.price), 0);
+      const targetEngin = engins.find(e => e.id === recordMachine);
+
+      const newLog: MaintenanceLog = {
+        id: generateId(),
+        machineId: targetEngin ? targetEngin.code : recordMachine,
+        machineType: 'ENGIN',
+        date: new Date().toISOString(),
+        type: logType,
+        description,
+        hoursCounter: hours ? parseInt(hours) : undefined,
+        partsUsed: selectedParts.map(p => ({ articleId: p.articleId, quantity: p.quantity })),
+        performer: currentUser?.name || currentUser?.email || 'Utilisateur inconnu',
+        cost: calculatedCost
+      };
+
       await addMaintenanceLog(newLog);
       toast.success("Succès d'incorporation : Rapport de maintenance enregistré !");
       setShowAddLog(false);
@@ -292,6 +298,8 @@ export function MaintenanceModule() {
       setSelectedParts([]);
     } catch (err) {
       toast.error("Échec d'enregistrement de l'intervention");
+    } finally {
+      setIsRecordingLog(false);
     }
   };
 
@@ -1159,9 +1167,10 @@ export function MaintenanceModule() {
                  <div className="pt-2">
                     <button 
                       onClick={handleRecordMaintenanceLog}
-                      className="w-full h-14 bg-indigo-650 hover:bg-indigo-750 text-slate-100 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/10 cursor-pointer"
+                      disabled={isRecordingLog}
+                      className="w-full h-14 bg-indigo-650 hover:bg-indigo-750 text-slate-100 rounded-xl font-black uppercase tracking-widest shadow-xl shadow-indigo-600/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
                     >
-                      Consolider l'Intervention
+                      {isRecordingLog ? 'Enregistrement...' : "Consolider l'Intervention"}
                     </button>
                  </div>
               </div>

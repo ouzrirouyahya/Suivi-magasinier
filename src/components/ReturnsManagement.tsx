@@ -28,6 +28,8 @@ export function ReturnsManagement() {
   
   const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
 
+  const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
+
   // Articles search states for predictive auto-complete bar
   const [articleSearchQuery, setArticleSearchQuery] = useState('');
   const [showArticleDropdown, setShowArticleDropdown] = useState(false);
@@ -78,6 +80,8 @@ export function ReturnsManagement() {
 
   // Handle return transaction
   const handleReturn = async () => {
+    if (isSubmittingReturn) return; // verrou
+    
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible de valider un retour.");
       return;
@@ -104,33 +108,36 @@ export function ReturnsManagement() {
       return;
     }
 
-    // Build notes block to include supervisor agent tracking clearly
-    const emitterString = selectedAgent 
-      ? `Émetteur: ${selectedAgent.lastname} ${selectedAgent.firstname} (Service: ${selectedAgent.service || 'MINES'})` 
-      : 'Émetteur: Agent Mineur non spécifié';
-    const finalNotes = `${emitterString} - Motif: ${reason}`;
-
-    const newMouvement: Mouvement = {
-      id: generateId(),
-      site: articleObj.site,
-      date: new Date().toISOString(),
-      type: 'RETOUR',
-      condition: condition,
-      reference: `RET-${Date.now().toString().slice(-6)}`,
-      items: [{ articleId: selectedArticleId, quantity: qty, price: articleObj.price || 0 }],
-      notes: finalNotes,
-      status: 'COMPLETE',
-      createdBy: currentUser?.email || 'unknown',
-      beneficiaire: selectedAgent ? `${selectedAgent.lastname} ${selectedAgent.firstname}` : undefined
-    };
-
+    setIsSubmittingReturn(true);
     try {
+      // Build notes block to include supervisor agent tracking clearly
+      const emitterString = selectedAgent 
+        ? `Émetteur: ${selectedAgent.lastname} ${selectedAgent.firstname} (Service: ${selectedAgent.service || 'MINES'})` 
+        : 'Émetteur: Agent Mineur non spécifié';
+      const finalNotes = `${emitterString} - Motif: ${reason}`;
+
+      const newMouvement: Mouvement = {
+        id: generateId(),
+        site: articleObj.site,
+        date: new Date().toISOString(),
+        type: 'RETOUR',
+        condition: condition,
+        reference: `RET-${Date.now().toString().slice(-6)}`,
+        items: [{ articleId: selectedArticleId, quantity: qty, price: articleObj.price || 0 }],
+        notes: finalNotes,
+        status: 'COMPLETE',
+        createdBy: currentUser?.email || 'unknown',
+        beneficiaire: selectedAgent ? `${selectedAgent.lastname} ${selectedAgent.firstname}` : undefined
+      };
+
       await addMouvement(newMouvement);
       toast.success("Retour réintégré avec succès. Les stocks physiques ont été mis à jour.");
       resetForm();
     } catch (err) {
       toast.error("Erreur technique lors de la validation du retour.");
       logger.error('[ReturnsManagement] handleReturn:', err);
+    } finally {
+      setIsSubmittingReturn(false);
     }
   };
 
@@ -521,10 +528,11 @@ export function ReturnsManagement() {
 
               <button 
                 onClick={handleReturn}
-                className="w-full btn bg-slate-900 border border-slate-900 text-white h-11 rounded-xl font-black uppercase tracking-widest text-xs shadow-md shadow-slate-200/50 hover:bg-sky-600 hover:border-sky-600 transition-all flex items-center justify-center gap-2"
+                disabled={isSubmittingReturn}
+                className="w-full btn bg-slate-900 border border-slate-900 text-white h-11 rounded-xl font-black uppercase tracking-widest text-xs shadow-md shadow-slate-200/50 hover:bg-sky-600 hover:border-sky-600 transition-all flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Check className="w-4 h-4" />
-                Valider la Réintégration
+                {isSubmittingReturn ? 'Enregistrement...' : 'Valider la Réintégration'}
               </button>
             </div>
           </div>

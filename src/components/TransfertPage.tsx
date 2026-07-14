@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import { Article, SiteCode, Transfert, MouvementItem, TransfertStatus, UserAccount } from '../types';
 import { SITES } from '../demoData';
-import { cn, formatCurrency } from '../lib/utils';
+import { cn, formatCurrency, generateSecureUUID } from '../lib/utils';
 import { useInventory } from '../context/InventoryContext';
 import { toast } from 'sonner';
 
@@ -52,6 +52,8 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
   } = useInventory();
 
   const [isCreating, setIsCreating] = useState(false);
+  const [isCreatingSubmit, setIsCreatingSubmit] = useState(false);
+  const [processingTransferId, setProcessingTransferId] = useState<string | null>(null);
   const [targetSite, setTargetSite] = useState<SiteCode | ''>('');
   const [reference, setReference] = useState('');
   const [items, setItems] = useState<MouvementItem[]>([]);
@@ -100,38 +102,81 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
   };
 
   // Create a raw Brouillon transfer
-  const handleCreateDraft = (e: React.FormEvent, submitNow = false) => {
+  const handleCreateDraft = async (e: React.FormEvent, submitNow = false) => {
     e.preventDefault();
     if (!targetSite || items.length === 0) return;
+    
+    if (isCreatingSubmit) return; // verrou anti-double-clic
+    setIsCreatingSubmit(true);
 
-    const email = currentUser?.email || 'Mines-Transfer';
-    const initialStatus: TransfertStatus = 'PENDING_APPROVAL';
+    try {
+      const email = currentUser?.email || 'Mines-Transfer';
+      const initialStatus: TransfertStatus = 'PENDING_APPROVAL';
 
-    const cleanTransfert: Transfert = {
-      id: `${currentSite}_TX_${Date.now()}`,
-      sourceSite: currentSite,
-      targetSite: targetSite as SiteCode,
-      dateEnvoi: new Date().toISOString(),
-      reference,
-      items,
-      status: initialStatus,
-      creatorEmail: email,
-      expediteur: email,
-      history: [
-        {
+      const cleanTransfert: Transfert = {
+        id: `${currentSite}_TX_${generateSecureUUID()}`,  // ← ID unique, plus de collision
+        sourceSite: currentSite,
+        targetSite: targetSite as SiteCode,
+        dateEnvoi: new Date().toISOString(),
+        reference,
+        items,
+        status: initialStatus,
+        creatorEmail: email,
+        expediteur: email,
+        history: [{
           status: 'PENDING_APPROVAL',
           date: new Date().toISOString(),
           userEmail: email,
           comment: submitNow ? 'Bordereau soumis pour approbation superviseur' : 'Initialisation du bordereau'
-        }
-      ]
-    };
+        }]
+      };
 
-    addTransfert(cleanTransfert);
-    setIsCreating(false);
-    setItems([]);
-    setReference('');
-    setTargetSite('');
+      await addTransfert(cleanTransfert);
+      setIsCreating(false);
+      setItems([]);
+      setReference('');
+      setTargetSite('');
+    } catch (err: any) {
+      toast.error(`Erreur : ${err.message || err}`);
+    } finally {
+      setIsCreatingSubmit(false);
+    }
+  };
+
+  const handleApprove = async (transferId: string, email: string, comment: string) => {
+    if (processingTransferId) return; // un seul traitement à la fois
+    setProcessingTransferId(transferId);
+    try {
+      await approveTransfert(transferId, email, comment);
+    } catch (err: any) {
+      toast.error(`Erreur : ${err.message || err}`);
+    } finally {
+      setProcessingTransferId(null);
+    }
+  };
+
+  const handleExpedier = async (transferId: string, email: string, comment: string) => {
+    if (processingTransferId) return;
+    setProcessingTransferId(transferId);
+    try {
+      await expedierTransfert(transferId, email, comment);
+    } catch (err: any) {
+      toast.error(`Erreur : ${err.message || err}`);
+    } finally {
+      setProcessingTransferId(null);
+    }
+  };
+
+  const handleAcceptAndClose = async (transferId: string, email: string, comment: string) => {
+    if (processingTransferId) return;
+    setProcessingTransferId(transferId);
+    try {
+      await accepterEtCloturerTransfert(transferId, email, comment);
+    } catch (err: any) {
+      toast.error(`Erreur : ${err.message || err}`);
+    } finally {
+      setProcessingTransferId(null);
+    }
   };
 
   // Get dynamic local site quantities (Summing active pieces)
@@ -221,47 +266,56 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
   };
 
   const handleSaveInspection = async (t: Transfert) => {
-    const email = currentUser?.email || 'Mines-Receiver';
-    
-    // Rebuild final items with precise reception quantities
-    const submittedItems: MouvementItem[] = t.items.map(it => {
-      const inspect = inspectItems[it.articleId] || { received: it.quantity, damaged: 0, comment: '' };
-      return {
-        ...it,
-        quantityReceived: inspect.received,
-        quantityDamaged: inspect.damaged,
-        comment: inspect.comment || undefined
-      };
-    });
+    if (processingTransferId) return;
+    setProcessingTransferId(t.id);
 
-    const totalReceived = submittedItems.reduce(
-      (sum, it) => sum + (it.quantityReceived || 0), 0
-    );
+    try {
+      const email = currentUser?.email || 'Mines-Receiver';
+      
+      // Rebuild final items with precise reception quantities
+      const submittedItems: MouvementItem[] = t.items.map(it => {
+        const inspect = inspectItems[it.articleId] || { received: it.quantity, damaged: 0, comment: '' };
+        return {
+          ...it,
+          quantityReceived: inspect.received,
+          quantityDamaged: inspect.damaged,
+          comment: inspect.comment || undefined
+        };
+      });
 
-    if (totalReceived === 0) {
-      toast.error(
-        'Impossible de valider une réception avec 0 unités reçues. ' +
-        'Si le transfert est entièrement refusé, utilisez le bouton "Litige".'
+      const totalReceived = submittedItems.reduce(
+        (sum, it) => sum + (it.quantityReceived || 0), 0
       );
-      return;
-    }
 
-    // Vérifier que received >= 0 pour chaque item
-    const invalidItem = submittedItems.find(it => (it.quantityReceived || 0) < 0);
-    if (invalidItem) {
-      toast.error('Une quantité reçue ne peut pas être négative.');
-      return;
-    }
+      if (totalReceived === 0) {
+        toast.error(
+          'Impossible de valider une réception avec 0 unités reçues. ' +
+          'Si le transfert est entièrement refusé, utilisez le bouton "Litige".'
+        );
+        return;
+      }
 
-    await receptionnerTransfert(
-      t.id, 
-      email, 
-      submittedItems, 
-      inspectDisputeReason || undefined, 
-      inspectComment || undefined
-    );
-    
-    setInspectingId(null);
+      // Vérifier que received >= 0 pour chaque item
+      const invalidItem = submittedItems.find(it => (it.quantityReceived || 0) < 0);
+      if (invalidItem) {
+        toast.error('Une quantité reçue ne peut pas être négative.');
+        return;
+      }
+
+      await receptionnerTransfert(
+        t.id, 
+        email, 
+        submittedItems, 
+        inspectDisputeReason || undefined, 
+        inspectComment || undefined
+      );
+      
+      setInspectingId(null);
+    } catch (err: any) {
+      toast.error(`Erreur lors de l'enregistrement de la réception : ${err.message || err}`);
+    } finally {
+      setProcessingTransferId(null);
+    }
   };
 
   return (
@@ -555,19 +609,19 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
               <button
                 type="button"
                 onClick={(e) => handleCreateDraft(e, false)}
-                disabled={items.length === 0}
+                disabled={items.length === 0 || isCreatingSubmit}
                 className="bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 font-black h-9 px-5 rounded-lg text-xs uppercase disabled:opacity-50 cursor-pointer"
               >
-                Enregistrer en Brouillon
+                {isCreatingSubmit ? 'Création...' : 'Enregistrer en Brouillon'}
               </button>
               
               <button 
                 type="button" 
                 onClick={(e) => handleCreateDraft(e, true)}
-                disabled={items.length === 0}
+                disabled={items.length === 0 || isCreatingSubmit}
                 className="bg-sky-600 hover:bg-sky-700 text-white font-black h-9 px-5 rounded-lg text-xs uppercase shadow-sm disabled:opacity-50 cursor-pointer"
               >
-                Soumettre à l'Approbation Superviseur
+                {isCreatingSubmit ? 'Création...' : "Soumettre à l'Approbation Superviseur"}
               </button>
             </div>
           </form>
@@ -976,13 +1030,14 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                             </button>
                             <button
                               type="button"
+                              disabled={processingTransferId === t.id}
                               onClick={() => {
                                 const email = currentUser?.email || 'Mines-Transfer';
-                                approveTransfert(t.id, email, "Soumission du brouillon");
+                                handleApprove(t.id, email, "Soumission du brouillon");
                               }}
-                              className="bg-sky-600 hover:bg-sky-700 text-white font-black h-8 px-4 rounded-lg text-xs uppercase cursor-pointer shadow-sm"
+                              className="bg-sky-600 hover:bg-sky-700 text-white font-black h-8 px-4 rounded-lg text-xs uppercase cursor-pointer shadow-sm disabled:opacity-50"
                             >
-                              Soumettre le bordereau
+                              {processingTransferId === t.id ? 'Traitement...' : 'Soumettre le bordereau'}
                             </button>
                           </div>
                         </div>
@@ -1015,14 +1070,15 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                           <div className="flex justify-end gap-2">
                             <button
                               type="button"
+                              disabled={processingTransferId === t.id}
                               onClick={async () => {
                                 const comment = actionComments[t.id];
-                                await approveTransfert(t.id, currentUser?.email || 'Mines-Supervisor', comment);
+                                await handleApprove(t.id, currentUser?.email || 'Mines-Supervisor', comment);
                                 setActionComments(prev => ({ ...prev, [t.id]: '' }));
                               }}
-                              className="bg-violet-600 hover:bg-violet-750 text-white font-black h-8 px-5 rounded-lg text-xs uppercase cursor-pointer shadow-sm"
+                              className="bg-violet-600 hover:bg-violet-750 text-white font-black h-8 px-5 rounded-lg text-xs uppercase cursor-pointer shadow-sm disabled:opacity-50"
                             >
-                              Approuver & Libérer
+                              {processingTransferId === t.id ? 'Traitement...' : 'Approuver & Libérer'}
                             </button>
                           </div>
                         </div>
@@ -1054,14 +1110,15 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                           <div className="flex justify-end">
                             <button
                               type="button"
+                              disabled={processingTransferId === t.id}
                               onClick={async () => {
                                 const comment = actionComments[t.id];
-                                await expedierTransfert(t.id, currentUser?.email || 'Mines-Shipper', comment);
+                                await handleExpedier(t.id, currentUser?.email || 'Mines-Shipper', comment);
                                 setActionComments(prev => ({ ...prev, [t.id]: '' }));
                               }}
-                              className="bg-teal-605 bg-slate-900 hover:bg-slate-800 text-white font-black h-8 px-5 rounded-lg text-xs uppercase cursor-pointer"
+                              className="bg-teal-605 bg-slate-900 hover:bg-slate-800 text-white font-black h-8 px-5 rounded-lg text-xs uppercase cursor-pointer disabled:opacity-50"
                             >
-                              Expédier le Convoi
+                              {processingTransferId === t.id ? 'Traitement...' : 'Expédier le Convoi'}
                             </button>
                           </div>
                         </div>
@@ -1127,10 +1184,11 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                                 
                                 <button
                                   type="button"
+                                  disabled={processingTransferId === t.id}
                                   onClick={() => handleSaveInspection(t)}
-                                  className="bg-sky-600 hover:bg-sky-700 text-white font-black h-8 px-4 rounded-lg text-xs uppercase cursor-pointer"
+                                  className="bg-sky-600 hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black h-8 px-4 rounded-lg text-xs uppercase cursor-pointer flex items-center justify-center gap-1"
                                 >
-                                  Enregistrer la Réception
+                                  {processingTransferId === t.id ? 'Enregistrement...' : 'Enregistrer la Réception'}
                                 </button>
                               </div>
                             </div>
@@ -1167,14 +1225,15 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                           <div className="flex justify-end">
                             <button
                               type="button"
+                              disabled={processingTransferId === t.id}
                               onClick={async () => {
                                 const comment = actionComments[t.id];
-                                await accepterEtCloturerTransfert(t.id, currentUser?.email || 'Mines-Accounting', comment);
+                                await handleAcceptAndClose(t.id, currentUser?.email || 'Mines-Accounting', comment);
                                 setActionComments(prev => ({ ...prev, [t.id]: '' }));
                               }}
-                              className="bg-emerald-600 hover:bg-emerald-700 text-white font-black h-8 px-5 rounded-lg text-xs uppercase cursor-pointer shadow-sm"
+                              className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white font-black h-8 px-5 rounded-lg text-xs uppercase cursor-pointer shadow-sm flex items-center justify-center gap-1"
                             >
-                              Confirmer la Clôture & Mettre le Stock à Jour
+                              {processingTransferId === t.id ? 'Traitement...' : 'Confirmer la Clôture & Mettre le Stock à Jour'}
                             </button>
                           </div>
                         </div>

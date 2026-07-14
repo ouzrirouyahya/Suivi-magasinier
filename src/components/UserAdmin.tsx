@@ -138,6 +138,15 @@ export const UserAdmin = React.memo(function UserAdmin({
   const [customAgentFonction, setCustomAgentFonction] = useState('');
   const [agentSubmitted, setAgentSubmitted] = useState(false);
 
+  const [deleteConfirm, setDeleteConfirm] = useState<{
+    type: 'engin' | 'agent' | 'perforateur';
+    id: string;
+  } | null>(null);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
+
   // Route guard & tab defaulting based on roles
   useEffect(() => {
     if (isAdminUser) {
@@ -163,6 +172,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
       return;
     }
+    if (isSaving) return;
     setEnginSubmitted(true);
     if (!enginCode.trim() || !enginLabel.trim() || !enginType || !enginWorkingLocation) {
       return;
@@ -172,6 +182,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       return;
     }
     const id = generateId();
+    setIsSaving(true);
     try {
       await onSetEngin(id, {
         code: enginCode.trim().toUpperCase(),
@@ -191,6 +202,8 @@ export const UserAdmin = React.memo(function UserAdmin({
     } catch (e: any) {
       console.error("SAVING ENGIN FAILED ERROR:", e);
       toast.error(`Erreur d'enregistrement de l'engin: ${e.message || e}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -208,20 +221,12 @@ export const UserAdmin = React.memo(function UserAdmin({
     }
   };
 
-  const deleteEngin = async (id: string) => {
+  const deleteEngin = (id: string) => {
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible de supprimer.");
       return;
     }
-    if (confirm('Supprimer cet engin ?')) {
-      try {
-        await onSetEngin(id, null);
-        toast.success("Engin supprimé du parc");
-      } catch (e: any) {
-        console.error("DELETING ENGIN FAILED ERROR:", e);
-        toast.error(`Erreur de suppression: ${e.message || e}`);
-      }
-    }
+    setDeleteConfirm({ type: 'engin', id });
   };
 
   // Handlers for Agents
@@ -241,6 +246,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
       return;
     }
+    if (isSaving) return;
     setAgentSubmitted(true);
     if (!agentMatricule.trim() || !agentFirstname.trim() || !agentLastname.trim() || !agentService.trim()) {
       return;
@@ -250,6 +256,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       return;
     }
     const id = generateId();
+    setIsSaving(true);
     try {
       await onSetAgent(id, {
         matricule: agentMatricule.trim().toUpperCase(),
@@ -271,6 +278,8 @@ export const UserAdmin = React.memo(function UserAdmin({
     } catch (e: any) {
       console.error("SAVING AGENT FAILED ERROR:", e);
       toast.error(`Erreur d'enregistrement du personnel: ${e.message || e}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -288,20 +297,12 @@ export const UserAdmin = React.memo(function UserAdmin({
     }
   };
 
-  const deleteAgent = async (id: string) => {
+  const deleteAgent = (id: string) => {
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible de supprimer.");
       return;
     }
-    if (confirm('Supprimer cet agent ?')) {
-      try {
-        await onSetAgent(id, null);
-        toast.success("Personnel supprimé");
-      } catch (e: any) {
-        console.error("DELETING AGENT FAILED ERROR:", e);
-        toast.error(`Erreur de suppression: ${e.message || e}`);
-      }
-    }
+    setDeleteConfirm({ type: 'agent', id });
   };
 
   // Handlers for Perfos
@@ -318,11 +319,13 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
       return;
     }
+    if (isSaving) return;
     setPerfoSubmitted(true);
     if (!perfoCode.trim() || !perfoLocation || !perfoSectorManager) {
       return;
     }
     const id = generateId();
+    setIsSaving(true);
     try {
       await onSetPerfo(id, {
         code: perfoCode.trim().toUpperCase(),
@@ -339,6 +342,8 @@ export const UserAdmin = React.memo(function UserAdmin({
     } catch (e: any) {
       console.error("SAVING PERFO FAILED ERROR:", e);
       toast.error(`Erreur d'enregistrement du perforateur: ${e.message || e}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -356,19 +361,36 @@ export const UserAdmin = React.memo(function UserAdmin({
     }
   };
 
-  const deletePerfo = async (id: string) => {
+  const deletePerfo = (id: string) => {
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible de supprimer.");
       return;
     }
-    if (confirm('Supprimer ce perforateur ?')) {
-      try {
+    setDeleteConfirm({ type: 'perforateur', id });
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deleteConfirm || isDeleting) return;
+    const { type, id } = deleteConfirm;
+    setIsDeleting(true);
+
+    try {
+      if (type === 'engin') {
+        await onSetEngin(id, null);
+        toast.success("Engin supprimé du parc");
+      } else if (type === 'agent') {
+        await onSetAgent(id, null);
+        toast.success("Personnel supprimé");
+      } else if (type === 'perforateur') {
         await onSetPerfo(id, null);
         toast.success("Perforateur supprimé");
-      } catch (e: any) {
-        console.error("DELETING PERFO FAILED ERROR:", e);
-        toast.error(`Erreur de suppression: ${e.message || e}`);
       }
+      setDeleteConfirm(null);
+    } catch (e: any) {
+      console.error(`DELETING ${type.toUpperCase()} FAILED ERROR:`, e);
+      toast.error(`Erreur de suppression: ${e.message || e}`);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -377,6 +399,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible de modifier les droits.");
       return;
     }
+    if (isProcessingAction) return;
     const targetRole = user.requestedRole || 'MAGASINIER';
     
     // MAGASINIER et RESPONSABLE_CHANTIER DOIVENT avoir un chantier
@@ -389,6 +412,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       return;
     }
 
+    setIsProcessingAction(true);
     try {
       const userRef = doc(db, 'accounts', user.id);
       const isReadOnlyByDefault = targetRole === 'ADMIN' || targetRole === 'RESPONSABLE_CHANTIER';
@@ -403,6 +427,8 @@ export const UserAdmin = React.memo(function UserAdmin({
     } catch (err: any) {
       console.error("[UserAdmin] Erreur lors de l'approbation :", err);
       toast.error(`Erreur lors de l'approbation : ${err.message || err}`);
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -411,6 +437,8 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible de modifier les droits.");
       return;
     }
+    if (isProcessingAction) return;
+    setIsProcessingAction(true);
     try {
       const userRef = doc(db, 'accounts', user.id);
       await updateDoc(userRef, {
@@ -424,6 +452,8 @@ export const UserAdmin = React.memo(function UserAdmin({
     } catch (err: any) {
       console.error("[UserAdmin] Erreur lors du rejet :", err);
       toast.error(`Erreur lors du rejet : ${err.message || err}`);
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -432,6 +462,8 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible d'approuver le remplacement.");
       return;
     }
+    if (isProcessingAction) return;
+    setIsProcessingAction(true);
     try {
       const reqRef = doc(db, 'replacementRequests', req.id);
       await updateDoc(reqRef, {
@@ -454,6 +486,8 @@ export const UserAdmin = React.memo(function UserAdmin({
     } catch (err: any) {
       console.error("[UserAdmin] Erreur lors de l'approbation du remplacement :", err);
       toast.error(`Erreur lors de l'approbation : ${err.message || err}`);
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -462,6 +496,8 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible de refuser le remplacement.");
       return;
     }
+    if (isProcessingAction) return;
+    setIsProcessingAction(true);
     try {
       const reqRef = doc(db, 'replacementRequests', req.id);
       await updateDoc(reqRef, {
@@ -480,6 +516,8 @@ export const UserAdmin = React.memo(function UserAdmin({
     } catch (err: any) {
       console.error("[UserAdmin] Erreur lors du rejet du remplacement :", err);
       toast.error(`Erreur lors du rejet : ${err.message || err}`);
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -488,6 +526,8 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible de modifier les accès d'écriture.");
       return;
     }
+    if (isProcessingAction) return;
+    setIsProcessingAction(true);
     try {
       const userRef = doc(db, 'accounts', user.id);
       await updateDoc(userRef, { 
@@ -498,6 +538,8 @@ export const UserAdmin = React.memo(function UserAdmin({
       );
     } catch (e: any) {
       toast.error(`Erreur : ${e.message || e}`);
+    } finally {
+      setIsProcessingAction(false);
     }
   };
 
@@ -1100,9 +1142,10 @@ export const UserAdmin = React.memo(function UserAdmin({
                 <div className="flex items-center gap-3 pt-2">
                   <button
                     onClick={handleSaveEngin}
-                    className="px-5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase shadow-sm cursor-pointer transition-all active:scale-95"
+                    disabled={isSaving}
+                    className="px-5 h-9 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black uppercase shadow-sm cursor-pointer transition-all flex items-center justify-center gap-1"
                   >
-                    Enregistrer
+                    {isSaving ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
                   <button
                     onClick={() => {
@@ -1324,9 +1367,10 @@ export const UserAdmin = React.memo(function UserAdmin({
                 <div className="flex items-center gap-3 pt-2">
                   <button
                     onClick={handleSaveAgent}
-                    className="px-5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase shadow-sm cursor-pointer transition-all active:scale-95"
+                    disabled={isSaving}
+                    className="px-5 h-9 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black uppercase shadow-sm cursor-pointer transition-all flex items-center justify-center gap-1"
                   >
-                    Enregistrer
+                    {isSaving ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
                   <button
                     onClick={() => {
@@ -1513,9 +1557,10 @@ export const UserAdmin = React.memo(function UserAdmin({
                 <div className="flex items-center gap-3 pt-2">
                   <button
                     onClick={handleSavePerfo}
-                    className="px-5 h-9 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-black uppercase shadow-sm cursor-pointer transition-all active:scale-95"
+                    disabled={isSaving}
+                    className="px-5 h-9 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-xl text-xs font-black uppercase shadow-sm cursor-pointer transition-all flex items-center justify-center gap-1"
                   >
-                    Enregistrer
+                    {isSaving ? 'Enregistrement...' : 'Enregistrer'}
                   </button>
                   <button
                     onClick={() => {
@@ -1600,6 +1645,35 @@ export const UserAdmin = React.memo(function UserAdmin({
           </div>
         )}
       </div>
+
+      {deleteConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-rose-900/50 rounded-2xl p-6 max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <h3 className="text-white font-black text-lg mb-2">
+              Confirmer la suppression ?
+            </h3>
+            <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+              Voulez-vous vraiment supprimer cet {deleteConfirm.type === 'perforateur' ? 'perforateur' : deleteConfirm.type} ? Cette action est définitive.
+            </p>
+            <div className="flex gap-3">
+              <button 
+                onClick={() => !isDeleting && setDeleteConfirm(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium cursor-pointer transition-colors text-xs uppercase tracking-widest font-black disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Annuler
+              </button>
+              <button 
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-black cursor-pointer transition-colors text-xs uppercase tracking-widest disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-1"
+              >
+                {isDeleting ? 'Suppression...' : 'Supprimer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

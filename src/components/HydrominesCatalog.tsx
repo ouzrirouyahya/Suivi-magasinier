@@ -132,6 +132,7 @@ export function HydrominesCatalog() {
   // Modal State for custom creation / edition
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<HydrominesCatalogItem> | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
 
   // States for the new technical catalog addition flow
   const [creationTab, setCreationTab] = useState<'catalog' | 'manual'>('catalog');
@@ -428,6 +429,7 @@ export function HydrominesCatalog() {
   // Save new manually created or updated item
   const handleSaveItemSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSaving) return;
     if (!editingItem || !editingItem.reference || !editingItem.designation) {
       toast.error("Veuillez remplir tous les champs obligatoires.");
       return;
@@ -461,6 +463,7 @@ export function HydrominesCatalog() {
       updatedAt: new Date().toISOString()
     };
 
+    setIsSaving(true);
     try {
       await saveHydrominesCatalogItem(finalItem);
       toast.success(isEdit ? "Pièce mise à jour avec succès !" : "Pièce ajoutée au catalogue !");
@@ -468,6 +471,8 @@ export function HydrominesCatalog() {
       setEditingItem(null);
     } catch (e: any) {
       toast.error(`Erreur d'enregistrement : ${e.message || e}`);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -2092,8 +2097,9 @@ export function HydrominesCatalog() {
                 <div className="flex items-center gap-3">
                   <button
                     type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="px-5 py-2.5 bg-white border border-slate-150 hover:bg-slate-50 text-slate-650 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer"
+                    onClick={() => !isSaving && setIsModalOpen(false)}
+                    disabled={isSaving}
+                    className="px-5 py-2.5 bg-white border border-slate-150 hover:bg-slate-50 text-slate-650 rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Fermer
                   </button>
@@ -2101,10 +2107,11 @@ export function HydrominesCatalog() {
                     <button
                       type="button"
                       onClick={handleSaveItemSubmit}
-                      className="flex items-center gap-2 px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-sky-600/10 cursor-pointer"
+                      disabled={isSaving}
+                      className="flex items-center gap-2 px-6 py-2.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-lg shadow-sky-600/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Save className="w-4 h-4" />
-                      Enregistrer la pièce
+                      {isSaving ? 'Enregistrement...' : 'Enregistrer la pièce'}
                     </button>
                   )}
                 </div>

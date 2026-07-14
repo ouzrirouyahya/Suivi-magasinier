@@ -39,6 +39,10 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   const [filterType, setFilterType] = useState<string>('ALL');
   const [compteur, setCompteur] = useState(currentUser?.name || currentUser?.email || '');
   const [viewingInventaire, setViewingInventaire] = useState<Inventaire | null>(null);
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [showValidateConfirm, setShowValidateConfirm] = useState(false);
+  const [showSetAllConfirm, setShowSetAllConfirm] = useState(false);
 
   const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
 
@@ -160,13 +164,20 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     });
   };
 
-  const handleValidate = async () => {
+  const handleValidate = () => {
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule.");
       return;
     }
     if (!activeSession) return;
-    if (confirm('Voulez-vous valider cet inventaire ? Les stocks seront mis à jour définitivement.')) {
+    setShowValidateConfirm(true);
+  };
+
+  const handleConfirmValidate = async () => {
+    setShowValidateConfirm(false);
+    if (isSaving || !activeSession) return;
+    setIsSaving(true);
+    try {
       const inv: Inventaire = { 
          ...activeSession, 
          status: 'VALIDE',
@@ -179,6 +190,8 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       }
       onSaveInventaire(inv);
       setActiveSession(null);
+    } finally {
+      setIsSaving(false);
     }
   };
 
@@ -187,16 +200,21 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       toast.error("Le compte est en lecture seule.");
       return;
     }
-    if (!activeSession) return;
-    const inv: Inventaire = { ...activeSession };
-    const result = await movementsService.saveInventaire(inv);
-    if (!result.success) {
-      toast.error(`Erreur inventaire : ${result.error}`);
-      return;
+    if (!activeSession || isSaving) return;
+    setIsSaving(true);
+    try {
+      const inv: Inventaire = { ...activeSession };
+      const result = await movementsService.saveInventaire(inv);
+      if (!result.success) {
+        toast.error(`Erreur inventaire : ${result.error}`);
+        return;
+      }
+      onSaveInventaire(inv);
+      setActiveSession(null);
+      toast.success('Inventaire sauvegardé en brouillon.');
+    } finally {
+      setIsSaving(false);
     }
-    onSaveInventaire(inv);
-    setActiveSession(null);
-    toast.success('Inventaire sauvegardé en brouillon.');
   };
 
   const handleSetAllConform = () => {
@@ -205,15 +223,19 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       return;
     }
     if (!activeSession) return;
-    if (confirm("Voulez-vous prérégler tous les comptages de cette session comme conformes au stock théorique ?")) {
-      const conformItems = activeSession.items.map(item => ({
-        ...item,
-        countedQuantity: item.theoricQuantity,
-        difference: 0
-      }));
-      setActiveSession({ ...activeSession, items: conformItems });
-      toast.success("Tous les articles ont été réglés comme conformes.");
-    }
+    setShowSetAllConfirm(true);
+  };
+
+  const handleConfirmSetAllConform = () => {
+    setShowSetAllConfirm(false);
+    if (!activeSession) return;
+    const conformItems = activeSession.items.map(item => ({
+      ...item,
+      countedQuantity: item.theoricQuantity,
+      difference: 0
+    }));
+    setActiveSession({ ...activeSession, items: conformItems });
+    toast.success("Tous les articles ont été réglés comme conformes.");
   };
 
   return (
@@ -346,10 +368,30 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
             </div>
 
             <div className="flex flex-wrap gap-2 shrink-0">
-               <button onClick={handleSetAllConform} className="btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 border px-5 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm" title="Prérégler tous les stocks comptés comme conformes au stock théorique">Tout Conforme ✓</button>
-               <button onClick={handleSaveDraft} className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm" title="Enregistrer le brouillon de comptage">Suspendre (Brouillon)</button>
+               <button 
+                 onClick={handleSetAllConform} 
+                 disabled={isSaving}
+                 className="btn bg-emerald-50 text-emerald-700 hover:bg-emerald-100 hover:border-emerald-200 border px-5 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm disabled:opacity-50" 
+                 title="Prérégler tous les stocks comptés comme conformes au stock théorique"
+               >
+                 Tout Conforme ✓
+               </button>
+               <button 
+                 onClick={handleSaveDraft} 
+                 disabled={isSaving}
+                 className="btn bg-slate-100 text-slate-600 hover:bg-slate-200 px-5 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase transition-all shadow-sm disabled:opacity-50" 
+                 title="Enregistrer le brouillon de comptage"
+               >
+                 {isSaving ? 'Enregistrement...' : 'Suspendre (Brouillon)'}
+               </button>
                {isAdmin ? (
-                 <button onClick={handleValidate} className="btn btn-primary px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase shadow-xl shadow-sky-500/20">Valider & Ajuster [Admin]</button>
+                 <button 
+                   onClick={handleValidate} 
+                   disabled={isSaving}
+                   className="btn btn-primary px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase shadow-xl shadow-sky-500/20 disabled:opacity-50"
+                 >
+                   {isSaving ? 'Enregistrement...' : 'Valider & Ajuster [Admin]'}
+                 </button>
                ) : (
                  <button disabled className="btn bg-slate-100 text-slate-400 cursor-not-allowed border border-slate-200 px-6 h-10 rounded-xl text-[10px] tracking-widest font-black uppercase" title="La validation finale et l'ajustement de stocks sont réservés aux administrateurs">Validation Réservée Admin</button>
                )}
@@ -710,6 +752,57 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                  </div>
               </div>
            </div>
+        </div>
+      )}
+
+      {showValidateConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center 
+                        bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-amber-700/50 rounded-2xl 
+                          p-6 max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <h3 className="text-white font-black text-lg mb-2">
+              Valider l'inventaire ?
+            </h3>
+            <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+              Les stocks seront mis à jour définitivement. Cette action 
+              crée un ajustement de stock irréversible.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowValidateConfirm(false)}
+                className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium cursor-pointer transition-colors text-xs uppercase tracking-widest font-black">
+                Annuler
+              </button>
+              <button onClick={handleConfirmValidate}
+                className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-black rounded-xl font-black cursor-pointer transition-colors text-xs uppercase tracking-widest">
+                Valider & Ajuster
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showSetAllConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center 
+                        bg-black/80 backdrop-blur-sm p-4">
+          <div className="bg-slate-900 border border-amber-700/50 rounded-2xl 
+                          p-6 max-w-sm w-full animate-in zoom-in-95 duration-200">
+            <h3 className="text-white font-black text-lg mb-2">
+              Prérégler tout conforme ?
+            </h3>
+            <p className="text-slate-400 text-sm mb-6 leading-relaxed">
+              Voulez-vous prérégler tous les comptages de cette session comme conformes au stock théorique ?
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setShowSetAllConfirm(false)}
+                className="flex-1 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-medium cursor-pointer transition-colors text-xs uppercase tracking-widest font-black">
+                Annuler
+              </button>
+              <button onClick={handleConfirmSetAllConform}
+                className="flex-1 px-4 py-2.5 bg-amber-500 hover:bg-amber-600 text-black rounded-xl font-black cursor-pointer transition-colors text-xs uppercase tracking-widest">
+                Confirmer
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

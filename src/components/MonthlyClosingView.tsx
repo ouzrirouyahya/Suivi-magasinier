@@ -38,6 +38,7 @@ export function MonthlyClosingView() {
   const [confirmInput, setConfirmInput] = useState('');
   const [pendingCloseIsOverwrite, setPendingCloseIsOverwrite] = useState(false);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Determine current active month
   const currentMonthValue = useMemo(() => {
@@ -225,6 +226,7 @@ export function MonthlyClosingView() {
   };
 
   const handlePerformClosing = async () => {
+    if (isClosingInProgress) return;
     setIsClosingInProgress(true);
     try {
       const closingId = targetMonth;
@@ -268,7 +270,8 @@ export function MonthlyClosingView() {
   };
 
   const handleConfirmDelete = async () => {
-    if (!deleteConfirmId) return;
+    if (!deleteConfirmId || isDeleting) return;
+    setIsDeleting(true);
     try {
       await deleteDoc(doc(db, 'monthlyClosings', deleteConfirmId));
       toast.success("Archive de clôture supprimée");
@@ -278,6 +281,7 @@ export function MonthlyClosingView() {
     } catch (err: any) {
       toast.error(`Erreur lors de la suppression : ${err.message}`);
     } finally {
+      setIsDeleting(false);
       setDeleteConfirmId(null);
     }
   };
@@ -827,16 +831,18 @@ export function MonthlyClosingView() {
             </p>
             <div className="flex gap-3">
               <button
-                onClick={() => setDeleteConfirmId(null)}
-                className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition-colors cursor-pointer"
+                onClick={() => !isDeleting && setDeleteConfirmId(null)}
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg font-medium hover:bg-slate-600 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 Annuler
               </button>
               <button
                 onClick={handleConfirmDelete}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-black hover:bg-red-500 transition-colors cursor-pointer"
+                disabled={isDeleting}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-black hover:bg-red-500 transition-colors cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1"
               >
-                Supprimer définitivement
+                {isDeleting ? 'Suppression...' : 'Supprimer définitivement'}
               </button>
             </div>
           </div>
