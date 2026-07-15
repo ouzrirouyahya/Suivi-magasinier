@@ -140,11 +140,13 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [mecanicien, setMecanicien] = useState(''); 
   const [mecanicienFreeText, setMecanicienFreeText] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const submissionLockRef = React.useRef(false);
   const [targetEngin, setTargetEngin] = useState(''); 
   const [targetPerfo, setTargetPerfo] = useState('');
   const [interventionType, setInterventionType] = useState<'CORRECTIF' | 'PREVENTIF' | 'ROUTINE' | 'PROPRIO'>('ROUTINE');
   const [service, setService] = useState('');
   const [notes, setNotes] = useState('');
+  const [backdateReason, setBackdateReason] = useState('');
   const [categoryFilter, setCategoryFilter] = useState<string>(type === 'SORTIE' ? '' : 'ALL');
   const [items, setItems] = useState<(MouvementItem & { lineId: string })[]>(() => {
     if (initialArticleId) {
@@ -162,6 +164,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [forceSubmitPrices, setForceSubmitPrices] = useState(false);
   const [priceWarnings, setPriceWarnings] = useState<string[]>([]);
   const [pendingPRId, setPendingPRId] = useState<string | null>(null);
+
+  const dateObjForCheck = new Date(date);
+  const thirtyDaysAgoForRender = new Date();
+  thirtyDaysAgoForRender.setDate(thirtyDaysAgoForRender.getDate() - 30);
+  const isBackdatedMoreThan30Days = dateObjForCheck.getTime() < thirtyDaysAgoForRender.getTime();
 
   // Real-time recalculation of anomalous price entries
   useEffect(() => {
@@ -786,8 +793,8 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     e.preventDefault();
     
     // Verrou anti-double-soumission — vérifié EN PREMIER, 
-    // avant toute autre logique
-    if (isSubmitting) {
+    // avant toute autre logique, de manière synchrone via ref et state
+    if (isSubmitting || submissionLockRef.current) {
       return; // Ignorer silencieusement les clics/soumissions répétés
     }
     
@@ -795,16 +802,33 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       toast.error("Le compte est en lecture seule. Impossible de valider.");
       return;
     }
+
+    // Acquérir le verrou immédiatement pour éliminer toute race condition pendant les opérations asynchrones
+    submissionLockRef.current = true;
+    setIsSubmitting(true);
+
+    const fail = (msg: string) => {
+      setValidationError(msg);
+      submissionLockRef.current = false;
+      setIsSubmitting(false);
+    };
     
-    // VALIDATIONS SYNCHRONES AVANT SOUUMISSION
+    // VALIDATIONS SYNCHRONES AVANT SOUMISSION
+    const dateObj = new Date(date);
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    const isBackdatedMoreThan30Days = dateObj.getTime() < thirtyDaysAgo.getTime();
+
+    if (isBackdatedMoreThan30Days && backdateReason.trim() === '') {
+      return fail("La justification est obligatoire pour une saisie rétroactive de plus de 30 jours.");
+    }
+
     if (site === 'ALL') {
-      setValidationError("Veuillez sélectionner un chantier avant de valider.");
-      return;
+      return fail("Veuillez sélectionner un chantier avant de valider.");
     }
 
     if (items.length === 0) { 
-      setValidationError('Ajoutez des articles.'); 
-      return; 
+      return fail('Ajoutez des articles.'); 
     }
 
     // Vérifier que toutes les quantités sont valides et > 0
@@ -818,25 +842,23 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
 
     if (invalidQtyItem) {
       const art = articles.find(a => a.id === invalidQtyItem.articleId) || localCreatedArticles.find(a => a.id === invalidQtyItem.articleId);
-      setValidationError(
+      return fail(
         `Quantité invalide pour "${art?.designation || 'un article'}" : la quantité doit être supérieure à 0 et comporter au maximum 3 décimales.`
       );
-      return;
     }
 
     if (type === 'ENTREE' && receptionSource !== 'CENTRAL' && (!entityName || entityName.trim() === '')) {
       setEntityNameError(true);
-      setValidationError(
-        "Le nom du fournisseur est obligatoire pour un bon d'entrée. " +
-        "Renseignez-le dans le champ 'Nom du Fournisseur / Vendeur' (surligné en rouge ci-dessous)."
-      );
       // Scroll automatique vers le champ concerné
       setTimeout(() => {
         document.getElementById('entityName-input')?.scrollIntoView({ 
           behavior: 'smooth', block: 'center' 
         });
       }, 100);
-      return;
+      return fail(
+        "Le nom du fournisseur est obligatoire pour un bon d'entrée. " +
+        "Renseignez-le dans le champ 'Nom du Fournisseur / Vendeur' (surligné en rouge ci-dessous)."
+      );
     }
     // Si validation passée, réinitialiser l'erreur visuelle :
     setEntityNameError(false);
@@ -847,10 +869,9 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       );
       if (negativePriceItem) {
         const art = articles.find(a => a.id === negativePriceItem.articleId) || localCreatedArticles.find(a => a.id === negativePriceItem.articleId);
-        setValidationError(
+        return fail(
           `Prix négatif détecté pour "${art?.designation}" : un prix ne peut pas être négatif.`
         );
-        return;
       }
     }
 
@@ -861,45 +882,38 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     });
     if (mismatchedItem) {
       const art = articles.find(a => a.id === mismatchedItem.articleId) || localCreatedArticles.find(a => a.id === mismatchedItem.articleId);
-      setValidationError(
+      return fail(
         `Incohérence détectée : l'article "${art?.designation}" appartient au chantier ${art?.site}, mais vous avez sélectionné le chantier ${site}. Retirez cette ligne ou changez de chantier.`
       );
-      return;
     }
 
     if (type === 'SORTIE' && !isMachineRelated) {
       const missingBeneficiary = items.some(item => !item.beneficiaryId);
       if (missingBeneficiary) {
-        setValidationError("Veuillez sélectionner un bénéficiaire individuel pour chaque ligne d'article.");
-        return;
+        return fail("Veuillez sélectionner un bénéficiaire individuel pour chaque ligne d'article.");
       }
     }
 
     if (type === 'SORTIE' && isMachineRelated) {
       if (!mecanicien || mecanicien.trim() === '') {
-        setValidationError(
+        return fail(
           "Le mécanicien responsable est obligatoire pour une sortie sur engin ou perforateur."
         );
-        return;
       }
       if (categoryFilter === 'ENGINS' && (!targetEngin || targetEngin.trim() === '')) {
-        setValidationError("L'engin concerné est obligatoire pour une sortie ENGINS.");
-        return;
+        return fail("L'engin concerné est obligatoire pour une sortie ENGINS.");
       }
       if (categoryFilter === 'PERFORATEURS' && (!targetPerfo || targetPerfo.trim() === '')) {
-        setValidationError("Le perforateur concerné est obligatoire pour une sortie PERFORATEURS.");
-        return;
+        return fail("Le perforateur concerné est obligatoire pour une sortie PERFORATEURS.");
       }
     }
 
     if (type === 'ENTREE' && !reference.trim()) {
-      setValidationError("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
-      return;
+      return fail("ERREUR : Le N° Bon de Livraison Fournisseur est obligatoire.");
     }
 
     if (type === 'ENTREE' && priceWarnings.length > 0 && !forceSubmitPrices) {
-      setValidationError("ATTENTION : Certains prix saisis sont jugés anormaux ou nuls par le système qualité. Veuillez confirmer l'exactitude des prix en cochant la case d'approbation et réessayez.");
-      return;
+      return fail("ATTENTION : Certains prix saisis sont jugés anormaux ou nuls par le système qualité. Veuillez confirmer l'exactitude des prix en cochant la case d'approbation et réessayez.");
     }
 
     // Vérification de la clôture mensuelle pour verrouiller la période
@@ -908,15 +922,11 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       const { doc, getDoc, db } = await import('../lib/db');
       const closingSnap = await getDoc(doc(db, 'monthlyClosings', targetMonth));
       if (closingSnap.exists()) {
-        setValidationError(`La période ${targetMonth} est close et scellée comptablement. Impossible d'enregistrer des mouvements dans cette période.`);
-        return;
+        return fail(`La période ${targetMonth} est close et scellée comptablement. Impossible d'enregistrer des mouvements dans cette période.`);
       }
     } catch (err) {
       console.warn("Vérification de clôture ignorée (possible mode hors-ligne):", err);
     }
-
-    // VALIDATION TERMINÉE - SÉCURISATION DE LA TRANSITION DE SOUUMISSION
-    setIsSubmitting(true);
     
     try {
       const resolvedMecanicien = agents.find(a => a.id === mecanicien);
@@ -970,7 +980,9 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
         motif: notes,
         notes,
         interventionType: isMachineRelated ? interventionType : undefined,
-        status: 'VALIDE',
+        status: isBackdatedMoreThan30Days ? 'EN_ATTENTE_APPROBATION' : 'VALIDE',
+        needsSuperAdminApproval: isBackdatedMoreThan30Days ? true : undefined,
+        backdateReason: isBackdatedMoreThan30Days ? backdateReason.trim() : undefined,
         items: items.map(({ lineId, ...rest }) => ({
           articleId: rest.articleId,
           quantity: rest.quantity,
@@ -999,6 +1011,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     } finally {
       // Le verrou est TOUJOURS libéré, succès ou échec,
       // pour permettre une nouvelle tentative si besoin
+      submissionLockRef.current = false;
       setIsSubmitting(false);
     }
   };
@@ -1123,7 +1136,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                   }
                 }}
                 max={maxDateStr}
-                min={type === 'SORTIE' ? undefined : minDateStr}
+                min="2020-01-01T00:00"
                 className="input-field h-10 px-3 text-xs bg-white font-mono font-bold border border-slate-205 rounded-lg w-full cursor-pointer focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
@@ -1139,6 +1152,25 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                 className="input-field h-10 px-3 text-xs bg-white font-mono font-bold border border-slate-205 rounded-lg w-full focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
+
+            {isBackdatedMoreThan30Days && (
+              <div className="sm:col-span-2 lg:col-span-3 p-4 bg-amber-500/10 border-2 border-amber-500/30 rounded-xl space-y-2 mt-2">
+                <div className="flex items-center gap-2 text-amber-600 text-xs font-black uppercase">
+                  <AlertTriangle className="w-5 h-5 text-amber-500 animate-bounce" />
+                  Saisie rétroactive supérieure à 30 jours (Approbation Requise)
+                </div>
+                <p className="text-[11px] text-slate-600 font-medium">
+                  Ce bon est rétroactif de plus de 30 jours. Pour être définitivement comptabilisé et mettre à jour les stocks, il doit être **validé par le SuperAdmin**. Veuillez renseigner ci-dessous la justification de cette saisie tardive :
+                </p>
+                <textarea
+                  placeholder="Justification obligatoire (ex: Retard de livraison du fournisseur, correction d'un écart d'inventaire, etc.)..."
+                  value={backdateReason}
+                  onChange={(e) => setBackdateReason(e.target.value)}
+                  className="w-full p-3 bg-white text-slate-900 border border-slate-300 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-amber-500 h-20"
+                  required
+                />
+              </div>
+            )}
           </div>
 
           <div className="md:col-span-2 p-5 bg-gradient-to-br from-[#121c26] via-[#091118] to-[#04080c] border border-amber-500/20 rounded-2xl text-white shadow-2xl relative overflow-hidden">

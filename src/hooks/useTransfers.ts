@@ -7,7 +7,7 @@ import { transfersService } from '../services/transfer.service';
 import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
 import { Transfert, MouvementItem } from '../types';
-import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
+import { serializeFirestoreData, handleFirestoreError, OperationType, logger } from '../lib/utils';
 import { migrateDocument } from '../lib/migrations';
 import { offlineQueue } from '../lib/offlineQueue';
 import { useSystemStore } from '../stores/system.store';
@@ -20,6 +20,8 @@ export function useTransfers() {
 
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+
+    setTransferts([]);
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'transferts'))
@@ -36,7 +38,7 @@ export function useTransfers() {
       setTransferts(list);
       offlineService.saveCollection('transferts', list)
         .then(() => snapshotManager.markCollectionSaved('transferts'))
-        .catch(err => console.warn('[IDB] transferts save error:', err));
+        .catch(err => logger.warn('[IDB] transferts save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'transferts');
     });
@@ -81,7 +83,7 @@ export function useTransfers() {
         throw err;
       }
 
-      console.warn('[useTransfers] Add Transfert failed, queuing offline fallback', err);
+      logger.warn('[useTransfers] Add Transfert failed, queuing offline fallback', err);
       const res = await transfersService.addTransfert(t, true);
       if (!res.success) throw new Error(res.error);
       
@@ -145,7 +147,7 @@ export function useTransfers() {
         throw err;
       }
 
-      console.warn('[useTransfers] Complete Transfert failed, queuing offline fallback', err);
+      logger.warn('[useTransfers] Complete Transfert failed, queuing offline fallback', err);
       const res = await transfersService.completeTransfert(id, recepteur, receivedItems, disputeReason, true);
       if (!res.success) throw new Error(res.error);
       

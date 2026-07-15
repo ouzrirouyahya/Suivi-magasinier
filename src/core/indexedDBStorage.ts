@@ -2,6 +2,7 @@
  * HydroMines Storage Hardening Engine v2.0 (SRE Runtime Enforcement)
  * Encapsulates safe, multi-store IndexedDB operations with automated localStorage fallbacks.
  */
+import { logger } from '../lib/utils';
 
 const DB_NAME = 'hydromines_secure_warehouse_v9';
 const DB_VERSION = 7;
@@ -18,7 +19,7 @@ class IndexedDBStorageClass {
 
   constructor() {
     this.initDatabase().catch((err) => {
-      console.warn('[STORAGE_HARDENING] IndexedDB initialization failed. LocalStorage fallback active.', err);
+      logger.warn('[STORAGE_HARDENING] IndexedDB initialization failed. LocalStorage fallback active.', err);
       this.isFallbackMode = true;
     });
   }
@@ -48,7 +49,7 @@ class IndexedDBStorageClass {
         // Self-healing check: Do we have all required stores?
         const missingStores = STORES.filter(store => !db.objectStoreNames.contains(store));
         if (missingStores.length > 0) {
-          console.warn(`[STORAGE_HARDENING] Missing stores detected: ${missingStores.join(', ')}. Triggering self-healing upgrade...`);
+          logger.warn(`[STORAGE_HARDENING] Missing stores detected: ${missingStores.join(', ')}. Triggering self-healing upgrade...`);
           
           // ─── ÉTAPE 1 : Sauvegarder la queue offline ───
           const BACKUP_KEY = 'hydromines_idb_migration_backup_' + Date.now();
@@ -70,10 +71,10 @@ class IndexedDBStorageClass {
             }
             if (backupItems.length > 0) {
               localStorage.setItem(BACKUP_KEY, JSON.stringify(backupItems));
-              console.info(`[IDB Migration] ${backupItems.length} items offline sauvegardés`);
+              logger.info(`[IDB Migration] ${backupItems.length} items offline sauvegardés`);
             }
           } catch (backupErr) {
-            console.warn('[IDB Migration] Backup échoué (non bloquant):', backupErr);
+            logger.warn('[IDB Migration] Backup échoué (non bloquant):', backupErr);
           }
 
           // ─── ÉTAPE 2 : Détruire et recréer la base ───
@@ -98,10 +99,10 @@ class IndexedDBStorageClass {
                 }
               }
               localStorage.removeItem(BACKUP_KEY);
-              console.info(`[IDB Migration] ${items.length} items offline restaurés`);
+              logger.info(`[IDB Migration] ${items.length} items offline restaurés`);
             }
           } catch (restoreErr) {
-            console.warn('[IDB Migration] Restauration échouée:', restoreErr);
+            logger.warn('[IDB Migration] Restauration échouée:', restoreErr);
           }
 
           resolve(freshDb);
@@ -137,7 +138,7 @@ class IndexedDBStorageClass {
       return db;
     }
 
-    console.warn(`[STORAGE_HARDENING] Store '${storeName}' does not exist in current IndexedDB schema. Triggering self-healing recreation...`);
+    logger.warn(`[STORAGE_HARDENING] Store '${storeName}' does not exist in current IndexedDB schema. Triggering self-healing recreation...`);
     if (!STORES.includes(storeName)) {
       STORES.push(storeName);
     }
@@ -153,7 +154,7 @@ class IndexedDBStorageClass {
         del.onsuccess = () => resolve();
         del.onerror = () => reject(del.error || new Error('Delete database failed during self-healing.'));
         del.onblocked = () => {
-          console.warn('[STORAGE_HARDENING] Database deletion blocked by other tabs/connections.');
+          logger.warn('[STORAGE_HARDENING] Database deletion blocked by other tabs/connections.');
           resolve();
         };
       });
@@ -161,7 +162,7 @@ class IndexedDBStorageClass {
       this.db = freshDb;
       return freshDb;
     } catch (err) {
-      console.warn(`[STORAGE_HARDENING_FALLBACK] Self-healing db recreation failed for store '${storeName}'.`, err);
+      logger.warn(`[STORAGE_HARDENING_FALLBACK] Self-healing db recreation failed for store '${storeName}'.`, err);
       throw err;
     }
   }
@@ -187,13 +188,13 @@ class IndexedDBStorageClass {
             const req = store.put(item);
             req.onerror = () => {
               errorOccured = true;
-              console.error(`[STORAGE_HARDENING] Error putting item into store ${resolvedStoreName}:`, req.error);
+              logger.error(`[STORAGE_HARDENING] Error putting item into store ${resolvedStoreName}:`, req.error);
             };
           });
 
           tx.oncomplete = () => {
             if (errorOccured) {
-              console.warn(`[STORAGE_HARDENING] Some items were discarded in store ${resolvedStoreName}.`);
+              logger.warn(`[STORAGE_HARDENING] Some items were discarded in store ${resolvedStoreName}.`);
             }
             // Keep a tiny quick reference / small cache in localStorage for instant boots
             this.updateLocalStorageCache(resolvedStoreName, items.slice(0, 50));
@@ -207,11 +208,11 @@ class IndexedDBStorageClass {
       });
     } catch (err) {
       this.isFallbackMode = true; // Downgrade to fallback
-      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB write failed for '${resolvedStoreName}'. Writing completely to LocalStorage.`, err);
+      logger.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB write failed for '${resolvedStoreName}'. Writing completely to LocalStorage.`, err);
       try {
         localStorage.setItem(`hydromines_cache_${resolvedStoreName}`, JSON.stringify(items));
       } catch (storageErr) {
-        console.error('[STORAGE_HARDENING] LocalStorage write fallback failed:', storageErr);
+        logger.error('[STORAGE_HARDENING] LocalStorage write fallback failed:', storageErr);
       }
     }
   }
@@ -231,7 +232,7 @@ class IndexedDBStorageClass {
         req.onerror = () => reject(req.error || new Error(`Failed to save item to ${resolvedStoreName}.`));
       });
     } catch (err) {
-      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB saveItem failed for '${resolvedStoreName}'.`, err);
+      logger.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB saveItem failed for '${resolvedStoreName}'.`, err);
       // LocalStorage fallback for single item
       try {
         const current = this.readLocalStorageCache<T>(resolvedStoreName) || [];
@@ -239,7 +240,7 @@ class IndexedDBStorageClass {
         filtered.push(item);
         this.updateLocalStorageCache(resolvedStoreName, filtered);
       } catch (storageErr) {
-        console.error('[STORAGE_HARDENING] LocalStorage saveItem fallback failed:', storageErr);
+        logger.error('[STORAGE_HARDENING] LocalStorage saveItem fallback failed:', storageErr);
       }
     }
   }
@@ -259,13 +260,13 @@ class IndexedDBStorageClass {
         req.onerror = () => reject(req.error || new Error(`Failed to delete item from ${resolvedStoreName}.`));
       });
     } catch (err) {
-      console.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB deleteItem failed for '${resolvedStoreName}'.`, err);
+      logger.warn(`[STORAGE_HARDENING_FALLBACK] IndexedDB deleteItem failed for '${resolvedStoreName}'.`, err);
       try {
         const current = this.readLocalStorageCache<any>(resolvedStoreName) || [];
         const filtered = current.filter((x: any) => x.id !== id);
         this.updateLocalStorageCache(resolvedStoreName, filtered);
       } catch (storageErr) {
-        console.error('[STORAGE_HARDENING] LocalStorage deleteItem fallback failed:', storageErr);
+        logger.error('[STORAGE_HARDENING] LocalStorage deleteItem fallback failed:', storageErr);
       }
     }
   }
@@ -298,7 +299,7 @@ class IndexedDBStorageClass {
         };
       });
     } catch (err) {
-      console.info(`[STORAGE_HARDENING_FALLBACK] IndexedDB read failed or inactive for '${resolvedStoreName}'. Responding with LocalStorage backup.`, err);
+      logger.info(`[STORAGE_HARDENING_FALLBACK] IndexedDB read failed or inactive for '${resolvedStoreName}'. Responding with LocalStorage backup.`, err);
       return this.readLocalStorageCache<T>(resolvedStoreName);
     }
   }
@@ -308,7 +309,7 @@ class IndexedDBStorageClass {
       // Keep only small caches (first 40 items) to guard quota space
       localStorage.setItem(`hydromines_cache_${storeName}_small`, JSON.stringify(items.slice(0, 40)));
     } catch (err) {
-      console.warn('[STORAGE_HARDENING] LocalStorage tiny cache update failed:', err);
+      logger.warn('[STORAGE_HARDENING] LocalStorage tiny cache update failed:', err);
     }
   }
 

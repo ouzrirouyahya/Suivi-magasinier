@@ -7,6 +7,7 @@ import { messagingService } from '../../services/message.service';
 import MessageComposer from './MessageComposer';
 import TelemetryDashboard from './TelemetryDashboard';
 import { InboxItem, MessageDraft, Message, SiteCode, UserRole, MessageRecipient } from '../../types';
+import { logger } from '../../lib/utils';
 import { 
   MessageSquare, 
   Inbox, 
@@ -77,10 +78,10 @@ export default function MessagingPage() {
   useEffect(() => {
     if (selectedItem?.threadId) {
       const unsub = loadThread(selectedItem.threadId);
-      openMessage(selectedItem).catch(console.error);
+      openMessage(selectedItem).catch(logger.error);
       return () => {
         unsub();
-        closeMessage(selectedItem).catch(console.error);
+        closeMessage(selectedItem).catch(logger.error);
       };
     }
   }, [selectedItem, loadThread, openMessage, closeMessage]);

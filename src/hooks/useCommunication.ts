@@ -33,7 +33,7 @@ import {
   SiteCode,
   UserRole
 } from '../types';
-import { generateSecureUUID } from '../lib/utils';
+import { generateSecureUUID, logger } from '../lib/utils';
 import { toast } from 'sonner';
 
 // Firestore Error handler matching firebase-integration skill
@@ -70,10 +70,10 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
     operationType,
     path
   };
-  console.error('Firestore Error inside Communication Module: ', JSON.stringify(errInfo));
+  logger.error('Firestore Error inside Communication Module: ', JSON.stringify(errInfo));
   
   if (operationType === OperationType.LIST) {
-    console.warn('[Firestore Sync Warning] Non-blocking list query inside Communication Module failed:', errInfo);
+    logger.warn('[Firestore Sync Warning] Non-blocking list query inside Communication Module failed:', errInfo);
     return;
   }
   
@@ -120,7 +120,7 @@ export function useCommunication() {
     try {
       await setDoc(doc(db, path, eventId), event);
     } catch (error) {
-      console.warn('Silent telemetry write failure:', error);
+      logger.warn('Silent telemetry write failure:', error);
     }
   }, [currentUser, currentSite, sessionId]);
 
@@ -503,7 +503,7 @@ export function useCommunication() {
       batch.delete(draftRef);
       await batch.commit();
     } catch (error) {
-      console.warn('Silent draft delete failure:', error);
+      logger.warn('Silent draft delete failure:', error);
     }
   }, []);
 
@@ -537,7 +537,7 @@ export function useCommunication() {
     try {
       await setDoc(doc(db, 'banner_views', viewId), view);
     } catch (error) {
-      console.warn('Silent banner view write failure:', error);
+      logger.warn('Silent banner view write failure:', error);
     }
   }, [currentUser, currentSite]);
 

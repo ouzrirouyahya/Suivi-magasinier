@@ -28,12 +28,12 @@ interface InventairePageProps {
   currentSite: SiteCode;
   articles: Article[];
   inventaires: Inventaire[];
-  onSaveInventaire: (i: Inventaire) => void;
+  onSaveInventaire: (i: Inventaire) => Promise<void> | void;
   isAdmin?: boolean;
 }
 
 export function InventairePage({ currentSite, articles, inventaires, onSaveInventaire, isAdmin = false }: InventairePageProps) {
-  const { currentUser } = useInventory();
+  const { currentUser, isReadOnlyUser } = useInventory();
   const [activeSession, setActiveSession] = useState<Inventaire | null>(null);
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
@@ -44,7 +44,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   const [showValidateConfirm, setShowValidateConfirm] = useState(false);
   const [showSetAllConfirm, setShowSetAllConfirm] = useState(false);
 
-  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+  const isReadOnly = isReadOnlyUser;
 
   useEffect(() => {
     if (currentUser && !compteur) {
@@ -183,13 +183,11 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
          status: 'VALIDE',
          validePar: currentUser?.name || currentUser?.email || 'Admin'
       };
-      const result = await movementsService.saveInventaire(inv);
-      if (!result.success) {
-        toast.error(`Erreur inventaire : ${result.error}`);
-        return;
-      }
-      onSaveInventaire(inv);
+      await onSaveInventaire(inv);
       setActiveSession(null);
+      toast.success('Inventaire validé avec succès. Les stocks physiques ont été ajustés.');
+    } catch (err: any) {
+      toast.error(`Erreur inventaire : ${err.message || err}`);
     } finally {
       setIsSaving(false);
     }
@@ -204,14 +202,11 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     setIsSaving(true);
     try {
       const inv: Inventaire = { ...activeSession };
-      const result = await movementsService.saveInventaire(inv);
-      if (!result.success) {
-        toast.error(`Erreur inventaire : ${result.error}`);
-        return;
-      }
-      onSaveInventaire(inv);
+      await onSaveInventaire(inv);
       setActiveSession(null);
       toast.success('Inventaire sauvegardé en brouillon.');
+    } catch (err: any) {
+      toast.error(`Erreur inventaire : ${err.message || err}`);
     } finally {
       setIsSaving(false);
     }

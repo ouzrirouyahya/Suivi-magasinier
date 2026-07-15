@@ -3,6 +3,26 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 
+// Polyfill pour crypto.randomUUID dans les environnements non sécurisés (HTTP) ou tablettes anciennes
+if (typeof window !== 'undefined') {
+  if (typeof window.crypto === 'undefined') {
+    (window as any).crypto = {} as any;
+  }
+  if (!window.crypto.randomUUID) {
+    Object.defineProperty(window.crypto, 'randomUUID', {
+      value: function () {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+          const r = (Math.random() * 16) | 0;
+          const v = c === 'x' ? r : (r & 0x3) | 0x8;
+          return v.toString(16);
+        });
+      },
+      writable: true,
+      configurable: true
+    });
+  }
+}
+
 import { InventoryProvider } from './context/InventoryContext.tsx';
 import { Toaster } from 'sonner';
 import { ErrorBoundary } from './components/ErrorBoundary';

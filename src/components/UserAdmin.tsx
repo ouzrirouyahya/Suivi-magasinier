@@ -200,7 +200,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       setShowAddEngin(false);
       toast.success(`Engin enregistré avec succès sur ${currentSite}`);
     } catch (e: any) {
-      console.error("SAVING ENGIN FAILED ERROR:", e);
+      logger.error("SAVING ENGIN FAILED ERROR:", e);
       toast.error(`Erreur d'enregistrement de l'engin: ${e.message || e}`);
     } finally {
       setIsSaving(false);
@@ -216,7 +216,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       await onSetEngin(id, updates);
       toast.success("Mise à jour de l'engin réussie");
     } catch (e: any) {
-      console.error("UPDATING ENGIN FAILED ERROR:", e);
+      logger.error("UPDATING ENGIN FAILED ERROR:", e);
       toast.error(`Erreur de modification: ${e.message || e}`);
     }
   };
@@ -276,7 +276,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       setShowAddAgent(false);
       toast.success(`Personnel ${agentFirstname} ${agentLastname} enregistré sur ${currentSite}`);
     } catch (e: any) {
-      console.error("SAVING AGENT FAILED ERROR:", e);
+      logger.error("SAVING AGENT FAILED ERROR:", e);
       toast.error(`Erreur d'enregistrement du personnel: ${e.message || e}`);
     } finally {
       setIsSaving(false);
@@ -292,7 +292,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       await onSetAgent(id, updates);
       toast.success("Mise à jour du personnel réussie");
     } catch (e: any) {
-      console.error("UPDATING AGENT FAILED ERROR:", e);
+      logger.error("UPDATING AGENT FAILED ERROR:", e);
       toast.error(`Erreur de modification: ${e.message || e}`);
     }
   };
@@ -340,7 +340,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       setShowAddPerfo(false);
       toast.success(`Perforateur ${perfoCode.toUpperCase()} enregistré sur ${currentSite}`);
     } catch (e: any) {
-      console.error("SAVING PERFO FAILED ERROR:", e);
+      logger.error("SAVING PERFO FAILED ERROR:", e);
       toast.error(`Erreur d'enregistrement du perforateur: ${e.message || e}`);
     } finally {
       setIsSaving(false);
@@ -356,7 +356,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       await onSetPerfo(id, updates);
       toast.success("Mise à jour du perforateur réussie");
     } catch (e: any) {
-      console.error("UPDATING PERFO FAILED ERROR:", e);
+      logger.error("UPDATING PERFO FAILED ERROR:", e);
       toast.error(`Erreur de modification: ${e.message || e}`);
     }
   };
@@ -387,7 +387,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       }
       setDeleteConfirm(null);
     } catch (e: any) {
-      console.error(`DELETING ${type.toUpperCase()} FAILED ERROR:`, e);
+      logger.error(`DELETING ${type.toUpperCase()} FAILED ERROR:`, e);
       toast.error(`Erreur de suppression: ${e.message || e}`);
     } finally {
       setIsDeleting(false);
@@ -425,7 +425,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       });
       toast.success(`Accès approuvé pour ${user.name}`);
     } catch (err: any) {
-      console.error("[UserAdmin] Erreur lors de l'approbation :", err);
+      logger.error("[UserAdmin] Erreur lors de l'approbation :", err);
       toast.error(`Erreur lors de l'approbation : ${err.message || err}`);
     } finally {
       setIsProcessingAction(false);
@@ -450,7 +450,7 @@ export const UserAdmin = React.memo(function UserAdmin({
       });
       toast.success(`Accès refusé pour ${user.name}`);
     } catch (err: any) {
-      console.error("[UserAdmin] Erreur lors du rejet :", err);
+      logger.error("[UserAdmin] Erreur lors du rejet :", err);
       toast.error(`Erreur lors du rejet : ${err.message || err}`);
     } finally {
       setIsProcessingAction(false);
@@ -484,7 +484,7 @@ export const UserAdmin = React.memo(function UserAdmin({
 
       toast.success(`Remplacement approuvé pour ${req.userName}`);
     } catch (err: any) {
-      console.error("[UserAdmin] Erreur lors de l'approbation du remplacement :", err);
+      logger.error("[UserAdmin] Erreur lors de l'approbation du remplacement :", err);
       toast.error(`Erreur lors de l'approbation : ${err.message || err}`);
     } finally {
       setIsProcessingAction(false);
@@ -514,7 +514,7 @@ export const UserAdmin = React.memo(function UserAdmin({
 
       toast.success(`Remplacement refusé pour ${req.userName}`);
     } catch (err: any) {
-      console.error("[UserAdmin] Erreur lors du rejet du remplacement :", err);
+      logger.error("[UserAdmin] Erreur lors du rejet du remplacement :", err);
       toast.error(`Erreur lors du rejet : ${err.message || err}`);
     } finally {
       setIsProcessingAction(false);

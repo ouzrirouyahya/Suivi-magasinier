@@ -40,7 +40,7 @@ import { useRadar } from '../hooks/useRadar';
 import { SiteCode } from '../types';
 import { SITE_CODES } from '../lib/constants';
 import { SITES } from '../demoData';
-import { formatCurrency, cn } from '../lib/utils';
+import { formatCurrency, cn, logger } from '../lib/utils';
 import type { Article, Mouvement } from '../types';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
@@ -435,7 +435,7 @@ export function ReportPage() {
               }
             }
           } catch (e) {
-            console.warn('CSS fetch bypass skipped:', e);
+            logger.warn('CSS fetch bypass skipped:', e);
           }
         }
       }
@@ -488,7 +488,7 @@ export function ReportPage() {
       pdf.save(`rapport_hydromines_epure.pdf`);
       toast.success("PDF téléchargé avec succès !");
     } catch (err: any) {
-      console.error(err);
+      logger.error(err);
       toast.error("Échec de la génération du PDF.");
     } finally {
       setIsGeneratingPDF(false);

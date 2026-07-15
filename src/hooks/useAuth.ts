@@ -83,7 +83,7 @@ export function useAuth() {
               }, { merge: true }).then(() => {
                 logger.log("✅ [useAuth] Synchronisation SUPER_ADMIN réussie.");
               }).catch(err => {
-                console.error("❌ [useAuth] Erreur lors de la mise à jour asynchrone du statut Super Admin :", err);
+                logger.error("❌ [useAuth] Erreur lors de la mise à jour asynchrone du statut Super Admin :", err);
               });
             }
           }
@@ -113,7 +113,7 @@ export function useAuth() {
               await setDoc(doc(db, 'accounts', uid), cleanObject(newUser));
               logger.log("✅ [useAuth] Document SUPER_ADMIN créé avec succès.");
             } catch (err) {
-              console.error("❌ [useAuth] Erreur de création du document SUPER_ADMIN :", err);
+              logger.error("❌ [useAuth] Erreur de création du document SUPER_ADMIN :", err);
             }
             setIsLoaded(true);
           } else {
@@ -137,7 +137,7 @@ export function useAuth() {
           }
         }
       }, (error) => {
-        console.error("❌ [Auth] Erreur Firestore onSnapshot:", error);
+        logger.error("❌ [Auth] Erreur Firestore onSnapshot:", error);
         setIsLoaded(true);
       });
     });
@@ -178,7 +178,7 @@ export function useAuth() {
             }, { merge: true });
             toast.info("⏰ Votre période de remplacement a expiré. Retour en mode lecture seule.");
           } catch (err) {
-            console.error("Error checking replacement expiration:", err);
+            logger.error("Error checking replacement expiration:", err);
           }
         }
       }

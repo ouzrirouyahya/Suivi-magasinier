@@ -39,8 +39,6 @@ interface TransfertPageProps {
 }
 
 export function TransfertPage({ currentSite, articles, transferts, onAddTransfert, onCompleteTransfert, currentUser }: TransfertPageProps) {
-  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
-
   const {
     approveTransfert,
     expedierTransfert,
@@ -48,8 +46,11 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
     accepterEtCloturerTransfert,
     deleteTransfert,
     getArticleTransitQty,
-    addTransfert
+    addTransfert,
+    isReadOnlyUser
   } = useInventory();
+
+  const isReadOnly = isReadOnlyUser;
 
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingSubmit, setIsCreatingSubmit] = useState(false);

@@ -1,5 +1,6 @@
 import { collection, addDoc, db } from '../lib/db';
 import { MessageTelemetry } from '../types';
+import { logger } from '../lib/utils';
 
 const QUEUE_KEY = 'hydromines_telemetry_queue';
 const MAX_QUEUE_SIZE = 500;
@@ -37,7 +38,7 @@ function saveQueue(queue: Omit<MessageTelemetry, 'id'>[]) {
   try {
     localStorage.setItem(QUEUE_KEY, JSON.stringify(queue));
   } catch (err) {
-    console.warn('[TelemetryService] Failed to save queue to localStorage:', err);
+    logger.warn('[TelemetryService] Failed to save queue to localStorage:', err);
   }
 }
 
@@ -57,7 +58,7 @@ export const telemetryService = {
         saveQueue(trimmed);
       }
     } catch (error) {
-      console.warn('[TelemetryService] Silent error during direct record, queueing event:', error);
+      logger.warn('[TelemetryService] Silent error during direct record, queueing event:', error);
       const queue = getQueue();
       queue.push(event);
       const trimmed = queue.length > MAX_QUEUE_SIZE
@@ -77,7 +78,7 @@ export const telemetryService = {
       try {
         await addDoc(collection(db, 'messageTelemetry'), event);
       } catch (error) {
-        console.warn('[TelemetryService] Failed to flush telemetry event, keeping in queue:', error);
+        logger.warn('[TelemetryService] Failed to flush telemetry event, keeping in queue:', error);
         // Garder les events qui ont échoué pour retry ultérieur
         failed.push(event);
       }
@@ -90,7 +91,7 @@ export const telemetryService = {
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
     telemetryService.flush().catch((err) => {
-      console.warn('[TelemetryService] Reconnection flush failed:', err);
+      logger.warn('[TelemetryService] Reconnection flush failed:', err);
     });
   });
 }

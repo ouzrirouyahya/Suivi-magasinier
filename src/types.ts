@@ -215,7 +215,7 @@ export interface Mouvement {
   beneficiaire?: string; // Nom de la personne qui reçoit l'EPI ou l'article
   referenceEngin?: string; // Référence de l'engin pour plus de précision
   targetSite?: SiteCode; // For transfers
-  status: 'BROUILLON' | 'VALIDE' | 'EN_TRANSIT' | 'COMPLETE';
+  status: 'BROUILLON' | 'VALIDE' | 'EN_TRANSIT' | 'COMPLETE' | 'EN_ATTENTE_APPROBATION' | 'REFUSE_APPROBATION';
   effectiveDemandeur?: string;
   category?: string;
   notes?: string;
@@ -223,6 +223,13 @@ export interface Mouvement {
   interventionType?: string;
   createdBy?: string; // Operator who created the movement
   condition?: 'NEUF' | 'BON' | 'MAUVAIS' | 'HORS_SERVICE';
+  needsSuperAdminApproval?: boolean;
+  approvedBySuperAdmin?: boolean;
+  backdateReason?: string;
+  approvedBy?: string;
+  approvedAt?: string;
+  rejectedBy?: string;
+  rejectedAt?: string;
 }
 
 export interface EnginMaster {

@@ -37,6 +37,15 @@ export class MovementsService {
       try {
         // Simulate locally
         mouvement.date = mouvement.date || new Date().toISOString();
+        if (mouvement.needsSuperAdminApproval) {
+          // Si simulation d'un bon en attente d'approbation, on l'ajoute juste localement sans toucher au stock
+          const toSaveLocal: Mouvement = {
+            ...mouvement,
+            status: 'EN_ATTENTE_APPROBATION'
+          };
+          useMovementsStore.getState().addMouvementLocal(toSaveLocal);
+          return { success: true };
+        }
         const updatedArticles = [...articles];
         
         for (const item of mouvement.items) {
@@ -47,13 +56,14 @@ export class MovementsService {
             const isReduction = mouvement.type === 'SORTIE' || mouvement.type === 'TRANSFERT_OUT';
             const isPMPUpdatable = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN';
             const isAdjustment = mouvement.type === 'AJUSTEMENT';
-            const newQty = isAdjustment
+            let newQty = isAdjustment
               ? item.quantity
               : isAddition 
                 ? (article.quantity || 0) + item.quantity 
                 : isReduction
                   ? (article.quantity || 0) - item.quantity
                   : (article.quantity || 0);
+            newQty = Math.round(newQty * 1000) / 1000;
             
             // Guard supplémentaire pour simulation :
             if (newQty < 0 && !isAdjustment) {
@@ -144,6 +154,46 @@ export class MovementsService {
       }
     }
 
+    if (mouvement.needsSuperAdminApproval) {
+      // Pour les mouvements en attente d'approbation superadmin:
+      // On l'enregistre simplement dans Firestore sans impacter le stock
+      try {
+        const movementRef = doc(db, 'mouvements', movementId);
+        const toSave: Mouvement = {
+          ...mouvement,
+          id: movementId,
+          status: 'EN_ATTENTE_APPROBATION',
+          date: mouvement.date || new Date().toISOString()
+        };
+        
+        await runTransaction(db, async (transaction) => {
+          const snap = await transaction.get(movementRef);
+          if (snap.exists()) {
+            throw new Error("MOUVEMENT_DEJA_TRAITE");
+          }
+          transaction.set(movementRef, cleanObject(toSave));
+
+          // Enregistrer un log d'audit
+          const logId = generateSecureUUID();
+          const auditLogRef = doc(db, 'auditLogs', logId);
+          transaction.set(auditLogRef, {
+            id: logId,
+            timestamp: new Date().toISOString(),
+            userEmail: mouvement.createdBy || 'system_service_account',
+            site: mouvement.site,
+            action: 'MOUVEMENT_ATTENTE_APPROBATION',
+            details: `Saisie rétroactive du bon ${mouvement.reference || 'Aucun'} (>30 jours) soumise à approbation. Justification : ${mouvement.backdateReason || 'Aucune'}`
+          });
+        });
+        
+        useMovementsStore.getState().addMouvementLocal(toSave);
+        return { success: true };
+      } catch (error: any) {
+        logger.error('[addMouvement (Approbation)] Erreur:', error);
+        return { success: false, error: error.message || "Erreur de soumission à l'approbation" };
+      }
+    }
+
     // 2. Run transactional database update
     try {
       const localArticlesToUpdate: { id: string; quantity: number }[] = [];
@@ -195,13 +245,14 @@ export class MovementsService {
           const isReduction = mouvement.type === 'SORTIE' || mouvement.type === 'TRANSFERT_OUT';
           const isPMPUpdatable = mouvement.type === 'ENTREE' || mouvement.type === 'TRANSFERT_IN';
           const isAdjustment = mouvement.type === 'AJUSTEMENT';
-          const newQty = isAdjustment
+          let newQty = isAdjustment
             ? item.quantity
             : isAddition 
               ? baseQty + item.quantity 
               : isReduction
                 ? baseQty - item.quantity
                 : baseQty;
+          newQty = Math.round(newQty * 1000) / 1000;
           
           if (newQty < 0 && !isAdjustment) {
             throw new Error(`Stock insuffisant pour l'article ${article.ref}. Disponible: ${baseQty}, Demandé: ${item.quantity}`);
@@ -376,6 +427,268 @@ export class MovementsService {
         success: false, 
         error: error.message || 'Erreur lors de l\'enregistrement du mouvement' 
       };
+    }
+  }
+
+  /**
+   * Approves a backdated movement and applies its stock updates in a single transaction
+   */
+  async approveMouvement(movementId: string, approvedByEmail: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const articleUpdates: { 
+        id: string;
+        ref: any; 
+        newQty: number; 
+        newPMP: number; 
+        lastPurchasePrice: number; 
+        priceHistory: any[];
+        stockBefore: number;
+        articleRefLabel: string;
+      }[] = [];
+      
+      let totalValue = 0;
+      let finalMovementData: Mouvement | null = null;
+
+      await runTransaction(db, async (transaction) => {
+        const movementRef = doc(db, 'mouvements', movementId);
+        const movementSnap = await transaction.get(movementRef);
+        if (!movementSnap.exists()) {
+          throw new Error("MOUVEMENT_INTROUVABLE");
+        }
+        const mData = movementSnap.data() as Mouvement;
+        if (mData.status !== 'EN_ATTENTE_APPROBATION') {
+          throw new Error("Mouvement déjà traité (statut: " + mData.status + ")");
+        }
+
+        finalMovementData = {
+          ...mData,
+          status: 'VALIDE',
+          approvedBySuperAdmin: true,
+          approvedBy: approvedByEmail,
+          approvedAt: new Date().toISOString()
+        };
+
+        // Vérification de la clôture mensuelle pour verrouiller la période
+        const targetMonth = toDateString(mData.date || new Date().toISOString()).slice(0, 7);
+        const closingRef = doc(db, 'monthlyClosings', targetMonth);
+        const closingSnap = await transaction.get(closingRef);
+        if (closingSnap.exists()) {
+          throw new Error(`PERIODE_CLOTUREE: La période ${targetMonth} est close.`);
+        }
+
+        for (const item of mData.items) {
+          const articleRef = doc(db, 'articles', item.articleId);
+          const articleSnap = await transaction.get(articleRef);
+          if (!articleSnap.exists()) {
+            throw new Error(`Article ${item.articleId} introuvable`);
+          }
+          
+          const article = articleSnap.data() as Article;
+          totalValue += item.quantity * (article.price || 0);
+          
+          const existingUpdateIndex = articleUpdates.findIndex(u => u.id === item.articleId);
+          const baseQty = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].newQty : (article.quantity || 0);
+          const basePMP = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].newPMP : (article.price || 0);
+          const baseLastPurchasePrice = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].lastPurchasePrice : (article.lastPurchasePrice || 0);
+          const baseHistory = existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].priceHistory : (article.priceHistory || []);
+
+          const isAddition = mData.type === 'ENTREE' || mData.type === 'TRANSFERT_IN' || (mData.type === 'RETOUR' && (!mData.condition || mData.condition === 'NEUF' || mData.condition === 'BON'));
+          const isReduction = mData.type === 'SORTIE' || mData.type === 'TRANSFERT_OUT';
+          const isPMPUpdatable = mData.type === 'ENTREE' || mData.type === 'TRANSFERT_IN';
+          const isAdjustment = mData.type === 'AJUSTEMENT';
+          
+          let newQty = isAdjustment
+            ? item.quantity
+            : isAddition 
+              ? baseQty + item.quantity 
+              : isReduction
+                ? baseQty - item.quantity
+                : baseQty;
+          newQty = Math.round(newQty * 1000) / 1000;
+          
+          if (newQty < 0 && !isAdjustment) {
+            throw new Error(`Stock insuffisant pour l'article ${article.ref}. Disponible: ${baseQty}, Requis: ${item.quantity}`);
+          }
+
+          let newPMP = basePMP;
+          let lastPurchasePrice = baseLastPurchasePrice;
+          let updatedHistory = baseHistory;
+
+          if (isPMPUpdatable) {
+            const tempArticleForPMP: Article = {
+              ...article,
+              quantity: baseQty,
+              price: basePMP,
+              lastPurchasePrice: baseLastPurchasePrice,
+              priceHistory: baseHistory
+            };
+            const updates = calculatePriceUpdates(
+              tempArticleForPMP,
+              item.quantity,
+              item.price || 0,
+              movementId,
+              mData.createdBy,
+              mData.date as any
+            );
+            newPMP = updates.price;
+            lastPurchasePrice = updates.lastPurchasePrice;
+            
+            const compactHistory = updates.priceHistory.map((h: any) => {
+              if (h && typeof h === 'object' && 'p' in h) return h;
+              return {
+                p: h.price ?? 0,
+                d: toDateString(h.date || mData.date || new Date().toISOString()).slice(0, 10),
+                q: h.quantityAttached ?? 0
+              };
+            });
+            updatedHistory = compactHistory;
+          } else if (isAddition) {
+            newPMP = basePMP;
+            lastPurchasePrice = baseLastPurchasePrice;
+            const compactHistory = updatedHistory.map((h: any) => {
+              if (h && typeof h === 'object' && 'p' in h) return h;
+              return {
+                p: h.price ?? 0,
+                d: toDateString(h.date || mData.date || new Date().toISOString()).slice(0, 10),
+                q: h.quantityAttached ?? 0
+              };
+            });
+            const retourEntry = {
+              p: basePMP,
+              d: toDateString(mData.date || new Date().toISOString()).slice(0, 10),
+              q: item.quantity
+            };
+            updatedHistory = [...compactHistory, retourEntry];
+          } else {
+            updatedHistory = updatedHistory.map((h: any) => {
+              if (h && typeof h === 'object' && 'p' in h) return h;
+              return {
+                p: h.price ?? 0,
+                d: toDateString(h.date || mData.date || new Date().toISOString()).slice(0, 10),
+                q: h.quantityAttached ?? 0
+              };
+            });
+          }
+
+          const updateObj = { 
+            id: item.articleId,
+            ref: articleRef, 
+            newQty, 
+            newPMP, 
+            lastPurchasePrice, 
+            priceHistory: updatedHistory.slice(-50),
+            stockBefore: existingUpdateIndex !== -1 ? articleUpdates[existingUpdateIndex].stockBefore : (article.quantity || 0),
+            articleRefLabel: article.ref || item.articleId
+          };
+
+          if (existingUpdateIndex !== -1) {
+            articleUpdates[existingUpdateIndex] = updateObj;
+          } else {
+            articleUpdates.push(updateObj);
+          }
+        }
+
+        // Appliquer les mises à jour aux articles
+        for (const update of articleUpdates) {
+          transaction.update(update.ref, { 
+            quantity: update.newQty,
+            price: update.newPMP,
+            lastPurchasePrice: update.lastPurchasePrice,
+            priceHistory: update.priceHistory
+          });
+        }
+
+        // Mettre à jour le mouvement
+        transaction.update(movementRef, {
+          status: 'VALIDE',
+          approvedBySuperAdmin: true,
+          approvedBy: approvedByEmail,
+          approvedAt: new Date().toISOString()
+        });
+
+        // Log d'audit de l'approbation
+        const logId = generateSecureUUID();
+        const auditLogRef = doc(db, 'auditLogs', logId);
+        transaction.set(auditLogRef, {
+          id: logId,
+          timestamp: new Date().toISOString(),
+          userEmail: approvedByEmail,
+          site: mData.site,
+          action: 'MOUVEMENT_APPROUVE',
+          details: `Approbation du bon rétroactif ${mData.reference || 'Aucun'} par ${approvedByEmail}. Justification d'origine : ${mData.backdateReason || 'Aucune'}`
+        });
+      });
+
+      // Mettre à jour l'état local
+      if (finalMovementData) {
+        useMovementsStore.getState().setMouvements(prev => 
+          prev.map(m => m.id === movementId ? finalMovementData! : m)
+        );
+        // Mettre à jour les articles en local
+        for (const upd of articleUpdates) {
+          useArticlesStore.getState().updateArticleLocal(upd.id, { quantity: upd.newQty, price: upd.newPMP, lastPurchasePrice: upd.lastPurchasePrice, priceHistory: upd.priceHistory });
+        }
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      logger.error('[approveMouvement] Erreur:', error);
+      return { success: false, error: error.message || "Erreur d'approbation" };
+    }
+  }
+
+  /**
+   * Rejects a backdated movement
+   */
+  async rejectMouvement(movementId: string, rejectedByEmail: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      let finalMovementData: Mouvement | null = null;
+      await runTransaction(db, async (transaction) => {
+        const movementRef = doc(db, 'mouvements', movementId);
+        const movementSnap = await transaction.get(movementRef);
+        if (!movementSnap.exists()) {
+          throw new Error("MOUVEMENT_INTROUVABLE");
+        }
+        const mData = movementSnap.data() as Mouvement;
+        if (mData.status !== 'EN_ATTENTE_APPROBATION') {
+          throw new Error("Mouvement déjà traité");
+        }
+
+        finalMovementData = {
+          ...mData,
+          status: 'REFUSE_APPROBATION',
+          rejectedBy: rejectedByEmail,
+          rejectedAt: new Date().toISOString()
+        };
+
+        transaction.update(movementRef, {
+          status: 'REFUSE_APPROBATION',
+          rejectedBy: rejectedByEmail,
+          rejectedAt: new Date().toISOString()
+        });
+
+        const logId = generateSecureUUID();
+        const auditLogRef = doc(db, 'auditLogs', logId);
+        transaction.set(auditLogRef, {
+          id: logId,
+          timestamp: new Date().toISOString(),
+          userEmail: rejectedByEmail,
+          site: mData.site,
+          action: 'MOUVEMENT_REFUSE',
+          details: `Refus du bon rétroactif ${mData.reference || 'Aucun'} par ${rejectedByEmail}.`
+        });
+      });
+
+      if (finalMovementData) {
+        useMovementsStore.getState().setMouvements(prev => 
+          prev.map(m => m.id === movementId ? finalMovementData! : m)
+        );
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      logger.error('[rejectMouvement] Erreur:', error);
+      return { success: false, error: error.message || "Erreur de rejet" };
     }
   }
 

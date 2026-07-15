@@ -5,8 +5,8 @@ import { useAuthStore } from '../stores/auth.store';
 import { movementsService } from '../services/movement.service';
 import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
-import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article, Inventaire } from '../types';
-import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
+import { Mouvement, DistributionEPI, PurchaseRequest, AnomalyReport, Article, Inventaire, compareDates } from '../types';
+import { serializeFirestoreData, handleFirestoreError, OperationType, logger } from '../lib/utils';
 import { migrateDocument } from '../lib/migrations';
 import { calculatePriceUpdates } from '../context/InventoryContext';
 import { offlineQueue } from '../lib/offlineQueue';
@@ -32,35 +32,70 @@ export function useMovements() {
   // Hydrate from IndexedDB on load/offline
   useEffect(() => {
     const hydrate = async () => {
+      if (!currentSite) return; // attendre que le site soit connu
       try {
         const cachedMouvements = await offlineService.getCollection<Mouvement>('mouvements');
         if (cachedMouvements && cachedMouvements.length > 0 && mouvements.length === 0) {
-          setMouvements(cachedMouvements);
+          // Filtrer pour ne garder QUE les mouvements du chantier actif
+          const filtered = currentSite === 'ALL'
+            ? cachedMouvements
+            : cachedMouvements.filter(m => m.site === currentSite);
+          if (filtered.length > 0) {
+            setMouvements(filtered);
+          }
         }
       } catch (err) {
-        console.warn('Error hydrating movements from IndexedDB:', err);
+        logger.warn('Error hydrating movements from IndexedDB:', err);
       }
       try {
         const cachedInventaires = await offlineService.getCollection<Inventaire>('inventaires');
         if (cachedInventaires && cachedInventaires.length > 0 && inventaires.length === 0) {
-          setInventaires(cachedInventaires);
+          // Filtrer pour ne garder QUE les inventaires du chantier actif
+          const filtered = currentSite === 'ALL'
+            ? cachedInventaires
+            : cachedInventaires.filter(i => i.site === currentSite);
+          if (filtered.length > 0) {
+            setInventaires(filtered);
+          }
         }
       } catch (err) {
-        console.warn('Error hydrating inventaires from IndexedDB:', err);
+        logger.warn('Error hydrating inventaires from IndexedDB:', err);
       }
     };
     hydrate();
-  }, [setMouvements, setInventaires]);
+  }, [setMouvements, setInventaires, currentSite, mouvements.length, inventaires.length]);
 
-  // Subscribe to movements (filter by site and last 90 days for better performance & accuracy)
+  // Subscribe to movements (filter by site and last 90 days, merged with any pending superadmin approvals)
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+
+    setMouvements([]);
+
+    let standardList: Mouvement[] = [];
+    let pendingList: Mouvement[] = [];
+
+    const updateStore = () => {
+      const merged = [...standardList];
+      pendingList.forEach(p => {
+        if (!merged.some(m => m.id === p.id)) {
+          merged.push(p);
+        }
+      });
+      // Sort descending by date
+      merged.sort((a, b) => compareDates(b.date, a.date));
+      setMouvements(merged);
+
+      offlineService.saveCollection('mouvements', merged)
+        .then(() => snapshotManager.markCollectionSaved('mouvements'))
+        .catch(err => {
+          logger.warn('Error saving movements to IndexedDB:', err);
+        });
+    };
+
     const ninetyDaysAgo = new Date();
     ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
 
-    // Note: This query requires a composite index in Firestore on the 'mouvements' collection:
-    // fields: site (Ascending), date (Descending)
-    const q = currentSite === 'ALL'
+    const qStd = currentSite === 'ALL'
       ? query(
           collection(db, 'mouvements'),
           where('date', '>=', ninetyDaysAgo.toISOString()),
@@ -73,23 +108,43 @@ export function useMovements() {
           orderBy('date', 'desc')
         );
 
-    const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map(doc => migrateDocument('mouvements', serializeFirestoreData({ id: doc.id, ...doc.data() })) as Mouvement);
-      setMouvements(list);
-      offlineService.saveCollection('mouvements', list)
-        .then(() => snapshotManager.markCollectionSaved('mouvements'))
-        .catch(err => {
-          console.warn('Error saving movements to IndexedDB:', err);
-        });
+    const unsubStd = onSnapshot(qStd, (snap) => {
+      standardList = snap.docs.map(doc => migrateDocument('mouvements', serializeFirestoreData({ id: doc.id, ...doc.data() })) as Mouvement);
+      updateStore();
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'mouvements');
     });
-    return unsub;
+
+    const qPending = currentSite === 'ALL'
+      ? query(
+          collection(db, 'mouvements'),
+          where('status', '==', 'EN_ATTENTE_APPROBATION')
+        )
+      : query(
+          collection(db, 'mouvements'),
+          where('site', '==', currentSite),
+          where('status', '==', 'EN_ATTENTE_APPROBATION')
+        );
+
+    const unsubPending = onSnapshot(qPending, (snap) => {
+      pendingList = snap.docs.map(doc => migrateDocument('mouvements', serializeFirestoreData({ id: doc.id, ...doc.data() })) as Mouvement);
+      updateStore();
+    }, (error) => {
+      handleFirestoreError(error, OperationType.LIST, 'mouvements_pending');
+    });
+
+    return () => {
+      unsubStd();
+      unsubPending();
+    };
   }, [setMouvements, currentSite, currentUser]);
 
   // Subscribe to distributions
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+
+    setDistributions([]);
+
     const q = currentSite === 'ALL'
       ? query(collection(db, 'distributions'))
       : query(collection(db, 'distributions'), where('site', '==', currentSite));
@@ -98,7 +153,7 @@ export function useMovements() {
       setDistributions(list);
       offlineService.saveCollection('distributions', list)
         .then(() => snapshotManager.markCollectionSaved('distributions'))
-        .catch(err => console.warn('[IDB] distributions save error:', err));
+        .catch(err => logger.warn('[IDB] distributions save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'distributions');
     });
@@ -108,6 +163,9 @@ export function useMovements() {
   // Subscribe to purchase requests
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+
+    setPurchaseRequests([]);
+
     const q = currentSite === 'ALL'
       ? query(collection(db, 'purchaseRequests'))
       : query(collection(db, 'purchaseRequests'), where('site', '==', currentSite));
@@ -116,7 +174,7 @@ export function useMovements() {
       setPurchaseRequests(list);
       offlineService.saveCollection('purchaseRequests', list)
         .then(() => snapshotManager.markCollectionSaved('purchaseRequests'))
-        .catch(err => console.warn('[IDB] purchaseRequests save error:', err));
+        .catch(err => logger.warn('[IDB] purchaseRequests save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'purchaseRequests');
     });
@@ -126,6 +184,9 @@ export function useMovements() {
   // Subscribe to anomaly reports
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+
+    setAnomalyReports([]);
+
     const q = currentSite === 'ALL'
       ? query(collection(db, 'anomalyReports'))
       : query(collection(db, 'anomalyReports'), where('site', '==', currentSite));
@@ -134,7 +195,7 @@ export function useMovements() {
       setAnomalyReports(list);
       offlineService.saveCollection('anomalyReports', list)
         .then(() => snapshotManager.markCollectionSaved('anomalyReports'))
-        .catch(err => console.warn('[IDB] anomalyReports save error:', err));
+        .catch(err => logger.warn('[IDB] anomalyReports save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'anomalyReports');
     });
@@ -144,6 +205,9 @@ export function useMovements() {
   // Subscribe to inventaires
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+
+    setInventaires([]);
+
     const q = currentSite === 'ALL'
       ? query(collection(db, 'inventaires'))
       : query(collection(db, 'inventaires'), where('site', '==', currentSite));
@@ -152,7 +216,7 @@ export function useMovements() {
       setInventaires(list);
       offlineService.saveCollection('inventaires', list)
         .then(() => snapshotManager.markCollectionSaved('inventaires'))
-        .catch(err => console.warn('[IDB] inventaires save error:', err));
+        .catch(err => logger.warn('[IDB] inventaires save error:', err));
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'inventaires');
     });
@@ -203,7 +267,7 @@ export function useMovements() {
         throw err;
       }
 
-      console.warn('[useMovements] Transaction failed, queuing offline fallback', err);
+      logger.warn('[useMovements] Transaction failed, queuing offline fallback', err);
       const res = await movementsService.addMouvement(enrichedMouvement, true);
       if (!res.success) throw new Error(res.error);
       
@@ -252,7 +316,7 @@ export function useMovements() {
       if (!res.success) throw new Error(res.error);
       return res;
     } catch (err: any) {
-      console.warn('[useMovements] Add PR failed, queuing offline fallback', err);
+      logger.warn('[useMovements] Add PR failed, queuing offline fallback', err);
       const res = await movementsService.addPurchaseRequest(pr, true);
       if (!res.success) throw new Error(res.error);
       
@@ -302,7 +366,7 @@ export function useMovements() {
       if (!res.success) throw new Error(res.error);
       return res;
     } catch (err: any) {
-      console.warn('[useMovements] Update PR status failed, queuing offline fallback', err);
+      logger.warn('[useMovements] Update PR status failed, queuing offline fallback', err);
       const res = await movementsService.updatePRStatus(id, status, true);
       if (!res.success) throw new Error(res.error);
       
@@ -361,7 +425,7 @@ export function useMovements() {
         throw err;
       }
 
-      console.warn('[useMovements] Save inventaire failed, queuing offline fallback', err);
+      logger.warn('[useMovements] Save inventaire failed, queuing offline fallback', err);
       const res = await movementsService.saveInventaire(inv, true);
       if (!res.success) throw new Error(res.error);
       
@@ -382,6 +446,24 @@ export function useMovements() {
     }
   }, []);
 
+  const approveMouvement = useCallback(async (movementId: string) => {
+    if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
+      throw new Error("Seul le SUPER_ADMIN peut approuver un bon rétroactif.");
+    }
+    const res = await movementsService.approveMouvement(movementId, currentUser.email);
+    if (!res.success) throw new Error(res.error);
+    toast.success("Mouvement approuvé avec succès et stock mis à jour !");
+  }, [currentUser]);
+
+  const rejectMouvement = useCallback(async (movementId: string) => {
+    if (!currentUser || currentUser.role !== 'SUPER_ADMIN') {
+      throw new Error("Seul le SUPER_ADMIN peut rejeter un bon rétroactif.");
+    }
+    const res = await movementsService.rejectMouvement(movementId, currentUser.email);
+    if (!res.success) throw new Error(res.error);
+    toast.success("Mouvement rejeté avec succès.");
+  }, [currentUser]);
+
   return {
     mouvements,
     distributions,
@@ -393,6 +475,8 @@ export function useMovements() {
     addPurchaseRequest,
     updatePRStatus,
     saveInventaire,
+    approveMouvement,
+    rejectMouvement,
   };
 }
 export default useMovements;

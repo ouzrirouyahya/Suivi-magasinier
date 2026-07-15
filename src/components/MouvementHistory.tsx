@@ -40,11 +40,26 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
   const [selectedMouvement, setSelectedMouvement] = useState<Mouvement | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string|null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteReason, setDeleteReason] = useState('');
+  const [deleteConfirmCheck, setDeleteConfirmCheck] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
 
   const isAdmin = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
 
   const handleConfirmDelete = async () => {
     if (!deleteConfirmId || isDeleting) return;
+    if (deleteReason.trim() === '') {
+      toast.error("Veuillez indiquer un motif de suppression obligatoire.");
+      return;
+    }
+    if (!deleteConfirmCheck) {
+      toast.error("Veuillez valider la case de certification.");
+      return;
+    }
+    if (deleteConfirmText !== 'SUPPRIMER') {
+      toast.error("Veuillez saisir 'SUPPRIMER' pour confirmer.");
+      return;
+    }
     const mouvement = mouvements.find(m => m.id === deleteConfirmId);
     if (!mouvement) return;
     
@@ -90,7 +105,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
           userEmail: currentUser?.email || 'unknown',
           site: mouvement.site,
           action: 'MOUVEMENT_SUPPRIME',
-          details: `Suppression du bon ${mouvement.reference} (${mouvement.type}) — ${mouvement.items.length} article(s)`,
+          details: `Suppression du bon ${mouvement.reference} (${mouvement.type}) par ${currentUser?.email || 'unknown'} — Motif : ${deleteReason.trim()} — ${mouvement.items.length} article(s)`,
         });
       });
       
@@ -101,6 +116,9 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
     } finally {
       setIsDeleting(false);
       setDeleteConfirmId(null);
+      setDeleteReason('');
+      setDeleteConfirmCheck(false);
+      setDeleteConfirmText('');
     }
   };
 
@@ -750,32 +768,86 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
       `}} />
 
       {deleteConfirmId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-          <div className="bg-slate-900 border border-red-700/50 rounded-2xl p-6 max-w-sm w-full">
-            <h3 className="text-white font-black text-lg mb-2 flex items-center gap-2">
-              <ShieldAlert className="w-5 h-5 text-red-400" />
-              Supprimer ce bon ?
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-slate-900 border border-red-900/60 rounded-3xl p-6 max-w-md w-full shadow-2xl relative animate-in zoom-in-95 duration-200">
+            <h3 className="text-white font-black text-xl mb-2 flex items-center gap-2">
+              <ShieldAlert className="w-6 h-6 text-red-500 animate-pulse" />
+              Supprimer & Corriger Stock
             </h3>
-            <p className="text-slate-400 text-sm mb-2">
-              Référence : <span className="text-white font-mono font-bold">
+            <p className="text-slate-400 text-xs mb-3">
+              Référence du document : <span className="text-red-400 font-mono font-black select-all">
                 {mouvements.find(m => m.id === deleteConfirmId)?.reference || mouvements.find(m => m.id === deleteConfirmId)?.id}
               </span>
             </p>
-            <p className="text-amber-400 text-xs mb-6">
-              ⚠️ Le stock sera automatiquement corrigé. 
-              Les AJUSTEMENTS ne peuvent pas être annulés automatiquement.
-              Cette action est irréversible.
-            </p>
+            
+            <div className="p-3 bg-red-950/30 border border-red-900/40 rounded-xl mb-4 text-[11px] text-amber-550 leading-normal">
+              ⚠️ **Règles de sécurité critiques** : Le stock de tous les articles rattachés à ce bon sera automatiquement recalculé et corrigé dans le sens inverse. Cette opération est comptablement enregistrée et irréversible.
+            </div>
+
+            <div className="space-y-4 mb-6">
+              {/* Motif de suppression obligatoire */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                  Motif de suppression (Obligatoire)
+                </label>
+                <textarea
+                  placeholder="Justifiez la suppression de ce bon..."
+                  value={deleteReason}
+                  onChange={(e) => setDeleteReason(e.target.value)}
+                  className="w-full p-2.5 bg-slate-800 text-white border border-slate-700 rounded-lg text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-red-500 h-16 resize-none"
+                  required
+                />
+              </div>
+
+              {/* Case à cocher de certification */}
+              <label className="flex items-start gap-2.5 cursor-pointer group select-none">
+                <input
+                  type="checkbox"
+                  checked={deleteConfirmCheck}
+                  onChange={(e) => setDeleteConfirmCheck(e.target.checked)}
+                  className="mt-0.5 rounded text-red-600 bg-slate-800 border-slate-700 focus:ring-red-500 cursor-pointer"
+                />
+                <span className="text-[11px] text-slate-350 font-bold group-hover:text-white transition-colors leading-snug">
+                  Je certifie la correction du stock physique et la traçabilité.
+                </span>
+              </label>
+
+              {/* Saisie de confirmation textuelle */}
+              <div className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+                  Saisissez <span className="text-red-400 font-black">"SUPPRIMER"</span> en majuscules pour confirmer :
+                </label>
+                <input
+                  type="text"
+                  placeholder="SUPPRIMER"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="w-full h-9 px-3 bg-slate-800 text-white font-mono font-black tracking-widest border border-slate-700 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-red-500 text-center"
+                />
+              </div>
+            </div>
+
             <div className="flex gap-3">
-              <button onClick={() => !isDeleting && setDeleteConfirmId(null)}
+              <button 
+                onClick={() => {
+                  if (!isDeleting) {
+                    setDeleteConfirmId(null);
+                    setDeleteReason('');
+                    setDeleteConfirmCheck(false);
+                    setDeleteConfirmText('');
+                  }
+                }}
                 disabled={isDeleting}
-                className="flex-1 px-4 py-2 bg-slate-700 text-white rounded-lg font-medium cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed">
+                className="flex-1 h-11 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+              >
                 Annuler
               </button>
-              <button onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg font-black cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1">
-                {isDeleting ? 'Suppression...' : 'Supprimer & Corriger stock'}
+              <button 
+                onClick={handleConfirmDelete}
+                disabled={isDeleting || deleteReason.trim() === '' || !deleteConfirmCheck || deleteConfirmText !== 'SUPPRIMER'}
+                className="flex-1 h-11 bg-red-600 hover:bg-red-500 disabled:bg-slate-800 text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-1.5 transition-colors shadow-lg shadow-red-900/10"
+              >
+                {isDeleting ? 'Suppression...' : 'Supprimer'}
               </button>
             </div>
           </div>

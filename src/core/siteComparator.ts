@@ -2,6 +2,7 @@ import { SiteCode } from '../types';
 import { SITE_CODES } from '../lib/constants';
 import { RadarReport } from './radarAnalyzer';
 import { toast } from 'sonner';
+import { logger } from '../lib/utils';
 
 export interface SiteMetrics {
   site: SiteCode;
@@ -128,7 +129,7 @@ export class SiteComparator {
   
   static getEnginCount(site: SiteCode): number {
     if (import.meta.env.DEV) {
-      console.warn(
+      logger.warn(
         `[SiteComparator] getEnginCount('${site}') appelé avec valeur hardcodée. ` +
         `Passer les données live à compareSites() pour des KPIs précis.`
       );
@@ -146,7 +147,7 @@ export class SiteComparator {
   
   static getPerforateurCount(site: SiteCode): number {
     if (import.meta.env.DEV) {
-      console.warn(
+      logger.warn(
         `[SiteComparator] getPerforateurCount('${site}') appelé avec valeur hardcodée. ` +
         `Passer les données live à compareSites() pour des KPIs précis.`
       );

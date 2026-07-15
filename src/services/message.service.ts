@@ -14,6 +14,7 @@ import {
   db
 } from '../lib/db';
 import { Message, InboxItem, MessageDraft } from '../types';
+import { logger } from '../lib/utils';
 
 export const messagingService = {
   // 1. Send a message to one or more recipients
@@ -219,7 +220,7 @@ export const messagingService = {
       });
       callback(items);
     }, (error) => {
-      console.error("[messagingService subscribeToInbox error]:", error);
+      logger.error("[messagingService subscribeToInbox error]:", error);
       if (onError) onError(error);
     });
   },
@@ -235,7 +236,7 @@ export const messagingService = {
       });
       callback(messages);
     }, (error) => {
-      console.error("[messagingService subscribeToThread error]:", error);
+      logger.error("[messagingService subscribeToThread error]:", error);
       if (onError) onError(error);
     });
   },
@@ -251,7 +252,7 @@ export const messagingService = {
       });
       callback(drafts);
     }, (error) => {
-      console.error("[messagingService subscribeToDrafts error]:", error);
+      logger.error("[messagingService subscribeToDrafts error]:", error);
       if (onError) onError(error);
     });
   }

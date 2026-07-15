@@ -1,4 +1,5 @@
 import { GoogleGenAI } from '@google/genai';
+import { logger } from '../lib/utils';
 
 let aiInstance: GoogleGenAI | null = null;
 
@@ -6,7 +7,7 @@ function getAI(): GoogleGenAI | null {
   if (!aiInstance) {
     const apiKey = import.meta.env.VITE_GEMINI_KEY;
     if (!apiKey) {
-      console.warn('[AI] Clé Gemini manquante — fonctionnalité IA désactivée.');
+      logger.warn('[AI] Clé Gemini manquante — fonctionnalité IA désactivée.');
       return null;
     }
     aiInstance = new GoogleGenAI({ apiKey });
@@ -33,7 +34,7 @@ export const aiService = {
       });
       return response.text || '';
     } catch (err) {
-      console.error('Gemini API call failed:', err);
+      logger.error('Gemini API call failed:', err);
       return 'Impossible de générer le résumé (erreur lors de l\'appel à l\'API Gemini ou clé invalide).';
     }
   }

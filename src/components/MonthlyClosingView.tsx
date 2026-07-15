@@ -18,7 +18,7 @@ import { doc, setDoc, onSnapshot, collection, deleteDoc, db } from '../lib/db';
 import { useInventory } from '../context/InventoryContext';
 import { SITE_CODES, SITE_LABELS, SiteCode } from '../lib/constants';
 import { MonthlyClosing, Article } from '../types';
-import { formatCurrency } from '../lib/utils';
+import { formatCurrency, logger } from '../lib/utils';
 import { toast } from 'sonner';
 
 export function MonthlyClosingView() {
@@ -87,7 +87,7 @@ export function MonthlyClosingView() {
       setClosings(list);
       setIsLoading(false);
     }, (err) => {
-      console.error('Error fetching closings:', err);
+      logger.error('Error fetching closings:', err);
       toast.error("Erreur de chargement des clôtures mensuelles");
       setIsLoading(false);
     });
@@ -256,7 +256,7 @@ export function MonthlyClosingView() {
       toast.success(`🎉 Clôture du mois ${targetMonth} enregistrée et scellée avec succès !`);
       setSelectedClosing(closingDoc);
     } catch (err) {
-      console.error('Error saving closing:', err);
+      logger.error('Error saving closing:', err);
       toast.error("Échec de l'enregistrement de la clôture mensuelle");
     } finally {
       setIsClosingInProgress(false);

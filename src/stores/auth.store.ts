@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { UserAccount, SiteCode } from '../types';
+import { logger } from '../lib/utils';
 
 interface AuthState {
   currentUser: UserAccount | null;
@@ -53,7 +54,7 @@ const getCachedUser = (): UserAccount | null => {
     }
     const age = Date.now() - parsed.cachedAt;
     if (age > CACHE_TTL) {
-      console.warn('[AuthStore] Session expirée (shift de 8h terminé). Forcer reconnexion.');
+      logger.warn('[AuthStore] Session expirée (shift de 8h terminé). Forcer reconnexion.');
       localStorage.removeItem('hydromines_cached_user');
       return null;
     }
@@ -98,7 +99,7 @@ export const useAuthStore = create<AuthState>((set) => {
           localStorage.removeItem('hydromines_cached_user');
         }
       } catch (err) {
-        console.warn('Failed to cache user account in localStorage:', err);
+        logger.warn('Failed to cache user account in localStorage:', err);
       }
       return { 
         currentUser: nextUser,
@@ -114,7 +115,7 @@ export const useAuthStore = create<AuthState>((set) => {
       try {
         localStorage.setItem('hydromines_current_site', site);
       } catch (err) {
-        console.warn(err);
+        logger.warn(err);
       }
       set({ currentSite: site });
     },
@@ -128,7 +129,7 @@ export const useAuthStore = create<AuthState>((set) => {
           localStorage.setItem('hydromines_cached_user', JSON.stringify(minimizeUser(nextUser)));
         }
       } catch (err) {
-        console.warn(err);
+        logger.warn(err);
       }
       return {
         accounts: nextAccounts,

@@ -9,6 +9,7 @@ import {
 } from '../../lib/db';
 import { useInventory } from '../../context/InventoryContext';
 import { Message, MessageTelemetry, BannerNotification } from '../../types';
+import { logger } from '../../lib/utils';
 import { 
   AreaChart, 
   Area, 
@@ -81,7 +82,7 @@ export default function TelemetryDashboard() {
       setBanners(loadedBanners);
       setBannerViews(loadedViews);
     } catch (err) {
-      console.error('[TelemetryDashboard] Failed to fetch data:', err);
+      logger.error('[TelemetryDashboard] Failed to fetch data:', err);
       toast.error('Erreur lors du chargement des données de télémétrie');
     } finally {
       setIsLoading(false);
@@ -176,7 +177,7 @@ export default function TelemetryDashboard() {
       toast.success(`Bannière ${newStatus === 'ACTIVE' ? 'activée' : 'suspendue'} avec succès`);
       fetchData();
     } catch (err) {
-      console.error('[TelemetryDashboard] Failed to update banner:', err);
+      logger.error('[TelemetryDashboard] Failed to update banner:', err);
       toast.error('Erreur lors de la modification de la bannière');
     }
   };
@@ -197,7 +198,7 @@ export default function TelemetryDashboard() {
       toast.success('Bannière supprimée avec succès');
       fetchData();
     } catch (err) {
-      console.error('[TelemetryDashboard] Failed to delete banner:', err);
+      logger.error('[TelemetryDashboard] Failed to delete banner:', err);
       toast.error('Erreur lors de la suppression de la bannière');
     } finally {
       setIsDeleting(false);

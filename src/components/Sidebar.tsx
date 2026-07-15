@@ -285,7 +285,7 @@ export const Sidebar = React.memo(function Sidebar({
         if (item.id !== 'FINANCE') allowedPageIds.add(item.id);
       });
     } else if (userRole === 'MAGASINIER') {
-      const allowed = ['COCKPIT', 'MESSAGING', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES', 'ANALYSE_EQUIPEMENTS'];
+      const allowed = ['COCKPIT', 'MESSAGING', 'BON_ENTREE', 'BON_SORTIE', 'TRANSFERS', 'RETURNS', 'STOCK_ENGINS', 'INVENTAIRE', 'RESTOCK_MGMT', 'TRACEABILITY', 'GESTION_ARTICLES', 'CATALOGUE_HYDROMINES'];
       allowed.forEach(id => allowedPageIds.add(id));
     } else if (userRole === 'RESPONSABLE_CHANTIER') {
       const allowed = currentUser?.isReplacingMagasinier && currentUser?.canWrite

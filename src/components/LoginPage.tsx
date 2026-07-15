@@ -32,7 +32,7 @@ const LoginPage: React.FC = () => {
       logger.log("✅ [LoginPage] signInWithPopup réussi ! Utilisateur :", result.user ? { email: result.user.email, uid: result.user.uid } : "aucun");
       // useAuth prend le relais automatiquement via onAuthStateChanged
     } catch (error: any) {
-      console.warn("⚠️ [LoginPage] Échec de la connexion via popup.", error);
+      logger.warn("⚠️ [LoginPage] Échec de la connexion via popup.", error);
       
       if (error.code === 'auth/cancelled-popup-request') return;
       
@@ -53,7 +53,7 @@ const LoginPage: React.FC = () => {
         // Connexion par redirection : 100% robuste sur tous les navigateurs, Safari, et navigation privée
         await signInWithRedirect(auth, googleProvider);
       } catch (redirectError: any) {
-        console.error("❌ [LoginPage] Échec du fallback par redirection :", redirectError);
+        logger.error("❌ [LoginPage] Échec du fallback par redirection :", redirectError);
         const redirectErrorMsg = redirectError.message || '';
         const isRedirectRefererBlocked = redirectErrorMsg.includes('requests-from-referer-') || redirectError.code?.includes('referer') || redirectErrorMsg.includes('blocked');
         

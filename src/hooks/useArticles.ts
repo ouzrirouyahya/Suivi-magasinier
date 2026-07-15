@@ -9,7 +9,7 @@ import { snapshotManager } from '../lib/snapshotManager';
 import { Article, CatalogItem, DeletionRequest, HydrominesCatalogItem, SiteCode } from '../types';
 import { CatalogUsageStats } from '../context/InventoryContext';
 import { MASTER_CATALOG } from '../catalogData';
-import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID, handleFirestoreError, OperationType } from '../lib/utils';
+import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID, handleFirestoreError, OperationType, logger } from '../lib/utils';
 import { migrateDocument } from '../lib/migrations';
 import { toast } from 'sonner';
 import { offlineQueue } from '../lib/offlineQueue';
@@ -34,21 +34,32 @@ export function useArticles() {
   // Hydrate from IndexedDB if offline or first load
   useEffect(() => {
     const hydrate = async () => {
+      if (!currentSite) return; // attendre que le site soit connu
       try {
         const cachedArticles = await offlineService.getCollection<Article>('articles');
         if (cachedArticles && cachedArticles.length > 0 && rawArticles.length === 0) {
-          setArticles(cachedArticles);
+          // Filtrer pour ne garder QUE les articles du chantier actif,
+          // afin d'éviter d'afficher des données d'un autre chantier 
+          // si la tablette a servi ailleurs auparavant
+          const filtered = currentSite === 'ALL'
+            ? cachedArticles
+            : cachedArticles.filter(a => a.site === currentSite);
+          if (filtered.length > 0) {
+            setArticles(filtered);
+          }
         }
       } catch (err) {
-        console.warn('Error hydrating articles from IndexedDB:', err);
+        logger.warn('Error hydrating articles from IndexedDB:', err);
       }
     };
     hydrate();
-  }, [setArticles]);
+  }, [setArticles, currentSite, rawArticles.length]);
 
   // Subscribe to articles
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+
+    setArticles([]);
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'articles'))
@@ -62,7 +73,7 @@ export function useArticles() {
       offlineService.saveCollection('articles', list)
         .then(() => snapshotManager.markCollectionSaved('articles'))
         .catch(err => {
-          console.warn('Error saving articles to IndexedDB:', err);
+          logger.warn('Error saving articles to IndexedDB:', err);
         });
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'articles');
@@ -73,6 +84,8 @@ export function useArticles() {
   // Subscribe to deletion requests
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+
+    setDeletionRequests([]);
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'deletionRequests'))
@@ -261,7 +274,7 @@ export function useArticles() {
       const res = await articleService.saveArticle(article);
       if (!res.success) throw new Error(res.error);
     } catch (err: any) {
-      console.warn('[useArticles] Save Article failed, queuing offline fallback', err);
+      logger.warn('[useArticles] Save Article failed, queuing offline fallback', err);
       const res = await articleService.saveArticle(article, true);
       if (!res.success) throw new Error(res.error);
       
@@ -309,7 +322,7 @@ export function useArticles() {
       const res = await articleService.deleteArticles([id]);
       if (!res.success) throw new Error(res.error);
     } catch (err: any) {
-      console.warn('[useArticles] Delete Article failed, queuing offline fallback', err);
+      logger.warn('[useArticles] Delete Article failed, queuing offline fallback', err);
       const res = await articleService.deleteArticles([id], true);
       if (!res.success) throw new Error(res.error);
       
@@ -357,7 +370,7 @@ export function useArticles() {
       const res = await articleService.deleteArticles(ids);
       if (!res.success) throw new Error(res.error);
     } catch (err: any) {
-      console.warn('[useArticles] Delete Articles failed, queuing offline fallback', err);
+      logger.warn('[useArticles] Delete Articles failed, queuing offline fallback', err);
       const res = await articleService.deleteArticles(ids, true);
       if (!res.success) throw new Error(res.error);
       
@@ -505,7 +518,7 @@ export function useArticles() {
       });
       toast.success("Demande de suppression approuvée.");
     } catch (err: any) {
-      console.error(err);
+      logger.error(err);
       toast.error(`Erreur lors de l'approbation : ${err.message || err}`);
     }
   }, [deletionRequests, currentUser]);

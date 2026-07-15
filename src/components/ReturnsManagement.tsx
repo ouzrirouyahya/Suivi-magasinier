@@ -24,9 +24,9 @@ import { cn, formatDate, generateId, formatCurrency, logger } from '../lib/utils
 import { toast } from 'sonner';
 
 export function ReturnsManagement() {
-  const { mouvements, articles, addMouvement, agents, currentSite, currentUser } = useInventory();
+  const { mouvements, articles, addMouvement, agents, currentSite, currentUser, isReadOnlyUser } = useInventory();
   
-  const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
+  const isReadOnly = isReadOnlyUser;
 
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
 

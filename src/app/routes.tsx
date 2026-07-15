@@ -90,6 +90,8 @@ const ProtectedRoute = ({
     if (!allowedPages.includes(location.pathname)) {
       return <Navigate to="/" replace />;
     }
+    // Bypass further checks since their access is determined by allowedPages
+    return <>{children}</>;
   }
 
   // Guard for other roles

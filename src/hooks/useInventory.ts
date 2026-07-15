@@ -72,6 +72,8 @@ export function useInventory() {
     addPurchaseRequest: movements.addPurchaseRequest,
     updatePRStatus: movements.updatePRStatus,
     saveInventaire: (movements as any).saveInventaire,
+    approveMouvement: (movements as any).approveMouvement,
+    rejectMouvement: (movements as any).rejectMouvement,
 
     // TRANSFERS
     transferts: transfers.transferts,

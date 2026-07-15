@@ -1,5 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { logger } from './utils';
 import {
   initializeFirestore,
   persistentLocalCache,
@@ -12,7 +13,7 @@ const requireEnv = (key: string): string => {
   const val = import.meta.env[key];
   if (!val || val.trim() === '') {
     // En développement : erreur claire dans la console
-    console.error(
+    logger.error(
       `[Firebase] ❌ Variable d'environnement manquante : ${key}\n` +
       `Créez un fichier .env.local à la racine avec :\n` +
       `${key}=votre_valeur_ici`
@@ -55,8 +56,8 @@ auth.languageCode = 'fr';
 
 const isDev = import.meta.env.DEV;
 const localLogger = {
-  log: (...args: any[]) => isDev && console.log(...args),
-  warn: (...args: any[]) => isDev && console.warn(...args),
+  log: (...args: any[]) => isDev && logger.log(...args),
+  warn: (...args: any[]) => isDev && logger.warn(...args),
 };
 
 // TODO: Réactiver App Check après configuration complète

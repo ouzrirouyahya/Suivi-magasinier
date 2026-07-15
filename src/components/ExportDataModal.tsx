@@ -34,6 +34,7 @@ import { PriceChangeRecord } from '../types/priceHistory';
 import { SiteCode } from '../types';
 import { SITE_CODES } from '../lib/constants';
 import { toast } from 'sonner';
+import { logger } from '../lib/utils';
 
 interface ExportDataModalProps {
   open: boolean;
@@ -94,7 +95,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
           setPriceHistory(data);
         })
         .catch(err => {
-          console.error('[ExportDataModal] Error loading price history:', err);
+          logger.error('[ExportDataModal] Error loading price history:', err);
         })
         .finally(() => {
           setLoadingHistory(false);
@@ -353,7 +354,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
 
       toast.success(`Export ${format.toUpperCase()} de "${sheets[0].name}" généré avec succès !`);
     } catch (error) {
-      console.error('Export error:', error);
+      logger.error('Export error:', error);
       toast.error('Une erreur est survenue lors de la compilation du rapport.');
     } finally {
       setExportingType(null);

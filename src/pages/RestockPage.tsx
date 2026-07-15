@@ -7,7 +7,7 @@ import { deleteDoc, doc, db } from '../lib/db';
 import { toast } from 'sonner';
 
 export const RestockPage: React.FC = () => {
-  const { currentSite, articles, mouvements, purchaseRequests, addPurchaseRequest, updatePRStatus, navigateToMouvement, currentUser } = useInventory();
+  const { currentSite, articles, mouvements, purchaseRequests, addPurchaseRequest, updatePRStatus, navigateToMouvement, currentUser, isReadOnlyUser } = useInventory();
 
   return (
     <div className="space-y-12">
@@ -18,7 +18,12 @@ export const RestockPage: React.FC = () => {
           articles={articles}
           mouvements={mouvements}
           purchaseRequests={purchaseRequests}
+          isReadOnly={isReadOnlyUser}
           onCreatePR={(items) => {
+            if (isReadOnlyUser) {
+              toast.error("Action refusée : Mode lecture seule actif.");
+              return;
+            }
             const pr: PurchaseRequest = {
               id: '', // Hook will generate
               site: currentSite,
@@ -29,8 +34,18 @@ export const RestockPage: React.FC = () => {
             };
             addPurchaseRequest(pr);
           }}
-          onUpdatePRStatus={updatePRStatus}
+          onUpdatePRStatus={(prId, status) => {
+            if (isReadOnlyUser) {
+              toast.error("Action refusée : Mode lecture seule actif.");
+              return;
+            }
+            updatePRStatus(prId, status);
+          }}
           onReceivePR={(pr) => {
+            if (isReadOnlyUser) {
+              toast.error("Action refusée : Mode lecture seule actif.");
+              return;
+            }
             sessionStorage.setItem('pendingPRReception', JSON.stringify({
               prId: pr.id,
               items: pr.items
@@ -38,6 +53,10 @@ export const RestockPage: React.FC = () => {
             navigateToMouvement('ENTREE');
           }}
           onDeletePR={async (id) => {
+            if (isReadOnlyUser) {
+              toast.error("Action refusée : Mode lecture seule actif.");
+              return;
+            }
             try {
               await deleteDoc(doc(db, 'purchaseRequests', id));
               toast.success('Demande supprimée avec succès');

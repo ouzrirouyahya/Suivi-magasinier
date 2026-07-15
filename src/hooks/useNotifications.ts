@@ -16,6 +16,8 @@ export function useNotifications() {
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
 
+    setNotifications([]);
+
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 

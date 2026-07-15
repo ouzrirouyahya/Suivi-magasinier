@@ -13,9 +13,10 @@ interface RestockModuleProps {
   onUpdatePRStatus: (prId: string, status: PurchaseRequest['status']) => void;
   onReceivePR: (pr: PurchaseRequest) => void;
   onDeletePR: (id: string) => void;
+  isReadOnly?: boolean;
 }
 
-export function RestockModule({ site, articles, purchaseRequests, mouvements = [], onCreatePR, onUpdatePRStatus, onReceivePR, onDeletePR }: RestockModuleProps) {
+export function RestockModule({ site, articles, purchaseRequests, mouvements = [], onCreatePR, onUpdatePRStatus, onReceivePR, onDeletePR, isReadOnly = false }: RestockModuleProps) {
   const [view, setView] = React.useState<'ALERTS' | 'HISTORY' | 'CREATE'>('ALERTS');
   const [search, setSearch] = React.useState('');
   const [selectedItems, setSelectedItems] = React.useState<Record<string, number>>({});
@@ -166,7 +167,11 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
             {Object.keys(selectedItems).length > 0 && (
               <button 
                 onClick={handleCreate}
-                className="btn bg-sky-600 text-white h-12 px-8 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl shadow-sky-200"
+                disabled={isReadOnly}
+                className={cn(
+                  "btn bg-sky-600 text-white h-12 px-8 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl shadow-sky-200",
+                  isReadOnly && "opacity-50 cursor-not-allowed pointer-events-none"
+                )}
               >
                 Générer Demande d'Achat
               </button>
@@ -210,7 +215,8 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                         {isSelected ? (
                           <input 
                             type="number" 
-                            className="w-24 h-10 border-2 border-sky-200 rounded-xl text-center font-black text-lg focus:border-sky-500 outline-none"
+                            disabled={isReadOnly}
+                            className="w-24 h-10 border-2 border-sky-200 rounded-xl text-center font-black text-lg focus:border-sky-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             value={selectedItems[article.id]}
                             onChange={(e) => updateQuantity(article.id, Number(e.target.value))}
                           />
@@ -220,12 +226,14 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                       </td>
                       <td className="px-8 py-6 text-center">
                         <button 
-                          onClick={() => toggleSelection(article)}
+                          onClick={() => !isReadOnly && toggleSelection(article)}
+                          disabled={isReadOnly}
                           className={cn(
                             "w-12 h-12 rounded-2xl flex items-center justify-center transition-all",
                             isSelected 
                               ? "bg-sky-600 text-white shadow-lg shadow-sky-200" 
-                              : "bg-white border-2 border-slate-100 text-slate-400 hover:border-sky-200 hover:text-sky-600"
+                              : "bg-white border-2 border-slate-100 text-slate-400 hover:border-sky-200 hover:text-sky-600",
+                            isReadOnly && "opacity-40 cursor-not-allowed"
                           )}
                         >
                           {isSelected ? <CheckCircle2 className="w-6 h-6" /> : <Plus className="w-6 h-6" />}
@@ -345,8 +353,12 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                         <Printer className="w-5 h-5" />
                       </button>
                       <button 
-                        onClick={() => setDeleteConfirmId(pr.id)}
-                        className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 shadow-sm"
+                        onClick={() => !isReadOnly && setDeleteConfirmId(pr.id)}
+                        disabled={isReadOnly}
+                        className={cn(
+                          "w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 shadow-sm",
+                          isReadOnly && "opacity-45 cursor-not-allowed"
+                        )}
                       >
                         <Trash2 className="w-5 h-5" />
                       </button>
@@ -354,24 +366,36 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                     <div className="flex gap-3">
                       {pr.status === 'BROUILLON' && (
                         <button 
-                          onClick={() => onUpdatePRStatus(pr.id, 'ENVOYE')}
-                          className="px-6 h-10 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-amber-600 transition-all active:scale-95"
+                          onClick={() => !isReadOnly && onUpdatePRStatus(pr.id, 'ENVOYE')}
+                          disabled={isReadOnly}
+                          className={cn(
+                            "px-6 h-10 bg-amber-500 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-amber-600 transition-all active:scale-95",
+                            isReadOnly && "opacity-50 cursor-not-allowed"
+                          )}
                         >
                           Envoyer la demande
                         </button>
                       )}
                       {pr.status === 'ENVOYE' && (
                         <button 
-                          onClick={() => onUpdatePRStatus(pr.id, 'COMMANDE')}
-                          className="px-6 h-10 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-sky-600 transition-all active:scale-95"
+                          onClick={() => !isReadOnly && onUpdatePRStatus(pr.id, 'COMMANDE')}
+                          disabled={isReadOnly}
+                          className={cn(
+                            "px-6 h-10 bg-slate-950 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl hover:bg-sky-600 transition-all active:scale-95",
+                            isReadOnly && "opacity-50 cursor-not-allowed"
+                          )}
                         >
                           Marquer Commandé
                         </button>
                       )}
                       {pr.status === 'COMMANDE' && (
                         <button 
-                          onClick={() => onReceivePR(pr)}
-                          className="px-6 h-10 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95"
+                          onClick={() => !isReadOnly && onReceivePR(pr)}
+                          disabled={isReadOnly}
+                          className={cn(
+                            "px-6 h-10 bg-emerald-600 text-white rounded-xl text-[10px] font-black uppercase tracking-widest shadow-xl shadow-emerald-100 hover:bg-emerald-700 transition-all active:scale-95",
+                            isReadOnly && "opacity-50 cursor-not-allowed"
+                          )}
                         >
                           Réceptionner (créer bon d'entrée)
                         </button>
