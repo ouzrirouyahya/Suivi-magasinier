@@ -5,6 +5,10 @@ import {
   doc, 
   updateDoc, 
   deleteDoc,
+  query,
+  where,
+  orderBy,
+  limit,
   db
 } from '../../lib/db';
 import { useInventory } from '../../context/InventoryContext';
@@ -57,18 +61,40 @@ export default function TelemetryDashboard() {
   const fetchData = async () => {
     setIsLoading(true);
     try {
+      // Calculer la date de début selon periodFilter (7, 30, ou pas de filtre pour ALL)
+      let startDateStr: string | null = null;
+      if (periodFilter !== 'ALL') {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - Number(periodFilter));
+        startDateStr = startDate.toISOString();
+      }
+
+      const buildQuery = (collectionName: string, dateField: string) => {
+        const baseCol = collection(db, collectionName);
+        if (startDateStr) {
+          return query(
+            baseCol,
+            where(dateField, '>=', startDateStr),
+            orderBy(dateField, 'desc'),
+            limit(1000)
+          );
+        }
+        // Mode 'ALL' : quand même borner pour éviter un téléchargement illimité
+        return query(baseCol, orderBy(dateField, 'desc'), limit(1000));
+      };
+
       const fetchViews = async () => {
         try {
-          return await getDocs(collection(db, 'bannerViews'));
+          return await getDocs(buildQuery('bannerViews', 'viewedAt'));
         } catch {
-          return { docs: [] };
+          return { docs: [] as any[] };
         }
       };
 
       const [msgSnap, telSnap, bannerSnap, viewsSnap] = await Promise.all([
-        getDocs(collection(db, 'messages')),
-        getDocs(collection(db, 'messageTelemetry')),
-        getDocs(collection(db, 'bannerNotifications')),
+        getDocs(buildQuery('messages', 'createdAt')),
+        getDocs(buildQuery('messageTelemetry', 'timestamp')),
+        getDocs(buildQuery('bannerNotifications', 'createdAt')),
         fetchViews()
       ]);
 
@@ -91,7 +117,7 @@ export default function TelemetryDashboard() {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [periodFilter]);
 
   // Format dynamic duration nicely (e.g., 2min 30s)
   const formatDuration = (totalSeconds?: number) => {

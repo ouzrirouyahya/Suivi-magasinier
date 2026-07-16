@@ -25,6 +25,7 @@ export function useMaintenance() {
   // Subscribe to maintenance logs
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+    setMaintenanceLogs([]);
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'maintenanceLogs'))
@@ -45,6 +46,7 @@ export function useMaintenance() {
   // Subscribe to engins
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+    setEngins([]);
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'engins'))
@@ -64,6 +66,7 @@ export function useMaintenance() {
   // Subscribe to perfos
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+    setPerfos([]);
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'perfos'))
@@ -83,6 +86,7 @@ export function useMaintenance() {
   // Subscribe to agents
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
+    setAgents([]);
 
     const q = currentSite === 'ALL'
       ? query(collection(db, 'agents'))

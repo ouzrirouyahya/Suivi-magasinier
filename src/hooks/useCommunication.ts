@@ -59,11 +59,16 @@ interface FirestoreErrorInfo {
 }
 
 function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
+  const isDev = import.meta.env.DEV;
   const errInfo: FirestoreErrorInfo = {
     error: error instanceof Error ? error.message : String(error),
     authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
+      userId: isDev 
+        ? auth.currentUser?.uid 
+        : auth.currentUser?.uid?.slice(0, 8) + '***',
+      email: isDev 
+        ? auth.currentUser?.email 
+        : auth.currentUser?.email?.replace(/(.{2}).*@/, '$1***@'),
       emailVerified: auth.currentUser?.emailVerified,
       isAnonymous: auth.currentUser?.isAnonymous,
     },
@@ -161,7 +166,8 @@ export function useCommunication() {
       collection(db, path),
       where('senderId', '==', currentUser.email),
       where('status', '==', 'ACTIVE'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(100)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -185,7 +191,8 @@ export function useCommunication() {
     const q = query(
       collection(db, path),
       where('senderId', '==', currentUser.email),
-      orderBy('lastSavedAt', 'desc')
+      orderBy('lastSavedAt', 'desc'),
+      limit(20)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -205,11 +212,14 @@ export function useCommunication() {
   useEffect(() => {
     if (!currentUser || !currentUser.active) return;
 
+    setActiveBanners([]); // ← ajout : vidage immédiat au changement de currentSite
+
     const path = 'banner_notifications';
     const q = query(
       collection(db, path),
       where('status', '==', 'ACTIVE'),
-      orderBy('createdAt', 'desc')
+      orderBy('createdAt', 'desc'),
+      limit(50)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -249,7 +259,9 @@ export function useCommunication() {
     const path = 'banner_views';
     const q = query(
       collection(db, path),
-      where('userId', '==', currentUser.email)
+      where('userId', '==', currentUser.email),
+      orderBy('viewedAt', 'desc'),
+      limit(200)
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {

@@ -10,6 +10,7 @@ export {
   // Lectures
   getDoc,
   getDocs,
+  getCountFromServer,
   // Écritures
   setDoc,
   addDoc,

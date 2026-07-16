@@ -5,6 +5,7 @@ import {
   updateDoc,
   deleteDoc,
   getDocs,
+  getCountFromServer,
   query,
   where,
   orderBy,
@@ -205,8 +206,8 @@ export const messagingService = {
   async getUnreadCount(userId: string): Promise<number> {
     const inboxCol = collection(db, 'userInbox', userId, 'messages');
     const q = query(inboxCol, where('status', '==', 'UNREAD'));
-    const snap = await getDocs(q);
-    return snap.size;
+    const snapshot = await getCountFromServer(q);
+    return snapshot.data().count;
   },
 
   // 9. Subscribe to user inbox real-time changes

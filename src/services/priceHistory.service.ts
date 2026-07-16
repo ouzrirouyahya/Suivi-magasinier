@@ -23,38 +23,20 @@ export async function getPriceHistory(
   limitVal: number = 50
 ): Promise<PriceChangeRecord[]> {
   try {
-    // Si aucun filtre n'est fourni, faire la requête triée de base
-    if (!itemId && !category) {
-      const constraints: QueryConstraint[] = [
-        orderBy('changedAt', 'desc'),
-        limit(limitVal)
-      ];
-      const q = query(collection(db, COLLECTION_NAME), ...constraints);
-      const snap = await getDocs(q);
-      return snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PriceChangeRecord[];
-    }
-
-    // Si filtré par itemId ou category, on évite d'utiliser orderBy() dans Firestore
-    // pour ne pas exiger d'index composite. On trie en mémoire.
     const constraints: QueryConstraint[] = [];
+    
     if (itemId) {
       constraints.push(where('itemId', '==', itemId));
     } else if (category) {
       constraints.push(where('category', '==', category));
     }
+    
+    constraints.push(orderBy('changedAt', 'desc'));
+    constraints.push(limit(limitVal));
 
     const q = query(collection(db, COLLECTION_NAME), ...constraints);
     const snap = await getDocs(q);
-    const records = snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PriceChangeRecord[];
-
-    // Tri en mémoire par changedAt décroissant
-    return records
-      .sort((a, b) => {
-        const dateA = new Date(a.changedAt || 0).getTime();
-        const dateB = new Date(b.changedAt || 0).getTime();
-        return dateB - dateA;
-      })
-      .slice(0, limitVal);
+    return snap.docs.map(doc => ({ id: doc.id, ...doc.data() })) as PriceChangeRecord[];
   } catch (error) {
     logger.error('[getPriceHistory] Erreur:', error);
     return [];

@@ -27,10 +27,14 @@ export function useAudit() {
   useEffect(() => {
     if (!currentUser || !currentUser.active || !currentSite) return;
 
+    setAuditLogs([]); // ← vidage immédiat (fix Bug A)
+
     const startDate = dateFilter === 'policy' 
       ? getArchiveThreshold('auditLogs')
       : (() => { const d = new Date(); d.setDate(d.getDate() - Number(dateFilter)); return d; })();
 
+    // Fix Bug B : appliquer le même filtre date + orderBy + limit 
+    // dans les DEUX cas (ALL et site spécifique)
     const q = currentSite === 'ALL'
       ? query(
           collection(db, 'auditLogs'),
@@ -40,23 +44,19 @@ export function useAudit() {
         )
       : query(
           collection(db, 'auditLogs'),
-          where('site', '==', currentSite)
+          where('site', '==', currentSite),
+          where('timestamp', '>=', startDate.toISOString()),
+          orderBy('timestamp', 'desc'),
+          limit(PAGE_SIZE)
         );
 
     const unsub = onSnapshot(q, (snap) => {
-      let list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AuditLog);
-      if (currentSite !== 'ALL') {
-        list = list
-          .filter(log => getTimestampString(log.timestamp) >= startDate.toISOString())
-          .sort((a, b) => getTimestampString(b.timestamp).localeCompare(getTimestampString(a.timestamp)));
-        setAuditLogs(list.slice(0, PAGE_SIZE));
-        setLastDoc(null);
-        setHasMore(false);
-      } else {
-        setAuditLogs(list);
-        setLastDoc(snap.docs[snap.docs.length - 1] || null);
-        setHasMore(snap.docs.length === PAGE_SIZE);
-      }
+      const list = snap.docs.map(doc => 
+        serializeFirestoreData({ id: doc.id, ...doc.data() }) as AuditLog
+      );
+      setAuditLogs(list);
+      setLastDoc(snap.docs[snap.docs.length - 1] || null);
+      setHasMore(snap.docs.length === PAGE_SIZE);
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'auditLogs');
     });
@@ -65,16 +65,26 @@ export function useAudit() {
   }, [currentUser, currentSite, dateFilter, setAuditLogs]);
 
   const loadMoreAuditLogs = async () => {
-    if (!lastDoc || !hasMore || currentSite !== 'ALL') return;
+    if (!lastDoc || !hasMore || !currentSite) return;
     try {
-      const q = query(
-        collection(db, 'auditLogs'),
-        orderBy('timestamp', 'desc'),
-        startAfter(lastDoc),
-        limit(PAGE_SIZE)
-      );
+      const q = currentSite === 'ALL'
+        ? query(
+            collection(db, 'auditLogs'),
+            orderBy('timestamp', 'desc'),
+            startAfter(lastDoc),
+            limit(PAGE_SIZE)
+          )
+        : query(
+            collection(db, 'auditLogs'),
+            where('site', '==', currentSite),
+            orderBy('timestamp', 'desc'),
+            startAfter(lastDoc),
+            limit(PAGE_SIZE)
+          );
       const snap = await getDocs(q);
-      const more = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AuditLog);
+      const more = snap.docs.map(doc => 
+        serializeFirestoreData({ id: doc.id, ...doc.data() }) as AuditLog
+      );
       const currentLogs = useSystemStore.getState().auditLogs;
       setAuditLogs([...currentLogs, ...more]);
       setLastDoc(snap.docs[snap.docs.length - 1] || null);
