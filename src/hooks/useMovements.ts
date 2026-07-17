@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react';
-import { collection, onSnapshot, query, orderBy, where, Timestamp, db } from '../lib/db';
+import { collection, onSnapshot, query, orderBy, where, Timestamp, limit, db } from '../lib/db';
 import { useMovementsStore } from '../stores/movement.store';
 import { useAuthStore } from '../stores/auth.store';
 import { movementsService } from '../services/movement.service';
@@ -35,12 +35,19 @@ export function useMovements() {
       if (!currentSite) return; // attendre que le site soit connu
       try {
         const cachedMouvements = await offlineService.getCollection<Mouvement>('mouvements');
-        if (cachedMouvements && cachedMouvements.length > 0 && mouvements.length === 0) {
+        if (cachedMouvements && cachedMouvements.length > 0) {
           // Filtrer pour ne garder QUE les mouvements du chantier actif
           const filtered = currentSite === 'ALL'
             ? cachedMouvements
             : cachedMouvements.filter(m => m.site === currentSite);
-          if (filtered.length > 0) {
+
+          // Si nous avons trouvé des mouvements d'un autre chantier, on nettoie le cache local (sécurité anti-leak)
+          if (filtered.length !== cachedMouvements.length) {
+            logger.info("[Storage Hardening] Nettoyage des mouvements inter-chantiers du cache local...");
+            await offlineService.saveCollection('mouvements', filtered);
+          }
+
+          if (filtered.length > 0 && mouvements.length === 0) {
             setMouvements(filtered);
           }
         }
@@ -49,12 +56,19 @@ export function useMovements() {
       }
       try {
         const cachedInventaires = await offlineService.getCollection<Inventaire>('inventaires');
-        if (cachedInventaires && cachedInventaires.length > 0 && inventaires.length === 0) {
+        if (cachedInventaires && cachedInventaires.length > 0) {
           // Filtrer pour ne garder QUE les inventaires du chantier actif
           const filtered = currentSite === 'ALL'
             ? cachedInventaires
             : cachedInventaires.filter(i => i.site === currentSite);
-          if (filtered.length > 0) {
+
+          // Si nous avons trouvé des inventaires d'un autre chantier, on nettoie le cache local (sécurité anti-leak)
+          if (filtered.length !== cachedInventaires.length) {
+            logger.info("[Storage Hardening] Nettoyage des inventaires inter-chantiers du cache local...");
+            await offlineService.saveCollection('inventaires', filtered);
+          }
+
+          if (filtered.length > 0 && inventaires.length === 0) {
             setInventaires(filtered);
           }
         }
@@ -145,9 +159,21 @@ export function useMovements() {
 
     setDistributions([]);
 
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
     const q = currentSite === 'ALL'
-      ? query(collection(db, 'distributions'))
-      : query(collection(db, 'distributions'), where('site', '==', currentSite));
+      ? query(
+          collection(db, 'distributions'),
+          where('date', '>=', ninetyDaysAgo.toISOString()),
+          limit(500)
+        )
+      : query(
+          collection(db, 'distributions'),
+          where('site', '==', currentSite),
+          where('date', '>=', ninetyDaysAgo.toISOString()),
+          limit(500)
+        );
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as DistributionEPI);
       setDistributions(list);
@@ -166,9 +192,21 @@ export function useMovements() {
 
     setPurchaseRequests([]);
 
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
     const q = currentSite === 'ALL'
-      ? query(collection(db, 'purchaseRequests'))
-      : query(collection(db, 'purchaseRequests'), where('site', '==', currentSite));
+      ? query(
+          collection(db, 'purchaseRequests'),
+          where('date', '>=', ninetyDaysAgo.toISOString()),
+          limit(500)
+        )
+      : query(
+          collection(db, 'purchaseRequests'),
+          where('site', '==', currentSite),
+          where('date', '>=', ninetyDaysAgo.toISOString()),
+          limit(500)
+        );
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as PurchaseRequest);
       setPurchaseRequests(list);
@@ -187,9 +225,21 @@ export function useMovements() {
 
     setAnomalyReports([]);
 
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
     const q = currentSite === 'ALL'
-      ? query(collection(db, 'anomalyReports'))
-      : query(collection(db, 'anomalyReports'), where('site', '==', currentSite));
+      ? query(
+          collection(db, 'anomalyReports'),
+          where('timestamp', '>=', ninetyDaysAgo.toISOString()),
+          limit(500)
+        )
+      : query(
+          collection(db, 'anomalyReports'),
+          where('site', '==', currentSite),
+          where('timestamp', '>=', ninetyDaysAgo.toISOString()),
+          limit(500)
+        );
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as AnomalyReport);
       setAnomalyReports(list);
@@ -208,9 +258,21 @@ export function useMovements() {
 
     setInventaires([]);
 
+    const ninetyDaysAgo = new Date();
+    ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90);
+
     const q = currentSite === 'ALL'
-      ? query(collection(db, 'inventaires'))
-      : query(collection(db, 'inventaires'), where('site', '==', currentSite));
+      ? query(
+          collection(db, 'inventaires'),
+          where('date', '>=', ninetyDaysAgo.toISOString()),
+          limit(500)
+        )
+      : query(
+          collection(db, 'inventaires'),
+          where('site', '==', currentSite),
+          where('date', '>=', ninetyDaysAgo.toISOString()),
+          limit(500)
+        );
     const unsub = onSnapshot(q, (snap) => {
       const list = snap.docs.map(doc => serializeFirestoreData({ id: doc.id, ...doc.data() }) as Inventaire);
       setInventaires(list);

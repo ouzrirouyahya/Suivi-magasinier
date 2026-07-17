@@ -8,12 +8,34 @@
  */
 
 import { Article, Mouvement, Transfert, MaintenanceLog } from '../types';
+import { SecuritySanitizer } from './SecuritySanitizer';
 
 export interface BSVValidationResult {
   isValid: boolean;
   classification: 'NETWORK_DRIFT' | 'STATE_INCONSISTENCY' | 'TRANSACTION_CONFLICT' | 'VALID';
   errorMsg?: string;
   inconsistentField?: string;
+}
+
+/**
+ * Scans object payloads recursively for security-level threats
+ */
+function checkForInjections(obj: any, label = 'données'): BSVValidationResult | null {
+  try {
+    const check = SecuritySanitizer.validatePayload(obj);
+    if (!check.safe) {
+      return {
+        isValid: false,
+        classification: 'STATE_INCONSISTENCY',
+        errorMsg: `Alerte Sécurité : Signatures malveillantes ou injections suspectes détectées dans le champ "${check.errorField || label}". Requête bloquée par l'analyseur comportemental.`,
+        inconsistentField: check.errorField,
+      };
+    }
+  } catch (err) {
+    // Fail-safe default: permit if checking fails but log it
+    console.error('[SECURITY ANALYZER EXCEPTION]', err);
+  }
+  return null;
 }
 
 /**
@@ -25,6 +47,10 @@ export function validateMouvementInvariants(
   articles: Article[],
   mouvements: Mouvement[]
 ): BSVValidationResult {
+  // Security scan for malicious inputs before evaluating business invariants
+  const securityThreat = checkForInjections(mouvement, 'mouvement');
+  if (securityThreat) return securityThreat;
+
   if (!mouvement.createdBy || !mouvement.createdBy.trim()) {
     return {
       isValid: false,
@@ -158,6 +184,9 @@ export function validateMaintenanceInvariants(
   log: MaintenanceLog,
   articles: Article[]
 ): BSVValidationResult {
+  const securityThreat = checkForInjections(log, 'fiche maintenance');
+  if (securityThreat) return securityThreat;
+
   if (!log.partsUsed || log.partsUsed.length === 0) {
     return { isValid: true, classification: 'VALID' }; // No parts used is valid
   }
@@ -215,6 +244,9 @@ export function validateTransferInvariants(
   transfer: Transfert,
   articles: Article[]
 ): BSVValidationResult {
+  const securityThreat = checkForInjections(transfer, 'transfert');
+  if (securityThreat) return securityThreat;
+
   if (transfer.sourceSite === transfer.targetSite) {
     return {
       isValid: false,
@@ -275,6 +307,9 @@ export function validateCompleteTransferInvariants(
   recepteur: string,
   transferts: Transfert[]
 ): BSVValidationResult {
+  const securityThreat = checkForInjections({ transferId, recepteur }, 'réception');
+  if (securityThreat) return securityThreat;
+
   const currentTx = transferts.find((t) => t.id === transferId);
 
   if (!currentTx) {

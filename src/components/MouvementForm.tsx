@@ -37,6 +37,7 @@ import { MASTER_CATALOG } from '../catalogData';
 import { useInventory } from '../context/InventoryContext';
 import { motion, AnimatePresence } from 'motion/react';
 import { useOfflineSync } from '../hooks/useOfflineSync';
+import { SecuritySanitizer } from '../core/SecuritySanitizer';
 
 const generateReference = (prefix: string, site: string): string => {
   const now = new Date();
@@ -139,6 +140,7 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
   const [buyerName, setBuyerName] = useState('');
   const [mecanicien, setMecanicien] = useState(''); 
   const [mecanicienFreeText, setMecanicienFreeText] = useState(false);
+  const [honeypotValue, setHoneypotValue] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const submissionLockRef = React.useRef(false);
   const [targetEngin, setTargetEngin] = useState(''); 
@@ -822,6 +824,26 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     if (isSubmitting || submissionLockRef.current) {
       return; // Ignorer silencieusement les clics/soumissions répétés
     }
+
+    // Bot Honeypot check
+    if (honeypotValue.trim() !== '') {
+      logger.warn('[SECURITY PROTECTION] Bot submission blocked via Honeypot trap.');
+      toast.error("Activité suspecte détectée.");
+      return;
+    }
+
+    // Bot Proof-of-Work puzzle challenge verification
+    try {
+      const challenge = SecuritySanitizer.generateChallenge('mouvement_pow');
+      const solution = SecuritySanitizer.solveChallenge(challenge, 2);
+      const isValidPoW = SecuritySanitizer.verifyChallenge(challenge, solution.nonce, 2);
+      if (!isValidPoW) {
+        toast.error("Validation de session incorrecte.");
+        return;
+      }
+    } catch (e) {
+      logger.warn('[PoW Security failure]', e);
+    }
     
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible de valider.");
@@ -1120,6 +1142,17 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       </div>
 
       <form onSubmit={handleSubmit} className={cn("space-y-4", isReadOnly && "pointer-events-none opacity-70")}>
+        {/* Antirobot Honeypot fields */}
+        <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }} aria-hidden="true">
+          <input 
+            type="text" 
+            name="website_url" 
+            value={honeypotValue} 
+            onChange={(e) => setHoneypotValue(e.target.value)} 
+            tabIndex={-1} 
+            autoComplete="off" 
+          />
+        </div>
         {site === 'ALL' && (
           <div className="flex items-center gap-3 px-6 py-5 bg-amber-50 
                           border-2 border-amber-300 rounded-2xl mb-4">

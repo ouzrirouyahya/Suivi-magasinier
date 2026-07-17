@@ -37,14 +37,21 @@ export function useArticles() {
       if (!currentSite) return; // attendre que le site soit connu
       try {
         const cachedArticles = await offlineService.getCollection<Article>('articles');
-        if (cachedArticles && cachedArticles.length > 0 && rawArticles.length === 0) {
+        if (cachedArticles && cachedArticles.length > 0) {
           // Filtrer pour ne garder QUE les articles du chantier actif,
           // afin d'éviter d'afficher des données d'un autre chantier 
           // si la tablette a servi ailleurs auparavant
           const filtered = currentSite === 'ALL'
             ? cachedArticles
             : cachedArticles.filter(a => a.site === currentSite);
-          if (filtered.length > 0) {
+
+          // Si nous avons trouvé des articles d'un autre chantier, on les nettoie du cache local (sécurité anti-leak)
+          if (filtered.length !== cachedArticles.length) {
+            logger.info("[Storage Hardening] Nettoyage des articles inter-chantiers du cache local...");
+            await offlineService.saveCollection('articles', filtered);
+          }
+
+          if (filtered.length > 0 && rawArticles.length === 0) {
             setArticles(filtered);
           }
         }

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 import { Article, SiteCode, Inventaire } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
+import { SecuritySanitizer } from '../core/SecuritySanitizer';
 import { toast } from 'sonner';
 import { useInventory } from '../context/InventoryContext';
 import { movementsService } from '../modules/movements/movements.service';
@@ -35,6 +36,7 @@ interface InventairePageProps {
 export function InventairePage({ currentSite, articles, inventaires, onSaveInventaire, isAdmin = false }: InventairePageProps) {
   const { currentUser, isReadOnlyUser } = useInventory();
   const [activeSession, setActiveSession] = useState<Inventaire | null>(null);
+  const [honeypotValue, setHoneypotValue] = useState('');
   const [search, setSearch] = useState('');
   const [filterType, setFilterType] = useState<string>('ALL');
   const [compteur, setCompteur] = useState(currentUser?.name || currentUser?.email || '');
@@ -177,6 +179,26 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   const handleConfirmValidate = async () => {
     setShowValidateConfirm(false);
     if (isSaving || !activeSession) return;
+
+    // Bot Honeypot detection
+    if (honeypotValue.trim() !== '') {
+      toast.error("Activité suspecte détectée.");
+      return;
+    }
+
+    // Bot Proof-of-Work challenge verification
+    try {
+      const challenge = SecuritySanitizer.generateChallenge('inventaire_validate_pow');
+      const solution = SecuritySanitizer.solveChallenge(challenge, 2);
+      const isValidPoW = SecuritySanitizer.verifyChallenge(challenge, solution.nonce, 2);
+      if (!isValidPoW) {
+        toast.error("Validation de session incorrecte (PoW).");
+        return;
+      }
+    } catch (e) {
+      console.error('[PoW Inventaire Security failure]', e);
+    }
+
     setIsSaving(true);
     try {
       const sanitizedItems = activeSession.items.map(it => {
@@ -209,6 +231,26 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
       return;
     }
     if (!activeSession || isSaving) return;
+
+    // Bot Honeypot detection
+    if (honeypotValue.trim() !== '') {
+      toast.error("Activité suspecte détectée.");
+      return;
+    }
+
+    // Bot Proof-of-Work challenge verification
+    try {
+      const challenge = SecuritySanitizer.generateChallenge('inventaire_draft_pow');
+      const solution = SecuritySanitizer.solveChallenge(challenge, 2);
+      const isValidPoW = SecuritySanitizer.verifyChallenge(challenge, solution.nonce, 2);
+      if (!isValidPoW) {
+        toast.error("Validation de session incorrecte (PoW).");
+        return;
+      }
+    } catch (e) {
+      console.error('[PoW Inventaire Draft Security failure]', e);
+    }
+
     setIsSaving(true);
     try {
       const sanitizedItems = activeSession.items.map(it => {
@@ -356,6 +398,17 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
 
       {activeSession ? (
         <div className={cn("space-y-8", isReadOnly && "pointer-events-none opacity-75")}>
+          {/* Antirobot Honeypot fields */}
+          <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }} aria-hidden="true">
+            <input 
+              type="text" 
+              name="website_url" 
+              value={honeypotValue} 
+              onChange={(e) => setHoneypotValue(e.target.value)} 
+              tabIndex={-1} 
+              autoComplete="off" 
+            />
+          </div>
           <div className="card glass p-10 sticky top-4 z-40 bg-white/95 backdrop-blur-2xl border-sky-100 flex flex-col xl:flex-row items-center justify-between gap-10 shadow-2xl shadow-sky-950/5">
             <div className="flex items-center gap-8">
               <div className="w-20 h-20 rounded-[2.5rem] bg-sky-600 text-white flex items-center justify-center shadow-2xl shadow-sky-600/30">

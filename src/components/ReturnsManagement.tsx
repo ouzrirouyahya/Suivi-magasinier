@@ -22,6 +22,7 @@ import { useInventory } from '../context/InventoryContext';
 import { Mouvement, Article } from '../types';
 import { cn, formatDate, generateId, formatCurrency, logger } from '../lib/utils';
 import { toast } from 'sonner';
+import { SecuritySanitizer } from '../core/SecuritySanitizer';
 
 export function ReturnsManagement() {
   const { mouvements, articles, addMouvement, agents, currentSite, currentUser, isReadOnlyUser } = useInventory();
@@ -29,6 +30,7 @@ export function ReturnsManagement() {
   const isReadOnly = isReadOnlyUser;
 
   const [isSubmittingReturn, setIsSubmittingReturn] = useState(false);
+  const [honeypotValue, setHoneypotValue] = useState('');
 
   // Articles search states for predictive auto-complete bar
   const [articleSearchQuery, setArticleSearchQuery] = useState('');
@@ -81,6 +83,26 @@ export function ReturnsManagement() {
   // Handle return transaction
   const handleReturn = async () => {
     if (isSubmittingReturn) return; // verrou
+
+    // Bot Honeypot detection
+    if (honeypotValue.trim() !== '') {
+      logger.warn('[SECURITY PROTECTION] Bot return submission blocked via Honeypot.');
+      toast.error("Activité suspecte détectée.");
+      return;
+    }
+
+    // Bot Proof-of-Work puzzle challenge verification
+    try {
+      const challenge = SecuritySanitizer.generateChallenge('returns_pow');
+      const solution = SecuritySanitizer.solveChallenge(challenge, 2);
+      const isValidPoW = SecuritySanitizer.verifyChallenge(challenge, solution.nonce, 2);
+      if (!isValidPoW) {
+        toast.error("Erreur de validation de session (PoW).");
+        return;
+      }
+    } catch (e) {
+      logger.warn('[PoW Return Security failure]', e);
+    }
     
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible de valider un retour.");
@@ -344,6 +366,17 @@ export function ReturnsManagement() {
         {/* Return creation workflow column */}
         <div className={cn("lg:col-span-1 space-y-4", isReadOnly && "pointer-events-none opacity-50 select-none")}>
           <div className="card p-5 bg-white border border-slate-100 shadow-sm border-t-4 border-t-sky-500 rounded-2xl">
+            {/* Antirobot Honeypot fields */}
+            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }} aria-hidden="true">
+              <input 
+                type="text" 
+                name="website_url" 
+                value={honeypotValue} 
+                onChange={(e) => setHoneypotValue(e.target.value)} 
+                tabIndex={-1} 
+                autoComplete="off" 
+              />
+            </div>
             <h3 className="text-xs font-black uppercase text-slate-400 tracking-widest mb-4 flex items-center gap-2">
               <RotateCcw className="w-4 h-4 text-sky-500" />
               Saisie de Réintégration

@@ -134,6 +134,32 @@ export const useAuthStore = create<AuthState>((set) => {
         IndexedDBStorage.saveCollection('purchaseRequests', []);
         IndexedDBStorage.saveCollection('anomalyReports', []);
         IndexedDBStorage.saveCollection('maintenanceLogs', []);
+
+        // Dynamic import to clear React Zustand stores and avoid circular dependency
+        import('./article.store').then(({ useArticlesStore }) => {
+          useArticlesStore.getState().setArticles([]);
+        }).catch(err => logger.warn('Reset articles store failed', err));
+
+        import('./movement.store').then(({ useMovementsStore }) => {
+          const s = useMovementsStore.getState();
+          s.setMouvements([]);
+          s.setDistributions([]);
+          s.setPurchaseRequests([]);
+          s.setAnomalyReports([]);
+          s.setInventaires([]);
+        }).catch(err => logger.warn('Reset movements store failed', err));
+
+        import('./transfer.store').then(({ useTransfersStore }) => {
+          useTransfersStore.getState().setTransferts([]);
+        }).catch(err => logger.warn('Reset transfers store failed', err));
+
+        import('./maintenance.store').then(({ useMaintenanceStore }) => {
+          const s = useMaintenanceStore.getState();
+          s.setMaintenanceLogs([]);
+          s.setEngins([]);
+          s.setPerfos([]);
+          s.setAgents([]);
+        }).catch(err => logger.warn('Reset maintenance store failed', err));
       } catch (err) {
         logger.warn(err);
       }

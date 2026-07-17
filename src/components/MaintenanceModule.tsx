@@ -1119,7 +1119,7 @@ export function MaintenanceModule() {
                                       step="0.001"
                                       inputMode="decimal"
                                       value={p.quantity}
-                                      onChange={(e) => updatePartQty(p.articleId, parseInt(e.target.value))}
+                                      onChange={(e) => updatePartQty(p.articleId, parseFloat(e.target.value) || 0)}
                                       className="w-12 h-8 bg-slate-900 border border-slate-800 rounded-lg text-center font-bold text-xs text-slate-200"
                                    />
                                    <button onClick={() => removePart(p.articleId)} className="text-rose-500 hover:text-rose-400 p-1">

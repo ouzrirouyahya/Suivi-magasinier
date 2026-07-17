@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { Article, SiteCode, Transfert, MouvementItem, TransfertStatus, UserAccount } from '../types';
 import { SITES } from '../demoData';
-import { cn, formatCurrency, generateSecureUUID } from '../lib/utils';
+import { cn, formatCurrency, generateSecureUUID, logger } from '../lib/utils';
+import { SecuritySanitizer } from '../core/SecuritySanitizer';
 import { useInventory } from '../context/InventoryContext';
 import { toast } from 'sonner';
 
@@ -54,6 +55,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
 
   const [isCreating, setIsCreating] = useState(false);
   const [isCreatingSubmit, setIsCreatingSubmit] = useState(false);
+  const [honeypotValue, setHoneypotValue] = useState('');
   const [processingTransferId, setProcessingTransferId] = useState<string | null>(null);
   const [targetSite, setTargetSite] = useState<SiteCode | ''>('');
   const [reference, setReference] = useState('');
@@ -104,6 +106,27 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
   // Create a raw Brouillon transfer
   const handleCreateDraft = async (e: React.FormEvent, submitNow = false) => {
     e.preventDefault();
+
+    // Bot Honeypot check
+    if (honeypotValue.trim() !== '') {
+      logger.warn('[SECURITY PROTECTION] Bot transfer creation blocked via Honeypot.');
+      toast.error("Activité suspecte détectée.");
+      return;
+    }
+
+    // Bot Proof-of-Work puzzle challenge verification
+    try {
+      const challenge = SecuritySanitizer.generateChallenge('transfer_pow');
+      const solution = SecuritySanitizer.solveChallenge(challenge, 2);
+      const isValidPoW = SecuritySanitizer.verifyChallenge(challenge, solution.nonce, 2);
+      if (!isValidPoW) {
+        toast.error("Erreur de validation de session (PoW).");
+        return;
+      }
+    } catch (e) {
+      logger.warn('[PoW Transfer Security failure]', e);
+    }
+
     if (!targetSite || items.length === 0) return;
     
     const parsedItems = items.map(it => ({
@@ -475,6 +498,17 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
           </div>
 
           <form onSubmit={(e) => handleCreateDraft(e, false)} className="space-y-4">
+            {/* Antirobot Honeypot fields */}
+            <div style={{ position: 'absolute', left: '-9999px', top: '-9999px', width: '1px', height: '1px', overflow: 'hidden', opacity: 0, pointerEvents: 'none' }} aria-hidden="true">
+              <input 
+                type="text" 
+                name="website_url" 
+                value={honeypotValue} 
+                onChange={(e) => setHoneypotValue(e.target.value)} 
+                tabIndex={-1} 
+                autoComplete="off" 
+              />
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div className="space-y-1">
                 <label className="text-[9px] font-black text-slate-400 uppercase tracking-widest ml-1">Site Destinataire</label>
