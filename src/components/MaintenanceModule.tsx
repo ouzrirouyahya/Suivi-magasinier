@@ -1068,6 +1068,8 @@ export function MaintenanceModule() {
                       <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Compteur Horaires</label>
                       <input 
                         type="number"
+                        step="0.001"
+                        inputMode="decimal"
                         value={hours}
                         onChange={(e) => setHours(e.target.value)}
                         placeholder="Ex: 5400"
@@ -1114,6 +1116,8 @@ export function MaintenanceModule() {
                                    </div>
                                    <input 
                                       type="number"
+                                      step="0.001"
+                                      inputMode="decimal"
                                       value={p.quantity}
                                       onChange={(e) => updatePartQty(p.articleId, parseInt(e.target.value))}
                                       className="w-12 h-8 bg-slate-900 border border-slate-800 rounded-lg text-center font-bold text-xs text-slate-200"
@@ -1137,6 +1141,8 @@ export function MaintenanceModule() {
                       <label className="block text-[10px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Main d'œuvre additionnelle (MAD)</label>
                       <input 
                         type="number"
+                        step="0.001"
+                        inputMode="decimal"
                         value={cost}
                         onChange={(e) => setCost(e.target.value)}
                         placeholder="Ex: 1500"

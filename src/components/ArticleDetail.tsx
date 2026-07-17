@@ -1,5 +1,6 @@
 import React from 'react';
 import { X, Calendar, Activity, ArrowDownLeft, ArrowUpRight, MapPin, Tag, Package, QrCode, Printer } from 'lucide-react';
+import { toast } from 'sonner';
 import { Article, Mouvement } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
@@ -140,7 +141,10 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                   <button 
                     onClick={() => {
                       const printWindow = window.open('', '_blank', 'width=400,height=300');
-                      if (!printWindow) return;
+                      if (!printWindow) {
+                        toast.error("L'ouverture de la fenêtre d'impression a été bloquée par votre navigateur. Veuillez autoriser les pop-ups ou ouvrir l'application dans un nouvel onglet.");
+                        return;
+                      }
                       
                       const qrData = JSON.stringify({ id: article.id, ref: article.ref, site: article.site });
                       

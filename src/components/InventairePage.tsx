@@ -136,17 +136,18 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     setCompteur(inv.compteur || '');
   };
 
-  const updateCount = (articleId: string, count: number) => {
+  const updateCount = (articleId: string, count: string | number) => {
     if (isReadOnly) return;
     if (!activeSession) return;
     setActiveSession({
       ...activeSession,
       items: activeSession.items.map(i => {
         if (i.articleId === articleId) {
-          const validCount = isNaN(count) ? 0 : count;
+          const parsed = typeof count === 'string' ? parseFloat(count) : count;
+          const validCount = isNaN(parsed) ? 0 : parsed;
           return {
             ...i,
-            countedQuantity: validCount,
+            countedQuantity: count as any,
             difference: validCount - (i.theoricQuantity || 0)
           };
         }
@@ -178,8 +179,17 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     if (isSaving || !activeSession) return;
     setIsSaving(true);
     try {
+      const sanitizedItems = activeSession.items.map(it => {
+        const qty = Number(it.countedQuantity) || 0;
+        return {
+          ...it,
+          countedQuantity: qty,
+          difference: qty - (it.theoricQuantity || 0)
+        };
+      });
       const inv: Inventaire = { 
          ...activeSession, 
+         items: sanitizedItems,
          status: 'VALIDE',
          validePar: currentUser?.name || currentUser?.email || 'Admin'
       };
@@ -201,7 +211,18 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     if (!activeSession || isSaving) return;
     setIsSaving(true);
     try {
-      const inv: Inventaire = { ...activeSession };
+      const sanitizedItems = activeSession.items.map(it => {
+        const qty = Number(it.countedQuantity) || 0;
+        return {
+          ...it,
+          countedQuantity: qty,
+          difference: qty - (it.theoricQuantity || 0)
+        };
+      });
+      const inv: Inventaire = { 
+        ...activeSession,
+        items: sanitizedItems
+      };
       await onSaveInventaire(inv);
       setActiveSession(null);
       toast.success('Inventaire sauvegardé en brouillon.');
@@ -452,6 +473,8 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
                                  <div className="flex items-center justify-center gap-2">
                                    <input 
                                       type="number"
+                                      step="0.001"
+                                      inputMode="decimal"
                                       className={cn(
                                         "w-20 h-10 rounded-lg font-black text-sm text-center outline-none transition-all shadow-sm",
                                         hasError ? "bg-white text-rose-600 ring-2 ring-rose-500" : "bg-white border border-slate-200 text-slate-900 focus:ring-4 focus:ring-sky-500/10 focus:border-sky-500"

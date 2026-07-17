@@ -10,7 +10,7 @@ export const BonSortiePage: React.FC = () => {
 
   return (
     <MouvementForm 
-      key={formKey}
+      key={`${currentSite}-${formKey}`}
       resetKey={formKey}
       type="SORTIE" 
       site={currentSite}

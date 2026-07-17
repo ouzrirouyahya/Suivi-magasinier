@@ -215,6 +215,8 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                         {isSelected ? (
                           <input 
                             type="number" 
+                            step="0.001"
+                            inputMode="decimal"
                             disabled={isReadOnly}
                             className="w-24 h-10 border-2 border-sky-200 rounded-xl text-center font-black text-lg focus:border-sky-500 outline-none disabled:opacity-50 disabled:cursor-not-allowed"
                             value={selectedItems[article.id]}
@@ -318,7 +320,10 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                       <button 
                         onClick={() => {
                           const printWindow = window.open('', '_blank');
-                          if (!printWindow) return;
+                          if (!printWindow) {
+                            toast.error("L'ouverture de la fenêtre d'impression a été bloquée par votre navigateur. Veuillez autoriser les pop-ups ou ouvrir l'application dans un nouvel onglet.");
+                            return;
+                          }
                           const itemsHtml = pr.items.map(item => {
                             const art = articles.find(a => a.id === item.articleId);
                             return `<tr>

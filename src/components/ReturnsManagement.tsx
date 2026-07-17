@@ -41,7 +41,7 @@ export function ReturnsManagement() {
   const [selectedAgentId, setSelectedAgentId] = useState('');
 
   // Saisie Quantité + Motif + État
-  const [returnQty, setReturnQty] = useState<number | ''>(1);
+  const [returnQty, setReturnQty] = useState<string>('1');
   const [reason, setReason] = useState('');
   const [condition, setCondition] = useState<'NEUF' | 'BON' | 'MAUVAIS' | 'HORS_SERVICE'>('BON');
 
@@ -159,7 +159,7 @@ export function ReturnsManagement() {
     setSelectedAgentId('');
     setArticleSearchQuery('');
     setAgentSearchQuery('');
-    setReturnQty(1);
+    setReturnQty('1');
     setReason('');
     setCondition('BON');
   };
@@ -494,9 +494,11 @@ export function ReturnsManagement() {
                   <label className="block text-[9px] font-black uppercase text-slate-400 tracking-widest mb-1.5 ml-1">Quantité</label>
                   <input 
                     type="number"
-                    min="1"
-                    value={returnQty === '' ? '' : returnQty}
-                    onChange={(e) => setReturnQty(e.target.value === '' ? '' : Math.max(1, parseInt(e.target.value) || 1))}
+                    min="0.001"
+                    step="0.001"
+                    inputMode="decimal"
+                    value={returnQty}
+                    onChange={(e) => setReturnQty(e.target.value)}
                     className="w-full h-11 bg-slate-50 border border-slate-200 rounded-xl px-4 font-black text-xs outline-none focus:border-sky-500 bg-white"
                   />
                 </div>

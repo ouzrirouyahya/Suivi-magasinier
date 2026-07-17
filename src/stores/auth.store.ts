@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { UserAccount, SiteCode } from '../types';
 import { logger } from '../lib/utils';
+import { IndexedDBStorage } from '../core/indexedDBStorage';
 
 interface AuthState {
   currentUser: UserAccount | null;
@@ -97,6 +98,16 @@ export const useAuthStore = create<AuthState>((set) => {
           localStorage.setItem('hydromines_cached_user', JSON.stringify(minimizeUser(nextUser)));
         } else {
           localStorage.removeItem('hydromines_cached_user');
+          // Clear all local cache on logout for high security
+          IndexedDBStorage.saveCollection('articles', []);
+          IndexedDBStorage.saveCollection('mouvements', []);
+          IndexedDBStorage.saveCollection('transferts', []);
+          IndexedDBStorage.saveCollection('inventaires', []);
+          IndexedDBStorage.saveCollection('distributions', []);
+          IndexedDBStorage.saveCollection('purchaseRequests', []);
+          IndexedDBStorage.saveCollection('anomalyReports', []);
+          IndexedDBStorage.saveCollection('notifications', []);
+          IndexedDBStorage.saveCollection('maintenanceLogs', []);
         }
       } catch (err) {
         logger.warn('Failed to cache user account in localStorage:', err);
@@ -114,6 +125,15 @@ export const useAuthStore = create<AuthState>((set) => {
     setCurrentSite: (site) => {
       try {
         localStorage.setItem('hydromines_current_site', site);
+        // Prune site-specific cached collections on site switch to prevent cross-site leakage
+        IndexedDBStorage.saveCollection('articles', []);
+        IndexedDBStorage.saveCollection('mouvements', []);
+        IndexedDBStorage.saveCollection('transferts', []);
+        IndexedDBStorage.saveCollection('inventaires', []);
+        IndexedDBStorage.saveCollection('distributions', []);
+        IndexedDBStorage.saveCollection('purchaseRequests', []);
+        IndexedDBStorage.saveCollection('anomalyReports', []);
+        IndexedDBStorage.saveCollection('maintenanceLogs', []);
       } catch (err) {
         logger.warn(err);
       }

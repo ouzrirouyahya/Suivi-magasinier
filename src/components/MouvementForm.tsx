@@ -357,7 +357,32 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
     if (categoryFilter && categoryFilter !== 'ALL') {
       sorted = sorted.filter(a => a.type === categoryFilter);
     }
+    
+    if (search) {
+      const searchLower = search.toLowerCase().trim();
+      sorted.sort((a, b) => {
+        const scoreOf = (art: Article): number => {
+          const ref = art.ref.toLowerCase();
+          const designation = art.designation.toLowerCase();
+          if (ref === searchLower) return 0; // correspondance exacte référence
+          if (ref.startsWith(searchLower)) return 1; // référence commence par
+          if (designation.startsWith(searchLower)) return 2; // désignation commence par
+          if (ref.includes(searchLower)) return 3; // référence contient
+          return 4; // désignation contient (déjà garanti par le filtre)
+        };
+        return scoreOf(a) - scoreOf(b);
+      });
+    }
+    
     return sorted.slice(0, 50);
+  }, [filteredArticles, categoryFilter, search]);
+
+  const totalMatchCount = useMemo(() => {
+    let sorted = [...filteredArticles];
+    if (categoryFilter && categoryFilter !== 'ALL') {
+      sorted = sorted.filter(a => a.type === categoryFilter);
+    }
+    return sorted.length;
   }, [filteredArticles, categoryFilter]);
 
   const filteredHydrominesCatalog = useMemo(() => {
@@ -1558,6 +1583,13 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                         </button>
                       );
                     })}
+                    {totalMatchCount > 50 && (
+                      <div className="px-3 py-2 text-[10px] text-amber-600 bg-amber-50 
+                                      border-t border-amber-200 font-bold">
+                        {totalMatchCount - 50} autre(s) résultat(s) non affiché(s) — 
+                        affinez votre recherche pour les voir (référence exacte recommandée).
+                      </div>
+                    )}
                   </div>
                 )}
                 
@@ -1747,7 +1779,9 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
                         <input 
                           id={`qty-${item.lineId}`}
                           type="number" 
-                          min="1" 
+                          min="0.001"
+                          step="0.001"
+                          inputMode="decimal"
                           className="w-full h-12 text-center p-4 rounded-xl border-2 border-slate-100 font-black text-lg bg-white focus:border-sky-500 outline-none" 
                           value={item.quantity} 
                           onChange={(e) => updateItem(item.lineId, { quantity: Number(e.target.value) })} 

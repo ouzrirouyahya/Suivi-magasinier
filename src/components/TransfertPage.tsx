@@ -97,9 +97,8 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
 
   const removeItem = (id: string) => setItems(items.filter(i => i.articleId !== id));
 
-  const updateItemQty = (id: string, qty: number, maxQty: number) => {
-    const validQty = Math.max(1, Math.min(maxQty, qty));
-    setItems(items.map(i => i.articleId === id ? { ...i, quantity: validQty } : i));
+  const updateItemQty = (id: string, qtyStr: string) => {
+    setItems(items.map(i => i.articleId === id ? { ...i, quantity: qtyStr as any } : i));
   };
 
   // Create a raw Brouillon transfer
@@ -107,6 +106,16 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
     e.preventDefault();
     if (!targetSite || items.length === 0) return;
     
+    const parsedItems = items.map(it => ({
+      ...it,
+      quantity: Number(it.quantity) || 0
+    })).filter(it => it.quantity > 0);
+
+    if (parsedItems.length === 0) {
+      toast.error("Veuillez renseigner des quantités valides supérieures à 0.");
+      return;
+    }
+
     if (isCreatingSubmit) return; // verrou anti-double-clic
     setIsCreatingSubmit(true);
 
@@ -120,7 +129,7 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
         targetSite: targetSite as SiteCode,
         dateEnvoi: new Date().toISOString(),
         reference,
-        items,
+        items: parsedItems,
         status: initialStatus,
         creatorEmail: email,
         expediteur: email,
@@ -569,11 +578,13 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                             <div className="flex items-center justify-center gap-1.5">
                               <input 
                                 type="number"
-                                min="1"
+                                min="0.001"
+                                step="0.001"
+                                inputMode="decimal"
                                 max={article?.quantity}
                                 className="w-16 bg-slate-100 border border-slate-250 rounded-md px-2 py-1 text-center font-black text-xs outline-none focus:bg-white"
                                 value={item.quantity}
-                                onChange={(e) => updateItemQty(item.articleId, Number(e.target.value), article?.quantity || 99999)}
+                                onChange={(e) => updateItemQty(item.articleId, e.target.value)}
                               />
                               <span className="text-[10px] text-slate-400 font-bold uppercase">{article?.unit || 'U'}</span>
                             </div>
@@ -939,6 +950,8 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                                           <input 
                                             type="number"
                                             min="0"
+                                            step="0.001"
+                                            inputMode="decimal"
                                             max={item.quantity}
                                             className="w-16 bg-white border border-slate-350 rounded px-1.5 py-0.5 text-center text-xs font-black outline-none focus:border-sky-500"
                                             value={currentInspect.received}
@@ -955,6 +968,8 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
                                           <input 
                                             type="number"
                                             min="0"
+                                            step="0.001"
+                                            inputMode="decimal"
                                             max={item.quantity}
                                             className="w-16 bg-white border border-slate-355 rounded px-1.5 py-0.5 text-center text-xs font-black text-rose-600 outline-none focus:border-rose-500"
                                             value={currentInspect.damaged}

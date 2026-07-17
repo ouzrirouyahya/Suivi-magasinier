@@ -7,6 +7,7 @@ export const InventairePage: React.FC = () => {
 
   return (
     <InventairePageRaw 
+      key={currentSite}
       currentSite={currentSite}
       articles={articles}
       inventaires={inventaires}

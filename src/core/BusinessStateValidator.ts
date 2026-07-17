@@ -25,6 +25,33 @@ export function validateMouvementInvariants(
   articles: Article[],
   mouvements: Mouvement[]
 ): BSVValidationResult {
+  if (!mouvement.createdBy || !mouvement.createdBy.trim()) {
+    return {
+      isValid: false,
+      classification: 'STATE_INCONSISTENCY',
+      errorMsg: 'Le créateur du mouvement est obligatoire.',
+      inconsistentField: 'createdBy',
+    };
+  }
+
+  if (!mouvement.reference || !mouvement.reference.trim()) {
+    return {
+      isValid: false,
+      classification: 'STATE_INCONSISTENCY',
+      errorMsg: 'La référence du bon/mouvement est obligatoire.',
+      inconsistentField: 'reference',
+    };
+  }
+
+  if (!mouvement.site || !mouvement.site.trim()) {
+    return {
+      isValid: false,
+      classification: 'STATE_INCONSISTENCY',
+      errorMsg: 'Le chantier (site) du mouvement est obligatoire.',
+      inconsistentField: 'site',
+    };
+  }
+
   if (!mouvement.items || mouvement.items.length === 0) {
     return {
       isValid: false,

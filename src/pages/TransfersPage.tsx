@@ -14,6 +14,7 @@ export const TransfersPage: React.FC = () => {
       className="space-y-12"
     >
       <TransfertPage 
+        key={currentSite}
         currentSite={currentSite}
         articles={articles}
         transferts={transferts}
