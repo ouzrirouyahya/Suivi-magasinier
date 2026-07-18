@@ -37,7 +37,7 @@ import {
 } from 'recharts';
 import { useInventory } from '../context/InventoryContext';
 import { useRadar } from '../hooks/useRadar';
-import { SiteCode } from '../types';
+import { SiteCode, toDateString } from '../types';
 import { SITE_CODES } from '../lib/constants';
 import { SITES } from '../demoData';
 import { formatCurrency, cn, logger } from '../lib/utils';
@@ -118,7 +118,7 @@ export function ReportPage() {
 
   const totalSortiesAujourdhui = useMemo(() => {
     const todayStr = new Date().toISOString().slice(0, 10);
-    const todayMovements = mouvements.filter(m => m.type === 'SORTIE' && m.date?.startsWith(todayStr));
+    const todayMovements = mouvements.filter(m => m.type === 'SORTIE' && toDateString(m.date)?.startsWith(todayStr));
     const value = todayMovements.reduce((sum, m) => {
       return sum + (m.items?.reduce((isum, it) => isum + (Number(it.quantity) || 0) * (Number(it.price) || 0), 0) || 0);
     }, 0);
@@ -176,7 +176,7 @@ export function ReportPage() {
       const dateStr = d.toISOString().slice(0, 10);
       const label = d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
       
-      const dayMovements = mouvements.filter(m => m.date?.startsWith(dateStr));
+      const dayMovements = mouvements.filter(m => toDateString(m.date)?.startsWith(dateStr));
       const entrees = dayMovements
         .filter(m => m.type === 'ENTREE' || m.type === 'RETOUR')
         .reduce((sum, m) => sum + (m.items?.reduce((isum, it) => isum + (Number(it.quantity) || 0) * (Number(it.price) || 0), 0) || 0), 0);
@@ -226,9 +226,9 @@ export function ReportPage() {
       // Type constraint
       if (movementType !== 'ALL' && m.type !== movementType) return false;
       // Date start constraint
-      if (dateStart && new Date(m.date) < new Date(dateStart)) return false;
+      if (dateStart && new Date(toDateString(m.date)) < new Date(dateStart)) return false;
       // Date end constraint
-      if (dateEnd && new Date(m.date) > new Date(dateEnd)) return false;
+      if (dateEnd && new Date(toDateString(m.date)) > new Date(dateEnd)) return false;
       
       // Keyword search constraint
       if (searchTerm) {
@@ -266,8 +266,8 @@ export function ReportPage() {
   const sortedMovements = useMemo(() => {
     return [...filteredMouvements].sort((a, b) => {
       if (sortKey === 'date') {
-        const timeA = new Date(a.date).getTime();
-        const timeB = new Date(b.date).getTime();
+        const timeA = new Date(toDateString(a.date)).getTime();
+        const timeB = new Date(toDateString(b.date)).getTime();
         return sortDirection === 'desc' ? timeB - timeA : timeA - timeB;
       } else {
         const valA = getMovementValue(a);
@@ -1128,7 +1128,7 @@ export function ReportPage() {
                       paginatedMovements.map(m => (
                         <tr key={m.id} className="hover:bg-slate-50/50 transition-colors">
                           <td className="p-3 font-mono font-bold text-slate-700 truncate max-w-[150px]">{m.reference || m.id}</td>
-                          <td className="p-3 font-semibold text-slate-500">{new Date(m.date).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
+                          <td className="p-3 font-semibold text-slate-500">{new Date(toDateString(m.date)).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' })}</td>
                           <td className="p-3"><span className="px-1.5 py-0.5 bg-slate-100 text-slate-700 font-bold font-mono text-[9px] rounded uppercase">{m.site}</span></td>
                           <td className="p-3">
                             <span className={cn(
@@ -1195,7 +1195,7 @@ export function ReportPage() {
                         </span>
                         <div>
                           <p className="text-xs font-mono font-bold text-slate-800">{m.reference || m.id}</p>
-                          <p className="text-[10px] text-slate-400">{new Date(m.date).toLocaleDateString('fr-FR')} | Site: {m.site} | Agent: {m.beneficiaire || 'Inconnu'}</p>
+                          <p className="text-[10px] text-slate-400">{new Date(toDateString(m.date)).toLocaleDateString('fr-FR')} | Site: {m.site} | Agent: {m.beneficiaire || 'Inconnu'}</p>
                         </div>
                       </div>
                       <span className="text-xs font-black text-slate-900">{formatCurrency(getMovementValue(m))}</span>

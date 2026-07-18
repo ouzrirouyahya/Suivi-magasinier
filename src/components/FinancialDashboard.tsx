@@ -1,4 +1,5 @@
 import React, { useMemo } from 'react';
+import { toDateString } from '../types';
 import { 
   BarChart3, 
   TrendingUp, 
@@ -233,7 +234,7 @@ export function FinancialDashboard() {
             <h3 className="font-black text-amber-900 uppercase tracking-wider text-xs">Dépenses Maintenance (30j)</h3>
           </div>
           <div className="text-3xl font-black text-slate-900">
-            {formatCurrency(maintenanceLogs.filter(l => new Date(l.date) >= thirtyDaysAgo).reduce((s, l) => s + (l.cost || 0), 0))}
+            {formatCurrency(maintenanceLogs.filter(l => new Date(toDateString(l.date)) >= thirtyDaysAgo).reduce((s, l) => s + (l.cost || 0), 0))}
           </div>
           <div className="mt-4 space-y-2">
             <div className="flex justify-between text-[10px] font-bold uppercase">

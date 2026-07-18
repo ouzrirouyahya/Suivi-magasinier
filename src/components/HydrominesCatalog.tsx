@@ -184,17 +184,18 @@ export function HydrominesCatalog() {
     mouvements.forEach(mov => {
       // Parse movement date safely
       let dateStr = '';
-      if (mov.date) {
-        if (typeof mov.date === 'string') {
-          dateStr = mov.date;
-        } else if (typeof mov.date.toDate === 'function') {
+      const movDate = mov.date as any;
+      if (movDate) {
+        if (typeof movDate === 'string') {
+          dateStr = movDate;
+        } else if (typeof movDate.toDate === 'function') {
           try {
-            dateStr = mov.date.toDate().toISOString();
+            dateStr = movDate.toDate().toISOString();
           } catch (e) {
             dateStr = '';
           }
-        } else if (typeof (mov.date as any).seconds === 'number') {
-          dateStr = new Date((mov.date as any).seconds * 1000).toISOString();
+        } else if (typeof movDate.seconds === 'number') {
+          dateStr = new Date(movDate.seconds * 1000).toISOString();
         }
       }
 

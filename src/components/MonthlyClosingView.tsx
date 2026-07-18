@@ -17,7 +17,7 @@ import {
 import { doc, setDoc, onSnapshot, collection, deleteDoc, db } from '../lib/db';
 import { useInventory } from '../context/InventoryContext';
 import { SITE_CODES, SITE_LABELS, SiteCode } from '../lib/constants';
-import { MonthlyClosing, Article } from '../types';
+import { MonthlyClosing, Article, toDateString } from '../types';
 import { formatCurrency, logger } from '../lib/utils';
 import { toast } from 'sonner';
 
@@ -106,8 +106,8 @@ export function MonthlyClosingView() {
 
   // Vigilance 2: Zéro bon de mouvement ou demande de suppression en cours
   const pendingRequests = useMemo(() => {
-    const pendingDeletions = deletionRequests.filter(r => r.status === 'PENDING' || r.status === 'PENDING_APPROVAL');
-    const pendingTransfersList = transferts.filter(t => t.status === 'PENDING' || t.status === 'PENDING_APPROVAL');
+    const pendingDeletions = deletionRequests.filter(r => r.status === 'PENDING_APPROVAL');
+    const pendingTransfersList = transferts.filter(t => t.status === 'PENDING_APPROVAL');
     return [...pendingDeletions, ...pendingTransfersList];
   }, [deletionRequests, transferts]);
 
@@ -141,7 +141,7 @@ export function MonthlyClosingView() {
     }, 0);
 
     // 4. Movements count for the chosen target month
-    const targetMouvements = mouvements.filter(m => m.date && m.date.startsWith(targetMonth));
+    const targetMouvements = mouvements.filter(m => m.date && toDateString(m.date).startsWith(targetMonth));
     const mouvementsCount = targetMouvements.length;
 
     // 5. Per-site analytical breakdown (derived from active articles)

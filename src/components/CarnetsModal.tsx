@@ -30,12 +30,12 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
       const perfoMovementsThisMonth = mouvements.filter(m => {
         if (m.type !== 'SORTIE' || m.site !== site || m.perforateur !== p.code) return false;
         try {
-          const rawDate = m.date;
+          const rawDate: any = m.date;
           const dateStr = (typeof rawDate === 'string') 
             ? rawDate 
             : (rawDate && typeof rawDate.toDate === 'function') 
               ? rawDate.toDate().toISOString() 
-              : new Date(rawDate).toISOString();
+              : new Date(rawDate as any).toISOString();
           return dateStr.slice(0, 7) === currentMonthStr;
         } catch {
           return false;
@@ -53,12 +53,12 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
       const enginMovementsThisMonth = mouvements.filter(m => {
         if (m.type !== 'SORTIE' || m.site !== site || m.engin !== e.code) return false;
         try {
-          const rawDate = m.date;
+          const rawDate: any = m.date;
           const dateStr = (typeof rawDate === 'string') 
             ? rawDate 
             : (rawDate && typeof rawDate.toDate === 'function') 
               ? rawDate.toDate().toISOString() 
-              : new Date(rawDate).toISOString();
+              : new Date(rawDate as any).toISOString();
           return dateStr.slice(0, 7) === currentMonthStr;
         } catch {
           return false;

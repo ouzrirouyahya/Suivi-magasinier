@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Search, Pencil, Trash2, X, Save, AlertCircle, ChevronDown, Wrench, Database, BookOpen, Layers, Upload, FileUp, RefreshCcw, Filter, TrendingDown, TrendingUp, CheckCircle2, Activity, ShieldAlert, Download, FileSpreadsheet, Clock, Eye, Info } from 'lucide-react';
-import { Article, StockType, SiteCode, CatalogItem, HydrominesCatalogItem } from '../types';
+import { Article, StockType, SiteCode, CatalogItem, HydrominesCatalogItem, toDateString } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
 import { MASTER_CATALOG } from '../catalogData';
 import Papa from 'papaparse';
@@ -214,7 +214,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
       const ref = a.ref || '';
       const des = a.designation || '';
       const siteCode = a.site || '';
-      const date = a.createdAt ? new Date(a.createdAt).toLocaleDateString('fr-FR') : '-';
+      const date = a.createdAt ? new Date(toDateString(a.createdAt)).toLocaleDateString('fr-FR') : '-';
       return `"${ref.replace(/"/g, '""')}";"${des.replace(/"/g, '""')}";"${siteCode.replace(/"/g, '""')}";"${date}"`;
     }).join("\n");
     
@@ -1750,7 +1750,7 @@ export function ArticleManagement({ site, articles, catalog, saveCatalogItem, de
                           </span>
                         </td>
                         <td className="px-4 py-3.5 text-slate-500 font-mono">
-                          {a.createdAt ? new Date(a.createdAt).toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-'}
+                          {a.createdAt ? new Date(toDateString(a.createdAt)).toLocaleDateString('fr-FR', { hour: '2-digit', minute: '2-digit' }) : '-'}
                         </td>
                       </tr>
                     ))

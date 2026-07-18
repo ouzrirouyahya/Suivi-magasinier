@@ -19,7 +19,7 @@ import {
   Eye
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
-import { Mouvement, Article } from '../types';
+import { Mouvement, Article, toDateString } from '../types';
 import { cn, formatDate, generateId, formatCurrency, logger } from '../lib/utils';
 import { toast } from 'sonner';
 import { SecuritySanitizer } from '../core/SecuritySanitizer';
@@ -390,7 +390,7 @@ export function ReturnsManagement() {
                   <div className="p-3 bg-slate-50 border border-slate-200 rounded-xl relative flex items-center justify-between">
                     <div>
                       <p className="text-xs font-black text-slate-900 uppercase tracking-tight">{selectedArticle.designation}</p>
-                      <p className="text-[10px] font-mono font-bold text-slate-400 mt-0.5">REF: {selectedArticle.ref} — Casier: {selectedArticle.localisation || 'A1'}</p>
+                      <p className="text-[10px] font-mono font-bold text-slate-400 mt-0.5">REF: {selectedArticle.ref} — Casier: {selectedArticle.location || 'A1'}</p>
                       <span className="text-[9px] font-black text-sky-600 bg-sky-100/40 px-1.5 py-0.5 mt-1 rounded uppercase tracking-wider inline-block">
                         Stock actuel: {selectedArticle.quantity} {selectedArticle.unit || 'U'}
                       </span>
@@ -695,7 +695,7 @@ export function ReturnsManagement() {
                              {m.reference || `RET-${m.id.slice(-6)}`}
                            </td>
                            <td className="p-3.5 text-[10px] font-bold text-slate-450 uppercase">
-                             {formatDate(m.date)}
+                             {formatDate(toDateString(m.date))}
                            </td>
                            <td className="p-3.5">
                               <div className="font-bold text-slate-800 text-xs line-clamp-1">{article?.designation || 'Pièce Reçue'}</div>

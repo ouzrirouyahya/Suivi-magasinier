@@ -84,6 +84,7 @@ export interface Article {
   lastPurchasePrice?: number; // Dernier prix d'achat réel du Bon d'Entrée
   priceHistory?: PriceHistoryEntry[]; // Traçabilité complète des variations de prix
   active: boolean;
+  createdAt?: FirestoreDate;
   lastInventoryDate?: string;
   notes?: string;
   compatibility?: string;

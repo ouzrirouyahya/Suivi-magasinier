@@ -26,7 +26,7 @@ import {
 } from 'lucide-react';
 import { useInventory } from '../context/InventoryContext';
 import { useAuthStore } from '../stores/auth.store';
-import { MaintenanceLog, EnginMaster, Article } from '../types';
+import { MaintenanceLog, EnginMaster, Article, toDateString } from '../types';
 import { cn, formatDate, generateId, formatCurrency } from '../lib/utils';
 import { motion, AnimatePresence } from 'motion/react';
 import { toast } from 'sonner';
@@ -997,7 +997,7 @@ export function MaintenanceModule() {
                       </div>
 
                       <div className="text-left md:text-right shrink-0 font-mono space-y-1 pl-14 md:pl-0">
-                        <div className="text-[10px] font-black text-slate-300 uppercase">{formatDate(log.date)}</div>
+                        <div className="text-[10px] font-black text-slate-300 uppercase">{formatDate(toDateString(log.date))}</div>
                         <div className="text-[9px] font-bold text-slate-550 uppercase">Rédacteur: {log.performer}</div>
                         {log.cost ? (
                           <div className="text-[10px] font-black text-amber-500">{formatCurrency(log.cost)}</div>
