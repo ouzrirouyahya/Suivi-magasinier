@@ -21,6 +21,7 @@ import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useInitialSnapshot } from './hooks/useInitialSnapshot';
 import BannerCarousel from './components/messaging/BannerCarousel';
 import { EntranceLoader } from './components/EntranceLoader';
+import { ExitLoader } from './components/ExitLoader';
 
 const pageRouteMap: Record<string, string> = {
   'COCKPIT': '/',
@@ -52,6 +53,8 @@ function AuthenticatedLayout() {
   const [showEntrance, setShowEntrance] = useState<boolean>(() => {
     return sessionStorage.getItem('hydromines_entrance_played') !== 'true';
   });
+
+  const [isSigningOut, setIsSigningOut] = useState<boolean>(false);
 
   const handleEntranceComplete = () => {
     setShowEntrance(false);
@@ -255,6 +258,13 @@ function AuthenticatedLayout() {
         {showEntrance && (
           <EntranceLoader onComplete={handleEntranceComplete} />
         )}
+        {isSigningOut && (
+          <ExitLoader onComplete={() => {
+            sessionStorage.removeItem('hydromines_entrance_played');
+            signOut(auth);
+            setIsSigningOut(false);
+          }} />
+        )}
       </AnimatePresence>
 
       <Sidebar 
@@ -266,8 +276,7 @@ function AuthenticatedLayout() {
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
         onSignOut={() => {
-          sessionStorage.removeItem('hydromines_entrance_played');
-          signOut(auth);
+          setIsSigningOut(true);
         }}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
