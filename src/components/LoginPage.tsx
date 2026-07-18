@@ -20,7 +20,9 @@ const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   // Séquence d'entrée 7s
-  const [showIntro, setShowIntro] = React.useState(true);
+  const [showIntro, setShowIntro] = React.useState<boolean>(() => {
+    return sessionStorage.getItem('hydromines_login_intro_played') !== 'true';
+  });
   const [dropletClass, setDropletClass] = React.useState('');
   const [impactClass, setImpactClass] = React.useState('');
   const [logoClass, setLogoClass] = React.useState('');
@@ -38,6 +40,15 @@ const LoginPage: React.FC = () => {
   // 2s sequence on the login page itself (0-1s: text, 1-2s: form)
   const [loginStep, setLoginStep] = React.useState(0);
 
+  const timersRef = React.useRef<ReturnType<typeof setTimeout>[]>([]);
+
+  const handleSkipIntro = () => {
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+    sessionStorage.setItem('hydromines_login_intro_played', 'true');
+    setShowIntro(false);
+  };
+
   React.useEffect(() => {
     if (!showIntro) return;
     const handleMouseMove = (e: MouseEvent) => {
@@ -50,6 +61,10 @@ const LoginPage: React.FC = () => {
   }, [showIntro]);
 
   React.useEffect(() => {
+    // Clear any existing timers first
+    timersRef.current.forEach(clearTimeout);
+    timersRef.current = [];
+
     if (!showIntro) {
       setLoginStep(1);
       const timer1 = setTimeout(() => {
@@ -58,68 +73,70 @@ const LoginPage: React.FC = () => {
       const timer2 = setTimeout(() => {
         setLoginStep(3);
       }, 2000);
+      timersRef.current.push(timer1, timer2);
       return () => {
-        clearTimeout(timer1);
-        clearTimeout(timer2);
+        timersRef.current.forEach(clearTimeout);
       };
     }
 
     const t1 = setTimeout(() => {
       setDropletClass('fall');
     }, 300);
+    timersRef.current.push(t1);
 
     const t2 = setTimeout(() => {
       setDropletClass('vanish');
       setImpactClass('on');
     }, 1200);
+    timersRef.current.push(t2);
 
     const t3 = setTimeout(() => {
       setImpactClass('');
       setLogoClass('on');
     }, 1600);
+    timersRef.current.push(t3);
 
     const t4 = setTimeout(() => {
       setLogoClass('on breathe');
     }, 2400);
+    timersRef.current.push(t4);
 
     const t5 = setTimeout(() => {
       setTypoClass('on');
       setHydroCharsShown(true);
     }, 3000);
+    timersRef.current.push(t5);
 
     const t6 = setTimeout(() => {
       setMinesCharsShown(true);
     }, 3350);
+    timersRef.current.push(t6);
 
     const t7 = setTimeout(() => {
       setLineClass('draw');
       setTaglineClass('show');
     }, 4200);
+    timersRef.current.push(t7);
 
     const t8 = setTimeout(() => {
       setMissionClass('show');
     }, 4800);
+    timersRef.current.push(t8);
 
     const t9 = setTimeout(() => {
       setCausticsClass('on');
       setStarsClass('on');
     }, 5500);
+    timersRef.current.push(t9);
 
     const t10 = setTimeout(() => {
+      sessionStorage.setItem('hydromines_login_intro_played', 'true');
       setShowIntro(false);
     }, 8000);
+    timersRef.current.push(t10);
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
-      clearTimeout(t3);
-      clearTimeout(t4);
-      clearTimeout(t5);
-      clearTimeout(t6);
-      clearTimeout(t7);
-      clearTimeout(t8);
-      clearTimeout(t9);
-      clearTimeout(t10);
+      timersRef.current.forEach(clearTimeout);
     };
   }, [showIntro]);
 
@@ -556,7 +573,7 @@ const LoginPage: React.FC = () => {
 
         <div className="grain"></div>
 
-        <div className="stage" id="stage">
+        <div className="stage cursor-pointer" id="stage" onClick={handleSkipIntro}>
           <div 
             className="parallax-layer animate-fade-in"
             style={{ transform: `translate(${parallaxOffset.x}px, ${parallaxOffset.y}px)` }}
@@ -756,6 +773,9 @@ const LoginPage: React.FC = () => {
             <div className={`typo-line ${lineClass}`} id="line"></div>
             <div className={`typo-tagline ${taglineClass}`} id="tagline">Logistique · Stock · Magasinage</div>
             <div className={`typo-mission ${missionClass}`} id="mission">Plateforme de Suivi et de Gestion des Flux de Chantier</div>
+          </div>
+          <div className="absolute bottom-8 right-8 text-[9px] text-slate-400 font-mono uppercase tracking-widest opacity-60 pointer-events-none">
+            Cliquez pour passer →
           </div>
         </div>
       </div>

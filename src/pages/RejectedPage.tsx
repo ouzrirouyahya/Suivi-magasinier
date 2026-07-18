@@ -2,12 +2,19 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { XCircle, HelpCircle, LogOut } from 'lucide-react';
 import { useAuthStore } from '../stores/auth.store';
+import { signOut, auth } from '../lib/firebase';
 
 export const RejectedPage: React.FC = () => {
   const { currentUser, setCurrentUser } = useAuthStore();
 
-  const handleLogout = () => {
-    setCurrentUser(null);
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+    } catch (error) {
+      console.error('Erreur lors de la déconnexion:', error);
+    } finally {
+      setCurrentUser(null);
+    }
   };
 
   return (
