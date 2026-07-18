@@ -55,6 +55,7 @@ function AuthenticatedLayout() {
   });
 
   const [isSigningOut, setIsSigningOut] = useState<boolean>(false);
+  const [progressComplete, setProgressComplete] = useState<boolean>(false);
 
   const handleEntranceComplete = () => {
     setShowEntrance(false);
@@ -186,11 +187,9 @@ function AuthenticatedLayout() {
     }
   }, [currentUser, isLoaded, location.pathname, navigate]);
 
-  if (!isLoaded) {
+  if (!isLoaded || !progressComplete) {
     return (
-      <div className="fixed inset-0 flex items-center justify-center bg-white z-[9999]">
-        <PageLoading />
-      </div>
+      <PageLoading onComplete={() => setProgressComplete(true)} />
     );
   }
 
