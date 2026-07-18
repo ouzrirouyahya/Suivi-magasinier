@@ -126,7 +126,7 @@ export default function MessagingPage() {
         {
           threadId: selectedItem.threadId,
           parentId: selectedItem.messageId,
-          senderId: currentUser?.id || 'system',
+          senderId: currentUser?.email || 'system',
           senderName: currentUser?.name || 'Système',
           senderRole: currentUser?.role || 'RESPONSABLE_CHANTIER',
           senderSite: currentUser?.assignedSite || SITE_CODES[0],

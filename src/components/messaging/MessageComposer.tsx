@@ -230,7 +230,7 @@ export default function MessageComposer({
       const payload = {
         threadId: replyTo?.threadId || crypto.randomUUID(),
         parentId: replyTo?.messageId || undefined,
-        senderId: currentUser?.id || 'system',
+        senderId: currentUser?.email || 'system',
         senderName: currentUser?.name || 'Système',
         senderRole: currentUser?.role || 'OPERATEUR',
         senderSite: currentUser?.assignedSite || SITE_CODES[0],

@@ -50,11 +50,12 @@ const LoginPage: React.FC = () => {
   };
 
   React.useEffect(() => {
-    if (!showIntro) return;
+    if (showIntro) return;
     const handleMouseMove = (e: MouseEvent) => {
       const x = (e.clientX / window.innerWidth - 0.5) * 2;
       const y = (e.clientY / window.innerHeight - 0.5) * 2;
-      setParallaxOffset({ x: x * -10, y: y * -10 });
+      // We want a subtle, high-end floating feedback (1.5cm translates to around 15px max offset)
+      setParallaxOffset({ x: x * 15, y: y * 15 });
     };
     window.addEventListener('mousemove', handleMouseMove);
     return () => window.removeEventListener('mousemove', handleMouseMove);
@@ -783,8 +784,30 @@ const LoginPage: React.FC = () => {
   }
 
   return (
-    <div className="fixed inset-0 min-h-screen bg-white overflow-hidden font-sans select-none flex flex-col lg:flex-row" style={{ fontSize: '16px' }}>
+    <div className="fixed inset-0 min-h-screen bg-slate-950 overflow-hidden font-sans select-none flex flex-col lg:flex-row" style={{ fontSize: '16px' }}>
       
+      {/* Background Image spanning the entire page */}
+      <motion.div 
+        initial={{ opacity: 0, scale: 1.05 }}
+        animate={{
+          opacity: loginStep >= 1 ? 1 : 0,
+          scale: loginStep >= 1 ? 1.05 : 1.08,
+          x: parallaxOffset.x * 0.7, // Slides slightly to match mouse position
+          y: parallaxOffset.y * 0.7
+        }}
+        transition={{ type: "spring", stiffness: 60, damping: 20 }}
+        className="absolute inset-0 w-full h-full z-0"
+      >
+        <img
+          src={loginImage}
+          alt="Hydromines"
+          referrerPolicy="no-referrer"
+          className="w-full h-full object-cover select-none scale-105"
+        />
+        {/* Very subtle dark overlay to keep it extremely elegant and high-contrast, ensuring photo is perfectly visible */}
+        <div className="absolute inset-0 bg-slate-950/25 z-10" />
+      </motion.div>
+
       {/* HEADER COMPACT (Floating over screen) */}
       <motion.header 
         initial={{ opacity: 0 }}
@@ -795,10 +818,10 @@ const LoginPage: React.FC = () => {
         <div className="flex items-center gap-4 pointer-events-auto">
           <div className="flex flex-col leading-tight">
             <div className="text-xl lg:text-2xl font-black tracking-tighter flex items-center">
-              <span className="text-[#0284C7] logo-glow-blue">HYDRO</span>
-              <span className="text-[#991B1B] logo-glow-red">MINES</span>
+              <span className="text-[#38bdf8] logo-glow-blue">HYDRO</span>
+              <span className="text-[#ef4444] logo-glow-red">MINES</span>
             </div>
-            <div className="font-mono text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-slate-500 font-black opacity-60 px-0.5">
+            <div className="font-mono text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-slate-300 font-black opacity-90 px-0.5">
               Mines — Eau — Environnement
             </div>
           </div>
@@ -806,29 +829,7 @@ const LoginPage: React.FC = () => {
       </motion.header>
 
       {/* LEFT COLUMN: 78% WIDTH CINEMATIC HERO */}
-      <section className="hidden lg:block lg:w-[78%] h-full bg-white relative overflow-hidden">
-        {/* Full-bleed background image */}
-        <motion.div 
-          initial={{ opacity: 0, scale: 1.03 }}
-          animate={loginStep >= 1 ? { opacity: 1, scale: 1 } : { opacity: 0, scale: 1.03 }}
-          transition={{ duration: 1.5, ease: "easeOut" }}
-          className="absolute inset-0 w-full h-full"
-        >
-          <img
-            src={loginImage}
-            alt="Hydromines"
-            referrerPolicy="no-referrer"
-            className="w-full h-full object-cover select-none"
-          />
-        </motion.div>
-
-        {/* Cinematic blend overlays: flawlessly fading the image on all edges with pristine visibility of our warehouse components */}
-        <div className="absolute inset-y-0 right-0 w-[35%] bg-gradient-to-r from-transparent via-white/10 via-white/50 to-white to-[98%] z-20 pointer-events-none" />
-        <div className="absolute top-0 left-0 w-[50%] h-[50%] bg-gradient-to-br from-white via-white/80 via-white/30 to-transparent z-10 pointer-events-none" />
-        <div className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-white/95 via-white/40 to-transparent z-10 pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-white/80 to-transparent z-10 pointer-events-none" />
-        <div className="absolute inset-x-0 bottom-0 h-[65%] bg-gradient-to-t from-slate-950/95 via-slate-950/45 to-transparent z-15 pointer-events-none" />
-
+      <section className="hidden lg:block lg:w-[78%] h-full bg-transparent relative overflow-hidden z-10">
         {/* Cinematic typography: Clean, premium, high-impact poster copy like Google or Tesla */}
         <div className="absolute inset-0 z-20 flex flex-col justify-end p-20 pb-28 text-left pointer-events-none">
           <motion.div
@@ -837,14 +838,14 @@ const LoginPage: React.FC = () => {
             transition={{ duration: 1.0, ease: "easeOut" }}
             className="max-w-2xl space-y-4"
           >
-            <p className="font-mono text-[11px] tracking-[0.52em] text-[#0284C7] font-extrabold uppercase drop-shadow-md">
+            <p className="font-mono text-[11px] tracking-[0.52em] text-[#38bdf8] font-extrabold uppercase drop-shadow-md">
               HYDROMINES LOGISTICS ENVIRONMENT
             </p>
-            <h2 className="text-5xl lg:text-6xl xl:text-7xl font-extralight text-white tracking-tighter leading-[0.95] uppercase drop-shadow-lg">
+            <h2 className="text-5xl lg:text-6xl xl:text-7xl font-extralight text-white tracking-tighter leading-[0.95] uppercase drop-shadow-lg animate-fade-in">
               L'efficience <br />
-              <span className="font-black text-[#0284C7] logo-glow-blue">SANS COMPROMIS.</span>
+              <span className="font-black text-[#38bdf8] logo-glow-blue">SANS COMPROMIS.</span>
             </h2>
-            <p className="text-slate-300 font-sans text-sm max-w-sm leading-relaxed font-semibold mt-3 drop-shadow-md">
+            <p className="text-slate-200 font-sans text-sm max-w-sm leading-relaxed font-semibold mt-3 drop-shadow-md">
               Supervision intelligente, flux en temps réel et outils de gestion de stocks Magasiniers.
             </p>
           </motion.div>
@@ -852,94 +853,74 @@ const LoginPage: React.FC = () => {
       </section>
 
       {/* RIGHT COLUMN: 22% LOGIN PANEL */}
-      <section className="w-full lg:w-[22%] h-full bg-white flex flex-col items-center justify-center p-8 relative z-20">
+      <section className="w-full lg:w-[22%] h-full bg-transparent flex flex-col items-center justify-center p-6 relative z-20">
         
-        {/* Anti-subpixel-gap pure white safety mask on the left boundary to perfectly bridge the columns */}
-        <div className="hidden lg:block absolute left-0 top-0 bottom-0 w-6 -ml-3 bg-white z-40 pointer-events-none" />
-        
-        <div className="w-full max-w-[420px] flex flex-col items-center gap-8 mt-12">
+        <div className="w-full max-w-[390px] flex flex-col items-center gap-6 mt-12">
           
-          {/* Main login block (completely flat with no borders or shadows to "kill the lines") */}
-          <div className="w-full bg-white text-center relative px-2">
-            
-            {/* Header / Brand info fading in during the 2nd second */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={loginStep >= 2 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="w-full flex flex-col items-center"
-            >
-              {/* Professional HYDROMINES Logo Graphic */}
-              <div className="flex justify-center mb-5">
-                <img 
-                  src={hydrominesLogo} 
-                  alt="HYDROMINES Logo" 
-                  className="w-[162px] h-[162px] object-contain select-none"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
+          {/* Compact login card */}
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{
+              opacity: loginStep >= 2 ? 1 : 0,
+              y: loginStep >= 2 ? parallaxOffset.y * 1.5 : 30, // Smoothly floats vertically with the mouse
+              x: parallaxOffset.x * 1.5, // Smoothly floats horizontally with the mouse
+              rotateX: -parallaxOffset.y * 0.4, // Subtle 3D tilting
+              rotateY: parallaxOffset.x * 0.4
+            }}
+            transition={{ 
+              type: "spring", 
+              stiffness: 80, 
+              damping: 25, 
+              mass: 0.8 
+            }}
+            className="w-full bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden p-6 md:p-8 flex flex-col items-center text-center border border-slate-100"
+            style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
+          >
+            {/* Top Identity Gradient Accent Line (Sky Blue -> Gold -> Dark Red) */}
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#38bdf8] via-[#eab308] to-[#991b1b]" />
 
-              {!showRoleSelection ? (
-                <>
-                  {/* Header of the section */}
-                  <div className="relative mb-4 flex items-center justify-center">
-                    {/* Crisp white aura backdrop glow for perfect legibility and glow look */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-sky-50/20 via-white to-sky-50/20 blur-md rounded-full pointer-events-none" />
-                    
-                    <motion.h1 
-                      animate={{ 
-                        backgroundPosition: ["0% 50%", "200% 50%"],
-                        textShadow: [
-                          "0 0 12px rgba(255, 255, 255, 1), 0 0 2px rgba(255, 255, 255, 0.8)",
-                          "0 0 24px rgba(255, 255, 255, 1), 0 0 6px rgba(255, 255, 255, 0.95)",
-                          "0 0 12px rgba(255, 255, 255, 1), 0 0 2px rgba(255, 255, 255, 0.8)"
-                        ]
-                      }}
-                      transition={{ 
-                        backgroundPosition: { repeat: Infinity, duration: 4.5, ease: "linear" },
-                        textShadow: { repeat: Infinity, duration: 2.5, ease: "easeInOut" }
-                      }}
-                      style={{
-                        backgroundImage: "linear-gradient(120deg, #090d16 0%, #1e293b 38%, #ffffff 50%, #1e293b 62%, #090d16 100%)",
-                        backgroundSize: "200% auto",
-                        WebkitBackgroundClip: "text",
-                        WebkitTextFillColor: "transparent"
-                      }}
-                      className="text-2xl md:text-3xl font-black tracking-widest uppercase font-sans select-none relative z-10 py-1"
-                    >
-                      Espace Magasinière
-                    </motion.h1>
-                  </div>
-                  <p className="text-xs md:text-sm text-slate-500 mb-8 leading-relaxed px-4 font-semibold">
-                    Supervision des stocks, suivi logistique, et conformité opérationnelle Hydromines.
-                  </p>
-                </>
-              ) : (
-                <div className="space-y-1.5 mb-6 text-center">
-                  <h2 className="text-xl font-black text-slate-900 tracking-tight">
-                    Bienvenue, {currentUser?.name || "Opérateur Core"} !
-                  </h2>
-                  <p className="text-xs text-slate-500 font-medium">
-                    Pour finaliser votre demande d'accès, veuillez préciser votre rôle :
-                  </p>
+            {/* Professional HYDROMINES Logo Graphic */}
+            <div className="flex justify-center mb-4 mt-2">
+              <img 
+                src={hydrominesLogo} 
+                alt="HYDROMINES Logo" 
+                className="w-[162px] h-[162px] object-contain select-none"
+                referrerPolicy="no-referrer"
+              />
+            </div>
+
+            {!showRoleSelection ? (
+              <>
+                {/* Title */}
+                <div className="relative mb-3 flex items-center justify-center">
+                  <h1 className="text-2xl font-black tracking-widest uppercase font-sans select-none text-slate-900">
+                    Espace Magasinière
+                  </h1>
                 </div>
-              )}
-            </motion.div>
+                <p className="text-xs text-slate-500 mb-6 leading-relaxed px-2 font-semibold">
+                  Supervision des stocks, suivi logistique, et conformité opérationnelle Hydromines.
+                </p>
+              </>
+            ) : (
+              <div className="space-y-1.5 mb-5 text-center">
+                <h2 className="text-lg font-black text-slate-900 tracking-tight">
+                  Bienvenue, {currentUser?.name || "Opérateur Core"} !
+                </h2>
+                <p className="text-xs text-slate-500 font-medium">
+                  Pour finaliser votre demande d'accès, veuillez préciser votre rôle :
+                </p>
+              </div>
+            )}
 
-            {/* Form actions and secondary elements fading in during the 3rd second */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={loginStep >= 3 ? { opacity: 1, y: 0 } : { opacity: 0, y: 20 }}
-              transition={{ duration: 0.8, ease: "easeOut" }}
-              className="w-full flex flex-col gap-6"
-            >
+            {/* Login / Actions Container */}
+            <div className="w-full flex flex-col gap-5">
               {!showRoleSelection ? (
                 <>
                   {/* Main CTA */}
                   <div className="space-y-3">
                     <button 
                       onClick={handleLogin}
-                      className="w-full py-4 bg-white hover:bg-slate-50/50 text-slate-900 rounded-2xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest shadow-[0_8px_24px_rgba(0,0,0,0.06)] border border-slate-150 transition-all hover:-translate-y-0.5 active:scale-95 group relative overflow-hidden cursor-pointer"
+                      className="w-full py-3.5 bg-white hover:bg-slate-50/50 text-slate-900 rounded-xl flex items-center justify-center gap-3 font-black text-xs uppercase tracking-widest shadow-[0_4px_12px_rgba(0,0,0,0.05)] border border-slate-200 transition-all hover:-translate-y-0.5 active:scale-95 group relative overflow-hidden cursor-pointer"
                     >
                        <svg className="w-5 h-5 transition-transform duration-500 group-hover:rotate-[360deg]" viewBox="0 0 24 24">
                           <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -947,12 +928,12 @@ const LoginPage: React.FC = () => {
                           <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
                           <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
                        </svg>
-                       Connexion sécurisée Google
+                       Connexion Google
                     </button>
                   </div>
 
                   {authError && (
-                    <div className="mt-4 bg-rose-50/90 border border-rose-200 p-3.5 rounded-2xl text-left space-y-1.5 text-xs">
+                    <div className="mt-4 bg-rose-50 border border-rose-200 p-3.5 rounded-xl text-left space-y-1.5 text-xs">
                       <div className="flex items-center gap-2 text-rose-700 font-extrabold uppercase tracking-wider text-[10px]">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
                         {authError === 'API_KEY_REFERER_BLOCKED' ? 'Clé API Google Cloud restreinte' : 'Erreur de connexion'}
@@ -966,64 +947,64 @@ const LoginPage: React.FC = () => {
                             {window.location.origin}
                           </p>
                           <p className="font-medium text-[9.5px] leading-relaxed">
-                            <strong>Solution :</strong> Ouvrez votre console Google Cloud, modifiez la clé API concernée et ajoutez ce domaine ci-dessus aux <i>Restrictions de sites Web</i> (ou retirez temporairement les restrictions).
+                            <strong>Solution :</strong> Ajoutez ce domaine dans les restrictions de votre console Google Cloud.
                           </p>
                         </div>
                       ) : (
                         <p className="text-slate-600 font-bold text-[9px] tracking-wide uppercase">
-                          Code : {authError}. Veuillez réessayer. Si le problème persiste, ouvrez le site dans un nouvel onglet standard.
+                          Code : {authError}. Veuillez réessayer.
                         </p>
                       )}
                     </div>
                   )}
 
                   {/* Security certification & trust anchors */}
-                  <div className="mt-8 space-y-4">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-50 text-emerald-800 rounded-full text-[9px] font-black uppercase tracking-widest">
+                  <div className="mt-4 space-y-3">
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-50 text-emerald-800 rounded-full text-[8.5px] font-black uppercase tracking-widest">
                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
                       Sécurité Cloud Certifiée
                     </div>
                     
-                    <div className="space-y-1.5">
-                      <p className="text-[10px] text-slate-500 leading-relaxed font-bold max-w-[280px] mx-auto italic">
-                        Chiffrement de bout en bout opéré via le protocole sécurisé <span className="text-[#0284C7] font-extrabold">Google OAuth 2.0</span>.
+                    <div className="space-y-1">
+                      <p className="text-[9px] text-slate-500 leading-relaxed font-bold max-w-[240px] mx-auto italic">
+                        Chiffrement via <span className="text-[#0284C7] font-extrabold">Google OAuth 2.0</span>.
                       </p>
                       <div className="flex items-center justify-center gap-2">
-                        <div className="h-[1px] w-4 bg-slate-100" />
-                        <p className="text-[9px] text-slate-400 font-black uppercase tracking-wider">
-                          NORME ISO 27001 & SOC 2 COMPLIANT
+                        <div className="h-[1px] w-3 bg-slate-100" />
+                        <p className="text-[8px] text-slate-400 font-black uppercase tracking-wider">
+                          NORME ISO 27001
                         </p>
-                        <div className="h-[1px] w-4 bg-slate-100" />
+                        <div className="h-[1px] w-3 bg-slate-100" />
                       </div>
                     </div>
                   </div>
                 </>
               ) : (
-                <div className="text-left py-2 px-1">
-                  <div className="space-y-3 mb-5">
+                <div className="text-left py-1">
+                  <div className="space-y-2 mb-4">
                     {/* Option 1: Magasinier */}
                     <button
                       type="button"
                       onClick={() => {
                         setSelectedRequestedRole('MAGASINIER');
                       }}
-                      className={`w-full p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 outline-none ${
+                      className={`w-full p-3 rounded-lg border text-left transition-all flex items-start gap-3 outline-none ${
                         selectedRequestedRole === 'MAGASINIER'
                           ? 'border-sky-500 bg-sky-50/30 ring-1 ring-sky-500'
                           : 'border-slate-200 bg-white hover:bg-slate-50/50'
                       }`}
                     >
-                      <div className={`p-2 rounded-lg ${
+                      <div className={`p-1.5 rounded ${
                         selectedRequestedRole === 'MAGASINIER' ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-500'
                       }`}>
-                        <Package className="w-5 h-5" />
+                        <Package className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="font-black text-xs text-slate-900 uppercase tracking-wider">
+                        <p className="font-black text-[11px] text-slate-900 uppercase tracking-wider">
                           Magasinier terrain
                         </p>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                          Gestion du stock réel d'un chantier déterminé.
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-tight">
+                          Gestion du stock réel d'un chantier.
                         </p>
                       </div>
                     </button>
@@ -1035,23 +1016,23 @@ const LoginPage: React.FC = () => {
                         setSelectedRequestedRole('ADMIN');
                         setRequestedSite('');
                       }}
-                      className={`w-full p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 outline-none ${
+                      className={`w-full p-3 rounded-lg border text-left transition-all flex items-start gap-3 outline-none ${
                         selectedRequestedRole === 'ADMIN'
                           ? 'border-sky-500 bg-sky-50/30 ring-1 ring-sky-500'
                           : 'border-slate-200 bg-white hover:bg-slate-50/50'
                       }`}
                     >
-                      <div className={`p-2 rounded-lg ${
+                      <div className={`p-1.5 rounded ${
                         selectedRequestedRole === 'ADMIN' ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-500'
                       }`}>
-                        <Shield className="w-5 h-5" />
+                        <Shield className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="font-black text-xs text-slate-900 uppercase tracking-wider">
+                        <p className="font-black text-[11px] text-slate-900 uppercase tracking-wider">
                           Administration
                         </p>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                          Supervision logistique multi-chantiers globale.
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-tight">
+                          Supervision logistique globale.
                         </p>
                       </div>
                     </button>
@@ -1062,23 +1043,23 @@ const LoginPage: React.FC = () => {
                       onClick={() => {
                         setSelectedRequestedRole('RESPONSABLE_CHANTIER');
                       }}
-                      className={`w-full p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 outline-none ${
+                      className={`w-full p-3 rounded-lg border text-left transition-all flex items-start gap-3 outline-none ${
                         selectedRequestedRole === 'RESPONSABLE_CHANTIER'
                           ? 'border-sky-500 bg-sky-50/30 ring-1 ring-sky-500'
                           : 'border-slate-200 bg-white hover:bg-slate-50/50'
                       }`}
                     >
-                      <div className={`p-2 rounded-lg ${
+                      <div className={`p-1.5 rounded ${
                         selectedRequestedRole === 'RESPONSABLE_CHANTIER' ? 'bg-sky-500 text-white' : 'bg-slate-50 text-slate-500'
                       }`}>
-                        <Briefcase className="w-5 h-5" />
+                        <Briefcase className="w-4 h-4" />
                       </div>
                       <div>
-                        <p className="font-black text-xs text-slate-900 uppercase tracking-wider">
+                        <p className="font-black text-[11px] text-slate-900 uppercase tracking-wider">
                           Responsable de Chantier
                         </p>
-                        <p className="text-[11px] text-slate-400 font-medium mt-0.5">
-                          Gestion de la production et consultations logistiques de chantier.
+                        <p className="text-[10px] text-slate-400 font-medium mt-0.5 leading-tight">
+                          Gestion de la production et logistique.
                         </p>
                       </div>
                     </button>
@@ -1086,14 +1067,14 @@ const LoginPage: React.FC = () => {
 
                   {/* Conditional Site Select */}
                   {(selectedRequestedRole === 'MAGASINIER' || selectedRequestedRole === 'RESPONSABLE_CHANTIER') && (
-                    <div className="space-y-1.5 mb-6 animate-fade-in">
-                      <label className="text-[10px] font-black uppercase text-slate-500 tracking-widest pl-1">
+                    <div className="space-y-1 mb-4">
+                      <label className="text-[9px] font-black uppercase text-slate-500 tracking-widest pl-0.5">
                         Chantier souhaité
                       </label>
                       <select
                         value={requestedSite}
                         onChange={(e) => setRequestedSite(e.target.value as SiteCode)}
-                        className="w-full p-3 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all"
+                        className="w-full p-2.5 rounded-lg border border-slate-200 bg-white text-[11px] font-bold text-slate-800 focus:outline-none focus:ring-1 focus:ring-sky-500 focus:border-sky-500 transition-all"
                       >
                         <option value="">-- Choisir un chantier actif --</option>
                         {SITES.map((site) => (
@@ -1114,47 +1095,29 @@ const LoginPage: React.FC = () => {
                       ((selectedRequestedRole === 'MAGASINIER' || selectedRequestedRole === 'RESPONSABLE_CHANTIER') && !requestedSite)
                     }
                     onClick={handleSubmitRequest}
-                    className="w-full py-3.5 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all hover:-translate-y-0.5 active:scale-95 shadow-[0_4px_12px_rgba(0,0,0,0.1)]"
+                    className="w-full py-3 bg-slate-900 hover:bg-slate-800 disabled:opacity-40 disabled:hover:bg-slate-900 text-white rounded-lg flex items-center justify-center gap-1.5 font-black text-[10px] uppercase tracking-widest transition-all hover:-translate-y-0.5 active:scale-95 shadow-md"
                   >
-                    {isSubmitting ? 'Envoi en cours...' : 'Envoyer ma demande'}
-                    <ArrowRight className="w-4 h-4" />
+                    {isSubmitting ? 'Envoi...' : 'Envoyer ma demande'}
+                    <ArrowRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               )}
-            </motion.div>
-          </div>
+            </div>
+          </motion.div>
 
-          {/* List of active extraction sites */}
+          {/* Professional copyright block */}
           <motion.div 
             initial={{ opacity: 0 }}
             animate={loginStep >= 2 ? { opacity: 1 } : { opacity: 0 }}
             transition={{ duration: 0.8 }}
-            className="w-full flex flex-col gap-4"
+            className="text-center pt-2 w-full"
           >
-            <div className="text-center">
-              <p className="font-mono text-[8px] uppercase tracking-[0.25em] text-slate-400 font-extrabold">Sites Sous Supervision active</p>
-            </div>
-            <div className="flex flex-wrap justify-center gap-2">
-              {SITE_CODES.map((site) => (
-                <div 
-                  key={site} 
-                  className="font-mono text-[9px] font-bold tracking-widest text-slate-500 px-3 py-1.5 bg-slate-50/80 rounded-lg flex items-center gap-2 hover:bg-slate-100/80 transition-colors cursor-default uppercase"
-                >
-                  <span className="w-1 h-1 rounded-full bg-emerald-500" />
-                  {site}
-                </div>
-              ))}
-            </div>
-
-            {/* Professional copyright block */}
-            <div className="text-center pt-4 border-t border-slate-100">
-              <p className="text-[10px] text-slate-400 font-medium tracking-wide">
-                © 2026 <span className="font-black text-slate-705">HYDROMINES</span>. Tous droits réservés.
-              </p>
-              <p className="text-[8px] text-slate-350 uppercase tracking-[0.15em] mt-1 font-semibold">
-                Système de Supervision Logistique & Gestion de Sécurité
-              </p>
-            </div>
+            <p className="text-[10px] text-slate-300 font-medium tracking-wide drop-shadow-md">
+              © 2026 <span className="font-black text-white">HYDROMINES</span>. Tous droits réservés.
+            </p>
+            <p className="text-[8px] text-slate-400 uppercase tracking-[0.15em] mt-1 font-semibold drop-shadow-md">
+              Système de Supervision Logistique
+            </p>
           </motion.div>
 
         </div>
