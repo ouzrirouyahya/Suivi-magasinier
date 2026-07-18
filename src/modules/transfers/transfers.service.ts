@@ -5,20 +5,7 @@ import { useTransfersStore } from './transfers.store';
 import { useArticlesStore } from '../articles/articles.store';
 import { useMovementsStore } from '../movements/movements.store';
 import { validateTransferInvariants, validateCompleteTransferInvariants } from '../../core/BusinessStateValidator';
-import { generateSecureUUID, cleanObject, logger } from '../../lib/utils';
-
-const sanitizeForFirestoreId = (str: string): string => {
-  return str
-    .trim()
-    .toUpperCase()
-    .replace(/\//g, '-')           // slash → tiret
-    .replace(/\./g, '_')           // point → underscore
-    .replace(/[\[\]\*\`~\(\)]/g, '') // supprimer les chars interdits
-    .replace(/\s+/g, '_')          // espaces → underscore
-    .replace(/_{2,}/g, '_')        // double underscore → simple
-    .replace(/^_|_$/g, '')         // supprimer underscore en début/fin
-    .slice(0, 100);                 // max 100 chars
-};
+import { generateSecureUUID, cleanObject, logger, sanitizeForFirestoreId } from '../../lib/utils';
 
 export class TransfersService {
   /**

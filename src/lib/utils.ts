@@ -7,6 +7,19 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
+export function sanitizeForFirestoreId(str: string): string {
+  return str
+    .trim()
+    .toUpperCase()
+    .replace(/\//g, '-')           // slash → tiret
+    .replace(/\./g, '_')           // point → underscore
+    .replace(/[\[\]\*\`~\(\)]/g, '') // supprimer les chars interdits
+    .replace(/\s+/g, '_')          // espaces → underscore
+    .replace(/_{2,}/g, '_')        // double underscore → simple
+    .replace(/^_|_$/g, '')         // supprimer underscore en début/fin
+    .slice(0, 100);                 // max 100 chars
+}
+
 export function formatCurrency(amount: number | undefined | null) {
   const safe = Number(amount);
   const validAmount = isNaN(safe) ? 0 : safe;

@@ -1,8 +1,8 @@
-import { doc, setDoc, db } from '../../lib/db';
+import { doc, setDoc, db, runTransaction } from '../../lib/db';
 import { Article, CatalogItem, SiteCode } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useArticlesStore } from './articles.store';
-import { generateId, cleanObject, logger } from '../../lib/utils';
+import { generateId, cleanObject, logger, sanitizeForFirestoreId } from '../../lib/utils';
 
 export class ArticlesService {
   /**
@@ -10,15 +10,41 @@ export class ArticlesService {
    */
   async saveArticle(article: Article, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
     try {
-      const id = article.id || generateId();
-      const item = { ...article, id };
+      // Si article.id est déjà fourni (cas d'une MISE À JOUR d'un article existant)
+      if (article.id) {
+        const item = { ...article };
+        if (isSimulation) {
+          useArticlesStore.getState().addArticleLocal(item);
+          return { success: true };
+        }
+        await firestoreRepository.write('articles', article.id, cleanObject(item));
+        useArticlesStore.getState().addArticleLocal(item);
+        return { success: true };
+      }
+
+      // Cas d'une CRÉATION : ID déterministe basé sur le chantier (site) et la référence
+      const deterministicId = `${article.site}_${sanitizeForFirestoreId(article.ref)}`;
+      const item = { ...article, id: deterministicId, active: true };
 
       if (isSimulation) {
         useArticlesStore.getState().addArticleLocal(item);
         return { success: true };
       }
 
-      await firestoreRepository.write('articles', id, cleanObject(item));
+      await runTransaction(db, async (transaction) => {
+        const docRef = doc(db, 'articles', deterministicId);
+        const docSnap = await transaction.get(docRef);
+        
+        if (docSnap.exists()) {
+          const existingData = docSnap.data();
+          if (existingData && existingData.active !== false) {
+            throw new Error(`REFERENCE_DEJA_UTILISEE: La référence "${article.ref}" existe déjà sur le chantier ${article.site}.`);
+          }
+        }
+        
+        transaction.set(docRef, cleanObject(item));
+      });
+
       useArticlesStore.getState().addArticleLocal(item);
       return { success: true };
     } catch (error: any) {

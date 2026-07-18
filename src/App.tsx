@@ -20,6 +20,7 @@ import { OfflineBanner } from './components/OfflineBanner';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useInitialSnapshot } from './hooks/useInitialSnapshot';
 import BannerCarousel from './components/messaging/BannerCarousel';
+import { EntranceLoader } from './components/EntranceLoader';
 
 const pageRouteMap: Record<string, string> = {
   'COCKPIT': '/',
@@ -48,6 +49,15 @@ function AuthenticatedLayout() {
   const navigate = useNavigate();
   const location = useLocation();
 
+  const [showEntrance, setShowEntrance] = useState<boolean>(() => {
+    return sessionStorage.getItem('hydromines_entrance_played') !== 'true';
+  });
+
+  const handleEntranceComplete = () => {
+    setShowEntrance(false);
+    sessionStorage.setItem('hydromines_entrance_played', 'true');
+  };
+
   const [isDesktopViewport, setIsDesktopViewport] = useState<boolean>(() => {
     return localStorage.getItem('hydromines_viewport_mode') !== 'mobile';
   });
@@ -65,10 +75,18 @@ function AuthenticatedLayout() {
   const {
     currentSite, setCurrentSite, currentUser, networkQuality, retryQueue = [],
     maintenanceMode, maintenanceReason, articles, selectedArticle, setSelectedArticle,
-    notifications, globalSearch, setGlobalSearch, movements: movementsList, isLoaded
+    notifications, globalSearch, setGlobalSearch, mouvements: movementsList, isLoaded,
+    pendingMouvementNav, setPendingMouvementNav
   } = useInventory();
 
   useSessionTimeout();
+
+  useEffect(() => {
+    if (pendingMouvementNav) {
+      navigate(pendingMouvementNav.type === 'ENTREE' ? '/movement/entree' : '/movement/sortie');
+      setPendingMouvementNav(null);
+    }
+  }, [pendingMouvementNav, navigate, setPendingMouvementNav]);
 
   const handleToggleDarkMode = () => setIsDarkMode(prev => !prev);
   const handleDensityChange = (d: 'compact' | 'standard' | 'large') => {
@@ -233,6 +251,12 @@ function AuthenticatedLayout() {
 
   return (
     <div className="min-h-screen bg-white flex relative overflow-hidden" data-density={density}>
+      <AnimatePresence mode="wait">
+        {showEntrance && (
+          <EntranceLoader onComplete={handleEntranceComplete} />
+        )}
+      </AnimatePresence>
+
       <Sidebar 
         currentSite={currentSite}
         setSite={(site) => { if (isAdmin) setCurrentSite(site); }} 
@@ -241,7 +265,10 @@ function AuthenticatedLayout() {
         notifications={notifications}
         isOpen={sidebarOpen}
         onClose={() => setSidebarOpen(false)}
-        onSignOut={() => signOut(auth)}
+        onSignOut={() => {
+          sessionStorage.removeItem('hydromines_entrance_played');
+          signOut(auth);
+        }}
         isDarkMode={isDarkMode}
         onToggleDarkMode={handleToggleDarkMode}
       />

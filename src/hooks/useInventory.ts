@@ -1,3 +1,5 @@
+import { useState, useCallback } from 'react';
+import { Article } from '../types';
 import { useAuth } from './useAuth';
 import { useArticles } from './useArticles';
 import { useMovements } from './useMovements';
@@ -10,6 +12,23 @@ import { useCatalog } from './useCatalog';
 import { useSystem } from './useSystem';
 
 export function useInventory() {
+  const [selectedArticle, setSelectedArticle] = useState<Article | null>(null);
+  const [selectedArticleId, setSelectedArticleId] = useState<string | null>(null);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const [pendingMouvementNav, setPendingMouvementNav] = useState<{ type: 'ENTREE' | 'SORTIE'; articleId?: string } | null>(null);
+
+  const navigateToMouvement = useCallback((param1: string, param2?: 'IN' | 'OUT') => {
+    if (param2) {
+      // Signature (articleId, action)
+      setSelectedArticleId(param1);
+      setPendingMouvementNav({ type: param2 === 'IN' ? 'ENTREE' : 'SORTIE', articleId: param1 });
+    } else {
+      // Signature (type)
+      setSelectedArticleId(null);
+      setPendingMouvementNav({ type: param1 as 'ENTREE' | 'SORTIE' });
+    }
+  }, []);
+
   // === HOOKS CRITIQUES (Toujours actifs) ===
   // Essentiels pour le fonctionnement de base de l'application, l'état d'authentification et les données de stock temps réel.
   const auth = useAuth();           // Critique : Gestion de session, profil et droits d'accès
@@ -54,6 +73,11 @@ export function useInventory() {
     addArticle: articles.saveArticle,
     updateArticle: articles.saveArticle,
     deleteArticle: articles.deleteArticle,
+    deleteArticles: articles.deleteArticles,
+    ghostArticles: articles.ghostArticles,
+    catalogUsageStats: articles.catalogUsageStats,
+    saveArticle: articles.saveArticle,
+    importAllCatalogToArticles: articles.importAllCatalogToArticles,
     importFromHydrominesCatalog: articles.importFromHydrominesCatalog,
     importSpecificCatalogItems: articles.importSpecificCatalogItems,
     requestDeletion: (articles as any).requestDeletion,
@@ -63,6 +87,7 @@ export function useInventory() {
 
     // MOVEMENTS
     mouvements: movements.mouvements,
+    movements: movements.mouvements,
     distributions: movements.distributions,
     purchaseRequests: movements.purchaseRequests,
     anomalyReports: movements.anomalyReports,
@@ -114,6 +139,8 @@ export function useInventory() {
     // NOTIFICATIONS
     notifications: notifications.notifications,
     addNotification: notifications.addNotification,
+    markNotificationAsRead: notifications.markNotificationAsRead,
+    markAllNotificationsAsRead: notifications.markAllNotificationsAsRead,
     markAllRead: notifications.markAllNotificationsAsRead,
 
     // AUDIT
@@ -149,6 +176,17 @@ export function useInventory() {
     toggleMaintenanceLock: system.toggleMaintenanceLock,
     collectSystemMetrics: system.collectSystemMetrics,
     exportForensic: system.exportForensic,
+
+    // SHARED UI / SEARCH / NAVIGATION
+    selectedArticle,
+    setSelectedArticle,
+    selectedArticleId,
+    setSelectedArticleId,
+    globalSearch,
+    setGlobalSearch,
+    pendingMouvementNav,
+    setPendingMouvementNav,
+    navigateToMouvement,
   };
 }
 

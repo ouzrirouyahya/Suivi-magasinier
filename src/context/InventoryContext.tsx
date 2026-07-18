@@ -77,7 +77,8 @@ export function calculatePriceUpdates(
   };
 }
 
-const InventoryContext = createContext<any>(null);
+type InventoryContextType = ReturnType<typeof useInventoryMaster>;
+const InventoryContext = createContext<InventoryContextType | null>(null);
 
 export function InventoryProvider({ children }: { children: ReactNode }) {
   const value = useInventoryMaster();
@@ -89,7 +90,7 @@ export function InventoryProvider({ children }: { children: ReactNode }) {
   );
 }
 
-export function useInventory() {
+export function useInventory(): InventoryContextType {
   const context = useContext(InventoryContext);
   if (!context) {
     throw new Error('useInventory must be used within an InventoryProvider');
