@@ -187,9 +187,12 @@ function AuthenticatedLayout() {
     }
   }, [currentUser, isLoaded, location.pathname, navigate]);
 
-  if (!isLoaded || !progressComplete) {
+  const hasPlayedIntro = sessionStorage.getItem('hydromines_login_intro_played') === 'true';
+  const shouldShowLoader = hasPlayedIntro || currentUser;
+
+  if (shouldShowLoader && (!isLoaded || !progressComplete)) {
     return (
-      <PageLoading onComplete={() => setProgressComplete(true)} />
+      <PageLoading isLoaded={isLoaded} onComplete={() => setProgressComplete(true)} />
     );
   }
 

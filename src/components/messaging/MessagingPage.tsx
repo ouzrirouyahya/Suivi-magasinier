@@ -25,6 +25,8 @@ import {
   UserCheck
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { offlineQueue } from '../../lib/offlineQueue';
+import { useSystemStore } from '../../stores/system.store';
 
 export default function MessagingPage() {
   const { currentUser, accounts, currentSite } = useAuthStore();
@@ -120,27 +122,58 @@ export default function MessagingPage() {
         status: 'UNREAD'
       }] : [];
 
+      const messagePayload = {
+        threadId: selectedItem.threadId,
+        parentId: selectedItem.messageId,
+        senderId: currentUser?.email || 'system',
+        senderName: currentUser?.name || 'Système',
+        senderRole: currentUser?.role || 'RESPONSABLE_CHANTIER',
+        senderSite: currentUser?.assignedSite || SITE_CODES[0],
+        targetType: 'INDIVIDUAL' as const,
+        targetUserId: selectedItem.senderId,
+        subject: selectedItem.subject.startsWith('RE:') ? selectedItem.subject : `RE: ${selectedItem.subject}`,
+        body: replyText,
+        priority: selectedItem.priority,
+        recipientIds: [selectedItem.senderId],
+        recipients: originalRecipients,
+        attachments: [],
+        status: 'ACTIVE' as const,
+        createdBy: currentUser?.email || 'system'
+      };
+
+      const isOnline = navigator.onLine;
+      if (!isOnline) {
+        const intentId = 'msg_' + crypto.randomUUID();
+        const payload = {
+          parentId: selectedItem.messageId,
+          threadId: selectedItem.threadId,
+          message: messagePayload
+        };
+
+        await offlineQueue.add({ intentId, type: 'replyToMessage', payload });
+
+        const { retryQueue, setRetryQueue } = useSystemStore.getState();
+        setRetryQueue([
+          ...retryQueue,
+          {
+            intentId,
+            type: 'replyToMessage',
+            payload,
+            retryCount: 0,
+            maxRetries: 3
+          }
+        ]);
+
+        toast.info("Mode hors-ligne : réponse mise en attente, elle sera envoyée dès le retour du réseau.");
+        setReplyText('');
+        setIsSendingReply(false);
+        return;
+      }
+
       await messagingService.replyToMessage(
         selectedItem.messageId, // parentId
         selectedItem.threadId,   // threadId
-        {
-          threadId: selectedItem.threadId,
-          parentId: selectedItem.messageId,
-          senderId: currentUser?.email || 'system',
-          senderName: currentUser?.name || 'Système',
-          senderRole: currentUser?.role || 'RESPONSABLE_CHANTIER',
-          senderSite: currentUser?.assignedSite || SITE_CODES[0],
-          targetType: 'INDIVIDUAL',
-          targetUserId: selectedItem.senderId,
-          subject: selectedItem.subject.startsWith('RE:') ? selectedItem.subject : `RE: ${selectedItem.subject}`,
-          body: replyText,
-          priority: selectedItem.priority,
-          recipientIds: [selectedItem.senderId],
-          recipients: originalRecipients,
-          attachments: [],
-          status: 'ACTIVE',
-          createdBy: currentUser?.email || 'system'
-        }
+        messagePayload
       );
 
       toast.success('Réponse envoyée');
@@ -531,23 +564,41 @@ export default function MessagingPage() {
 
                           {/* Render Attachments if present */}
                           {msg.attachments && msg.attachments.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-slate-200 flex flex-col gap-1">
-                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Fichiers Jointes</span>
-                              {msg.attachments.map((att: any, attIdx: number) => (
-                                <a
-                                  key={attIdx}
-                                  href={att.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="text-xs text-[#8c7017] hover:underline flex items-center gap-1 mt-1 font-semibold"
-                                >
-                                  <Paperclip className="w-3.5 h-3.5" />
-                                  <span>{att.name}</span>
-                                </a>
-                              ))}
+                            <div className="mt-3 pt-3 border-t border-slate-200 flex flex-col gap-2">
+                              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block">Pièces Jointes</span>
+                              <div className="flex flex-wrap gap-2 mt-1">
+                                {msg.attachments.map((att: any, attIdx: number) => {
+                                  const isImg = att.mimeType && att.mimeType.startsWith('image/');
+                                  return (
+                                    <div key={attIdx} className="flex flex-col bg-slate-50 border border-slate-200 p-2 rounded-lg max-w-xs shadow-xs">
+                                      {isImg && (
+                                        <img
+                                          src={att.originalUrl}
+                                          alt={att.fileName || 'Image'}
+                                          referrerPolicy="no-referrer"
+                                          className="w-full h-32 object-cover rounded-md mb-1.5 border border-slate-200 shadow-sm max-w-[200px] select-none"
+                                        />
+                                      )}
+                                      <a
+                                        href={att.originalUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="text-xs text-[#8c7017] hover:underline flex items-center gap-1.5 font-semibold break-all"
+                                      >
+                                        <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
+                                        <span>{att.fileName || 'Fichier'}</span>
+                                      </a>
+                                    </div>
+                                  );
+                                })}
+                              </div>
                             </div>
                           )}
                         </div>
+
+                        {isMe && msg.recipients && msg.recipients.length > 0 && (
+                          <ReadReceiptBadge recipients={msg.recipients} formatRelativeTime={formatRelativeTime} />
+                        )}
                       </div>
                     );
                   })
@@ -735,6 +786,91 @@ export default function MessagingPage() {
         </div>
 
         </div>
+      )}
+    </div>
+  );
+}
+
+function ReadReceiptBadge({ recipients, formatRelativeTime }: { recipients: MessageRecipient[]; formatRelativeTime: (iso?: string) => string }) {
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (!recipients || recipients.length === 0) return null;
+
+  const formatReceiptTime = (isoString?: string) => {
+    if (!isoString) return '';
+    const date = new Date(isoString);
+    const now = new Date();
+    if (date.toDateString() === now.toDateString()) {
+      return `à ${date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}`;
+    }
+    return formatRelativeTime(isoString);
+  };
+
+  if (recipients.length === 1) {
+    const single = recipients[0];
+    if (single.status === 'READ') {
+      return (
+        <span className="text-[10px] text-emerald-600 font-medium flex items-center gap-1 mt-1 select-none">
+          <span className="font-semibold">✓✓</span> Lu {formatReceiptTime(single.readAt)}
+        </span>
+      );
+    }
+    return (
+      <span className="text-[10px] text-slate-400 font-medium flex items-center gap-1 mt-1 select-none">
+        <span>✓</span> Envoyé
+      </span>
+    );
+  }
+
+  // Diffusion (multiple recipients)
+  const readCount = recipients.filter(r => r.status === 'READ').length;
+  const sortedRecipients = [...recipients].sort((a, b) => {
+    if (a.status === 'READ' && b.status !== 'READ') return -1;
+    if (a.status !== 'READ' && b.status === 'READ') return 1;
+    if (a.readAt && b.readAt) return new Date(b.readAt).getTime() - new Date(a.readAt).getTime();
+    return 0;
+  });
+
+  return (
+    <div className="relative mt-1">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="text-[10px] text-amber-700 hover:text-amber-900 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded px-1.5 py-0.5 font-semibold flex items-center gap-1 transition cursor-pointer select-none"
+      >
+        <span>✓✓ Lu par {readCount}/{recipients.length}</span>
+      </button>
+
+      {isOpen && (
+        <>
+          {/* Overlay to close the popover */}
+          <div className="fixed inset-0 z-10 bg-transparent" onClick={() => setIsOpen(false)} />
+          
+          <div className="absolute right-0 bottom-full mb-1.5 w-64 bg-white border border-slate-200 rounded-lg shadow-lg p-2.5 z-20 space-y-1.5 max-h-48 overflow-y-auto">
+            <div className="text-[9px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 pb-1">
+              Destinataires ({recipients.length})
+            </div>
+            {sortedRecipients.map((r, i) => (
+              <div key={i} className="flex justify-between items-center text-xs text-slate-700 py-0.5">
+                <div className="flex flex-col min-w-0 pr-2">
+                  <span className="font-semibold truncate">{r.userName || r.userId.split('@')[0]}</span>
+                  <span className="text-[9px] text-slate-400 truncate">{r.userId}</span>
+                </div>
+                <div className="flex-shrink-0 text-right">
+                  {r.status === 'READ' ? (
+                    <span className="text-[10px] text-emerald-600 font-semibold bg-emerald-50 px-1.5 py-0.5 rounded">
+                      Lu {formatReceiptTime(r.readAt)}
+                    </span>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-medium bg-slate-50 px-1.5 py-0.5 rounded">
+                      Non lu
+                    </span>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );

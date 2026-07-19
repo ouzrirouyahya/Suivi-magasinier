@@ -155,6 +155,45 @@ export const messagingService = {
       updates.timeSpentSeconds = timeSpentSeconds;
     }
     await updateDoc(inboxRef, updates);
+
+    // Propagate read receipt to shared message
+    try {
+      const messageRef = doc(db, 'messages', itemId);
+      await runTransaction(db, async (transaction) => {
+        const messageSnap = await transaction.get(messageRef);
+        if (!messageSnap.exists()) {
+          return;
+        }
+        const messageData = messageSnap.data();
+        const recipients: any[] = messageData.recipients || [];
+        
+        let updated = false;
+        const updatedRecipients = recipients.map((r: any) => {
+          if (r.userId === userId) {
+            updated = true;
+            const updatedRecipient = {
+              ...r,
+              status: 'READ',
+              readAt: new Date().toISOString()
+            };
+            if (timeSpentSeconds !== undefined) {
+              updatedRecipient.timeSpentSeconds = timeSpentSeconds;
+            }
+            return updatedRecipient;
+          }
+          return r;
+        });
+
+        if (updated) {
+          transaction.update(messageRef, {
+            recipients: updatedRecipients,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      });
+    } catch (err) {
+      console.error("Failed to propagate read receipt:", err);
+    }
   },
 
   // 4. Archive an inbox item

@@ -3,6 +3,7 @@ import { articleService } from './article.service';
 import { movementsService } from './movement.service';
 import { transfersService } from './transfer.service';
 import { maintenanceService } from './maintenance.service';
+import { messagingService } from './message.service';
 import { logger } from '../lib/utils';
 
 export const offlineService = {
@@ -54,6 +55,12 @@ export const offlineService = {
         break;
       case 'addMaintenanceLog':
         await maintenanceService.addMaintenanceLog(payload);
+        return;
+      case 'sendMessage':
+        await messagingService.sendMessage(payload);
+        return;
+      case 'replyToMessage':
+        await messagingService.replyToMessage(payload.parentId, payload.threadId, payload.message);
         return;
       default:
         logger.warn(`Unknown offline retry intent type: ${type}`);

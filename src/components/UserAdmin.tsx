@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Users, Shield, CheckCircle2, XCircle, Mail, Clock, Search, Truck, Drill, LayoutGrid, Plus, Trash2, Tag, Hash, Eye, Globe, Languages, Monitor, Cpu, History, Compass, Activity, MapPin, Smartphone, Laptop, Tablet, ChevronRight, AlertTriangle, Filter, Calendar, X, Wrench, Database } from 'lucide-react';
-import { UserAccount, EnginMaster, AgentMaster, PerfoMaster, SiteCode } from '../types';
+import { UserAccount, EnginMaster, AgentMaster, PerfoMaster, SiteCode, toDateString } from '../types';
 import { cn, generateId, logger } from '../lib/utils';
 import { SITES, SERVICES } from '../demoData';
 import { collection, onSnapshot, query, doc, updateDoc, db } from '../lib/db';
@@ -807,6 +807,21 @@ export const UserAdmin = React.memo(function UserAdmin({
                               {isPrimaryAdmin && <span className="text-[7px] font-black uppercase bg-amber-500/20 text-amber-800 px-1 py-0.5 rounded-md">PROTÉGÉ</span>}
                             </h3>
                             <p className="text-[10px] text-slate-400 font-mono font-bold">{user.email}</p>
+                            {user.hideLastConnection === true ? (
+                              <p className="text-[10px] text-slate-400 italic">Dernière connexion : Masquée</p>
+                            ) : toDateString(user.lastConnectionAt) ? (
+                              <p className="text-[10px] text-slate-500">
+                                Dernière connexion : {new Date(toDateString(user.lastConnectionAt)).toLocaleString('fr-FR', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </p>
+                            ) : (
+                              <p className="text-[10px] text-slate-300">Dernière connexion : jamais</p>
+                            )}
                           </div>
                         </div>
 

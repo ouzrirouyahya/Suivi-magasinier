@@ -61,6 +61,8 @@ export interface UserAccount {
   replacementEndDate?: string;
   replacementReason?: string;
   replacementRequestStatus?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'EXPIRED';
+  lastConnectionAt?: FirestoreDate;
+  hideLastConnection?: boolean;
 }
 
 export interface Article {

@@ -28,16 +28,18 @@ import {
   Smartphone,
   Sun,
   Moon,
-  Database
+  Database,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { cn, generateSecureUUID } from '../lib/utils';
 import { SITES } from '../demoData';
-import { SiteCode, AppNotification } from '../types';
+import { SiteCode, AppNotification, toDateString } from '../types';
 import { User } from 'firebase/auth';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useInventory } from '../context/InventoryContext';
 import { toast } from 'sonner';
-import { doc, setDoc, db } from '../lib/db';
+import { doc, setDoc, updateDoc, db } from '../lib/db';
 import { useNotifications } from '../hooks/useNotifications';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { useMessages } from '../hooks/useMessages';
@@ -562,6 +564,40 @@ export const Sidebar = React.memo(function Sidebar({
               <p className="text-[10px] text-slate-400 font-bold truncate uppercase tracking-widest mt-0.5">
                 {currentUser?.role || (isAdmin ? 'ADMIN' : 'OPÉRATEUR')}
               </p>
+              {toDateString(currentUser?.lastConnectionAt) && (
+                <p className="text-[9px] text-slate-400 flex items-center gap-1 mt-0.5 select-none leading-none">
+                  <span className="truncate">
+                    Dernière connexion : {new Date(toDateString(currentUser!.lastConnectionAt)).toLocaleString('fr-FR', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </span>
+                  {currentUser?.role === 'SUPER_ADMIN' && (
+                    <button
+                      onClick={async () => {
+                        try {
+                          const nextHide = !currentUser.hideLastConnection;
+                          await updateDoc(doc(db, 'accounts', currentUser.id), { hideLastConnection: nextHide });
+                          toast.success(nextHide 
+                            ? "Ta dernière connexion est maintenant masquée pour les autres admins" 
+                            : "Ta dernière connexion est maintenant visible pour les autres admins"
+                          );
+                        } catch (err) {
+                          console.error(err);
+                          toast.error("Erreur lors de la modification du masquage");
+                        }
+                      }}
+                      className="text-slate-400 hover:text-amber-500 transition-colors cursor-pointer"
+                      title={currentUser.hideLastConnection ? "Rendre visible" : "Masquer"}
+                    >
+                      {currentUser.hideLastConnection ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                    </button>
+                  )}
+                </p>
+              )}
             </div>
             <button 
               onClick={onSignOut}

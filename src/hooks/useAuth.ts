@@ -60,6 +60,11 @@ export function useAuth() {
       }
 
       const uid = user.uid;
+      
+      // Enregistrer la connexion
+      setDoc(doc(db, 'accounts', uid), { lastConnectionAt: new Date().toISOString() }, { merge: true })
+        .catch(err => logger.error('[useAuth] Échec enregistrement dernière connexion:', err));
+
       logger.log("🔄 [useAuth] Configuration de l'écouteur Firestore onSnapshot pour l'utilisateur UID :", uid);
       unsubUser = onSnapshot(doc(db, 'accounts', uid), async (snap) => {
         logger.log("🔄 [useAuth] onSnapshot reçu pour l'utilisateur UID :", uid, "Existe ?", snap.exists(), "Données brutes :", snap.data());

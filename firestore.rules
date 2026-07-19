@@ -219,7 +219,7 @@ service cloud.firestore {
 
     function isValidAccount(data) {
       return data.keys().hasAll(['id', 'email', 'name', 'role', 'active'])
-        && data.keys().size() <= 16
+        && data.keys().size() <= 18
         && data.id is string && data.id.size() > 0 && data.id.size() <= 128
         && data.email is string && data.email.size() > 0 && data.email.size() <= 256
         && data.name is string && data.name.size() > 0 && data.name.size() <= 256
@@ -230,7 +230,9 @@ service cloud.firestore {
         && (!data.keys().contains('status') || data.status in ['PENDING', 'PENDING_REGISTRATION', 'APPROVED', 'REJECTED', 'DISABLED'])
         && (!data.keys().contains('requestedRole') || data.requestedRole in ['ADMIN', 'MAGASINIER', 'RESPONSABLE_CHANTIER'])
         && (!data.keys().contains('assignedSite') || data.assignedSite == null || data.assignedSite is string)
-        && (!data.keys().contains('requestedSite') || data.requestedSite == null || data.requestedSite is string);
+        && (!data.keys().contains('requestedSite') || data.requestedSite == null || data.requestedSite is string)
+        && (!data.keys().contains('lastConnectionAt') || data.lastConnectionAt is string)
+        && (!data.keys().contains('hideLastConnection') || data.hideLastConnection is bool);
     }
 
     function isValidAuditLog(data) {
@@ -391,6 +393,7 @@ service cloud.firestore {
           // L'utilisateur ne peut pas modifier lui-même son statut d'approbation s'il est déjà défini
           && (incoming().status == existing().status || (!existing().keys().contains('status') && incoming().status == 'PENDING'))
           && (!incoming().keys().contains('canWrite') || incoming().canWrite == existing().get('canWrite', false))
+          && (!incoming().keys().contains('hideLastConnection') || existing().role == 'SUPER_ADMIN')
           && isValidAccount(incoming())
         )
       );
@@ -560,9 +563,10 @@ service cloud.firestore {
         request.resource.data.createdBy == getUserEmail() &&
         request.resource.data.status == 'ACTIVE';
 
-      allow update: if isActive() &&
-        (getUserEmail() == resource.data.senderId || isAdmin()) &&
-        request.resource.data.status in ['ACTIVE', 'DELETED_BY_SENDER'];
+      allow update: if isActive() && (
+        (getUserEmail() == resource.data.senderId || isAdmin()) && request.resource.data.status in ['ACTIVE', 'DELETED_BY_SENDER'] ||
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['recipients', 'updatedAt'])
+      );
 
       allow delete: if isSuperAdmin();
     }
