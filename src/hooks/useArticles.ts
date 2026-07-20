@@ -541,6 +541,10 @@ export function useArticles() {
     toast.success("Demande de suppression rejetée.");
   }, [deletionRequests]);
 
+  const updateArticlePrice = useCallback(async (articleId: string, newPrice: number, reason: string, userRole: string, changedByEmail: string, changedByName: string) => {
+    return articleService.updateArticlePrice(articleId, newPrice, reason, userRole, changedByEmail, changedByName);
+  }, []);
+
   const addArticle = saveArticle;
   const updateArticle = saveArticle;
 
@@ -555,6 +559,7 @@ export function useArticles() {
     saveArticle,
     addArticle,
     updateArticle,
+    updateArticlePrice,
     deleteArticle,
     deleteArticles,
     importAllCatalogToArticles: articleService.importAllCatalogToArticles,

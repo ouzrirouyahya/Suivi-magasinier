@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   Wrench, 
   Activity, 
@@ -69,6 +69,21 @@ export function MaintenanceModule() {
 
   // HydroFuel Correlation details state
   const [selectedFuelMachine, setSelectedFuelMachine] = useState<string>(engins[0]?.id || 'cat-401');
+
+  useEffect(() => {
+    if (!selectedConsoleMachine && engins.length > 0) {
+      setSelectedConsoleMachine(engins[0].id);
+    }
+  }, [engins, selectedConsoleMachine]);
+
+  useEffect(() => {
+    if ((!selectedFuelMachine || selectedFuelMachine === 'cat-401') && engins.length > 0) {
+      const stillValid = engins.some(e => e.id === selectedFuelMachine);
+      if (!stillValid) {
+        setSelectedFuelMachine(engins[0].id);
+      }
+    }
+  }, [engins, selectedFuelMachine]);
 
   // Part Selection Logic
   const filteredArticles = articles.filter(a => 

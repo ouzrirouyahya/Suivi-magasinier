@@ -270,7 +270,7 @@ export default function MessageComposer({
         parentId: replyTo?.messageId || undefined,
         senderId: currentUser?.email || 'system',
         senderName: currentUser?.name || 'Système',
-        senderRole: currentUser?.role || 'OPERATEUR',
+        senderRole: currentUser?.role || 'MAGASINIER',
         senderSite: currentUser?.assignedSite || SITE_CODES[0],
         subject: subject,
         body: body,
@@ -572,12 +572,11 @@ export default function MessageComposer({
                     className="w-full bg-transparent py-1.5 text-xs text-white focus:outline-none cursor-pointer"
                   >
                     <option value="ALL">Tous les chantiers (ALL)</option>
-                    <option value="SMI">SMI</option>
-                    <option value="ST2D">ST2D</option>
-                    <option value="ST2G">ST2G</option>
-                    <option value="ST7">ST7</option>
-                    <option value="T23">T23</option>
-                    <option value="T28">T28</option>
+                    {SITE_CODES.map((code) => (
+                      <option key={code} value={code}>
+                        {code}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -598,8 +597,6 @@ export default function MessageComposer({
                     <option value="ADMIN">Administrateur</option>
                     <option value="MAGASINIER">Magasinier</option>
                     <option value="RESPONSABLE_CHANTIER">Responsable de Chantier</option>
-                    <option value="AGREE_FORAGE">Agréé Forage</option>
-                    <option value="OPERATEUR">Opérateur</option>
                   </select>
                 </div>
               </div>

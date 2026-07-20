@@ -130,7 +130,7 @@ export function EquipmentAnalysis() {
   const allEnginsList = useMemo(() => {
     const list = [...LOCAL_ENGINS];
     engins.forEach(e => {
-      if (e.site === currentSite && !list.some(item => item.code === e.code)) {
+      if ((currentSite === 'ALL' || e.site === currentSite) && !list.some(item => item.code === e.code)) {
         list.push({
           code: e.code,
           label: e.label || `Machine ${e.code}`,
@@ -146,7 +146,7 @@ export function EquipmentAnalysis() {
   const allPerfosList = useMemo(() => {
     const list = [...LOCAL_PERFOS];
     perfos.forEach(p => {
-      if (p.site === currentSite && !list.some(item => item.code === p.code)) {
+      if ((currentSite === 'ALL' || p.site === currentSite) && !list.some(item => item.code === p.code)) {
         list.push({
           code: p.code,
           label: `Perforateur Classique ${p.code}`,

@@ -72,6 +72,7 @@ export function useInventory() {
     deletionRequests: articles.deletionRequests,
     addArticle: articles.saveArticle,
     updateArticle: articles.saveArticle,
+    updateArticlePrice: articles.updateArticlePrice,
     deleteArticle: articles.deleteArticle,
     deleteArticles: articles.deleteArticles,
     ghostArticles: articles.ghostArticles,

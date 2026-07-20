@@ -1,10 +1,13 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { messagingService } from '../services/message.service';
 import { useAuthStore } from '../stores/auth.store';
-import { InboxItem, Message, MessageDraft } from '../types';
+import { InboxItem, Message, MessageDraft, MessageTelemetryEvent } from '../types';
+import { telemetryService } from '../services/telemetry.service';
+import { generateSecureUUID } from '../lib/utils';
 
 export function useMessages() {
-  const { currentUser } = useAuthStore();
+  const { currentUser, currentSite } = useAuthStore();
+  const [sessionId] = useState(() => generateSecureUUID());
   const [inbox, setInbox] = useState<InboxItem[]>([]);
   const [drafts, setDrafts] = useState<MessageDraft[]>([]);
   const [activeThread, setActiveThread] = useState<Message[]>([]);
@@ -46,8 +49,21 @@ export function useMessages() {
     const userId = currentUser?.email;
     if (item.status === 'UNREAD' && userId) {
       await messagingService.markAsRead(userId, item.id);
+      if (currentUser) {
+        telemetryService.record({
+          messageId: item.messageId,
+          threadId: item.threadId,
+          userId: currentUser.email,
+          userName: currentUser.name,
+          userRole: currentUser.role,
+          userSite: currentSite || 'SMI',
+          eventType: 'MESSAGE_OPENED',
+          timestamp: new Date().toISOString(),
+          sessionId
+        }).catch(() => {});
+      }
     }
-  }, [currentUser]);
+  }, [currentUser, currentSite, sessionId]);
 
   // Fermer un message - enregistrer temps passé
   const closeMessage = useCallback(async (item: InboxItem) => {

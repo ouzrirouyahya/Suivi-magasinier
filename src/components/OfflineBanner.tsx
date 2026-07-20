@@ -19,6 +19,7 @@ import {
 import { useOffline } from '../hooks/useOffline';
 import { snapshotManager } from '../lib/snapshotManager';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuthStore } from '../stores/auth.store';
 
 function formatOperationType(type: string): string {
   const mapping: Record<string, string> = {
@@ -85,6 +86,8 @@ export function OfflineBanner() {
     simulateRuleFailure,
     simulateConcurrentConflicts
   } = useOffline();
+
+  const { currentUser } = useAuthStore();
 
   const [isOpen, setIsOpen] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -361,31 +364,33 @@ export function OfflineBanner() {
                 </div>
 
                 {/* Panel de Simulation Experts */}
-                <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 space-y-3">
-                  <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
-                    <Activity className="w-3.5 h-3.5 text-indigo-400" />
-                    Outils experts et simulations de pannes
-                  </h4>
-                  <p className="text-[11px] text-slate-400">
-                    Ces boutons simulent des conditions réelles de production pour tester la résilience transactionnelle de l'application et les retransmissions.
-                  </p>
-                  <div className="flex flex-col sm:flex-row gap-2.5">
-                    <button
-                      onClick={simulateRuleFailure}
-                      className="flex-1 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-rose-950/45 hover:text-rose-300 text-slate-350 border border-slate-700/50 hover:border-rose-900 transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
-                    >
-                      <AlertTriangle className="w-3.5 h-3.5" />
-                      Simuler échec de règles (Firestore)
-                    </button>
-                    <button
-                      onClick={simulateConcurrentConflicts}
-                      className="flex-1 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-amber-950/45 hover:text-amber-300 text-slate-350 border border-slate-700/50 hover:border-amber-900 transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
-                    >
-                      <Zap className="w-3.5 h-3.5" />
-                      Simuler conflit de concurrence
-                    </button>
+                {currentUser?.role === 'SUPER_ADMIN' && (
+                  <div className="p-4 rounded-xl bg-slate-900/40 border border-slate-800 space-y-3">
+                    <h4 className="text-[10px] font-black uppercase tracking-wider text-slate-400 flex items-center gap-1">
+                      <Activity className="w-3.5 h-3.5 text-indigo-400" />
+                      Outils experts et simulations de pannes
+                    </h4>
+                    <p className="text-[11px] text-slate-400">
+                      Ces boutons simulent des conditions réelles de production pour tester la résilience transactionnelle de l'application et les retransmissions.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2.5">
+                      <button
+                        onClick={simulateRuleFailure}
+                        className="flex-1 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-rose-950/45 hover:text-rose-300 text-slate-350 border border-slate-700/50 hover:border-rose-900 transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                      >
+                        <AlertTriangle className="w-3.5 h-3.5" />
+                        Simuler échec de règles (Firestore)
+                      </button>
+                      <button
+                        onClick={simulateConcurrentConflicts}
+                        className="flex-1 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-amber-950/45 hover:text-amber-300 text-slate-350 border border-slate-700/50 hover:border-amber-900 transition-all text-xs font-semibold flex items-center justify-center gap-1.5"
+                      >
+                        <Zap className="w-3.5 h-3.5" />
+                        Simuler conflit de concurrence
+                      </button>
+                    </div>
                   </div>
-                </div>
+                )}
 
               </div>
 

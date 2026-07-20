@@ -21,14 +21,14 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
   const currentMonthStr = new Date().toISOString().slice(0, 7); // "YYYY-MM"
 
   // Filter list of machines for the active site
-  const sitePerfos = useMemo(() => perfos.filter(p => p.site === site), [perfos, site]);
-  const siteEngins = useMemo(() => engins.filter(e => e.site === site), [engins, site]);
+  const sitePerfos = useMemo(() => site === 'ALL' ? perfos : perfos.filter(p => p.site === site), [perfos, site]);
+  const siteEngins = useMemo(() => site === 'ALL' ? engins : engins.filter(e => e.site === site), [engins, site]);
 
   // Map machine codes to their movements count for month KPI on cards
   const perfosWithQty = useMemo(() => {
     return sitePerfos.map(p => {
       const perfoMovementsThisMonth = mouvements.filter(m => {
-        if (m.type !== 'SORTIE' || m.site !== site || m.perforateur !== p.code) return false;
+        if (m.type !== 'SORTIE' || (site !== 'ALL' && m.site !== site) || m.perforateur !== p.code) return false;
         try {
           const rawDate: any = m.date;
           const dateStr = (typeof rawDate === 'string') 
@@ -51,7 +51,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
   const enginsWithQty = useMemo(() => {
     return siteEngins.map(e => {
       const enginMovementsThisMonth = mouvements.filter(m => {
-        if (m.type !== 'SORTIE' || m.site !== site || m.engin !== e.code) return false;
+        if (m.type !== 'SORTIE' || (site !== 'ALL' && m.site !== site) || m.engin !== e.code) return false;
         try {
           const rawDate: any = m.date;
           const dateStr = (typeof rawDate === 'string') 
@@ -94,7 +94,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
     if (!selectedMachine) return [];
     return mouvements.filter(m => 
       m.type === 'SORTIE' && 
-      m.site === site && 
+      (site === 'ALL' || m.site === site) && 
       (currentTab === 'PERFORATEURS' ? m.perforateur === selectedMachine : m.engin === selectedMachine)
     );
   }, [selectedMachine, mouvements, site, currentTab]);

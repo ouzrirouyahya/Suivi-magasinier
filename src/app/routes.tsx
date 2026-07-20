@@ -39,7 +39,7 @@ const RESPONSABLE_READONLY_PAGES = [
 const RESPONSABLE_REPLACEMENT_PAGES = [
   ...RESPONSABLE_READONLY_PAGES,
   '/movement/entree', '/movement/sortie', '/transfers', '/returns',
-  '/inventaire', '/articles', '/restock'
+  '/inventaire', '/restock'
 ];
 
 // Role helper

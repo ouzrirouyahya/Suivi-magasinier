@@ -37,7 +37,149 @@ import {
 } from 'recharts';
 
 export function FinancialDashboard() {
-  const { articles, auditLogs, mouvements, currentSite, maintenanceLogs } = useInventory();
+  const { articles, auditLogs, mouvements, currentSite, maintenanceLogs, inventaires = [] } = useInventory();
+
+  // Taux de Rotation Calculation
+  const tauxRotationStats = useMemo(() => {
+    const activeArticlesValue = articles
+      .filter(a => a.active !== false)
+      .reduce((sum, a) => sum + ((Number(a.quantity) || 0) * (Number(a.price) || 0)), 0);
+
+    const oneYearAgo = new Date();
+    oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+    const sortiesValue12Mois = mouvements
+      .filter(m => m.type === 'SORTIE' && new Date(toDateString(m.date)) >= oneYearAgo)
+      .reduce((sum, m) => sum + (m.items?.reduce((s, it) => s + ((Number(it.quantity) || 0) * (Number(it.price) || 0)), 0) || 0), 0);
+
+    const taux = activeArticlesValue > 0 ? (sortiesValue12Mois / activeArticlesValue) : 0;
+    
+    let badge = 'LENT';
+    let colorClass = 'text-rose-500';
+    if (taux >= 3) {
+      badge = 'OPTIMAL';
+      colorClass = 'text-emerald-500';
+    } else if (taux >= 1) {
+      badge = 'MOYEN';
+      colorClass = 'text-amber-500';
+    }
+
+    return {
+      value: `${taux.toFixed(1)}x`,
+      badge,
+      colorClass
+    };
+  }, [articles, mouvements]);
+
+  // Ruptures Coûteuses Calculation
+  const rupturesStats = useMemo(() => {
+    const count = articles.filter(a => 
+      a.active !== false && 
+      (a.minStock || 0) > 0 && 
+      (a.quantity || 0) <= (a.minStock || 0) && 
+      (Number(a.price) || 0) > 10000
+    ).length;
+
+    let badge = 'OK';
+    let colorClass = 'text-emerald-500';
+    if (count > 0) {
+      badge = 'RISQUE';
+      colorClass = 'text-rose-500';
+    }
+
+    return {
+      value: count.toString().padStart(2, '0'),
+      badge,
+      colorClass
+    };
+  }, [articles]);
+
+  // Stock Dormant (+1an) Calculation
+  const dormantStats = useMemo(() => {
+    const activeArticles = articles.filter(a => a.active !== false);
+    const totalValue = activeArticles.reduce((sum, a) => sum + ((Number(a.quantity) || 0) * (Number(a.price) || 0)), 0);
+    if (totalValue <= 0) {
+      return {
+        value: '0.0%',
+        badge: 'SAIN',
+        colorClass: 'text-emerald-500'
+      };
+    }
+
+    const threshold = new Date();
+    threshold.setFullYear(threshold.getFullYear() - 1);
+    const thresholdTime = threshold.getTime();
+
+    const activeQtyArticles = activeArticles.filter(a => (Number(a.quantity) || 0) > 0);
+    const lastSortieDateMap: Record<string, number> = {};
+    mouvements.forEach(m => {
+      if (m.type === 'SORTIE') {
+        const mTime = new Date(toDateString(m.date)).getTime();
+        m.items?.forEach(it => {
+          if (it.articleId) {
+            const currentMax = lastSortieDateMap[it.articleId] || 0;
+            if (mTime > currentMax) {
+              lastSortieDateMap[it.articleId] = mTime;
+            }
+          }
+        });
+      }
+    });
+
+    let sumDormant = 0;
+    activeQtyArticles.forEach(a => {
+      const lastSortieTime = lastSortieDateMap[a.id];
+      if (!lastSortieTime || lastSortieTime < thresholdTime) {
+        sumDormant += (Number(a.quantity) || 0) * (Number(a.price) || 0);
+      }
+    });
+
+    const percent = (sumDormant / totalValue) * 100;
+    let badge = 'SAIN';
+    let colorClass = 'text-emerald-500';
+    if (percent > 5) {
+      badge = 'SUR-STOCK';
+      colorClass = 'text-amber-500';
+    }
+
+    return {
+      value: `${percent.toFixed(1)}%`,
+      badge,
+      colorClass
+    };
+  }, [articles, mouvements]);
+
+  // Précision Inventaire Calculation
+  const precisionStats = useMemo(() => {
+    const validInventaires = inventaires.filter(inv => inv.status === 'VALIDE');
+    const allItems = validInventaires.flatMap(inv => inv.items || []);
+    const matchingItems = allItems.filter(item => item.difference === 0).length;
+    const precisionPercent = allItems.length > 0 ? (matchingItems / allItems.length * 100) : null;
+
+    if (precisionPercent === null) {
+      return {
+        value: 'N/A',
+        badge: 'Aucun inventaire validé',
+        colorClass: 'text-slate-400'
+      };
+    }
+
+    let badge = 'CRITIQUE';
+    let colorClass = 'text-rose-500';
+    if (precisionPercent >= 95) {
+      badge = 'EXCELLENT';
+      colorClass = 'text-emerald-500';
+    } else if (precisionPercent >= 85) {
+      badge = 'À SURVEILLER';
+      colorClass = 'text-amber-500';
+    }
+
+    return {
+      value: `${precisionPercent.toFixed(1)}%`,
+      badge,
+      colorClass
+    };
+  }, [inventaires]);
 
   // Financial Stats Calculation
   const totalStockValue = articles
@@ -118,6 +260,11 @@ export function FinancialDashboard() {
   }, [mouvements, currentSite]);
 
   const handleExportExcel = () => {
+    if (currentSite !== 'ALL') {
+      toast.error("Sélectionne 'Tous les sites' dans le menu en haut de l'application avant d'exporter — ce rapport compare les 5 chantiers entre eux.");
+      return;
+    }
+
     const siteLabel = currentSite === 'ALL' ? 'Tous chantiers' : currentSite;
     
     exportToExcel([
@@ -275,23 +422,31 @@ export function FinancialDashboard() {
               Répartition Valorisation par Site (MAD)
            </h3>
            <div className="h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stockBySiteData} layout="vertical" margin={{ left: 20 }}>
-                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
-                  <XAxis type="number" hide />
-                  <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} />
-                  <Tooltip 
-                    cursor={{ fill: '#f8fafc' }}
-                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
-                    formatter={(val: number) => formatCurrency(val)}
-                  />
-                  <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={32}>
-                    {stockBySiteData.map((entry, index) => (
-                      <Cell key={index} fill={['#0ea5e9', '#10b981', '#6366f1', '#f59e0b', '#ec4899'][index % 5]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              {currentSite !== 'ALL' ? (
+                <div className="h-full flex flex-col items-center justify-center text-center px-6 bg-slate-50 rounded-xl border border-dashed border-slate-200">
+                  <p className="text-xs text-slate-500 font-semibold max-w-sm leading-relaxed">
+                    📊 Ce graphique compare les 5 chantiers entre eux — sélectionnez 'Tous les sites' dans le menu en haut de l'application pour l'afficher.
+                  </p>
+                </div>
+              ) : (
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={stockBySiteData} layout="vertical" margin={{ left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 900, fill: '#64748b' }} />
+                    <Tooltip 
+                      cursor={{ fill: '#f8fafc' }}
+                      contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
+                      formatter={(val: number) => formatCurrency(val)}
+                    />
+                    <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={32}>
+                      {stockBySiteData.map((entry, index) => (
+                        <Cell key={index} fill={['#0ea5e9', '#10b981', '#6366f1', '#f59e0b', '#ec4899'][index % 5]} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              )}
            </div>
         </div>
 
@@ -374,19 +529,27 @@ export function FinancialDashboard() {
             <div className="grid grid-cols-2 gap-4">
                <div className="p-4 bg-slate-50 rounded-2xl">
                   <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Taux de Rotation</div>
-                  <div className="text-xl font-black text-slate-900">4.2x <span className="text-[10px] text-emerald-500">OPTIMAL</span></div>
+                  <div className="text-xl font-black text-slate-900">
+                     {tauxRotationStats.value} <span className={cn("text-[10px] font-bold", tauxRotationStats.colorClass)}>{tauxRotationStats.badge}</span>
+                  </div>
                </div>
                <div className="p-4 bg-slate-50 rounded-2xl">
                   <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Ruptures Coûteuses</div>
-                  <div className="text-xl font-black text-slate-900">03 <span className="text-[10px] text-rose-500">RISQUE</span></div>
+                  <div className="text-xl font-black text-slate-900">
+                     {rupturesStats.value} <span className={cn("text-[10px] font-bold", rupturesStats.colorClass)}>{rupturesStats.badge}</span>
+                  </div>
                </div>
                <div className="p-4 bg-slate-50 rounded-2xl">
                   <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Stock Dormant (+1an)</div>
-                  <div className="text-xl font-black text-slate-900">8.5% <span className="text-[10px] text-amber-500">SUR-STOCK</span></div>
+                  <div className="text-xl font-black text-slate-900">
+                     {dormantStats.value} <span className={cn("text-[10px] font-bold", dormantStats.colorClass)}>{dormantStats.badge}</span>
+                  </div>
                </div>
                <div className="p-4 bg-slate-50 rounded-2xl">
                   <div className="text-[10px] font-black uppercase text-slate-400 mb-1">Précision Inventaire</div>
-                  <div className="text-xl font-black text-slate-900">99.1% <span className="text-[10px] text-emerald-500">EXCELLENT</span></div>
+                  <div className="text-xl font-black text-slate-900">
+                     {precisionStats.value} <span className={cn("text-[10px] font-bold", precisionStats.colorClass)}>{precisionStats.badge}</span>
+                  </div>
                </div>
             </div>
          </div>

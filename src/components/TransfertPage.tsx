@@ -226,10 +226,10 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
       transit += getArticleTransitQty(art.ref, currentSite);
     });
 
-    const activeDrafts = transferts.filter(t => t.status === 'BROUILLON' && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
-    const activeDemandes = transferts.filter(t => (t.status === 'DEMANDE' || t.status === 'PENDING_APPROVAL') && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
-    const activeInTransit = transferts.filter(t => (t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
-    const activeDisputes = transferts.filter(t => (t.status === 'LITIGE' || t.status === 'DISPUTED') && (t.sourceSite === currentSite || t.targetSite === currentSite)).length;
+    const activeDrafts = transferts.filter(t => t.status === 'BROUILLON' && (currentSite === 'ALL' || t.sourceSite === currentSite || t.targetSite === currentSite)).length;
+    const activeDemandes = transferts.filter(t => (t.status === 'DEMANDE' || t.status === 'PENDING_APPROVAL') && (currentSite === 'ALL' || t.sourceSite === currentSite || t.targetSite === currentSite)).length;
+    const activeInTransit = transferts.filter(t => (t.status === 'EXPEDIE' || t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') && (currentSite === 'ALL' || t.sourceSite === currentSite || t.targetSite === currentSite)).length;
+    const activeDisputes = transferts.filter(t => (t.status === 'LITIGE' || t.status === 'DISPUTED') && (currentSite === 'ALL' || t.sourceSite === currentSite || t.targetSite === currentSite)).length;
 
     return {
       available,

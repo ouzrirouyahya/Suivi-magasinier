@@ -27,7 +27,8 @@ export function MonthlyClosingView() {
     mouvements, 
     transferts, 
     deletionRequests = [], 
-    currentUser 
+    currentUser,
+    currentSite
   } = useInventory();
 
   const [closings, setClosings] = useState<MonthlyClosing[]>([]);
@@ -183,6 +184,11 @@ export function MonthlyClosingView() {
 
   // Execute the Month Closing operation
   const handleCloseMonth = async () => {
+    if (currentSite !== 'ALL') {
+      toast.error("Clôture bloquée : le mode 'Tous les sites' doit être actif.");
+      return;
+    }
+
     if (!isSuperAdmin) {
       toast.error("Seul le rôle Super Admin est autorisé à clôturer le mois.");
       return;
@@ -226,6 +232,11 @@ export function MonthlyClosingView() {
   };
 
   const handlePerformClosing = async () => {
+    if (currentSite !== 'ALL') {
+      toast.error("Clôture bloquée : le mode 'Tous les sites' doit être actif.");
+      return;
+    }
+
     if (isClosingInProgress) return;
     setIsClosingInProgress(true);
     try {
@@ -300,6 +311,22 @@ export function MonthlyClosingView() {
     const index = parseInt(month, 10) - 1;
     return `${months[index]} ${year}`;
   };
+
+  if (currentSite !== 'ALL') {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-4 max-w-2xl mx-auto my-12 shadow-sm">
+        <ShieldAlert className="w-12 h-12 text-red-600 shrink-0" />
+        <div className="space-y-2">
+          <h3 className="text-sm font-black uppercase tracking-wider text-red-800">
+            Accès Bloqué — Opération Globale
+          </h3>
+          <p className="text-xs text-red-700 font-medium leading-relaxed">
+            ⚠️ Sélectionne <strong>'Tous les sites'</strong> dans le menu en haut de l'application avant d'accéder à la clôture mensuelle. La clôture est une opération globale qui doit voir les 5 chantiers simultanément — les vigilances de sécurité ne sont fiables qu'en mode 'Tous les sites'.
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-8 animate-in fade-in duration-300">

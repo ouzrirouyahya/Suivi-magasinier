@@ -1,9 +1,10 @@
 import React from 'react';
-import { X, Calendar, Activity, ArrowDownLeft, ArrowUpRight, MapPin, Tag, Package, QrCode, Printer } from 'lucide-react';
+import { X, Calendar, Activity, ArrowDownLeft, ArrowUpRight, MapPin, Tag, Package, QrCode, Printer, Edit2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Article, Mouvement } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
 import { QRCodeSVG } from 'qrcode.react';
+import { useInventory } from '../hooks/useInventory';
 import { 
   AreaChart, 
   Area, 
@@ -21,6 +22,12 @@ interface ArticleDetailProps {
 }
 
 export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailProps) {
+  const { isReadOnlyUser, currentUser, updateArticlePrice, addNotification } = useInventory();
+  const [isEditingPrice, setIsEditingPrice] = React.useState(false);
+  const [newPrice, setNewPrice] = React.useState<number>(article.price || 0);
+  const [priceReason, setPriceReason] = React.useState('');
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
+
   const articleMouvements = mouvements.filter(m => 
     m.items.some(item => item.articleId === article.id)
   ).sort((a, b) => new Date(b.date as any).getTime() - new Date(a.date as any).getTime());
@@ -204,7 +211,117 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                   )}
                   <InfoItem icon={MapPin} label="Emplacement" value={article.location} />
                   <InfoItem icon={ArrowDownLeft} label="Unités" value={article.unit} />
-                  <InfoItem icon={Activity} label="Valeur Unitaire" value={formatCurrency(article.price)} />
+                  {isEditingPrice ? (
+                    <div className="p-3 bg-neutral-50 rounded-xl space-y-3 border border-neutral-200 mt-2">
+                      <div className="flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-neutral-400" />
+                        <span className="text-[10px] font-bold uppercase text-neutral-400 tracking-tighter leading-none">Modifier le prix</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-[10px] text-neutral-400 font-semibold uppercase">Nouveau Prix (Dhs)</label>
+                          <input 
+                            type="number"
+                            step="0.01"
+                            min="0.01"
+                            value={newPrice}
+                            onChange={(e) => setNewPrice(parseFloat(e.target.value) || 0)}
+                            className="w-full bg-white border border-neutral-300 rounded px-2 py-1 text-xs text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] text-neutral-400 font-semibold uppercase">Raison du changement (min 5 car.)</label>
+                          <textarea 
+                            value={priceReason}
+                            onChange={(e) => setPriceReason(e.target.value)}
+                            placeholder="Ex: Mise à jour du prix d'achat..."
+                            rows={2}
+                            className="w-full bg-white border border-neutral-300 rounded px-2 py-1 text-xs text-neutral-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            disabled={isSubmitting}
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setIsEditingPrice(false)}
+                            className="px-2 py-1 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                            disabled={isSubmitting}
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (newPrice <= 0) {
+                                toast.error("Le prix doit être supérieur à zéro");
+                                return;
+                              }
+                              if (priceReason.trim().length < 5) {
+                                toast.error("Merci de préciser la raison du changement (5 caractères minimum)");
+                                return;
+                              }
+                              if (!currentUser) {
+                                toast.error("Utilisateur non connecté");
+                                return;
+                              }
+                              
+                              setIsSubmitting(true);
+                              try {
+                                const res = await updateArticlePrice(article.id, newPrice, priceReason, currentUser.role, currentUser.email || '', currentUser.name || '');
+                                if (res.success) {
+                                  toast.success("Le prix de l'article a été mis à jour avec succès.");
+                                  
+                                  // Send automated notification to admins
+                                  await addNotification({
+                                    siteId: article.site,
+                                    category: 'STOCK',
+                                    message: `💰 ${currentUser.name} a changé le prix de "${article.designation}" (${article.ref}) — Prix initial : ${res.oldPrice} Dhs / Nouveau prix : ${newPrice} Dhs. Raison : ${priceReason}`,
+                                    actionRoute: 'COCKPIT',
+                                    severity: 'INFO',
+                                    isRead: false,
+                                    timestamp: new Date().toISOString()
+                                  });
+                                  
+                                  setIsEditingPrice(false);
+                                } else {
+                                  toast.error(res.error || "Erreur lors de la mise à jour du prix");
+                                }
+                              } catch (err: any) {
+                                toast.error(err.message || "Erreur lors de la mise à jour");
+                              } finally {
+                                setIsSubmitting(false);
+                              }
+                            }}
+                            className="px-2 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                            disabled={isSubmitting}
+                          >
+                            {isSubmitting ? "Validation..." : "Confirmer"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <InfoItem icon={Activity} label="Valeur Unitaire">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-semibold text-neutral-800">{formatCurrency(article.price)}</span>
+                        {!isReadOnlyUser && (
+                          <button 
+                            type="button"
+                            onClick={() => {
+                              setNewPrice(article.price || 0);
+                              setPriceReason('');
+                              setIsEditingPrice(true);
+                            }}
+                            className="p-1 hover:bg-neutral-200 rounded text-neutral-500 hover:text-neutral-700 transition-colors"
+                            title="Modifier le prix"
+                          >
+                            <Edit2 className="w-3.5 h-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </InfoItem>
+                  )}
                 </div>
               </div>
 
@@ -297,7 +414,7 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
   );
 }
 
-function InfoItem({ icon: Icon, label, value }: { icon: any, label: string, value: string }) {
+function InfoItem({ icon: Icon, label, value, children }: { icon: any, label: string, value?: string, children?: React.ReactNode }) {
   return (
     <div className="flex items-center gap-3">
       <div className="p-2 bg-white rounded-lg border border-neutral-200">
@@ -305,7 +422,7 @@ function InfoItem({ icon: Icon, label, value }: { icon: any, label: string, valu
       </div>
       <div>
         <p className="text-[10px] font-bold text-neutral-400 uppercase tracking-tighter leading-none mb-1">{label}</p>
-        <p className="text-sm font-semibold text-neutral-800 leading-none">{value}</p>
+        {children ? children : <p className="text-sm font-semibold text-neutral-800 leading-none">{value}</p>}
       </div>
     </div>
   );

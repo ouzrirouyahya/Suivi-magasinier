@@ -3,6 +3,8 @@ import { Article, CatalogItem, SiteCode } from '../../types';
 import { firestoreRepository } from '../../infrastructure/firestore/FirestoreRepository';
 import { useArticlesStore } from './articles.store';
 import { generateId, cleanObject, logger, sanitizeForFirestoreId } from '../../lib/utils';
+import { auditService } from '../../services/audit.service';
+import { logPriceChange } from '../../services/priceHistory.service';
 
 export class ArticlesService {
   /**
@@ -160,6 +162,75 @@ export class ArticlesService {
     } catch (error: any) {
       logger.error('[importAllCatalogToArticles] Erreur:', error);
       return { success: false, error: error.message || "Erreur lors de l'importation du catalogue", imported: 0, skipped: 0 };
+    }
+  }
+
+  /**
+   * Update article price with transaction and audit log
+   */
+  async updateArticlePrice(
+    articleId: string, 
+    newPrice: number, 
+    reason: string, 
+    userRole: string,
+    changedByEmail: string,
+    changedByName: string
+  ): Promise<{ success: boolean; error?: string; oldPrice?: number }> {
+    try {
+      if (newPrice <= 0) {
+        return { success: false, error: "Le prix doit être supérieur à zéro" };
+      }
+      if (reason.trim().length < 5) {
+        return { success: false, error: "Merci de préciser la raison du changement (5 caractères minimum)" };
+      }
+
+      let oldPrice = 0;
+      let articleData: any = null;
+
+      await runTransaction(db, async (transaction) => {
+        const docRef = doc(db, 'articles', articleId);
+        const docSnap = await transaction.get(docRef);
+
+        if (!docSnap.exists()) {
+          throw new Error("Article introuvable");
+        }
+
+        articleData = docSnap.data();
+        oldPrice = articleData.price || 0;
+
+        transaction.update(docRef, { price: newPrice });
+
+        auditService.logActionTx(
+          transaction,
+          'MODIFICATION_PRIX',
+          `Prix de "${articleData.designation}" (${articleData.ref}) modifié de ${oldPrice} Dhs à ${newPrice} Dhs. Raison : ${reason}`,
+          articleData.site,
+          userRole,
+          newPrice - oldPrice
+        );
+      });
+
+      // Update local store after transaction success
+      useArticlesStore.getState().updateArticleLocal(articleId, { price: newPrice });
+
+      // Log price change to history in fire-and-forget style
+      logPriceChange({
+        itemId: articleId,
+        itemReference: articleData?.ref || '',
+        itemDesignation: articleData?.designation || '',
+        oldPrice,
+        newPrice,
+        changedBy: changedByEmail,
+        changedByName: changedByName,
+        changedAt: new Date().toISOString(),
+        reason,
+        category: articleData?.functionalCategory || articleData?.category || 'AUTRE'
+      }).catch(() => {});
+
+      return { success: true, oldPrice };
+    } catch (error: any) {
+      logger.error('[updateArticlePrice] Erreur:', error);
+      return { success: false, error: error.message || "Erreur lors de la mise à jour du prix" };
     }
   }
 }

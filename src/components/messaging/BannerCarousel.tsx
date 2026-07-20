@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useBanners } from '../../hooks/useBanners';
 import { useAuthStore } from '../../stores/auth.store';
 import { bannerService } from '../../services/banner.service';
+import { SITE_CODES } from '../../lib/constants';
 import { 
   Bell, 
   AlertTriangle, 
@@ -303,12 +304,11 @@ export default function BannerCarousel() {
                       className="w-full bg-slate-900 border border-slate-700 rounded-md px-2 py-1 text-xs text-white focus:outline-none focus:border-[#d4af37] h-20"
                     >
                       <option value="ALL">Tous les sites</option>
-                      <option value="SMI">SMI</option>
-                      <option value="ST2D">ST2D</option>
-                      <option value="ST2G">ST2G</option>
-                      <option value="ST7">ST7</option>
-                      <option value="T23">T23</option>
-                      <option value="T28">T28</option>
+                      {SITE_CODES.map((code) => (
+                        <option key={code} value={code}>
+                          {code}
+                        </option>
+                      ))}
                     </select>
                     <span className="text-[10px] text-slate-400">Maintenez Ctrl/Cmd pour multi-sélection</span>
                   </div>
@@ -329,8 +329,6 @@ export default function BannerCarousel() {
                       <option value="ADMIN">Admin</option>
                       <option value="MAGASINIER">Magasinier</option>
                       <option value="RESPONSABLE_CHANTIER">Resp. Chantier</option>
-                      <option value="AGREE_FORAGE">Agréé Forage</option>
-                      <option value="OPERATEUR">Opérateur</option>
                     </select>
                   </div>
                 </div>

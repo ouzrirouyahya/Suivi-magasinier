@@ -699,12 +699,11 @@ export default function MessagingPage() {
                           className="w-full bg-white border border-slate-200 rounded px-2 py-1 text-xs text-slate-800 h-16 focus:outline-none"
                         >
                           <option value="ALL">Tous les chantiers (ALL)</option>
-                          <option value="SMI">SMI</option>
-                          <option value="ST2D">ST2D</option>
-                          <option value="ST2G">ST2G</option>
-                          <option value="ST7">ST7</option>
-                          <option value="T23">T23</option>
-                          <option value="T28">T28</option>
+                          {SITE_CODES.map((code) => (
+                            <option key={code} value={code}>
+                              {code}
+                            </option>
+                          ))}
                         </select>
                       </div>
                       <div>
@@ -723,8 +722,6 @@ export default function MessagingPage() {
                           <option value="ADMIN">Administrateur</option>
                           <option value="MAGASINIER">Magasinier</option>
                           <option value="RESPONSABLE_CHANTIER">Responsable Chantier</option>
-                          <option value="AGREE_FORAGE">Agréé Forage</option>
-                          <option value="OPERATEUR">Opérateur</option>
                         </select>
                       </div>
                     </div>

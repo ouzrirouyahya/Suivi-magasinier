@@ -58,7 +58,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const [filterType, setFilterType] = React.useState<'ALL' | 'CRITICAL' | 'WARNING' | 'INFO'>('ALL');
 
   const siteNotifications = React.useMemo(() => {
-    return (notifications || []).filter(n => n.siteId === currentSite);
+    return currentSite === 'ALL' 
+      ? (notifications || [])
+      : (notifications || []).filter(n => n.siteId === currentSite);
   }, [notifications, currentSite]);
 
   const unreadCount = React.useMemo(() => {
@@ -92,7 +94,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     });
   }, [siteNotifications, filterType]);
 
-  const siteArticles = articles.filter(a => a.site === currentSite);
+  const siteArticles = currentSite === 'ALL' ? articles : articles.filter(a => a.site === currentSite);
   const totalValue = siteArticles.reduce((sum, a) => sum + (a.quantity * a.price), 0);
 
   const metrics = collectSystemMetrics();

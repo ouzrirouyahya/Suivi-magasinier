@@ -61,7 +61,7 @@ const TABS = [
 const COLORS = ['#d4af37', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
 export function ReportPage() {
-  const { articles, mouvements, transferts, maintenanceLogs = [], currentUser, engins = [], perfos = [] } = useInventory();
+  const { articles, mouvements, transferts, maintenanceLogs = [], currentUser, engins = [], perfos = [], currentSite } = useInventory();
   const printRef = useRef<HTMLDivElement>(null);
   
   const {
@@ -964,65 +964,76 @@ export function ReportPage() {
         {/* ========================================== */}
         {activeTab === 'COMPARISON' && (
           <div className="comparison-tab p-6 bg-white border border-slate-100 rounded-2xl shadow-xs animate-in fade-in duration-300">
-            <h2 className="text-xl font-black uppercase tracking-wider text-slate-900 flex items-center gap-2 mb-1">
-              📊 Comparaison Inter-Chantiers
-            </h2>
-            <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-6">
-              Analyse normalisée par nombre d'engins et perforateurs
-            </p>
-            
-            <div className="comparison-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 my-6">
-              {siteMetrics.map(metric => (
-                <div key={metric.site} className={`site-card rank-${metric.efficiencyRank} bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm transition-all duration-300 hover:shadow-md border-t-4`}>
-                  <div className="site-header flex justify-between items-center mb-4 pb-2 border-b border-slate-50">
-                    <h3 className="text-sm font-black uppercase text-slate-800 tracking-wider">
-                      {metric.site === 'BOU-AZZER' ? 'Bou-Azzer' : metric.site}
-                    </h3>
-                    <span className={`rank-badge rank-${metric.efficiencyRank} px-3 py-1 rounded-full font-black text-xs uppercase tracking-wider`}>
-                      #{metric.efficiencyRank}
-                    </span>
-                  </div>
-                  
-                  <div className="equipment-info flex gap-4 text-xs font-bold text-slate-500 mb-4 pb-3 border-b border-slate-100/50">
-                    <span className="flex items-center gap-1">🔧 {metric.enginCount} engins</span>
-                    <span className="flex items-center gap-1">⛏️ {metric.perforateurCount} perforateurs</span>
-                  </div>
-                  
-                  <div className="metrics grid grid-cols-2 gap-4">
-                    <div className="metric">
-                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Conso/engin (30j)</label>
-                      <span className="value block text-sm font-extrabold text-slate-800">{metric.consumptionPerEngin.toFixed(1)}</span>
+            {currentSite !== 'ALL' ? (
+              <div className="flex flex-col items-center justify-center p-8 text-center bg-slate-50 border border-dashed border-slate-200 rounded-xl my-6">
+                <AlertCircle className="w-12 h-12 text-amber-500 mb-3 opacity-80" />
+                <p className="text-sm font-bold text-slate-700 max-w-xl">
+                  ⚠️ Sélectionne 'Tous les sites' dans le menu en haut de l'application pour comparer les chantiers entre eux — cette vue a besoin de voir les 5 chantiers simultanément.
+                </p>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-xl font-black uppercase tracking-wider text-slate-900 flex items-center gap-2 mb-1">
+                  📊 Comparaison Inter-Chantiers
+                </h2>
+                <p className="text-xs font-bold uppercase tracking-wide text-slate-400 mb-6">
+                  Analyse normalisée par nombre d'engins et perforateurs
+                </p>
+                
+                <div className="comparison-grid grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 my-6">
+                  {siteMetrics.map(metric => (
+                    <div key={metric.site} className={`site-card rank-${metric.efficiencyRank} bg-white border border-slate-200/80 rounded-2xl p-5 shadow-sm transition-all duration-300 hover:shadow-md border-t-4`}>
+                      <div className="site-header flex justify-between items-center mb-4 pb-2 border-b border-slate-50">
+                        <h3 className="text-sm font-black uppercase text-slate-800 tracking-wider">
+                          {metric.site === 'BOU-AZZER' ? 'Bou-Azzer' : metric.site}
+                        </h3>
+                        <span className={`rank-badge rank-${metric.efficiencyRank} px-3 py-1 rounded-full font-black text-xs uppercase tracking-wider`}>
+                          #{metric.efficiencyRank}
+                        </span>
+                      </div>
+                      
+                      <div className="equipment-info flex gap-4 text-xs font-bold text-slate-500 mb-4 pb-3 border-b border-slate-100/50">
+                        <span className="flex items-center gap-1">🔧 {metric.enginCount} engins</span>
+                        <span className="flex items-center gap-1">⛏️ {metric.perforateurCount} perforateurs</span>
+                      </div>
+                      
+                      <div className="metrics grid grid-cols-2 gap-4">
+                        <div className="metric">
+                          <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Conso/engin (30j)</label>
+                          <span className="value block text-sm font-extrabold text-slate-800">{metric.consumptionPerEngin.toFixed(1)}</span>
+                        </div>
+                        <div className="metric">
+                          <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Coût maintenance/engin</label>
+                          <span className="value block text-sm font-extrabold text-slate-800">{formatCurrency(metric.maintenanceCostPerEngin)}</span>
+                        </div>
+                        <div className="metric">
+                          <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Valeur stock/engin</label>
+                          <span className="value block text-sm font-extrabold text-slate-800">{formatCurrency(metric.stockValuePerEngin)}</span>
+                        </div>
+                        <div className="metric">
+                          <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Score anomalie</label>
+                          <span className={cn("value block text-sm font-black", metric.anomalyScore > 50 ? "text-red-500" : "text-emerald-500")}>
+                            {metric.anomalyScore}/100
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <div className="alerts-bar flex h-1.5 rounded-full overflow-hidden mt-5 bg-slate-100">
+                        <div className="alert critical bg-red-500 transition-all duration-500" style={{width: `${Math.min(metric.criticalAlerts * 15, 50)}%`}}></div>
+                        <div className="alert high bg-amber-500 transition-all duration-500" style={{width: `${Math.min(metric.anomalyScore, 50)}%`}}></div>
+                      </div>
                     </div>
-                    <div className="metric">
-                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Coût maintenance/engin</label>
-                      <span className="value block text-sm font-extrabold text-slate-800">{formatCurrency(metric.maintenanceCostPerEngin)}</span>
-                    </div>
-                    <div className="metric">
-                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Valeur stock/engin</label>
-                      <span className="value block text-sm font-extrabold text-slate-800">{formatCurrency(metric.stockValuePerEngin)}</span>
-                    </div>
-                    <div className="metric">
-                      <label className="block text-[10px] font-black uppercase text-slate-400 tracking-wider mb-1">Score anomalie</label>
-                      <span className={cn("value block text-sm font-black", metric.anomalyScore > 50 ? "text-red-500" : "text-emerald-500")}>
-                        {metric.anomalyScore}/100
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="alerts-bar flex h-1.5 rounded-full overflow-hidden mt-5 bg-slate-100">
-                    <div className="alert critical bg-red-500 transition-all duration-500" style={{width: `${Math.min(metric.criticalAlerts * 15, 50)}%`}}></div>
-                    <div className="alert high bg-amber-500 transition-all duration-500" style={{width: `${Math.min(metric.anomalyScore, 50)}%`}}></div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-            
-            <button 
-              onClick={() => SiteComparator.generateComparisonPDF(siteMetrics)} 
-              className="pdf-btn mt-4 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-wider cursor-pointer font-sans"
-            >
-              📄 PDF Comparaison
-            </button>
+                
+                <button 
+                  onClick={() => SiteComparator.generateComparisonPDF(siteMetrics)} 
+                  className="pdf-btn mt-4 px-5 py-2.5 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-extrabold rounded-xl text-xs flex items-center justify-center gap-2 transition-all shadow-sm uppercase tracking-wider cursor-pointer font-sans"
+                >
+                  📄 PDF Comparaison
+                </button>
+              </>
+            )}
           </div>
         )}
 

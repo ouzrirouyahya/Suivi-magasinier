@@ -19,6 +19,7 @@ import { AppRoutes } from './app/routes';
 import { OfflineBanner } from './components/OfflineBanner';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useInitialSnapshot } from './hooks/useInitialSnapshot';
+import { usePresence } from './hooks/usePresence';
 import BannerCarousel from './components/messaging/BannerCarousel';
 import { EntranceLoader } from './components/EntranceLoader';
 import { ExitLoader } from './components/ExitLoader';
@@ -84,6 +85,7 @@ function AuthenticatedLayout() {
   } = useInventory();
 
   useSessionTimeout();
+  usePresence();
 
   useEffect(() => {
     if (pendingMouvementNav) {
@@ -443,7 +445,7 @@ function AuthenticatedLayout() {
           >
             <ShoppingCart className="w-5 h-5 flex-shrink-0" />
             <span className="text-[9px] font-black uppercase tracking-tight scale-90">Alertes</span>
-            {notifications.filter(n => n.siteId === currentSite && !n.isRead).length > 0 && (
+            {notifications.filter(n => (currentSite === 'ALL' || n.siteId === currentSite) && !n.isRead).length > 0 && (
               <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
             )}
           </button>

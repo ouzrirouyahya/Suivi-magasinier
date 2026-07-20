@@ -6,6 +6,7 @@ import { SITES, SERVICES } from '../demoData';
 import { collection, onSnapshot, query, doc, updateDoc, db } from '../lib/db';
 import { toast } from 'sonner';
 import { useInventory } from '../context/InventoryContext';
+import { useOnlineStatus } from '../hooks/useOnlineStatus';
 import { ARCHIVE_POLICY, estimateCollectionGrowth } from '../lib/archivePolicy';
 
 export const FONCTIONS = [
@@ -81,14 +82,11 @@ export const UserAdmin = React.memo(function UserAdmin({
     currentUser
   } = useInventory();
 
-  logger.log("AGENTS:", agents)
-  logger.log("ENGINS:", engins)
-  logger.log("PERFOS:", perfos)
-  logger.log("CURRENT SITE:", currentSite)
+  const { isOnline } = useOnlineStatus();
 
-  const siteAgents = agents.filter(a => a.site === currentSite);
-  const siteEngins = engins.filter(e => e.site === currentSite);
-  const sitePerfos = perfos.filter(p => p.site === currentSite);
+  const siteAgents = currentSite === 'ALL' ? agents : agents.filter(a => a.site === currentSite);
+  const siteEngins = currentSite === 'ALL' ? engins : engins.filter(e => e.site === currentSite);
+  const sitePerfos = currentSite === 'ALL' ? perfos : perfos.filter(p => p.site === currentSite);
 
   const isAdminUser = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
   const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
@@ -809,6 +807,11 @@ export const UserAdmin = React.memo(function UserAdmin({
                             <p className="text-[10px] text-slate-400 font-mono font-bold">{user.email}</p>
                             {user.hideLastConnection === true ? (
                               <p className="text-[10px] text-slate-400 italic">Dernière connexion : Masquée</p>
+                            ) : isOnline(user.id) ? (
+                              <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-bold">
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
+                                <span>Actif maintenant</span>
+                              </div>
                             ) : toDateString(user.lastConnectionAt) ? (
                               <p className="text-[10px] text-slate-500">
                                 Dernière connexion : {new Date(toDateString(user.lastConnectionAt)).toLocaleString('fr-FR', {

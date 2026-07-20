@@ -469,10 +469,13 @@ export function formatMovementsForExport(
         if (m.type === 'ENTREE' || m.type === 'RETOUR' || m.type === 'TRANSFERT_IN') {
           dayTotalQtyIn += item.quantity || 0;
           dayTotalValIn += totalPrice;
-        } else if (m.type === 'SORTIE' || m.type === 'AJUSTEMENT' || m.type === 'TRANSFERT_OUT') {
+        } else if (m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT') {
           dayTotalQtyOut += item.quantity || 0;
           dayTotalValOut += totalPrice;
         }
+        // AJUSTEMENT : la ligne individuelle reste visible dans l'export, mais n'est plus additionnée
+        // dans les totaux ENTREES/SORTIES du jour, car item.quantity représente la quantité finale
+        // absolue après correction d'inventaire, pas une quantité réellement mouvementée.
       });
     }
   });
@@ -565,7 +568,7 @@ export function formatMovementsConsolidated(movements: Mouvement[], articles: Ar
       if (m.type === 'ENTREE' || m.type === 'RETOUR' || m.type === 'TRANSFERT_IN') {
         summary.totalQtyIn += item.quantity || 0;
         summary.totalValIn += totalPrice;
-      } else if (m.type === 'SORTIE' || m.type === 'AJUSTEMENT' || m.type === 'TRANSFERT_OUT') {
+      } else if (m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT') {
         summary.totalQtyOut += item.quantity || 0;
         summary.totalValOut += totalPrice;
       }

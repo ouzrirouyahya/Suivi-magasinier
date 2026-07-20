@@ -30,7 +30,7 @@ export function StockAlertView({ articles, currentSite, mouvements = [], onActio
     (a.quantity || 0) > 0 || 
     (usedArticleIds.has(a.id) && a.location && a.location !== 'Non assigné' && a.location !== 'Non assignée');
 
-  const lowStockArticles = articles.filter(a => a.active && a.site === currentSite && isRealStock(a) && (a.minStock || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0));
+  const lowStockArticles = articles.filter(a => a.active && (currentSite === 'ALL' || a.site === currentSite) && isRealStock(a) && (a.minStock || 0) > 0 && (a.quantity || 0) <= (a.minStock || 0));
   
   const getTypeIcon = (type: string) => {
     switch (type) {
