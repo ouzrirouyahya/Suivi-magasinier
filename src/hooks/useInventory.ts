@@ -81,7 +81,7 @@ export function useInventory() {
     importAllCatalogToArticles: articles.importAllCatalogToArticles,
     importFromHydrominesCatalog: articles.importFromHydrominesCatalog,
     importSpecificCatalogItems: articles.importSpecificCatalogItems,
-    requestDeletion: (articles as any).requestDeletion,
+    requestDeletion: articles.requestDeletion,
     approveDeletionRequest: articles.approveDeletionRequest,
     rejectDeletionRequest: articles.rejectDeletionRequest,
     calculateCatalogUsageStats: (articles as any).calculateCatalogUsageStats,

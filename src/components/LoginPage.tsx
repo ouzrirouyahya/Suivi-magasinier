@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { auth, googleProvider, db, signInWithPopup, signInWithRedirect } from '../lib/firebase';
+import { auth, googleProvider, db, signInWithRedirect } from '../lib/firebase';
 import { setDoc, doc } from '../lib/db';
 import { cleanObject, logger } from '../lib/utils';
 import { toast } from 'sonner';
@@ -145,50 +145,26 @@ const LoginPage: React.FC = () => {
 
   const handleLogin = async () => {
     try {
-      logger.log("🔄 [LoginPage] handleLogin cliqué, tentative de connexion...");
+      logger.log("🔄 [LoginPage] handleLogin cliqué, connexion par redirection...");
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
-      
-      // Essai de connexion via popup (rapide et sans rechargement de page si supporté)
-      const result = await signInWithPopup(auth, googleProvider);
-      logger.log("✅ [LoginPage] signInWithPopup réussi ! Utilisateur :", result.user ? { email: result.user.email, uid: result.user.uid } : "aucun");
-      // useAuth prend le relais automatiquement via onAuthStateChanged
+      sessionStorage.setItem('pendingRedirectAuth', 'true');
+      await signInWithRedirect(auth, googleProvider);
+      // La suite est gérée automatiquement par useAuth.ts (getRedirectResult + onAuthStateChanged)
     } catch (error: any) {
-      logger.warn("⚠️ [LoginPage] Échec de la connexion via popup.", error);
-      
-      if (error.code === 'auth/cancelled-popup-request') return;
-      
+      logger.error("❌ [LoginPage] Échec de la connexion par redirection :", error);
       const errorMsg = error.message || '';
       const isRefererBlocked = errorMsg.includes('requests-from-referer-') || error.code?.includes('referer') || errorMsg.includes('blocked');
-      
+
       if (isRefererBlocked) {
         const hostname = window.location.hostname;
         setAuthError('API_KEY_REFERER_BLOCKED');
         toast.error(`Accès bloqué par les restrictions de clé API Google Cloud. Veuillez ajouter le domaine "${hostname}" aux restrictions de votre clé API dans Google Cloud Console.`, { duration: 15000 });
-        return;
+      } else {
+        setAuthError(error.code || 'unknown');
+        toast.error(`Erreur de connexion : ${error.message || error}`);
       }
-
-      try {
-        sessionStorage.setItem('pendingRedirectAuth', 'true');
-        toast.info("Ajustement de la connexion... Redirection sécurisée vers Google.", { duration: 4000 });
-        
-        // Connexion par redirection : 100% robuste sur tous les navigateurs, Safari, et navigation privée
-        await signInWithRedirect(auth, googleProvider);
-      } catch (redirectError: any) {
-        logger.error("❌ [LoginPage] Échec du fallback par redirection :", redirectError);
-        const redirectErrorMsg = redirectError.message || '';
-        const isRedirectRefererBlocked = redirectErrorMsg.includes('requests-from-referer-') || redirectError.code?.includes('referer') || redirectErrorMsg.includes('blocked');
-        
-        if (isRedirectRefererBlocked) {
-          const hostname = window.location.hostname;
-          setAuthError('API_KEY_REFERER_BLOCKED');
-          toast.error(`Accès bloqué par les restrictions de clé API Google Cloud. Ajoutez le domaine "${hostname}" aux restrictions de votre clé API.`, { duration: 15000 });
-        } else {
-          setAuthError(redirectError.code || 'unknown');
-          toast.error(`Erreur de connexion : ${redirectError.message || redirectError}`);
-        }
-        sessionStorage.removeItem('pendingRedirectAuth');
-      }
+      sessionStorage.removeItem('pendingRedirectAuth');
     }
   };
 

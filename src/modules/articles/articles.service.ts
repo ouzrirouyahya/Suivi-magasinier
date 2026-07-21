@@ -39,7 +39,9 @@ export class ArticlesService {
         
         if (docSnap.exists()) {
           const existingData = docSnap.data();
-          if (existingData && existingData.active !== false) {
+          if (existingData && existingData.deleted === true) {
+            // Article précédemment supprimé sur cette référence/chantier : réactivation autorisée
+          } else if (existingData) {
             throw new Error(`REFERENCE_DEJA_UTILISEE: La référence "${article.ref}" existe déjà sur le chantier ${article.site}.`);
           }
         }
@@ -71,7 +73,7 @@ export class ArticlesService {
 
       const batch = firestoreRepository.createBatch();
       ids.forEach(id => {
-        batch.update(doc(db, 'articles', id), { deleted: true });
+        batch.update(doc(db, 'articles', id), { deleted: true, active: false });
       });
       await batch.commit();
 

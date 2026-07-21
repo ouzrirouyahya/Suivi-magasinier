@@ -498,6 +498,34 @@ export function useArticles() {
     return { imported: importedCount, skipped: skippedCount };
   }, [rawArticles]);
 
+  const requestDeletion = useCallback(async (articleId: string, reason: string) => {
+    const article = rawArticles.find(a => a.id === articleId);
+    if (!article) {
+      toast.error("Article introuvable.");
+      return { success: false };
+    }
+    try {
+      const requestId = generateSecureUUID();
+      await setDoc(doc(db, 'deletionRequests', requestId), {
+        id: requestId,
+        articleIds: [articleId],
+        articleRefs: [article.ref],
+        articleDesignations: [article.designation],
+        site: article.site,
+        requestedBy: currentUser?.email || 'unknown',
+        requestedAt: new Date().toISOString(),
+        status: 'PENDING_APPROVAL',
+        reason
+      });
+      toast.success("Demande de suppression envoyée pour validation.");
+      return { success: true };
+    } catch (err: any) {
+      logger.error('[requestDeletion] Erreur:', err);
+      toast.error(`Erreur : ${err.message || err}`);
+      return { success: false };
+    }
+  }, [rawArticles, currentUser]);
+
   const approveDeletionRequest = useCallback(async (requestId: string) => {
     const req = deletionRequests.find(r => r.id === requestId);
     if (!req) {
@@ -562,6 +590,7 @@ export function useArticles() {
     updateArticlePrice,
     deleteArticle,
     deleteArticles,
+    requestDeletion,
     importAllCatalogToArticles: articleService.importAllCatalogToArticles,
     importSpecificCatalogItems,
     importFromHydrominesCatalog,

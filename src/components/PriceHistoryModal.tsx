@@ -9,9 +9,10 @@ interface PriceHistoryModalProps {
   onClose: () => void;
   itemId?: string;
   itemDesignation?: string;
+  embeddedHistory?: any[];
 }
 
-export function PriceHistoryModal({ open, onClose, itemId, itemDesignation }: PriceHistoryModalProps) {
+export function PriceHistoryModal({ open, onClose, itemId, itemDesignation, embeddedHistory = [] }: PriceHistoryModalProps) {
   const [history, setHistory] = useState<PriceChangeRecord[]>([]);
   const [loading, setLoading] = useState(false);
   
@@ -29,7 +30,7 @@ export function PriceHistoryModal({ open, onClose, itemId, itemDesignation }: Pr
   }, [open, itemId]);
 
   // Helper to format date cleanly
-  const formatDate = (isoString: string) => {
+  const formatDate = (isoString: string | number) => {
     try {
       const date = new Date(isoString);
       return date.toLocaleDateString('fr-FR', {
@@ -40,9 +41,54 @@ export function PriceHistoryModal({ open, onClose, itemId, itemDesignation }: Pr
         minute: '2-digit'
       });
     } catch {
-      return isoString;
+      return String(isoString);
     }
   };
+
+  // Merge embedded and Firestore history records
+  const mergedTimeline = React.useMemo(() => {
+    // 1. Process Embedded (Automatic price updates from PMP calculation)
+    const parsedEmbedded = (embeddedHistory || []).map(entry => {
+      const price = entry.p !== undefined ? entry.p : (entry.price !== undefined ? entry.price : 0);
+      const date = entry.d !== undefined ? entry.d : (entry.date !== undefined ? entry.date : Date.now());
+      const quantity = entry.q !== undefined ? entry.q : (entry.quantityAttached !== undefined ? entry.quantityAttached : entry.quantity);
+      return {
+        date,
+        newPrice: Number(price),
+        source: 'AUTO' as const,
+        quantity: quantity !== undefined ? Number(quantity) : undefined
+      };
+    });
+
+    // Sort ascending by date to compute old prices chronologically
+    parsedEmbedded.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+
+    let prevPrice = 0;
+    const autoTimeline = parsedEmbedded.map(entry => {
+      const oldPrice = prevPrice;
+      prevPrice = entry.newPrice;
+      return {
+        ...entry,
+        oldPrice
+      };
+    });
+
+    // 2. Process Manual (Firestore manual price adjustments)
+    const manualTimeline = (history || []).map(record => ({
+      date: record.changedAt,
+      oldPrice: record.oldPrice,
+      newPrice: record.newPrice,
+      source: 'MANUEL' as const,
+      changedByName: record.changedByName,
+      reason: record.reason,
+      quantity: undefined
+    }));
+
+    // 3. Merge and sort descending (newest first)
+    const merged = [...autoTimeline, ...manualTimeline];
+    merged.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    return merged;
+  }, [embeddedHistory, history]);
   
   return (
     <AnimatePresence>
@@ -90,7 +136,7 @@ export function PriceHistoryModal({ open, onClose, itemId, itemDesignation }: Pr
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#b8860b] mb-3"></div>
                   <span className="text-xs font-black uppercase tracking-widest">Chargement...</span>
                 </div>
-              ) : history.length === 0 ? (
+              ) : mergedTimeline.length === 0 ? (
                 <div className="py-16 text-center text-slate-400">
                   <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center text-slate-400 mx-auto mb-3 border border-slate-100">
                     <Clock className="w-5 h-5" />
@@ -111,7 +157,7 @@ export function PriceHistoryModal({ open, onClose, itemId, itemDesignation }: Pr
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 bg-white">
-                      {history.map(record => {
+                      {mergedTimeline.map((record, idx) => {
                         const variation = record.newPrice - record.oldPrice;
                         const variationPercent = record.oldPrice > 0 
                           ? ((variation / record.oldPrice) * 100).toFixed(1)
@@ -120,9 +166,9 @@ export function PriceHistoryModal({ open, onClose, itemId, itemDesignation }: Pr
                         const isDown = variation < 0;
 
                         return (
-                          <tr key={record.id} className="hover:bg-slate-50/50 transition-colors">
+                          <tr key={`${record.source}-${record.date}-${idx}`} className="hover:bg-slate-50/50 transition-colors">
                             <td className="px-4 py-3 text-xs font-medium text-slate-600">
-                              {formatDate(record.changedAt)}
+                              {formatDate(record.date)}
                             </td>
                             <td className="px-4 py-3 text-right text-xs font-mono font-bold text-slate-500">
                               {record.oldPrice.toLocaleString('fr-FR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} MAD
@@ -141,16 +187,29 @@ export function PriceHistoryModal({ open, onClose, itemId, itemDesignation }: Pr
                               )}
                             </td>
                             <td className="px-4 py-3 text-xs">
-                              <div className="flex flex-col gap-0.5">
-                                <span className="font-bold text-slate-700 flex items-center gap-1">
-                                  <User className="w-3 h-3 opacity-60 text-[#b8860b]" /> {record.changedByName}
-                                </span>
-                                {record.reason && (
-                                  <span className="text-[10px] text-slate-400 flex items-center gap-1 italic">
-                                    <FileText className="w-2.5 h-2.5 opacity-60" /> {record.reason}
+                              {record.source === 'AUTO' ? (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="italic text-slate-400 flex items-center gap-1 font-medium">
+                                    <Clock className="w-3 h-3 opacity-60 text-slate-400" /> Achat / Recalcul PMP
                                   </span>
-                                )}
-                              </div>
+                                  {record.quantity !== undefined && (
+                                    <span className="text-[10px] text-slate-400 flex items-center gap-1 italic">
+                                      <FileText className="w-2.5 h-2.5 opacity-60" /> Quantité reçue : {record.quantity}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : (
+                                <div className="flex flex-col gap-0.5">
+                                  <span className="font-bold text-slate-700 flex items-center gap-1">
+                                    <User className="w-3 h-3 opacity-60 text-[#b8860b]" /> {record.changedByName}
+                                  </span>
+                                  {record.reason && (
+                                    <span className="text-[10px] text-slate-400 flex items-center gap-1 italic">
+                                      <FileText className="w-2.5 h-2.5 opacity-60" /> {record.reason}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </td>
                           </tr>
                         );

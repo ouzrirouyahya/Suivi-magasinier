@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Calendar, Activity, ArrowDownLeft, ArrowUpRight, MapPin, Tag, Package, QrCode, Printer, Edit2 } from 'lucide-react';
+import { X, Calendar, Activity, ArrowDownLeft, ArrowUpRight, MapPin, Tag, Package, QrCode, Printer, Edit2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { Article, Mouvement } from '../types';
 import { formatCurrency, formatDate, cn } from '../lib/utils';
@@ -22,11 +22,15 @@ interface ArticleDetailProps {
 }
 
 export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailProps) {
-  const { isReadOnlyUser, currentUser, updateArticlePrice, addNotification } = useInventory();
+  const { isReadOnlyUser, currentUser, updateArticlePrice, addNotification, requestDeletion } = useInventory();
   const [isEditingPrice, setIsEditingPrice] = React.useState(false);
   const [newPrice, setNewPrice] = React.useState<number>(article.price || 0);
   const [priceReason, setPriceReason] = React.useState('');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  const [isRequestingDeletion, setIsRequestingDeletion] = React.useState(false);
+  const [deletionReason, setDeletionReason] = React.useState('');
+  const [isSubmittingDeletion, setIsSubmittingDeletion] = React.useState(false);
 
   const articleMouvements = mouvements.filter(m => 
     m.items.some(item => item.articleId === article.id)
@@ -301,23 +305,92 @@ export function ArticleDetail({ article, mouvements, onClose }: ArticleDetailPro
                         </div>
                       </div>
                     </div>
+                  ) : isRequestingDeletion ? (
+                    <div className="p-3 bg-red-50/50 rounded-xl space-y-3 border border-red-100 mt-2">
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="w-4 h-4 text-red-500" />
+                        <span className="text-[10px] font-bold uppercase text-red-500 tracking-tighter leading-none">Demander la suppression</span>
+                      </div>
+                      <div className="space-y-2">
+                        <div>
+                          <label className="text-[10px] text-neutral-400 font-semibold uppercase">Raison de la demande (min 5 car.)</label>
+                          <textarea 
+                            value={deletionReason}
+                            onChange={(e) => setDeletionReason(e.target.value)}
+                            placeholder="Ex: Référence obsolète, doublon..."
+                            rows={2}
+                            className="w-full bg-white border border-neutral-300 rounded px-2 py-1 text-xs text-neutral-800 focus:outline-none focus:ring-1 focus:ring-red-500"
+                            disabled={isSubmittingDeletion}
+                          />
+                        </div>
+                        <div className="flex gap-2 justify-end">
+                          <button
+                            type="button"
+                            onClick={() => setIsRequestingDeletion(false)}
+                            className="px-2 py-1 bg-neutral-200 hover:bg-neutral-300 text-neutral-700 rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                            disabled={isSubmittingDeletion}
+                          >
+                            Annuler
+                          </button>
+                          <button
+                            type="button"
+                            onClick={async () => {
+                              if (deletionReason.trim().length < 5) {
+                                toast.error("Merci de préciser la raison de la demande (5 caractères minimum)");
+                                return;
+                              }
+                              setIsSubmittingDeletion(true);
+                              try {
+                                const res = await requestDeletion(article.id, deletionReason);
+                                if (res.success) {
+                                  setIsRequestingDeletion(false);
+                                }
+                              } catch (err: any) {
+                                toast.error(err.message || "Erreur lors de la demande");
+                              } finally {
+                                setIsSubmittingDeletion(false);
+                              }
+                            }}
+                            className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-[10px] font-bold uppercase tracking-wider transition-colors"
+                            disabled={isSubmittingDeletion}
+                          >
+                            {isSubmittingDeletion ? "Envoi..." : "Confirmer"}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <InfoItem icon={Activity} label="Valeur Unitaire">
                       <div className="flex items-center gap-2">
                         <span className="text-sm font-semibold text-neutral-800">{formatCurrency(article.price)}</span>
                         {!isReadOnlyUser && (
-                          <button 
-                            type="button"
-                            onClick={() => {
-                              setNewPrice(article.price || 0);
-                              setPriceReason('');
-                              setIsEditingPrice(true);
-                            }}
-                            className="p-1 hover:bg-neutral-200 rounded text-neutral-500 hover:text-neutral-700 transition-colors"
-                            title="Modifier le prix"
-                          >
-                            <Edit2 className="w-3.5 h-3.5" />
-                          </button>
+                          <div className="flex items-center gap-1">
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setNewPrice(article.price || 0);
+                                setPriceReason('');
+                                setIsEditingPrice(true);
+                                setIsRequestingDeletion(false);
+                              }}
+                              className="p-1 hover:bg-neutral-200 rounded text-neutral-500 hover:text-neutral-700 transition-colors"
+                              title="Modifier le prix"
+                            >
+                              <Edit2 className="w-3.5 h-3.5" />
+                            </button>
+                            <button 
+                              type="button"
+                              onClick={() => {
+                                setDeletionReason('');
+                                setIsRequestingDeletion(true);
+                                setIsEditingPrice(false);
+                              }}
+                              className="p-1 hover:bg-red-100 rounded text-red-500 hover:text-red-700 transition-colors"
+                              title="Demander la suppression"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         )}
                       </div>
                     </InfoItem>

@@ -46,7 +46,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
   const [categoryFilter, setCategoryFilter] = useState('ALL');
   const [viewMode, setViewMode] = useState<'TABLE' | 'GRID'>('GRID');
   const [isCarnetsOpen, setIsCarnetsOpen] = useState(false);
-  const [selectedPriceHistoryArticle, setSelectedPriceHistoryArticle] = useState<{ id: string; designation: string } | null>(null);
+  const [selectedPriceHistoryArticle, setSelectedPriceHistoryArticle] = useState<{ id: string; designation: string; embeddedHistory: any[] } | null>(null);
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'RUPTURE' | 'CRITIQUE' | 'OPTIMAL'>('ALL');
   const [locationFilter, setLocationFilter] = useState('');
   const [stockAvailabilityTab, setStockAvailabilityTab] = useState<'AVAILABLE' | 'OUT_OF_STOCK'>('AVAILABLE');
@@ -719,7 +719,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                          <button
                            onClick={(e) => {
                              e.stopPropagation();
-                             setSelectedPriceHistoryArticle({ id: article.id, designation: article.designation });
+                             setSelectedPriceHistoryArticle({ id: article.id, designation: article.designation, embeddedHistory: article.priceHistory || [] });
                            }}
                            className="text-[10px] font-bold text-slate-400 hover:text-[#b8860b] hover:underline cursor-pointer flex items-center gap-1 transition-all"
                            title="Historique des prix"
@@ -858,7 +858,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            setSelectedPriceHistoryArticle({ id: article.id, designation: article.designation });
+                            setSelectedPriceHistoryArticle({ id: article.id, designation: article.designation, embeddedHistory: article.priceHistory || [] });
                           }}
                           className="hover:text-[#b8860b] hover:underline cursor-pointer inline-flex items-center gap-1 focus:outline-none font-bold"
                           title="Voir l'historique des prix"
@@ -979,6 +979,7 @@ export const StockTable = memo(({ type, site, articles, mouvements = [], initial
         onClose={() => setSelectedPriceHistoryArticle(null)}
         itemId={selectedPriceHistoryArticle?.id}
         itemDesignation={selectedPriceHistoryArticle?.designation}
+        embeddedHistory={selectedPriceHistoryArticle?.embeddedHistory || []}
       />
     </div>
   );

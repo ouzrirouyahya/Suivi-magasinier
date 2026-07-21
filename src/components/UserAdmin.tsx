@@ -79,7 +79,10 @@ export const UserAdmin = React.memo(function UserAdmin({
     setAgent: onSetAgent,
     setUserRole,
     setUserAssignedSite,
-    currentUser
+    currentUser,
+    deletionRequests,
+    approveDeletionRequest,
+    rejectDeletionRequest
   } = useInventory();
 
   const { isOnline } = useOnlineStatus();
@@ -87,6 +90,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   const siteAgents = currentSite === 'ALL' ? agents : agents.filter(a => a.site === currentSite);
   const siteEngins = currentSite === 'ALL' ? engins : engins.filter(e => e.site === currentSite);
   const sitePerfos = currentSite === 'ALL' ? perfos : perfos.filter(p => p.site === currentSite);
+
+  const pendingDeletionRequests = (deletionRequests || []).filter(
+    (req: any) => req.status === 'PENDING_APPROVAL'
+  );
 
   const isAdminUser = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN';
   const isReadOnly = currentUser?.role === 'ADMIN' && !currentUser?.canWrite;
@@ -759,6 +766,91 @@ export const UserAdmin = React.memo(function UserAdmin({
                 </div>
               )}
             </div>
+
+            {/* SECTION: Demandes de suppression */}
+            {isAdminUser && pendingDeletionRequests.length > 0 && (
+              <div className="space-y-3 pt-4">
+                <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                  <Trash2 className="w-4 h-4 text-red-500" />
+                  <h3 className="text-xs font-black uppercase tracking-widest text-slate-800">
+                    🗑️ Demandes de suppression en attente ({pendingDeletionRequests.length})
+                  </h3>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {pendingDeletionRequests.map((req: any) => (
+                    <div key={req.id} className="card p-4 border border-red-100 bg-red-50/5 shadow-sm rounded-2xl flex flex-col gap-3 justify-between animate-in fade-in duration-300">
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-red-100 text-red-750 flex items-center justify-center font-black text-xs">
+                              {req.requestedBy ? req.requestedBy.split('@')[0].substring(0, 2).toUpperCase() : 'M'}
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-slate-900 leading-none">{req.requestedBy}</p>
+                              <p className="text-[9px] text-slate-400 font-bold leading-tight mt-0.5">
+                                Demandé le : {req.requestedAt ? new Date(req.requestedAt).toLocaleString('fr-FR') : 'Date inconnue'}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="space-y-1 bg-white/80 p-2.5 rounded-xl border border-red-100/60 text-xs text-slate-700">
+                          <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-1">Articles concernés</p>
+                          {req.articleRefs?.map((ref: string, idx: number) => (
+                            <div key={idx} className="border-b border-slate-100 last:border-0 pb-1 last:pb-0 pt-1 first:pt-0">
+                              <span className="font-bold text-red-600">{ref}</span> - <span className="font-medium text-slate-800">{req.articleDesignations?.[idx] || 'Sans nom'}</span>
+                            </div>
+                          ))}
+                          <p className="text-[10px] mt-1.5 pt-1.5 border-t border-slate-100/50 flex justify-between font-bold">
+                            <span className="text-slate-400 uppercase font-black tracking-widest text-[9px]">Chantier d'origine :</span>
+                            <span className="text-slate-800 uppercase font-black">{req.site}</span>
+                          </p>
+                        </div>
+
+                        <div className="text-xs bg-slate-50 border border-slate-100 p-2 rounded-lg text-slate-600 font-medium">
+                          <span className="text-[9px] font-black uppercase tracking-widest text-slate-450 block mb-0.5">Raison :</span>
+                          "{req.reason || req.raison}"
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 pt-2 border-t border-slate-100/60">
+                        <button
+                          onClick={async () => {
+                            try {
+                              await rejectDeletionRequest(req.id);
+                              toast.success("Demande de suppression refusée.");
+                            } catch (err: any) {
+                              toast.error(err.message || "Erreur lors du rejet");
+                            }
+                          }}
+                          className="flex-1 py-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl font-black text-[9px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all outline-none cursor-pointer"
+                        >
+                          <XCircle className="w-3.5 h-3.5" />
+                          Refuser la demande
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (window.confirm("Es-tu sûr de vouloir approuver la suppression de ces articles ?")) {
+                              try {
+                                await approveDeletionRequest(req.id);
+                                toast.success("La suppression a été approuvée et effectuée.");
+                              } catch (err: any) {
+                                toast.error(err.message || "Erreur lors de l'approbation");
+                              }
+                            }
+                          }}
+                          className="flex-1 py-1.5 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-black text-[9px] uppercase tracking-wider flex items-center justify-center gap-1 transition-all outline-none shadow-xs cursor-pointer"
+                        >
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          Approuver la suppression
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* SECTION 2 - Membres actifs */}
             <div className="space-y-3 pt-4">
