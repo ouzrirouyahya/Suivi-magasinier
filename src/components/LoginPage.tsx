@@ -10,8 +10,8 @@ import { SITES } from '../demoData';
 import { SiteCode, UserAccount } from '../types';
 import { SITE_CODES } from '../lib/constants';
 import { useAuthStore } from '../stores/auth.store';
-import loginImage from '../assets/images/hydromines_login_banner_clean.png';
-import hydrominesLogo from '../assets/images/hydromines_logo.png';
+import loginImage from '../assets/images/hydromines_login_banner_clean.webp';
+import hydrominesLogo from '../assets/images/hydromines_logo.webp';
 
 const LoginPage: React.FC = () => {
   const { currentUser } = useAuthStore();

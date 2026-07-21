@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { BrowserRouter, useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { signOut } from 'firebase/auth';
@@ -20,7 +20,7 @@ import { OfflineBanner } from './components/OfflineBanner';
 import { useSessionTimeout } from './hooks/useSessionTimeout';
 import { useInitialSnapshot } from './hooks/useInitialSnapshot';
 import { usePresence } from './hooks/usePresence';
-import BannerCarousel from './components/messaging/BannerCarousel';
+const BannerCarousel = React.lazy(() => import('./components/messaging/BannerCarousel'));
 import { EntranceLoader } from './components/EntranceLoader';
 import { ExitLoader } from './components/ExitLoader';
 
@@ -318,7 +318,9 @@ function AuthenticatedLayout() {
             onToggleViewportMode={() => setIsDesktopViewport(p => !p)}
           />
 
-          <BannerCarousel />
+          <Suspense fallback={null}>
+            <BannerCarousel />
+          </Suspense>
 
           <AnimatePresence>
             {networkQuality === 'OFFLINE' && (

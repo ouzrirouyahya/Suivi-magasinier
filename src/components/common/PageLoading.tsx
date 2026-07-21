@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import hydrominesLogo from '../../assets/images/hydromines_logo.png';
+import hydrominesLogo from '../../assets/images/hydromines_logo.webp';
 
 interface PageLoadingProps {
   isLoaded?: boolean;

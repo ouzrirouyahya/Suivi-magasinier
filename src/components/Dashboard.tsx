@@ -11,7 +11,7 @@ import {
 } from 'lucide-react';
 import { Article, Mouvement, SiteCode } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
-import hydrominesLogo from '../assets/images/hydromines_logo.png';
+import hydrominesLogo from '../assets/images/hydromines_logo.webp';
 
 interface DashboardProps {
   site: SiteCode;

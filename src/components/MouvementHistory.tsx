@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Search, Download, Calendar, ArrowDownLeft, ArrowUpRight, Clock, HardDrive, User, Printer, Eye, X, BookOpen, LayoutGrid, RotateCcw, Trash2, ShieldAlert } from 'lucide-react';
 import { Mouvement, Article, SiteCode } from '../types';
 import { cn, formatDate, formatCurrency } from '../lib/utils';
-import hydrominesLogo from '../assets/images/hydromines_logo.png';
+import hydrominesLogo from '../assets/images/hydromines_logo.webp';
 import { useAuthStore } from '../stores/auth.store';
 import { db, runTransaction, doc, collection } from '../lib/db';
 import { toast } from 'sonner';

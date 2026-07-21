@@ -11,7 +11,7 @@ import { HydrominesCatalogItem, CatalogItem, Article, SiteCode, EquipmentFamily,
 import { MASTER_CATALOG } from '../catalogData';
 import { generateId, formatCurrency, cn, logger } from '../lib/utils';
 import { toast } from 'sonner';
-import { useCatalogFilter, getCatalogByFamily } from '../hooks/useCatalog';
+import { useCatalogFilter, getCatalogByFamily } from '../hooks/catalogSearch';
 import { SITE_CODES } from '../lib/constants';
 
 const CATALOG_OPTIONS: (CatalogSelectorConfig & { desc: string })[] = [

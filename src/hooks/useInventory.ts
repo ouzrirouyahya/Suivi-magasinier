@@ -162,7 +162,6 @@ export function useInventory() {
     saveHydrominesItem: catalog.saveHydrominesItem,
     deleteHydrominesItem: catalog.deleteHydrominesItem,
     addToHydrominesCatalog: catalog.addToHydrominesCatalog,
-    buildHierarchy: catalog.buildHierarchy,
     catalogStats: (catalog as any).catalogStats,
     maintenanceStats: (catalog as any).maintenanceStats,
 

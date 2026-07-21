@@ -44,7 +44,7 @@ import { useNotifications } from '../hooks/useNotifications';
 import { useOfflineSync } from '../hooks/useOfflineSync';
 import { useMessages } from '../hooks/useMessages';
 import { snapshotManager } from '../lib/snapshotManager';
-import hydrominesLogo from '../assets/images/hydromines_logo.png';
+import hydrominesLogo from '../assets/images/hydromines_logo.webp';
 
 export type Page = 
   | 'COCKPIT' 

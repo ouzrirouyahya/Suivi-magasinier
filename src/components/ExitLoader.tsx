@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { auth } from '../lib/firebase';
 import { useInventory } from '../context/InventoryContext';
-import hydrominesLogo from '../assets/images/hydromines_logo.png';
+import hydrominesLogo from '../assets/images/hydromines_logo.webp';
 
 interface ExitLoaderProps {
   onComplete: () => void;
