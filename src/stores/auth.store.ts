@@ -83,7 +83,7 @@ const getCachedSite = (): SiteCode => {
   }
 };
 
-export const useAuthStore = create<AuthState>((set) => {
+export const useAuthStore = create<AuthState>((set, get) => {
   const cachedUser = getCachedUser();
   return {
     currentUser: cachedUser,
@@ -123,6 +123,9 @@ export const useAuthStore = create<AuthState>((set) => {
       return { accounts: nextAccounts };
     }),
     setCurrentSite: (site) => {
+      if (get().currentSite === site) {
+        return;
+      }
       try {
         localStorage.setItem('hydromines_current_site', site);
         // Prune site-specific cached collections on site switch to prevent cross-site leakage

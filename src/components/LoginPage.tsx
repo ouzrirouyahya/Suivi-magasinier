@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'motion/react';
+import { useNavigate } from 'react-router-dom';
 import { auth, googleProvider, db, signInWithRedirect } from '../lib/firebase';
 import { setDoc, doc } from '../lib/db';
 import { cleanObject, logger } from '../lib/utils';
@@ -14,10 +15,30 @@ import hydrominesLogo from '../assets/images/hydromines_logo.png';
 
 const LoginPage: React.FC = () => {
   const { currentUser } = useAuthStore();
+  const navigate = useNavigate();
   const [authError, setAuthError] = React.useState<string | null>(null);
   const [selectedRequestedRole, setSelectedRequestedRole] = React.useState<'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' | ''>('');
   const [requestedSite, setRequestedSite] = React.useState<SiteCode | ''>( '');
   const [isSubmitting, setIsSubmitting] = React.useState(false);
+
+  // Redirection automatique si déjà connecté selon le statut du compte
+  React.useEffect(() => {
+    if (currentUser) {
+      if (currentUser.status === 'APPROVED' && currentUser.active !== false) {
+        logger.log("🔄 [LoginPage] Utilisateur approuvé et actif. Redirection vers le tableau de bord (/).");
+        navigate('/', { replace: true });
+      } else if (currentUser.status === 'PENDING') {
+        logger.log("🔄 [LoginPage] Compte en attente. Redirection vers /pending.");
+        navigate('/pending', { replace: true });
+      } else if (currentUser.status === 'REJECTED') {
+        logger.log("🔄 [LoginPage] Compte rejeté. Redirection vers /rejected.");
+        navigate('/rejected', { replace: true });
+      } else if (currentUser.active === false && currentUser.status === 'APPROVED') {
+        logger.log("🔄 [LoginPage] Compte désactivé. Redirection vers /disabled.");
+        navigate('/disabled', { replace: true });
+      }
+    }
+  }, [currentUser, navigate]);
 
   // Séquence d'entrée 7s
   const [showIntro, setShowIntro] = React.useState<boolean>(() => {
