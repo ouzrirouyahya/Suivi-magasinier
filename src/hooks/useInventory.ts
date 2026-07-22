@@ -76,7 +76,6 @@ export function useInventory() {
     deleteArticle: articles.deleteArticle,
     deleteArticles: articles.deleteArticles,
     ghostArticles: articles.ghostArticles,
-    catalogUsageStats: articles.catalogUsageStats,
     saveArticle: articles.saveArticle,
     importAllCatalogToArticles: articles.importAllCatalogToArticles,
     importFromHydrominesCatalog: articles.importFromHydrominesCatalog,
@@ -84,7 +83,6 @@ export function useInventory() {
     requestDeletion: articles.requestDeletion,
     approveDeletionRequest: articles.approveDeletionRequest,
     rejectDeletionRequest: articles.rejectDeletionRequest,
-    calculateCatalogUsageStats: (articles as any).calculateCatalogUsageStats,
 
     // MOVEMENTS
     mouvements: movements.mouvements,

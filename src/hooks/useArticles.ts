@@ -7,8 +7,6 @@ import { articleService } from '../services/article.service';
 import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
 import { Article, CatalogItem, DeletionRequest, HydrominesCatalogItem, SiteCode } from '../types';
-import { CatalogUsageStats } from '../context/InventoryContext';
-import { MASTER_CATALOG } from '../catalogData';
 import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID, handleFirestoreError, OperationType, logger } from '../lib/utils';
 import { migrateDocument } from '../lib/migrations';
 import { toast } from 'sonner';
@@ -122,104 +120,6 @@ export function useArticles() {
       (a.quantity || 0) === 0 && !usedArticleIds.has(a.id)
     );
   }, [rawArticles, movements]);
-
-  // Computed: catalogUsageStats
-  const catalogUsageStats: CatalogUsageStats[] = useMemo(() => {
-    const hydrominesRefs = new Set(
-      (hydrominesCatalog || []).map(h => h.reference.trim().toUpperCase())
-    );
-
-    const articlesByRef = new Map<string, Article[]>();
-    for (let i = 0; i < rawArticles.length; i++) {
-      const a = rawArticles[i];
-      if (!a.ref) continue;
-      const refNorm = a.ref.trim().toUpperCase();
-      let list = articlesByRef.get(refNorm);
-      if (!list) {
-        list = [];
-        articlesByRef.set(refNorm, list);
-      }
-      list.push(a);
-    }
-
-    const movementsByArticleId = new Map<string, any[]>();
-    for (let i = 0; i < movements.length; i++) {
-      const m = movements[i];
-      if (!m.items) continue;
-      for (let j = 0; j < m.items.length; j++) {
-        const item = m.items[j];
-        if (!item.articleId) continue;
-        let list = movementsByArticleId.get(item.articleId);
-        if (!list) {
-          list = [];
-          movementsByArticleId.set(item.articleId, list);
-        }
-        list.push(m);
-      }
-    }
-
-    return MASTER_CATALOG.map(catalogItem => {
-      const refNorm = catalogItem.reference.trim().toUpperCase();
-      const matchingArticles = articlesByRef.get(refNorm) || [];
-      
-      const relevantMovementsSet = new Set<any>();
-      for (let i = 0; i < matchingArticles.length; i++) {
-        const art = matchingArticles[i];
-        const movs = movementsByArticleId.get(art.id);
-        if (movs) {
-          for (let j = 0; j < movs.length; j++) {
-            relevantMovementsSet.add(movs[j]);
-          }
-        }
-      }
-      const relevantMovements = Array.from(relevantMovementsSet);
-
-      const matchingArticleIds = new Set<string>();
-      for (let i = 0; i < matchingArticles.length; i++) {
-        matchingArticleIds.add(matchingArticles[i].id);
-      }
-
-      let totalQuantityOut = 0;
-      const sitesUsingSet = new Set<string>();
-      let maxTime = 0;
-      let lastUsedDate: string | null = null;
-
-      for (let i = 0; i < relevantMovements.length; i++) {
-        const m = relevantMovements[i];
-        
-        if (m.site) {
-          sitesUsingSet.add(m.site);
-        }
-
-        if (m.date) {
-          const time = new Date(m.date).getTime();
-          if (time > maxTime) {
-            maxTime = time;
-            lastUsedDate = m.date;
-          }
-        }
-
-        if (m.type === 'SORTIE' && m.items) {
-          for (let j = 0; j < m.items.length; j++) {
-            const item = m.items[j];
-            if (matchingArticleIds.has(item.articleId)) {
-              totalQuantityOut += item.quantity || 0;
-            }
-          }
-        }
-      }
-
-      return {
-        catalogItem,
-        isUsed: relevantMovements.length > 0,
-        movementCount: relevantMovements.length,
-        totalQuantityOut,
-        sitesUsing: Array.from(sitesUsingSet),
-        isInHydrominesCatalog: hydrominesRefs.has(refNorm),
-        lastUsedDate
-      };
-    });
-  }, [rawArticles, movements, hydrominesCatalog]);
 
   const saveArticle = useCallback(async (article: Article) => {
     // Vérifier l'unicité de la référence sur le site
@@ -582,7 +482,6 @@ export function useArticles() {
     catalogItems: catalog,
     hydrominesCatalog,
     ghostArticles,
-    catalogUsageStats,
     deletionRequests,
     saveArticle,
     addArticle,
