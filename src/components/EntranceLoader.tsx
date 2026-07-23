@@ -235,11 +235,11 @@ export const EntranceLoader: React.FC<EntranceLoaderProps> = ({ onComplete }) =>
           transition={{ duration: 0.8, ease: [0.16, 1, 0.3, 1] }}
           className="mb-8"
         >
-          <div className="relative p-6 bg-slate-900/40 backdrop-blur-md rounded-full border border-sky-500/20 shadow-2xl logo-breathe flex items-center justify-center">
+          <div className="relative p-7 bg-slate-900/40 backdrop-blur-md rounded-full border border-sky-500/20 shadow-2xl logo-breathe flex items-center justify-center">
             <img 
               src={hydrominesLogo} 
               alt="Hydromines Logo" 
-              className="w-20 h-20 object-contain"
+              className="w-24 h-24 object-contain"
               referrerPolicy="no-referrer"
             />
           </div>

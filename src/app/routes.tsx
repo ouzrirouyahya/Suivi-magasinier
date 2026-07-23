@@ -71,10 +71,14 @@ const ProtectedRoute = ({
   children: React.ReactNode; 
   requiredRole?: 'SUPER_ADMIN' | 'ADMIN' | 'MAGASINIER' | 'RESPONSABLE_CHANTIER' 
 }) => {
-  const { currentUser } = useAuthStore();
+  const { currentUser, isLoaded } = useAuthStore();
   const location = useLocation();
   
-  if (!currentUser) return <Navigate to="/login" replace />;
+  // Tant que la session n'est pas encore confirmée, ne prends aucune décision de redirection
+  // (évite de rediriger vers /login puis / un utilisateur déjà connecté qui recharge une page précise)
+  if (!isLoaded) return null;
+  
+  if (!currentUser) return <Navigate to="/login" replace state={{ from: location.pathname }} />;
   
   // Guard for status
   if (currentUser.status === 'PENDING') return <Navigate to="/pending" replace />;
