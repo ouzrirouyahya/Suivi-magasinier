@@ -160,7 +160,7 @@ function AuthenticatedLayout() {
     const status = currentUser.status;
     const active = currentUser.active;
 
-    // Utilisateur Google connecté mais pas encore de compte Hydromines
+    // Utilisateur Google connecté mais pas encore de compte Excellence
     // → rester sur /login pour afficher le formulaire de rôle
     if (status === 'PENDING_REGISTRATION') {
       if (location.pathname !== '/login') {

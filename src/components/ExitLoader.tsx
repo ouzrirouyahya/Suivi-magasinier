@@ -111,7 +111,7 @@ export const ExitLoader: React.FC<ExitLoaderProps> = ({ onComplete }) => {
           <div className="relative p-7 bg-slate-900/50 backdrop-blur-md rounded-full border border-sky-500/10 shadow-xl flex items-center justify-center">
             <img 
               src={hydrominesLogo} 
-              alt="Hydromines Logo" 
+              alt="Excellence Logo" 
               className="w-24 h-24 object-contain opacity-80"
               referrerPolicy="no-referrer"
             />

@@ -486,10 +486,10 @@ export const MasterCatalogPage: React.FC = () => {
                           if (!isImported) {
                             addToHydromines(sub); 
                           } else {
-                            toast.info("Cette pièce est déjà présente dans le catalogue Hydromines");
+                            toast.info("Cette pièce est déjà présente dans le catalogue Excellence");
                           }
                         }}
-                        title={isImported ? "Déjà importé dans le Catalogue Hydromines" : "Importer dans le Catalogue Hydromines"}
+                        title={isImported ? "Déjà importé dans le Catalogue Excellence" : "Importer dans le Catalogue Excellence"}
                       >
                         {isImported ? '✓' : '⭐'}
                       </button>
@@ -569,13 +569,13 @@ export const MasterCatalogPage: React.FC = () => {
                           if (!isImported) {
                             addToHydromines(comp);
                           } else {
-                            toast.info("Cette pièce est déjà présente dans le catalogue Hydromines");
+                            toast.info("Cette pièce est déjà présente dans le catalogue Excellence");
                           }
                         }}
                         disabled={isImported}
                       >
                         <span>{isImported ? '✓' : '⭐'}</span>
-                        <span>{isImported ? 'Présent dans Hydromines' : 'Ajouter au Catalogue Hydromines'}</span>
+                        <span>{isImported ? 'Présent dans Excellence' : 'Ajouter au Catalogue Excellence'}</span>
                       </button>
                     </div>
                   </div>

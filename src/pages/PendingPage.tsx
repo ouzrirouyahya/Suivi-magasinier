@@ -36,7 +36,7 @@ export const PendingPage: React.FC = () => {
             Bonjour, <span className="font-semibold text-slate-200">{currentUser?.name || currentUser?.email}</span>.
           </p>
           <p className="text-slate-400 text-sm">
-            Votre compte a été créé avec succès. Un administrateur de la mine d'Hydromines doit valider votre rôle 
+            Votre compte a été créé avec succès. Un administrateur de la mine d'Excellence doit valider votre rôle 
             <span className="font-semibold text-amber-400"> {currentUser?.requestedRole || 'MAGASINIER'}</span> avant que vous ne puissiez accéder à l'application.
           </p>
         </div>

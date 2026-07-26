@@ -35,12 +35,12 @@ function formatDateSimple(dateVal: any): string {
 
 /**
  * Exports data to professional Excel format
- * Leaves rows 1, 2, 3 empty for titles and Hydromines logo integration
+ * Leaves rows 1, 2, 3 empty for titles and Excellence logo integration
  * Enables gridlines explicitly and auto-fits columns dynamically
  */
 /**
  * Exports data to professional Excel format with customized styles
- * Leaves rows 1, 2, 3 empty for titles and Hydromines logo integration
+ * Leaves rows 1, 2, 3 empty for titles and Excellence logo integration
  * Forces gridlines to be invisible and applies custom colors/borders
  */
 export function exportToExcel(
@@ -52,7 +52,7 @@ export function exportToExcel(
 
   sheetsArray.forEach(sheet => {
     // 1. Create a beautiful header header inside Excel (starting at Row 4, leaving Rows 1, 2, 3 empty)
-    const titleRow = [`🔵 HYDROMINES — ${sheet.title.toUpperCase()}`];
+    const titleRow = [`🔵 EXCELLENCE — ${sheet.title.toUpperCase()}`];
     const dateStrFr = new Date().toLocaleDateString('fr-FR', {
       day: 'numeric',
       month: 'long',
@@ -64,7 +64,7 @@ export function exportToExcel(
     const decorativeRow = [`━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━` ];
 
     const ws = XLSX.utils.aoa_to_sheet([
-      ['🩵🩵🩵🩵🩵🩵🩵  H Y D R O M I N E S  🟥🟥🟥🟥🟥🟥🟥'], // Row 1: Hydromines Logo Accent
+      ['🩵🩵🩵🩵🩵🩵🩵  E X C E L L E N C E  🟥🟥🟥🟥🟥🟥🟥'], // Row 1: Excellence Logo Accent
       ['🌐 SYSTEME DE GESTION INTEGRAL — RAPPORT DECISIONNEL D\'INVENTAIRE'], // Row 2: Subtitle/Logo Text
       ['━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━'], // Row 3: Double border line
       titleRow, // Row 4: Header Title
@@ -109,7 +109,7 @@ export function exportToExcel(
         const row = parseInt(match[2], 10);
 
         if (row === 1) {
-          // Hydromines Main Title Logo banner
+          // Excellence Main Title Logo banner
           cell.s = {
             fill: { fgColor: { rgb: "1E293B" } }, // Slate-800
             font: { name: "Calibri", sz: 14, bold: true, color: { rgb: "38BDF8" } }, // Sky Blue logo text
@@ -133,7 +133,7 @@ export function exportToExcel(
           // Sheet Title
           cell.s = {
             fill: { fgColor: { rgb: "F8FAFC" } },
-            font: { name: "Calibri", sz: 12, bold: true, color: { rgb: "1B365D" } }, // Hydromines Dark Navy
+            font: { name: "Calibri", sz: 12, bold: true, color: { rgb: "1B365D" } }, // Excellence Dark Navy
             alignment: { vertical: "center", horizontal: "left" },
             border: {
               top: { style: "thin", color: { rgb: "E2E8F0" } },
@@ -355,7 +355,7 @@ export function formatMovementsForExport(
 
   const flushDay = () => {
     if (dayRows.length > 0) {
-      // Add a beautifully shaded header row for the day matching the Sky Blue Hydromines color
+      // Add a beautifully shaded header row for the day matching the Sky Blue Excellence color
       formatted.push({
         '🩵 Date Mouvement': `🩵 JOURNÉE DU ${currentDay} ───────────────────`,
         '🩵 ID Mouvement': '░░░░░░░░░░░',

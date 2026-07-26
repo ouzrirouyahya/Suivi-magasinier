@@ -176,7 +176,7 @@ export class SiteComparator {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(24);
-    doc.text('HYDROMINES', 20, 25);
+    doc.text('EXCELLENCE', 20, 25);
     doc.setFontSize(14);
     doc.text('Rapport Comparatif Inter-Chantiers', 20, 35);
     
@@ -226,7 +226,7 @@ export class SiteComparator {
     doc.setTextColor(150, 150, 150);
     doc.setFontSize(8);
     
-    doc.text('HYDROMINES - Système d\'Analyse Multi-Sites Normalisée', 20, 280);
+    doc.text('EXCELLENCE - Système d\'Analyse Multi-Sites Normalisée', 20, 280);
     doc.text('Document confidentiel', pageWidth - 60, 280);
     
     doc.save(`COMPARATIF_SITES_${new Date().toISOString().split('T')[0]}.pdf`);

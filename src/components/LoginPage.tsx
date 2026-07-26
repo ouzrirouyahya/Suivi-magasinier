@@ -228,8 +228,8 @@ const LoginPage: React.FC = () => {
   };
 
 
-  const hydroText = "HYDRO";
-  const minesText = "MINES";
+  const hydroText = "EXCEL";
+  const minesText = "LENCE";
   const starPositions = [
     { x: 50, y: 8, size: 20, delay: 0 },
     { x: 18, y: 30, size: 16, delay: 140 },
@@ -471,8 +471,8 @@ const LoginPage: React.FC = () => {
             letter-spacing: -0.04em;
             line-height: 1;
           }
-          .typo-brand .hydro { color: #0284C7; }
-          .typo-brand .mines { color: #991B1B; }
+          .typo-brand .hydro { color: #F59E0B; }
+          .typo-brand .mines { color: #D4AF37; }
 
           .typo-char {
             display: inline-block;
@@ -485,7 +485,7 @@ const LoginPage: React.FC = () => {
           .typo-line {
             width: 0;
             height: 2.5px;
-            background: linear-gradient(90deg, #0284C7, #C9A227, #991B1B);
+            background: linear-gradient(90deg, #F59E0B, #EAB308, #D4AF37);
             border-radius: 2px;
             margin: 12px 0;
             transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
@@ -742,7 +742,7 @@ const LoginPage: React.FC = () => {
 
           {/* LOGO */}
           <div className={`logo-wrap ${logoClass}`} id="logo">
-            <img className="logo-img" src={hydrominesLogo} alt="HYDROMINES"/>
+            <img className="logo-img" src={hydrominesLogo} alt="EXCELLENCE"/>
           </div>
 
           {/* TYPOGRAPHIE */}
@@ -800,7 +800,7 @@ const LoginPage: React.FC = () => {
       >
         <img
           src={loginImage}
-          alt="Hydromines"
+          alt="Excellence"
           referrerPolicy="no-referrer"
           className="w-full h-full object-cover select-none scale-105"
         />
@@ -818,11 +818,11 @@ const LoginPage: React.FC = () => {
         <div className="flex items-center gap-4 pointer-events-auto">
           <div className="flex flex-col leading-tight">
             <div className="text-xl lg:text-2xl font-black tracking-tighter flex items-center">
-              <span className="text-[#38bdf8] logo-glow-blue">HYDRO</span>
-              <span className="text-[#ef4444] logo-glow-red">MINES</span>
+              <span className="text-[#F59E0B] drop-shadow-[0_0_12px_rgba(245,158,11,0.5)]">EXCEL</span>
+              <span className="text-[#D4AF37] drop-shadow-[0_0_12px_rgba(212,175,55,0.5)]">LENCE</span>
             </div>
             <div className="font-mono text-[8px] md:text-[9px] uppercase tracking-[0.3em] text-slate-300 font-black opacity-90 px-0.5">
-              Mines — Eau — Environnement
+              MINES — CARRIÈRES — SÉCURITÉ — ENVIRONNEMENT
             </div>
           </div>
         </div>
@@ -838,12 +838,12 @@ const LoginPage: React.FC = () => {
             transition={{ duration: 1.0, ease: "easeOut" }}
             className="max-w-2xl space-y-4"
           >
-            <p className="font-mono text-[11px] tracking-[0.52em] text-[#38bdf8] font-extrabold uppercase drop-shadow-md">
-              HYDROMINES LOGISTICS ENVIRONMENT
+            <p className="font-mono text-[11px] tracking-[0.52em] text-[#F59E0B] font-extrabold uppercase drop-shadow-md">
+              EXCELLENCE LOGISTICS ENVIRONMENT
             </p>
             <h2 className="text-5xl lg:text-6xl xl:text-7xl font-extralight text-white tracking-tighter leading-[0.95] uppercase drop-shadow-lg animate-fade-in">
               L'efficience <br />
-              <span className="font-black text-[#38bdf8] logo-glow-blue">SANS COMPROMIS.</span>
+              <span className="font-black text-[#F59E0B] drop-shadow-[0_0_15px_rgba(245,158,11,0.6)]">SANS COMPROMIS.</span>
             </h2>
             <p className="text-slate-200 font-sans text-sm max-w-sm leading-relaxed font-semibold mt-3 drop-shadow-md">
               Supervision intelligente, flux en temps réel et outils de gestion de stocks Magasiniers.
@@ -876,14 +876,14 @@ const LoginPage: React.FC = () => {
             className="w-full bg-white rounded-2xl shadow-[0_20px_50px_rgba(0,0,0,0.3)] relative overflow-hidden p-6 md:p-8 flex flex-col items-center text-center border border-slate-100"
             style={{ transformStyle: "preserve-3d", perspective: "1000px" }}
           >
-            {/* Top Identity Gradient Accent Line (Sky Blue -> Gold -> Dark Red) */}
-            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#38bdf8] via-[#eab308] to-[#991b1b]" />
+            {/* Top Identity Gold Accent Line */}
+            <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-[#F59E0B] via-[#EAB308] to-[#D4AF37]" />
 
-            {/* Professional HYDROMINES Logo Graphic */}
+            {/* Professional EXCELLENCE Logo Graphic */}
             <div className="flex justify-center mb-4 mt-2">
               <img 
                 src={hydrominesLogo} 
-                alt="HYDROMINES Logo" 
+                alt="EXCELLENCE Logo" 
                 className="w-[162px] h-[162px] object-contain select-none"
                 referrerPolicy="no-referrer"
               />
@@ -898,7 +898,7 @@ const LoginPage: React.FC = () => {
                   </h1>
                 </div>
                 <p className="text-xs text-slate-500 mb-6 leading-relaxed px-2 font-semibold">
-                  Supervision des stocks, suivi logistique, et conformité opérationnelle Hydromines.
+                  Supervision des stocks, suivi logistique, et conformité opérationnelle Excellence.
                 </p>
               </>
             ) : (
@@ -1113,7 +1113,7 @@ const LoginPage: React.FC = () => {
             className="text-center pt-2 w-full"
           >
             <p className="text-[10px] text-slate-300 font-medium tracking-wide drop-shadow-md">
-              © 2026 <span className="font-black text-white">HYDROMINES</span>. Tous droits réservés.
+              © 2026 <span className="font-black text-white">EXCELLENCE</span>. Tous droits réservés.
             </p>
             <p className="text-[8px] text-slate-400 uppercase tracking-[0.15em] mt-1 font-semibold drop-shadow-md">
               Système de Supervision Logistique
@@ -1132,7 +1132,7 @@ const LoginPage: React.FC = () => {
         className="absolute bottom-6 left-0 right-0 text-center pointer-events-none"
       >
         <div className="font-mono text-[9px] tracking-[0.3em] uppercase text-slate-400/80">
-          HYDROMINES © 2026
+          EXCELLENCE © 2026
         </div>
       </motion.footer>
 

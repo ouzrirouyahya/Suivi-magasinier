@@ -123,7 +123,7 @@ export function useAuth() {
             setIsLoaded(true);
           } else {
             logger.log("🔄 [useAuth] Nouvel utilisateur standard (en attente d'inscription)");
-            // Utilisateur Google authentifié mais pas encore de compte Hydromines
+            // Utilisateur Google authentifié mais pas encore de compte Excellence
             // Créer un UserAccount temporaire "EN_ATTENTE_INSCRIPTION"
             // pour que App.tsx ne redirige PAS vers /login
             // Garder l'écouteur actif pour recevoir la mise à jour dès la création du document

@@ -73,7 +73,7 @@ export const PageLoading: React.FC<PageLoadingProps> = ({ isLoaded = false, onCo
           
           <img
             src={hydrominesLogo}
-            alt="Hydromines Logo"
+            alt="Excellence Logo"
             referrerPolicy="no-referrer"
             className="w-28 h-28 md:w-32 md:h-32 object-contain relative z-10 select-none pointer-events-none"
           />
@@ -96,7 +96,7 @@ export const PageLoading: React.FC<PageLoadingProps> = ({ isLoaded = false, onCo
 
         {/* Pure minimalist loading caption */}
         <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em]">
-          Chargement Hydromines
+          Chargement Excellence
         </p>
 
         {/* Polite status message for slower operations */}
@@ -108,7 +108,7 @@ export const PageLoading: React.FC<PageLoadingProps> = ({ isLoaded = false, onCo
             className="mt-6 text-center max-w-xs"
           >
             <p className="text-xs text-slate-500 font-sans font-medium tracking-wide leading-relaxed animate-pulse">
-              Veuillez patienter... L'Espace Magasinier Hydromines s'ouvrira dans quelques instants.
+              Veuillez patienter... L'Espace Magasinier Excellence s'ouvrira dans quelques instants.
             </p>
           </motion.div>
         )}

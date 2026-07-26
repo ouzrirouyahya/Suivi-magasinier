@@ -442,7 +442,7 @@ export function HydrominesCatalog() {
     if (!editingItem.id) {
       const alreadyExists = isAlreadyInHM(editingItem.reference);
       if (alreadyExists) {
-        toast.error(`La référence "${editingItem.reference}" existe déjà dans le Catalogue Hydromines !`);
+        toast.error(`La référence "${editingItem.reference}" existe déjà dans le Catalogue Excellence !`);
         return;
       }
     }
@@ -652,7 +652,7 @@ export function HydrominesCatalog() {
     if (!selectedCatalogItem) return;
 
     if (isAlreadyInHM(selectedCatalogItem.reference)) {
-      toast.warning(`La référence ${selectedCatalogItem.reference} existe déjà dans le Catalogue Hydromines ⭐`);
+      toast.warning(`La référence ${selectedCatalogItem.reference} existe déjà dans le Catalogue Excellence ⭐`);
       return;
     }
 
@@ -682,7 +682,7 @@ export function HydrominesCatalog() {
 
     try {
       await saveHydrominesCatalogItem(newItem);
-      toast.success(`La pièce ${newItem.reference} a été ajoutée avec succès au Catalogue Hydromines ⭐`);
+      toast.success(`La pièce ${newItem.reference} a été ajoutée avec succès au Catalogue Excellence ⭐`);
       
       // Clear selection so they can keep adding consecutive elements without closing physical modal
       setSelectedCatalogItem(null);
@@ -761,7 +761,7 @@ export function HydrominesCatalog() {
               </span>
             </div>
             <h2 className="text-sm font-black text-white uppercase tracking-wider mt-1">
-              Catalogue Hydromines Officiel d'Autorité Unique
+              Catalogue Excellence Officiel d'Autorité Unique
             </h2>
             <p className="text-xs text-slate-300 font-medium leading-relaxed max-w-2xl mt-0.5">
               Toutes les entrées, sorties et réapprovisionnements de pièces détachées sur chantiers doivent obligatoirement utiliser les fiches de ce catalogue. La Bibliothèque Technique sert exclusivement à l'homologation de nouvelles références.
@@ -918,7 +918,7 @@ export function HydrominesCatalog() {
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight">Contrôle Qualité & Conformité</h3>
                 </div>
                 <p className="text-[10px] font-semibold text-slate-400 mt-1 leading-normal">
-                  Audit en temps réel des caractéristiques techniques du référentiel Hydromines.
+                  Audit en temps réel des caractéristiques techniques du référentiel Excellence.
                 </p>
               </div>
 
@@ -1132,7 +1132,7 @@ export function HydrominesCatalog() {
                   <h3 className="text-xs font-black text-slate-900 uppercase tracking-tight">Performances & Rotation d'inventaire</h3>
                 </div>
                 <p className="text-[10px] font-semibold text-slate-400 mt-1">
-                  Analyse des mouvements réels sur le stock physique pour chaque référence du catalogue Hydromines.
+                  Analyse des mouvements réels sur le stock physique pour chaque référence du catalogue Excellence.
                 </p>
               </div>
 
@@ -1418,7 +1418,7 @@ export function HydrominesCatalog() {
                     <tr>
                       <td colSpan={isAdminOrMagasinier ? 9 : 8} className="px-6 py-20 text-center text-slate-400">
                         <Database className="w-12 h-12 text-slate-200 mx-auto mb-3 opacity-60" />
-                        <p className="font-bold text-sm text-slate-850">Aucun article trouvé dans le Catalogue Hydromines</p>
+                        <p className="font-bold text-sm text-slate-850">Aucun article trouvé dans le Catalogue Excellence</p>
                         <p className="text-xs text-slate-400 mt-1">Utilisez l'ajout depuis le catalogue technique pour enrichir la liste sans erreurs.</p>
                       </td>
                     </tr>
@@ -1581,7 +1581,7 @@ export function HydrominesCatalog() {
                 <div className="p-6 space-y-4">
                   <div className="bg-amber-50 border border-amber-200/50 rounded-xl p-3 text-xs text-amber-800 font-bold leading-normal">
                     <p>
-                      Vous vous apprêtez à initialiser librement en stock pour le chantier choisi {selectedItems.length} pièce(s) d'origine certifiée Hydromines.
+                      Vous vous apprêtez à initialiser librement en stock pour le chantier choisi {selectedItems.length} pièce(s) d'origine certifiée Excellence.
                     </p>
                   </div>
 
@@ -1649,7 +1649,7 @@ export function HydrominesCatalog() {
                   <h3 className="text-base font-black text-slate-900 uppercase tracking-tight">
                     {editingItem.id ? "Modifier la pièce" : "Enregistrer une nouvelle pièce"}
                   </h3>
-                  <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Hydromines Technical Master Catalog System</p>
+                  <p className="text-[11px] font-semibold text-slate-400 mt-0.5">Excellence Technical Master Catalog System</p>
                 </div>
                 <button
                   type="button"
@@ -1811,7 +1811,7 @@ export function HydrominesCatalog() {
                                       </span>
                                       {inHM && (
                                         <span className="text-[8px] font-black tracking-wide uppercase bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded leading-none">
-                                          ✓ Dans Hydromines
+                                          ✓ Dans Excellence
                                         </span>
                                       )}
                                     </div>
@@ -1935,7 +1935,7 @@ export function HydrominesCatalog() {
                           <div className="pt-4 border-t border-slate-200">
                             {isAlreadyInHM(selectedCatalogItem.reference) ? (
                               <div className="bg-slate-100 border border-slate-200 p-3 rounded-xl text-center text-slate-500 font-bold text-[10.5px]">
-                                ✓ DÉJÀ PRÉSENT DANS LE CATALOGUE HYDROMINES
+                                ✓ DÉJÀ PRÉSENT DANS LE CATALOGUE EXCELLENCE
                               </div>
                             ) : (
                               <button
@@ -1944,7 +1944,7 @@ export function HydrominesCatalog() {
                                 className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md shadow-sky-600/10 cursor-pointer transition-all active:scale-95"
                               >
                                 <Save className="w-4 h-4" />
-                                Ajouter au Catalogue Hydromines
+                                Ajouter au Catalogue Excellence
                               </button>
                             )}
                           </div>
@@ -2077,7 +2077,7 @@ export function HydrominesCatalog() {
                             className="w-4.5 h-4.5 rounded text-sky-600 focus:ring-sky-500 border-slate-350 bg-slate-50"
                           />
                           <div className="flex flex-col">
-                            <span className="text-xs font-bold text-slate-800">Déclarer cet article comme pièce critique Hydromines</span>
+                            <span className="text-xs font-bold text-slate-800">Déclarer cet article comme pièce critique Excellence</span>
                             <span className="text-[10px] font-semibold text-slate-450 leading-normal">Mettra en surbrillance rouge cet article dans les registres d'inventaire généraux.</span>
                           </div>
                         </label>

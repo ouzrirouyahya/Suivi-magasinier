@@ -165,7 +165,7 @@ self.addEventListener('sync', (event) => {
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SHOW_SYNC_NOTIFICATION') {
     const showNotificationPromise = self.registration.showNotification ? 
-      self.registration.showNotification('HydroMines — Synchro Cloud', {
+      self.registration.showNotification('Excellence — Synchro Cloud', {
         body: event.data.message || 'Données synchronisées avec succès !',
         icon: '/favicon.ico',
         badge: '/favicon.ico',

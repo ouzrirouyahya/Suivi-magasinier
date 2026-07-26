@@ -1,5 +1,5 @@
 /**
- * HydroMines Storage Hardening Engine v2.0 (SRE Runtime Enforcement)
+ * Excellence Storage Hardening Engine v2.0 (SRE Runtime Enforcement)
  * Encapsulates safe, multi-store IndexedDB operations with automated localStorage fallbacks.
  */
 import { logger } from '../lib/utils';

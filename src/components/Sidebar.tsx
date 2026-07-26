@@ -144,7 +144,7 @@ export const Sidebar = React.memo(function Sidebar({
     const handleAppInstalled = () => {
       setIsInstallable(false);
       (window as any).deferredPrompt = null;
-      toast.success("HydroMines a été installée sur votre appareil !");
+      toast.success("Excellence a été installée sur votre appareil !");
     };
     window.addEventListener('appinstalled', handleAppInstalled);
 
@@ -259,7 +259,7 @@ export const Sidebar = React.memo(function Sidebar({
 
       { id: 'TRACEABILITY', label: 'Grand Registre des Bons', icon: ShieldCheck, section: 'REGISTRES' },
       { id: 'GESTION_ARTICLES', label: 'Bibliothèque Technique', icon: Settings2, section: 'REGISTRES' },
-      { id: 'CATALOGUE_HYDROMINES', label: 'Catalogue Hydromines ⭐', icon: Database, section: 'REGISTRES' },
+      { id: 'CATALOGUE_HYDROMINES', label: 'Catalogue Excellence ⭐', icon: Database, section: 'REGISTRES' },
 
       { id: 'ANALYSE_EQUIPEMENTS', label: 'Rapports & Analyses 📊', icon: Activity, section: 'ADMINISTRATION' },
       { id: 'USER_MGMT', label: 'Paramètres système', icon: Users, section: 'ADMINISTRATION' },
@@ -351,14 +351,14 @@ export const Sidebar = React.memo(function Sidebar({
         <div className="p-5 pb-3 relative z-10 flex flex-col items-center text-center gap-2">
           <img 
             src={hydrominesLogo} 
-            alt="Hydromines" 
+            alt="Excellence" 
             className="w-16 h-16 object-contain drop-shadow-md hover:scale-105 transition-transform duration-200"
             referrerPolicy="no-referrer"
           />
           <div className="flex flex-col items-center">
             <h1 className="text-xl font-black tracking-tighter flex items-center gap-0.5 leading-none">
-              <span className="logo-hydro text-sky-500">HYDRO</span>
-              <span className="logo-mines text-[#FF5252]">MINES</span>
+              <span className="logo-hydro text-amber-500">EXCEL</span>
+              <span className="logo-mines text-amber-400">LENCE</span>
             </h1>
             <span className="text-[10px] text-slate-400 font-extrabold uppercase tracking-[0.07em] mt-1.5 leading-none">Suivi magasinier</span>
           </div>

@@ -36,7 +36,7 @@ export const DisabledPage: React.FC = () => {
             Bonjour, <span className="font-semibold text-slate-200">{currentUser?.name || currentUser?.email}</span>.
           </p>
           <p className="text-slate-400 text-sm">
-            Votre compte d'accès Hydromines a été temporairement désactivé par l'administration de la mine.
+            Votre compte d'accès Excellence a été temporairement désactivé par l'administration de la mine.
           </p>
         </div>
 

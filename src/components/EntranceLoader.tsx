@@ -40,7 +40,7 @@ export const EntranceLoader: React.FC<EntranceLoaderProps> = ({ onComplete }) =>
       } else if (currentProgress < 45) {
         setStatusText('Mise en cache locale du stock actif (IndexedDB)...');
       } else if (currentProgress < 70) {
-        setStatusText('Indexation du catalogue Hydromines...');
+        setStatusText('Indexation du catalogue Excellence...');
       } else if (currentProgress < 90) {
         setStatusText('Téléchargement de la télémétrie des forages...');
       } else {

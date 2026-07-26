@@ -63,7 +63,7 @@ async function startServer() {
       
       let systemPrompt = "";
       if (promptType === 'ANOMALIES') {
-        systemPrompt = `Tu es un expert en audit de consommation de carburant (Gasoil) et maintenance minière pour Hydromines. 
+        systemPrompt = `Tu es un expert en audit de consommation de carburant (Gasoil) et maintenance minière pour Excellence. 
         Analyse les mouvements et détecte des anomalies comme:
         - Surconsommation de gasoil par rapport aux heures machine / engin
         - Vols de gasoil suspectés (baisses brutales de stock sans sortie correspondante ou sorties trop fréquentes)
@@ -111,7 +111,7 @@ async function startServer() {
           }
         }`;
       } else if (promptType === 'MECHANIC_PERFORMANCE') {
-        systemPrompt = `Tu es un expert en gestion de flotte et capital humain pour Hydromines.
+        systemPrompt = `Tu es un expert en gestion de flotte et capital humain pour Excellence.
         Analyse la liste des agents fournie et leurs consommations d'articles dans les mouvements (en utilisant le champ 'beneficiaire').
         Compare les agents (mécaniciens / opérateurs) :
         - Qui consomme le plus de pièces détachées par rapport au volume d'activité ?
@@ -120,7 +120,7 @@ async function startServer() {
         Réponds uniquement au format JSON.
         Format: { "agentInsights": [{ "id": string, "agentName": string, "score": number, "analysis": string, "anomalies": string[], "strengths": string[] }] }`;
       } else if (promptType === 'COMPLIANCE') {
-        systemPrompt = `Tu es un auditeur de conformité pour Hydromines. 
+        systemPrompt = `Tu es un auditeur de conformité pour Excellence. 
         Vérifie la rigueur de saisie et les procédures dans les données fournies :
         - CRITIQUE : Sorties (type: SORTIE) dont le champ 'beneficiaire' est vide ou absent. C'est le problème n°1 à corriger.
         - Mouvements hors heures habituelles (nuit/weekend).
@@ -129,7 +129,7 @@ async function startServer() {
         Réponds uniquement au format JSON.
         Format: { "complianceIssues": [{ "id": string, "issue": string, "severity": "HIGH" | "MEDIUM" | "LOW", "affectedDocument": string, "reason": string }] }`;
       } else if (promptType === 'PROCUREMENT') {
-        systemPrompt = `Tu es un planificateur d'approvisionnement stratégique pour Hydromines.
+        systemPrompt = `Tu es un planificateur d'approvisionnement stratégique pour Excellence.
         Analyse les stocks actuels et suggère un plan d'achat :
         - Articles proches du point de commande.
         - Anticipation des besoins (Simbas, Jumbos).
@@ -137,7 +137,7 @@ async function startServer() {
         Réponds uniquement au format JSON.
         Format: { "procurementPlan": [{ "id": string, "articleName": string, "suggestedQty": number, "priority": "URGENT" | "NORMAL" | "LOW", "estimatedCost": string, "reasoning": string }] }`;
       } else {
-        systemPrompt = `Tu es un expert en planification de ravitaillement gasoil et pièces pour Hydromines. 
+        systemPrompt = `Tu es un expert en planification de ravitaillement gasoil et pièces pour Excellence. 
         Prédis les besoins pour les 30 prochains jours basés sur l'historique de consommation.
         Si l'article est "Gasoil", sois précis sur le litrage estimé (predictedNeed).
         Pour les autres pièces, base-toi sur la fréquence de changement.
@@ -224,7 +224,7 @@ async function startServer() {
 
       const { messages, context } = req.body;
       
-      const systemInstruction = `Tu es l'Expert Gemini d'Hydromines, spécialisé dans la maintenance des équipements miniers au jour et la gestion de magasin au jour.
+      const systemInstruction = `Tu es l'Expert Gemini d'Excellence, spécialisé dans la maintenance des équipements miniers au jour et la gestion de magasin au jour.
       Ton expertise inclut :
       - Les engins de forage (Jumbos, Simbas).
       - Les perforateurs Montabert (modèles T23 et T28).

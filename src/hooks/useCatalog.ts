@@ -89,7 +89,7 @@ export function useCatalog() {
 
     try {
       await catalogService.saveHydrominesItem(hydrominesItem);
-      toast.success(`✅ ${item.name || item.designation} ajouté au Catalogue Hydromines`);
+      toast.success(`✅ ${item.name || item.designation} ajouté au Catalogue Excellence`);
     } catch (err) {
       toast.error("Échec de l'ajout au catalogue");
     }

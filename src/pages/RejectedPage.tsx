@@ -45,7 +45,7 @@ export const RejectedPage: React.FC = () => {
           <HelpCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
           <div>
             <p className="font-semibold text-slate-300">Que faire ?</p>
-            <p>Si vous pensez qu'il s'agit d'une erreur, veuillez contacter la direction technique Hydromines pour clarifier votre situation d'accès.</p>
+            <p>Si vous pensez qu'il s'agit d'une erreur, veuillez contacter la direction technique Excellence pour clarifier votre situation d'accès.</p>
           </div>
         </div>
 

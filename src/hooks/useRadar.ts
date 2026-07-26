@@ -138,7 +138,7 @@ export function useRadar() {
     doc.setTextColor(255, 255, 255);
     doc.setFont('helvetica', 'bold');
     doc.setFontSize(24);
-    doc.text('HYDROMINES', 20, 25);
+    doc.text('EXCELLENCE', 20, 25);
     doc.setFontSize(14);
     doc.text(`Rapport RADAR - ${report.site}`, 20, 35);
     
@@ -214,7 +214,7 @@ export function useRadar() {
     // Footer
     doc.setTextColor(150, 150, 150);
     doc.setFontSize(8);
-    doc.text('HYDROMINES - Système RADAR d\'Analyse Logistique', 20, 280);
+    doc.text('EXCELLENCE - Système RADAR d\'Analyse Logistique', 20, 280);
     doc.text('Document confidentiel', pageWidth - 60, 280);
     
     doc.save(`RADAR_${report.site}_${new Date().toISOString().split('T')[0]}.pdf`);

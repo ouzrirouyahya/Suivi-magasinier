@@ -418,7 +418,7 @@ export interface ReplacementRequest {
  */
 
 /**
- * Familles d'équipements gérées par la plateforme Hydromines.
+ * Familles d'équipements gérées par la plateforme Excellence.
  */
 export type EquipmentFamily = 'ST2G' | 'ST2D' | 'ST7' | 'T23' | 'T28' | 'EPI' | 'CONSOMMABLES' | 'AUTRE';
 
@@ -460,7 +460,7 @@ export interface HydrominesCatalogItem {
 
 // =========================================================================
 // PHASE 1 — MESSAGERIE & NOTIFICATIONS BANNIÈRES
-// Extensions de types pour le système de communication interne Hydromines
+// Extensions de types pour le système de communication interne Excellence
 // =========================================================================
 
 export type MessagePriority = 'LOW' | 'NORMAL' | 'HIGH' | 'URGENT';
