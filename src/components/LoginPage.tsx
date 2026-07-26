@@ -296,64 +296,13 @@ const LoginPage: React.FC = () => {
             filter: blur(80px);
             animation: caustic-drift 10s ease-in-out infinite;
           }
-          .caustic:nth-child(1) { width: 400px; height: 150px; background: rgba(2,132,199,0.18); left: 20%; top: 60%; animation-delay: 0s; }
-          .caustic:nth-child(2) { width: 300px; height: 120px; background: rgba(2,132,199,0.12); right: 15%; top: 40%; animation-delay: -3s; }
-          .caustic:nth-child(3) { width: 250px; height: 100px; background: rgba(153,27,27,0.06); left: 50%; top: 70%; animation-delay: -6s; }
+          .caustic:nth-child(1) { width: 400px; height: 150px; background: rgba(245,158,11,0.12); left: 20%; top: 60%; animation-delay: 0s; }
+          .caustic:nth-child(2) { width: 300px; height: 120px; background: rgba(212,175,55,0.10); right: 15%; top: 40%; animation-delay: -3s; }
+          .caustic:nth-child(3) { width: 250px; height: 100px; background: rgba(234,179,8,0.08); left: 50%; top: 70%; animation-delay: -6s; }
           @keyframes caustic-drift {
             0%,100% { transform: translate(0,0) scale(1); }
             33% { transform: translate(20px,-15px) scale(1.08); }
             66% { transform: translate(-15px,10px) scale(0.95); }
-          }
-
-          .droplet-wrap {
-            position: absolute;
-            z-index: 80;
-            opacity: 0;
-            transform: translateY(-220px);
-            transform-origin: center bottom;
-          }
-          .droplet-wrap.fall {
-            animation: droplet-real-fall 0.9s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-          }
-          @keyframes droplet-real-fall {
-            0% { transform: translateY(-220px) scaleX(0.75) scaleY(1.35); opacity: 0; }
-            15% { opacity: 1; }
-            65% { transform: translateY(0) scaleX(0.85) scaleY(1.18); opacity: 1; }
-            82% { transform: translateY(14px) scaleX(1.25) scaleY(0.72); opacity: 1; }
-            92% { transform: translateY(-4px) scaleX(0.95) scaleY(1.05); opacity: 1; }
-            100% { transform: translateY(0) scaleX(1) scaleY(1); opacity: 1; }
-          }
-          .droplet-wrap.vanish {
-            animation: droplet-vanish 0.35s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-          }
-          @keyframes droplet-vanish {
-            0% { opacity: 1; transform: translateY(0) scale(1); }
-            100% { opacity: 0; transform: translateY(12px) scaleX(1.4) scaleY(0.2); }
-          }
-
-          .droplet-svg {
-            width: 48px;
-            height: 72px;
-          }
-
-          .droplet-trail {
-            position: absolute;
-            left: 50%;
-            top: -40px;
-            width: 1px;
-            height: 40px;
-            background: linear-gradient(to bottom, transparent, rgba(2,132,199,0.12));
-            transform: translateX(-50%);
-            opacity: 0;
-            border-radius: 1px;
-          }
-          .droplet-wrap.fall .droplet-trail {
-            animation: trail-fade 0.6s ease forwards;
-          }
-          @keyframes trail-fade {
-            0% { opacity: 0; height: 0; }
-            30% { opacity: 1; height: 40px; }
-            100% { opacity: 0; height: 20px; top: -20px; }
           }
 
           .impact-wrap {
@@ -548,18 +497,18 @@ const LoginPage: React.FC = () => {
             0%, 100% { 
               opacity: 0.65; 
               transform: scale(0.9) rotate(0deg); 
-              filter: drop-shadow(0 0 3px rgba(56, 189, 248, 0.45));
+              filter: drop-shadow(0 0 3px rgba(245, 158, 11, 0.6));
             }
             50% { 
               opacity: 1.0; 
               transform: scale(1.35) rotate(45deg); 
-              filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.95)) drop-shadow(0 0 20px rgba(14, 165, 233, 0.65));
+              filter: drop-shadow(0 0 10px rgba(245, 158, 11, 0.95)) drop-shadow(0 0 20px rgba(212, 175, 55, 0.8));
             }
           }
 
           .star-svg {
             display: block;
-            filter: drop-shadow(0 0 5px rgba(56, 189, 248, 0.85)) drop-shadow(0 0 15px rgba(2, 132, 199, 0.45));
+            filter: drop-shadow(0 0 5px rgba(245, 158, 11, 0.85)) drop-shadow(0 0 15px rgba(212, 175, 55, 0.6));
           }
 
           @media (max-width: 640px) {
@@ -568,7 +517,6 @@ const LoginPage: React.FC = () => {
             .stars-wrap { width: 240px; height: 80px; top: calc(50% - 105px); }
             .typo-brand .hydro,
             .typo-brand .mines { font-size: 32px; }
-            .droplet-svg { width: 40px; height: 60px; }
           }
         `}</style>
 
@@ -600,8 +548,8 @@ const LoginPage: React.FC = () => {
                   <svg className="star-svg" width={pos.size} height={pos.size} viewBox="0 0 24 24" fill="none">
                     <path
                       d="M12 1.5L14.7 9.3L23 9.8L16.5 15.2L18.8 23L12 18.8L5.2 23L7.5 15.2L1 9.8L9.3 9.3L12 1.5Z"
-                      fill="white"
-                      stroke="rgba(2,132,199,0.2)"
+                      fill="#F59E0B"
+                      stroke="rgba(212, 175, 55, 0.6)"
                       strokeWidth="0.5"
                       strokeLinejoin="round"
                     />
@@ -609,110 +557,6 @@ const LoginPage: React.FC = () => {
                 </div>
               ))}
             </div>
-          </div>
-
-          {/* GOUTTE */}
-          <div className={`droplet-wrap ${dropletClass}`} id="droplet">
-            <div className="droplet-trail"></div>
-            <svg className="droplet-svg" viewBox="0 0 48 72" xmlns="http://www.w3.org/2000/svg">
-              <defs>
-                <radialGradient id="d-body" cx="35%" cy="30%" r="75%">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.25"/>
-                  <stop offset="20%" stopColor="#E0F2FE" stopOpacity="0.18"/>
-                  <stop offset="55%" stopColor="#38BDF8" stopOpacity="0.32"/>
-                  <stop offset="85%" stopColor="#0284C7" stopOpacity="0.55"/>
-                  <stop offset="100%" stopColor="#0369A1" stopOpacity="0.75"/>
-                </radialGradient>
-                <linearGradient id="d-flow" x1="50%" y1="0%" x2="50%" y2="100%">
-                  <stop offset="0%" stopColor="#E0F2FE" stopOpacity="0"/>
-                  <stop offset="25%" stopColor="#E0F2FE" stopOpacity="0.45"/>
-                  <stop offset="55%" stopColor="#BAE6FD" stopOpacity="0.3"/>
-                  <stop offset="85%" stopColor="#7DD3FC" stopOpacity="0.2"/>
-                  <stop offset="100%" stopColor="#38BDF8" stopOpacity="0"/>
-                </linearGradient>
-                <radialGradient id="d-caustic1" cx="30%" cy="32%" r="25%">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.65"/>
-                  <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0"/>
-                </radialGradient>
-                <radialGradient id="d-caustic2" cx="68%" cy="60%" r="22%">
-                  <stop offset="0%" stopColor="#E0F2FE" stopOpacity="0.5"/>
-                  <stop offset="100%" stopColor="#0284C7" stopOpacity="0"/>
-                </radialGradient>
-                <radialGradient id="d-caustic3" cx="48%" cy="68%" r="18%">
-                  <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.45"/>
-                  <stop offset="100%" stopColor="#E0F2FE" stopOpacity="0"/>
-                </radialGradient>
-                <linearGradient id="d-rim" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#38BDF8" stopOpacity="0.55"/>
-                  <stop offset="30%" stopColor="#7DD3FC" stopOpacity="0.22"/>
-                  <stop offset="70%" stopColor="#0EA5E9" stopOpacity="0.15"/>
-                  <stop offset="100%" stopColor="#0284C7" stopOpacity="0.45"/>
-                </linearGradient>
-                <filter id="d-turb" x="-30%" y="-30%" width="160%" height="160%">
-                  <feTurbulence type="fractalNoise" baseFrequency="0.08" numOctaves="4" result="noise">
-                    <animate attributeName="baseFrequency" values="0.08;0.11;0.08" dur="3s" repeatCount="indefinite"/>
-                  </feTurbulence>
-                  <feDisplacementMap in="SourceGraphic" in2="noise" scale="1.4" xChannelSelector="R" yChannelSelector="G"/>
-                </filter>
-                <clipPath id="d-clip">
-                  <path d="M24 2 C24 2, 5 30, 5 48 C5 61.3, 13.2 71, 24 71 C34.8 71, 43 61.3, 43 48 C43 30, 24 2, 24 2Z"/>
-                </clipPath>
-              </defs>
-
-              {/* Backside water shadow simulation for real lens focus */}
-              <path d="M24 3 C24 3, 6 30, 6 48 C6 60, 14 69, 24 69 C34 69, 42 60, 42 48 C42 30, 24 3, 24 3Z" 
-                    fill="#0EA5E9" opacity="0.12" filter="blur(2px)"/>
-
-              {/* Main droplet body and edge highlights */}
-              <path d="M24 2 C24 2, 5 30, 5 48 C5 61.3, 13.2 71, 24 71 C34.8 71, 43 61.3, 43 48 C43 30, 24 2, 24 2Z" 
-                    fill="url(#d-body)" stroke="url(#d-rim)" strokeWidth="0.6"/>
-
-              <g clipPath="url(#d-clip)">
-                {/* Micro liquid-flow currents */}
-                <path d="M18 6 Q21 22 19 36 Q17 50 21 62 Q22 66 24 69" 
-                      fill="none" stroke="url(#d-flow)" strokeWidth="8" strokeLinecap="round" opacity="0.65">
-                  <animate attributeName="d" 
-                    values="M18 6 Q21 22 19 36 Q17 50 21 62 Q22 66 24 69;
-                            M20 6 Q19 22 21 36 Q23 50 19 62 Q21 66 24 69;
-                            M18 6 Q21 22 19 36 Q17 50 21 62 Q22 66 24 69"
-                    dur="2s" repeatCount="indefinite"/>
-                </path>
-                <path d="M28 8 Q25 24 27 38 Q29 52 25 64 Q24 67 24 70" 
-                      fill="none" stroke="url(#d-flow)" strokeWidth="5.5" strokeLinecap="round" opacity="0.45">
-                  <animate attributeName="d" 
-                    values="M28 8 Q25 24 27 38 Q29 52 25 64 Q24 67 24 70;
-                            M26 8 Q27 24 25 38 Q23 52 27 64 Q25 67 24 70;
-                            M28 8 Q25 24 27 38 Q29 52 25 64 Q24 67 24 70"
-                    dur="2.5s" repeatCount="indefinite"/>
-                </path>
-
-                {/* Light focal point at the bottom right (creates hyper-real glass/liquid refraction index) */}
-                <path d="M 8 48 C 12 66, 36 66, 40 48 C 34 58, 14 58, 8 48 Z" fill="url(#d-caustic2)" opacity="0.6"/>
-                <path d="M 12 52 C 16 63, 32 63, 36 52 C 32 58, 16 58, 12 52 Z" fill="#E0F2FE" opacity="0.45" />
-
-                {/* Inner light caustics */}
-                <ellipse cx="19" cy="26" rx="4.5" ry="6.5" fill="url(#d-caustic1)">
-                  <animate attributeName="cy" values="26;29;26" dur="3.2s" repeatCount="indefinite"/>
-                  <animate attributeName="cx" values="19;21;19" dur="2.6s" repeatCount="indefinite"/>
-                </ellipse>
-                <ellipse cx="29" cy="44" rx="3.5" ry="4.5" fill="url(#d-caustic2)">
-                  <animate attributeName="cy" values="44;41;44" dur="2.4s" repeatCount="indefinite"/>
-                  <animate attributeName="cx" values="29;27;29" dur="3.4s" repeatCount="indefinite"/>
-                </ellipse>
-                <ellipse cx="23" cy="56" rx="2.5" ry="3.5" fill="url(#d-caustic3)">
-                  <animate attributeName="cy" values="56;59;56" dur="3s" repeatCount="indefinite"/>
-                </ellipse>
-
-                {/* Micro turbulence inside */}
-                <ellipse cx="24" cy="38" rx="15" ry="24" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5" filter="url(#d-turb)"/>
-              </g>
-
-              {/* Sun reflections / Highly-specular glass highlights on outer surface */}
-              <ellipse cx="17" cy="17" rx="7" ry="10" fill="url(#d-caustic1)" transform="rotate(-15 17 17)" opacity="0.85"/>
-              <ellipse cx="19" cy="15" rx="3" ry="5" fill="#FFFFFF" transform="rotate(-15 19 15)" opacity="0.95"/>
-              <circle cx="12" cy="28" r="1.5" fill="#FFFFFF" opacity="0.55"/>
-              <path d="M14 60 Q24 65 34 60" fill="none" stroke="rgba(255,255,255,0.12)" strokeWidth="1.0" strokeLinecap="round"/>
-            </svg>
           </div>
 
           {/* IMPACT */}
