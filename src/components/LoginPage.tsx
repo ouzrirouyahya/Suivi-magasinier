@@ -47,7 +47,6 @@ const LoginPage: React.FC = () => {
   const [showIntro, setShowIntro] = React.useState<boolean>(() => {
     return sessionStorage.getItem('hydromines_login_intro_played') !== 'true';
   });
-  const [dropletClass, setDropletClass] = React.useState('');
   const [impactClass, setImpactClass] = React.useState('');
   const [logoClass, setLogoClass] = React.useState('');
   const [causticsClass, setCausticsClass] = React.useState('');
@@ -104,15 +103,9 @@ const LoginPage: React.FC = () => {
       };
     }
 
-    const t1 = setTimeout(() => {
-      setDropletClass('fall');
-    }, 300);
-    timersRef.current.push(t1);
-
     const t2 = setTimeout(() => {
-      setDropletClass('vanish');
       setImpactClass('on');
-    }, 1200);
+    }, 400);
     timersRef.current.push(t2);
 
     const t3 = setTimeout(() => {

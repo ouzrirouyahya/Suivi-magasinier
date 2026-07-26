@@ -209,7 +209,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               <div className="inline-flex items-center gap-2 px-3 py-1 bg-amber-50/60 border border-amber-200/50 rounded-full">
                 <span className="w-2 h-2 bg-[#d4af37] rounded-full animate-pulse" />
                 <span className="text-[10px] font-bold tracking-wider uppercase text-[#b8860b] font-mono">
-                  HYDROMINES ERP
+                  PLATEFORME D'EXCELLENCE
                 </span>
               </div>
               
@@ -243,10 +243,9 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
 
           {/* Section HUD / Horloge droite (3 cols) - clean stack */}
           <div className="lg:col-span-3 bg-white flex flex-col justify-center items-center lg:items-end p-6 lg:pr-10 gap-3">
-            <div className="flex items-center gap-1 px-2.5 py-0.5 bg-amber-50 border border-amber-200/30 rounded-md shadow-sm">
+            <div className="flex items-center gap-1.5 px-2.5 py-0.5 bg-amber-50 border border-amber-200/40 rounded-md shadow-sm">
               <span className="w-1.5 h-1.5 bg-[#b8860b] rounded-full animate-pulse" />
-              <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">HYDRO</span>
-              <span className="text-[9px] font-black tracking-wider uppercase text-slate-900 -ml-0.5">MINES</span>
+              <span className="text-[9px] font-black tracking-widest uppercase text-[#b8860b]">EXCELLENCE</span>
             </div>
             <div className="px-2.5 py-0.5 bg-slate-50 border border-slate-150 rounded-md text-[9px] font-mono font-bold text-slate-650 shadow-sm flex items-center gap-1.5">
               <span className="text-slate-400">Live:</span>
@@ -407,7 +406,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
               Transferts & Retours
             </h4>
             <p className="text-[11px] text-slate-500 font-medium mt-1 leading-snug">
-              Expédier ou réceptionner du matériel en transit entre les chantiers de l'exploitation Hydromines ou gérer un retour fournisseur.
+              Expédier ou réceptionner du matériel en transit entre les chantiers de l'exploitation Excellence ou gérer un retour fournisseur.
             </p>
           </div>
 

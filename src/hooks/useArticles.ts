@@ -395,6 +395,8 @@ export function useArticles() {
       await batch.commit();
     }
 
+    snapshotManager.markCollectionSaved('articles');
+
     return { imported: importedCount, skipped: skippedCount };
   }, [rawArticles]);
 

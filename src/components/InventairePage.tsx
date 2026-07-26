@@ -54,7 +54,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     }
   }, [currentUser]);
 
-  const siteArticles = articles.filter(a => a.site === currentSite && a.active);
+  const siteArticles = articles.filter(a => (currentSite === 'ALL' || a.site === currentSite) && a.active);
   
   const filteredArticles = siteArticles.filter(a => {
     const matchesSearch = a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase());
