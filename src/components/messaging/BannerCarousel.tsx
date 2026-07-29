@@ -110,7 +110,7 @@ export default function BannerCarousel() {
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: -50, opacity: 0 }}
         role="region"
-        aria-label="Annonces Hydromines"
+        aria-label="Annonces Excellence"
         aria-live="polite"
         className={`fixed top-[56px] left-0 right-0 z-40 flex items-center justify-between px-4 py-3 text-white transition-all ${style.bg} ${style.accent}`}
         id="banner-carousel-container"

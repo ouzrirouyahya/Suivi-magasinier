@@ -339,7 +339,7 @@ export function MonthlyClosingView() {
             Clôture Comptable & Inventaire Mensuel
           </h2>
           <p className="text-xs text-slate-400 font-medium">
-            Scellez les comptes de stock mensuels, générez des états financiers officiels et assurez la conformité absolue des 5 chantiers Hydromines.
+            Scellez les comptes de stock mensuels, générez des états financiers officiels et assurez la conformité absolue des 5 chantiers Excellence.
           </p>
         </div>
       </div>
@@ -671,7 +671,7 @@ export function MonthlyClosingView() {
                 CERTIFICAT DE CLÔTURE DE STOCK
               </h3>
               <p className="text-[10px] text-indigo-900 font-extrabold uppercase tracking-widest bg-indigo-50/70 inline-block px-3 py-1 rounded-full">
-                Hydromines Logistique • Période de {getMonthLabel(selectedClosing.month)}
+                Excellence Logistique • Période de {getMonthLabel(selectedClosing.month)}
               </p>
               <p className="text-[11px] text-slate-400 font-mono font-semibold">
                 ID Unique Archive : HMAC-{selectedClosing.id}

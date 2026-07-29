@@ -13,10 +13,10 @@ export const HydrominesSecurityAlert: React.FC<HydrominesSecurityAlertProps> = (
         <div className="absolute inset-0 bg-rose-500/10 rounded-3xl blur-xl animate-pulse" />
       </div>
       <h2 className="text-4xl font-black text-slate-900 uppercase tracking-tighter mb-4">Accès Restreint</h2>
-      <p className="text-xl font-bold text-slate-500 uppercase tracking-widest mb-2 opacity-70">HYDROMINES - DIVISION IA</p>
+      <p className="text-xl font-bold text-slate-500 uppercase tracking-widest mb-2 opacity-70">EXCELLENCE - DIVISION IA</p>
       <div className="h-px bg-slate-100 w-full my-8" />
       <p className="text-slate-600 font-medium leading-relaxed mb-10">
-        Désolé, cette zone de haute sécurité est exclusivement réservée aux administrateurs certifiés de la plateforme Hydromines.
+        Désolé, cette zone de haute sécurité est exclusivement réservée aux administrateurs certifiés de la plateforme Excellence.
       </p>
       <button 
         onClick={onClose}

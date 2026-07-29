@@ -197,7 +197,7 @@ export function Dashboard({ site, articles, mouvements, isAdmin, onAction, onArt
           <div className="lg:col-span-3 p-6 flex items-center justify-center lg:justify-start bg-white lg:pl-10">
             <img 
               src={hydrominesLogo} 
-              alt="Hydromines Logo" 
+              alt="Excellence Logo" 
               referrerPolicy="no-referrer"
               className="h-32 lg:h-44 xl:h-48 w-auto object-contain select-none pointer-events-none"
             />

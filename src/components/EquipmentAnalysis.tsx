@@ -1350,7 +1350,7 @@ export function EquipmentAnalysis() {
                     <div className="p-4 bg-indigo-500/[0.04] border border-indigo-100 rounded-2xl flex gap-3 items-start">
                       <Cpu className="w-5 h-5 text-indigo-600 shrink-0 mt-0.5" />
                       <div className="space-y-1">
-                        <p className="text-xs font-black text-slate-900 uppercase">Recommandation Expert Hydromines-Maintenance</p>
+                        <p className="text-xs font-black text-slate-900 uppercase">Recommandation Expert Excellence-Maintenance</p>
                         <p className="text-[11px] text-slate-600 leading-relaxed font-sans font-medium">
                           Le Scooptram <strong>{selectedEngin}</strong> présente un taux d'intervention supérieur à la moyenne de sa flotte. Nous suggérons une vidange d'huile hydraulique et une vérification de la tension de la chenille de translation lors de son prochain passage à l'atelier principal.
                         </p>
@@ -1732,7 +1732,7 @@ export function EquipmentAnalysis() {
                                   <td className="p-3">
                                     <div className="space-y-0.5">
                                       <span className="font-mono text-[10px] text-slate-900 font-bold">{part.name}</span>
-                                      <p className="text-[9px] text-slate-400 font-sans font-medium">Consommable de forage certifié Hydromines</p>
+                                      <p className="text-[9px] text-slate-400 font-sans font-medium">Consommable de forage certifié Excellence</p>
                                     </div>
                                   </td>
                                   <td className="p-3 text-center text-slate-900 font-black">

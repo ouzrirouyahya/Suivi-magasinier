@@ -17,7 +17,7 @@ export const auditService = {
       userId: auth.currentUser?.uid || 'system_service_account',
       userRole,
       deviceInfo,
-      sourcePlatform: 'HydroMines Web Application Core'
+      sourcePlatform: 'Excellence Web Application Core'
     }));
   },
 
@@ -35,7 +35,7 @@ export const auditService = {
       userId: auth.currentUser?.uid || 'system_service_account',
       userRole,
       deviceInfo,
-      sourcePlatform: 'HydroMines Web Application Core'
+      sourcePlatform: 'Excellence Web Application Core'
     }));
   }
 };

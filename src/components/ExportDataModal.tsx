@@ -409,7 +409,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
                     Rapports et Exportations Excel
                   </h3>
                   <p className="text-[10px] font-bold text-[#b8860b] uppercase tracking-wider mt-0.5">
-                    Extractions personnalisées aux couleurs de Hydromines
+                    Extractions personnalisées aux couleurs d'Excellence
                   </p>
                 </div>
               </div>
@@ -654,7 +654,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
             <div className="px-6 py-4.5 border-t border-slate-100 bg-slate-50/50 flex justify-between items-center shrink-0">
               <span className="text-[9px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-1">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                Service Exportation Hydromines opérationnel
+                Service Exportation Excellence opérationnel
               </span>
               <button
                 type="button"

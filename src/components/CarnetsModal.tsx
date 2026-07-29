@@ -261,7 +261,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
             <ClipboardList className="w-8 h-8 text-sky-600" />
             <div>
               <h1 className="text-2xl font-black tracking-tight text-slate-900 uppercase">Carnets de Bord des Machines</h1>
-              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Hydromines Underground Database • Site : <span className="text-sky-600">{site}</span></p>
+              <p className="text-xs text-slate-400 font-bold uppercase tracking-wider mt-0.5">Excellence Underground Database • Site : <span className="text-sky-600">{site}</span></p>
             </div>
           </div>
 
@@ -281,7 +281,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
         <div className="hidden print:block border-b-4 border-slate-950 pb-6 mb-8">
           <div className="flex justify-between items-end">
             <div>
-              <h1 className="text-3xl font-black text-slate-950 tracking-tighter uppercase leading-none">HYDROMINES</h1>
+              <h1 className="text-3xl font-black text-slate-950 tracking-tighter uppercase leading-none">EXCELLENCE</h1>
               <p className="text-xs uppercase tracking-[0.25em] font-extrabold text-slate-400 mt-2">Fiche Historique de Consommation Machine</p>
             </div>
             <div className="text-right">

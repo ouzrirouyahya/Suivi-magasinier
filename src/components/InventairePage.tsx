@@ -16,7 +16,8 @@ import {
   Drill,
   Droplets,
   Eye,
-  Shield
+  Shield,
+  ShieldAlert
 } from 'lucide-react';
 import { Article, SiteCode, Inventaire } from '../types';
 import { cn, generateId, formatCurrency } from '../lib/utils';
@@ -54,7 +55,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     }
   }, [currentUser]);
 
-  const siteArticles = articles.filter(a => (currentSite === 'ALL' || a.site === currentSite) && a.active);
+  const siteArticles = articles.filter(a => a.site === currentSite && a.active);
   
   const filteredArticles = siteArticles.filter(a => {
     const matchesSearch = a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase());
@@ -296,6 +297,22 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     toast.success("Tous les articles ont été réglés comme conformes.");
   };
 
+  if (currentSite === 'ALL') {
+    return (
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 flex flex-col items-center justify-center text-center gap-4 max-w-2xl mx-auto my-12 shadow-sm">
+        <ShieldAlert className="w-12 h-12 text-amber-600 shrink-0" />
+        <div className="space-y-2">
+          <h3 className="text-sm font-black uppercase tracking-wider text-amber-800">
+            Sélection de Chantier Requise
+          </h3>
+          <p className="text-xs text-amber-800 font-medium leading-relaxed">
+            ⚠️ Sélectionne un chantier précis dans le menu en haut de l'application pour lancer ou consulter un inventaire physique. Un inventaire se fait toujours sur un seul chantier à la fois.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-8 animate-in fade-in slide-in-from-bottom-6 duration-700 pb-24 mission-control-bg p-12 flex-1">
       {isReadOnly && (
@@ -349,7 +366,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
               <span className="text-[9px] font-bold tracking-wider uppercase text-[#b8860b]">SMI AUDITEUR</span>
             </div>
             <div className="px-3.5 py-1.5 bg-gradient-to-br from-slate-900 to-slate-950 border border-slate-800 rounded-lg text-xs font-black text-[#ffd700] shadow-md uppercase tracking-widest select-none leading-none">
-              {currentSite === 'ALL' ? 'TOUS LES SITES' : currentSite}
+              {currentSite}
             </div>
           </div>
           

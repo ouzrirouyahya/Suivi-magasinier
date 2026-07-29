@@ -296,7 +296,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
       {/* Sub-Header Section */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print border-b border-slate-100 pb-4">
         <div className="flex items-center gap-3">
-          <img src={hydrominesLogo} alt="Hydromines" className="w-10 h-10 object-contain" />
+          <img src={hydrominesLogo} alt="Excellence" className="w-10 h-10 object-contain" />
           <div>
             <h3 className="text-sm font-black text-slate-900 uppercase tracking-widest flex items-center gap-2">
               <Clock className="w-4 h-4 text-sky-500" />
@@ -585,7 +585,7 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                   {/* Doubled the logo size from h-16 to h-32 to be perfectly visible */}
                   <img src={hydrominesLogo} alt="Logo" className="h-32 w-auto object-contain" />
                   <div>
-                    <h1 className="text-4xl font-black tracking-tighter uppercase text-slate-950 leading-none">HYDROMINES</h1>
+                    <h1 className="text-4xl font-black tracking-tighter uppercase text-slate-950 leading-none">EXCELLENCE</h1>
                     <p className="text-[11px] font-black text-slate-400 tracking-[0.25em] uppercase mt-2">Exploitation Minière & Logistique</p>
                   </div>
                 </div>

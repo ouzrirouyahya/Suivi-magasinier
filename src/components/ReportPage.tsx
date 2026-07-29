@@ -503,7 +503,7 @@ export function ReportPage() {
         <AlertCircle className="w-12 h-12 text-amber-500 mb-4 opacity-50" />
         <h2 className="text-sm font-black text-slate-900 uppercase tracking-widest">Accès Limité</h2>
         <p className="text-slate-500 mt-2 font-bold max-w-sm text-xs">
-          Seuls les administrateurs et directeurs peuvent consulter les rapports consolidés d'Hydromines.
+          Seuls les administrateurs et directeurs peuvent consulter les rapports consolidés d'Excellence.
         </p>
       </div>
     );
@@ -569,7 +569,7 @@ export function ReportPage() {
         {/* PRINT ONLY LOGO HEADER */}
         <div className="hidden print:flex items-center justify-between border-b-2 border-slate-900 pb-4 mb-8">
           <div>
-            <h1 className="text-xl font-black uppercase tracking-widest text-slate-900">Hydromines</h1>
+            <h1 className="text-xl font-black uppercase tracking-widest text-slate-900">Excellence</h1>
             <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">RAPPORT LOGISTIQUE OFFICIEL</p>
           </div>
           <div className="text-right">
@@ -718,7 +718,7 @@ export function ReportPage() {
                     🤖 RADAR — Système d'Analyse Intelligente
                   </h2>
                   <p className="text-slate-500 text-xs mt-0.5">
-                    Moteur d'intelligence logistique locale d'Hydromines. Analyse des pièces, consommation machine et détection des fraudes.
+                    Moteur d'intelligence logistique locale d'Excellence. Analyse des pièces, consommation machine et détection des fraudes.
                   </p>
                 </div>
                 <div className="ai-controls">

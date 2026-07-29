@@ -238,7 +238,7 @@ export function MaintenanceModule() {
           recs = [
             "Démontage et brossage ultrasonique du clapet de retour des gaz (EGR).",
             "Changer préventivement la cartouche filtrante d'insufflation d'air.",
-            "Ajouter l'additif HydroMines Turbo-Cleaner directement lors du prochain plein de gasoil."
+            "Ajouter l'additif Excellence Turbo-Cleaner directement lors du prochain plein de gasoil."
           ];
           parts = [
             { ref: 'SKU_FILTRE_AIR_P', designation: 'Cartouche de filtre à air primaire renforcé', neededQty: 1 }
