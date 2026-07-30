@@ -19,6 +19,7 @@ export const RestockPage: React.FC = () => {
           mouvements={mouvements}
           purchaseRequests={purchaseRequests}
           isReadOnly={isReadOnlyUser}
+          isAdmin={currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN'}
           onCreatePR={(items) => {
             if (isReadOnlyUser) {
               toast.error("Action refusée : Mode lecture seule actif.");
@@ -55,6 +56,11 @@ export const RestockPage: React.FC = () => {
           onDeletePR={async (id) => {
             if (isReadOnlyUser) {
               toast.error("Action refusée : Mode lecture seule actif.");
+              return;
+            }
+            const pr = purchaseRequests.find(p => p.id === id);
+            if (pr?.status === 'RECU') {
+              toast.error("Impossible de supprimer une demande déjà réceptionnée — elle fait partie de l'historique d'achat.");
               return;
             }
             try {

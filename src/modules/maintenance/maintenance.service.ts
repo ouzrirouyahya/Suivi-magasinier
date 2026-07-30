@@ -44,15 +44,17 @@ export class MaintenanceService {
     }
 
     // 2. Transaction
+    const articleUpdates: { id: string; ref: any; newQty: number; price: number; article: Article }[] = [];
+
     await firestoreRepository.runTransactionBlock(async (transaction) => {
+      articleUpdates.length = 0;
+
       // Idempotency check
       const logRef = doc(db, 'maintenanceLogs', id);
       const logSnap = await transaction.get(logRef);
       if (logSnap.exists()) {
         throw new Error("OPERATION_DEJA_EXECUTE");
       }
-
-      const articleUpdates: { id: string; ref: any; newQty: number; price: number; article: Article }[] = [];
 
       if (log.partsUsed && log.partsUsed.length > 0) {
         for (const part of log.partsUsed) {
@@ -174,6 +176,10 @@ export class MaintenanceService {
         details: `Machine: ${log.machineId}`,
         amount: log.cost || 0
       }));
+    });
+
+    articleUpdates.forEach(upd => {
+      useArticlesStore.getState().updateArticleLocal(upd.id, { quantity: upd.newQty });
     });
 
     useMaintenanceStore.getState().addMaintenanceLogLocal(log);

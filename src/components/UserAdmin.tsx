@@ -177,6 +177,10 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
       return;
     }
+    if (currentSite === 'ALL') {
+      toast.error("Sélectionne un chantier précis dans le menu en haut de l'application avant de créer un engin — impossible d'en créer un pour 'Tous les sites' à la fois.");
+      return;
+    }
     if (isSaving) return;
     setEnginSubmitted(true);
     if (!enginCode.trim() || !enginLabel.trim() || !enginType || !enginWorkingLocation) {
@@ -251,6 +255,10 @@ export const UserAdmin = React.memo(function UserAdmin({
       toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
       return;
     }
+    if (currentSite === 'ALL') {
+      toast.error("Sélectionne un chantier précis dans le menu en haut de l'application avant de créer un agent — impossible d'en créer un pour 'Tous les sites' à la fois.");
+      return;
+    }
     if (isSaving) return;
     setAgentSubmitted(true);
     if (!agentMatricule.trim() || !agentFirstname.trim() || !agentLastname.trim() || !agentService.trim()) {
@@ -322,6 +330,10 @@ export const UserAdmin = React.memo(function UserAdmin({
   const handleSavePerfo = async () => {
     if (isReadOnly) {
       toast.error("Le compte est en lecture seule. Impossible d'enregistrer.");
+      return;
+    }
+    if (currentSite === 'ALL') {
+      toast.error("Sélectionne un chantier précis dans le menu en haut de l'application avant de créer un perforateur — impossible d'en créer un pour 'Tous les sites' à la fois.");
       return;
     }
     if (isSaving) return;
@@ -1131,7 +1143,14 @@ export const UserAdmin = React.memo(function UserAdmin({
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registre du Parc Matériel</h3>
-              <button onClick={addEngin} className="btn bg-sky-600 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-2 shadow-sm">
+              <button 
+                onClick={addEngin} 
+                disabled={currentSite === 'ALL'}
+                className={cn(
+                  "btn bg-sky-600 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-2 shadow-sm",
+                  currentSite === 'ALL' && "opacity-50 cursor-not-allowed"
+                )}
+              >
                 <Plus className="w-3.5 h-3.5" /> Ajouter
               </button>
             </div>
@@ -1340,7 +1359,14 @@ export const UserAdmin = React.memo(function UserAdmin({
                 <h3 className="text-sm font-black uppercase tracking-widest text-slate-900">Registre du Personnel (Site {currentSite})</h3>
                 <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Gérez l'effectif des travailleurs du jour pour les attributions de matériel.</p>
               </div>
-              <button onClick={addAgent} className="bg-sky-600 text-white hover:bg-sky-700 px-4 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-2 shadow-md cursor-pointer transition-all active:scale-95">
+              <button 
+                onClick={addAgent} 
+                disabled={currentSite === 'ALL'}
+                className={cn(
+                  "bg-sky-600 text-white hover:bg-sky-700 px-4 py-2 rounded-xl text-xs font-black uppercase flex items-center gap-2 shadow-md cursor-pointer transition-all active:scale-95",
+                  currentSite === 'ALL' && "opacity-50 cursor-not-allowed"
+                )}
+              >
                 <Plus className="w-4 h-4" /> Ajouter
               </button>
             </div>
@@ -1590,7 +1616,14 @@ export const UserAdmin = React.memo(function UserAdmin({
           <div className="space-y-4">
             <div className="flex justify-between items-center">
               <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-400">Registre des Perforateurs</h3>
-              <button onClick={addPerfo} className="btn bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-2 shadow-sm">
+              <button 
+                onClick={addPerfo} 
+                disabled={currentSite === 'ALL'}
+                className={cn(
+                  "btn bg-rose-600 text-white px-3 py-1.5 rounded-lg text-xs font-black uppercase flex items-center gap-2 shadow-sm",
+                  currentSite === 'ALL' && "opacity-50 cursor-not-allowed"
+                )}
+              >
                 <Plus className="w-3.5 h-3.5" /> Ajouter
               </button>
             </div>

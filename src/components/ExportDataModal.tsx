@@ -29,6 +29,7 @@ import {
 import { useArticlesStore } from '../stores/article.store';
 import { useMovementsStore } from '../stores/movement.store';
 import { useTransfersStore } from '../stores/transfer.store';
+import { useAuthStore } from '../stores/auth.store';
 import { getPriceHistory } from '../services/priceHistory.service';
 import { PriceChangeRecord } from '../types/priceHistory';
 import { SiteCode } from '../types';
@@ -62,6 +63,7 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
   const [priceHistory, setPriceHistory] = useState<PriceChangeRecord[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
+  const currentSite = useAuthStore(state => state.currentSite);
   const articles = useArticlesStore(state => state.articles);
   const movements = useMovementsStore(state => state.mouvements);
   const transfers = useTransfersStore(state => state.transferts);
@@ -440,9 +442,10 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Chantier / Site</label>
                     <div className="relative">
                       <select
-                        value={siteFilter}
+                        value={currentSite === 'ALL' ? siteFilter : currentSite}
                         onChange={(e) => setSiteFilter(e.target.value as any)}
-                        className="w-full h-10 pl-3 pr-10 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#b8860b] focus:ring-1 focus:ring-[#b8860b] transition-all cursor-pointer appearance-none animate-pulse-once"
+                        disabled={currentSite !== 'ALL'}
+                        className="w-full h-10 pl-3 pr-10 bg-white border border-slate-200 hover:border-slate-300 rounded-xl text-xs font-semibold text-slate-700 focus:outline-none focus:border-[#b8860b] focus:ring-1 focus:ring-[#b8860b] transition-all cursor-pointer appearance-none animate-pulse-once disabled:opacity-50 disabled:cursor-not-allowed"
                       >
                         <option value="ALL">🏢 Tous les sites (Consolidé)</option>
                         <option value="SMI">SMI</option>
@@ -453,6 +456,11 @@ export function ExportDataModal({ open, onClose }: ExportDataModalProps) {
                       </select>
                       <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-3 pointer-events-none" />
                     </div>
+                    {currentSite !== 'ALL' && (
+                      <p className="text-[10px] text-amber-600 font-medium mt-1">
+                        Pour exporter tous les chantiers ou un autre chantier, sélectionne d'abord "Tous les sites" dans le menu principal de l'application.
+                      </p>
+                    )}
                   </div>
 
                   {/* Dropdown to choose preset */}

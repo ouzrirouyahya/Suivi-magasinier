@@ -14,9 +14,10 @@ interface RestockModuleProps {
   onReceivePR: (pr: PurchaseRequest) => void;
   onDeletePR: (id: string) => void;
   isReadOnly?: boolean;
+  isAdmin?: boolean;
 }
 
-export function RestockModule({ site, articles, purchaseRequests, mouvements = [], onCreatePR, onUpdatePRStatus, onReceivePR, onDeletePR, isReadOnly = false }: RestockModuleProps) {
+export function RestockModule({ site, articles, purchaseRequests, mouvements = [], onCreatePR, onUpdatePRStatus, onReceivePR, onDeletePR, isReadOnly = false, isAdmin = false }: RestockModuleProps) {
   const [view, setView] = React.useState<'ALERTS' | 'HISTORY' | 'CREATE'>('ALERTS');
   const [search, setSearch] = React.useState('');
   const [selectedItems, setSelectedItems] = React.useState<Record<string, number>>({});
@@ -357,16 +358,14 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
                       >
                         <Printer className="w-5 h-5" />
                       </button>
-                      <button 
-                        onClick={() => !isReadOnly && setDeleteConfirmId(pr.id)}
-                        disabled={isReadOnly}
-                        className={cn(
-                          "w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 shadow-sm",
-                          isReadOnly && "opacity-45 cursor-not-allowed"
-                        )}
-                      >
-                        <Trash2 className="w-5 h-5" />
-                      </button>
+                      {isAdmin && !isReadOnly && (
+                        <button 
+                          onClick={() => setDeleteConfirmId(pr.id)}
+                          className="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 flex items-center justify-center hover:bg-rose-50 hover:text-rose-600 transition-all active:scale-95 shadow-sm"
+                        >
+                          <Trash2 className="w-5 h-5" />
+                        </button>
+                      )}
                     </div>
                     <div className="flex gap-3">
                       {pr.status === 'BROUILLON' && (
@@ -414,7 +413,7 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
         </div>
       )}
 
-      {deleteConfirmId && (
+      {isAdmin && !isReadOnly && deleteConfirmId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
           <div className="bg-slate-900 border border-red-500/30 rounded-2xl p-6 max-w-sm w-full shadow-2xl">
             <h3 className="text-white font-black text-lg mb-2">
