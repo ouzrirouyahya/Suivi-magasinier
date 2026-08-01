@@ -232,6 +232,10 @@ export function MonthlyClosingView() {
   };
 
   const handlePerformClosing = async () => {
+    if (!isSuperAdmin) {
+      toast.error("Seul le Super Administrateur est autorisé à sceller une clôture mensuelle.");
+      return;
+    }
     if (currentSite !== 'ALL') {
       toast.error("Clôture bloquée : le mode 'Tous les sites' doit être actif.");
       return;
@@ -281,6 +285,10 @@ export function MonthlyClosingView() {
   };
 
   const handleConfirmDelete = async () => {
+    if (!isSuperAdmin) {
+      toast.error("Seul le Super Administrateur est autorisé à supprimer une archive de clôture.");
+      return;
+    }
     if (!deleteConfirmId || isDeleting) return;
     setIsDeleting(true);
     try {

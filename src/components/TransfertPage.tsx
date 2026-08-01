@@ -100,7 +100,9 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
   const removeItem = (id: string) => setItems(items.filter(i => i.articleId !== id));
 
   const updateItemQty = (id: string, qtyStr: string) => {
-    setItems(items.map(i => i.articleId === id ? { ...i, quantity: qtyStr as any } : i));
+    const parsed = parseFloat(qtyStr);
+    const validQty = isNaN(parsed) ? 0 : parsed;
+    setItems(items.map(i => i.articleId === id ? { ...i, quantity: validQty } : i));
   };
 
   // Create a raw Brouillon transfer

@@ -122,6 +122,11 @@ export function useArticles() {
   }, [rawArticles, movements]);
 
   const saveArticle = useCallback(async (article: Article) => {
+    if (article.site === 'ALL') {
+      const err = "Impossible d'enregistrer un article sur le mode 'Tous les sites'. Sélectionne un chantier précis dans l'en-tête.";
+      toast.error(err);
+      throw new Error(err);
+    }
     // Vérifier l'unicité de la référence sur le site
     const existingArticle = (rawArticles || []).find(a => a.id === article.id);
 

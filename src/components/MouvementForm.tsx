@@ -934,6 +934,22 @@ export function MouvementForm({ type, site, articles, catalog, engins, perfos, a
       );
     }
 
+    if (type === 'SORTIE') {
+      const missingBeneficiary = items.find(it => {
+        const art = articles.find(a => a.id === it.articleId) || localCreatedArticles.find(a => a.id === it.articleId);
+        const itemType = art?.type || (it as any).type || (it as any).category;
+        return (itemType === 'EPI' || itemType === 'OUTILS_TRAVAUX') && (!it.beneficiaryId || !it.beneficiaryId.trim());
+      });
+      if (missingBeneficiary) {
+        const art = articles.find(a => a.id === missingBeneficiary.articleId) || localCreatedArticles.find(a => a.id === missingBeneficiary.articleId);
+        const designation = art?.designation || missingBeneficiary.articleDesignation || 'article';
+        toast.error(`Sélectionnez un bénéficiaire pour "${designation}" — obligatoire pour les EPI et outils.`);
+        submissionLockRef.current = false;
+        setIsSubmitting(false);
+        return;
+      }
+    }
+
     if (type === 'SORTIE' && !isMachineRelated) {
       const missingBeneficiary = items.some(item => !item.beneficiaryId);
       if (missingBeneficiary) {

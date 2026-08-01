@@ -695,10 +695,10 @@ export const MouvementHistory = React.memo(function MouvementHistory({ site, mou
                             <span className="text-[10px] font-mono text-slate-400 mt-0.5 block">{ref}</span>
                           </td>
                           <td className="py-4 px-6 text-center font-black text-slate-950 text-sm">
-                            {item.quantity}
+                            {Number(item.quantity) || 0}
                           </td>
                           <td className="py-4 px-6 text-right font-semibold text-slate-600">
-                            {formatCurrency(item.price)}
+                            {formatCurrency(Number(item.price) || 0)}
                           </td>
                           <td className="py-4 px-6 text-right font-black text-slate-950 text-sm">
                             {formatCurrency((Number(item.quantity) || 0) * (Number(item.price) || 0))}

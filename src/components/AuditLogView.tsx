@@ -4,6 +4,24 @@ import { AuditLog, SiteCode } from '../types';
 import { cn, formatCurrency } from '../lib/utils';
 import { useInventory } from '../context/InventoryContext';
 
+const formatLogTimestamp = (ts: unknown): string => {
+  if (!ts) return '';
+  try {
+    const d = typeof ts === 'object' && ts !== null && 'toDate' in ts && typeof (ts as { toDate: () => Date }).toDate === 'function'
+      ? (ts as { toDate: () => Date }).toDate()
+      : new Date(ts as string | number | Date);
+    if (isNaN(d.getTime()) || d.getFullYear() <= 1970) return '';
+    return d.toLocaleString('fr-FR', {
+      day: '2-digit',
+      month: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  } catch {
+    return '';
+  }
+};
+
 interface AuditLogViewProps {
   logs: AuditLog[];
   dateFilter?: string;
@@ -138,15 +156,10 @@ export const AuditLogView = React.memo(function AuditLogView({
                     <div className="flex items-center gap-1.5">
                       <Calendar className="w-3.5 h-3.5 text-slate-300" />
                       <span className="text-[11px] font-bold text-slate-600">
-                        {!log.timestamp || new Date(log.timestamp as any).getFullYear() <= 1970 ? (
+                        {!formatLogTimestamp(log.timestamp) ? (
                           <span className="text-amber-500 animate-pulse uppercase tracking-wider text-[9px]">À l'instant</span>
                         ) : (
-                          new Date(log.timestamp as any).toLocaleString('fr-FR', {
-                            day: '2-digit',
-                            month: '2-digit',
-                            hour: '2-digit',
-                            minute: '2-digit'
-                          })
+                          formatLogTimestamp(log.timestamp)
                         )}
                       </span>
                     </div>

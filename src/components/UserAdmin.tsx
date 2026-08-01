@@ -163,6 +163,10 @@ export const UserAdmin = React.memo(function UserAdmin({
 
   // Handlers for Engins
   const addEngin = () => {
+    if (currentSite === 'ALL') {
+      toast.error("Sélectionne un chantier précis dans le menu en haut de l'application avant de créer un engin.");
+      return;
+    }
     setShowAddEngin(true);
     setEnginCode('');
     setEnginLabel('');
@@ -240,6 +244,10 @@ export const UserAdmin = React.memo(function UserAdmin({
 
   // Handlers for Agents
   const addAgent = () => {
+    if (currentSite === 'ALL') {
+      toast.error("Sélectionne un chantier précis dans le menu en haut de l'application avant de créer un agent.");
+      return;
+    }
     setShowAddAgent(true);
     setAgentMatricule('');
     setAgentFirstname('');
@@ -320,6 +328,10 @@ export const UserAdmin = React.memo(function UserAdmin({
 
   // Handlers for Perfos
   const addPerfo = () => {
+    if (currentSite === 'ALL') {
+      toast.error("Sélectionne un chantier précis dans le menu en haut de l'application avant de créer un perforateur.");
+      return;
+    }
     setShowAddPerfo(true);
     setPerfoCode('');
     setPerfoLocation('IMITER 1');

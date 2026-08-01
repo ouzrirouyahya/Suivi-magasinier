@@ -122,7 +122,7 @@ export function ReportPage() {
     const value = todayMovements.reduce((sum, m) => {
       return sum + (m.items?.reduce((isum, it) => isum + (Number(it.quantity) || 0) * (Number(it.price) || 0), 0) || 0);
     }, 0);
-    return value > 0 ? value : 45000; // Elegant default fallback
+    return value;
   }, [mouvements]);
 
   const siteMetrics = useMemo(() => {
@@ -163,7 +163,7 @@ export function ReportPage() {
     const totalQty = activeTransfers.reduce((sum, t) => {
       return sum + (t.items?.reduce((isum, it) => isum + (Number(it.quantity) || 0), 0) || 0);
     }, 0);
-    return totalQty > 0 ? totalQty : 12; // Beautiful requested default fallback
+    return totalQty;
   }, [transferts]);
 
   // Evolution chart data: Entrées vs Sorties over the last 7 days
@@ -186,8 +186,8 @@ export function ReportPage() {
       
       data.push({
         name: label,
-        'Entrées (MAD)': entrees > 0 ? entrees : Math.floor(Math.random() * 25000 + 4000), // realistic values fallback
-        'Sorties (MAD)': sorties > 0 ? sorties : Math.floor(Math.random() * 18000 + 3000),
+        'Entrées (MAD)': entrees,
+        'Sorties (MAD)': sorties,
       });
     }
     return data;

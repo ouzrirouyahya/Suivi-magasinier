@@ -55,7 +55,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
     }
   }, [currentUser]);
 
-  const siteArticles = articles.filter(a => a.site === currentSite && a.active);
+  const siteArticles = articles.filter(a => (currentSite === 'ALL' || a.site === currentSite) && a.active);
   
   const filteredArticles = siteArticles.filter(a => {
     const matchesSearch = a.designation.toLowerCase().includes(search.toLowerCase()) || a.ref.toLowerCase().includes(search.toLowerCase());
@@ -68,7 +68,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
   const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
   const recentlyAuditedIds = new Set(
     inventaires
-      .filter(i => i.site === currentSite &&
+      .filter(i => (currentSite === 'ALL' || i.site === currentSite) &&
                    i.status === 'VALIDE' &&
                    new Date(i.date).getTime() > thirtyDaysAgo)
       .flatMap(i => i.items.map(item => item.articleId))
@@ -79,7 +79,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
 
   // B) Last validated accuracy
   const lastValidated = [...inventaires]
-    .filter(i => i.site === currentSite && i.status === 'VALIDE')
+    .filter(i => (currentSite === 'ALL' || i.site === currentSite) && i.status === 'VALIDE')
     .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())[0];
 
   let accuracy = '—';
@@ -150,7 +150,7 @@ export function InventairePage({ currentSite, articles, inventaires, onSaveInven
           const validCount = isNaN(parsed) ? 0 : parsed;
           return {
             ...i,
-            countedQuantity: count as any,
+            countedQuantity: validCount,
             difference: validCount - (i.theoricQuantity || 0)
           };
         }

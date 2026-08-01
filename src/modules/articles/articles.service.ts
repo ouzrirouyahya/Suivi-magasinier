@@ -200,12 +200,14 @@ export class ArticlesService {
         articleData = docSnap.data();
         oldPrice = articleData.price || 0;
 
-        transaction.update(docRef, { price: newPrice });
+        transaction.update(docRef, { 
+          price: newPrice
+        });
 
         auditService.logActionTx(
           transaction,
           'MODIFICATION_PRIX',
-          `Prix de "${articleData.designation}" (${articleData.ref}) modifié de ${oldPrice} Dhs à ${newPrice} Dhs. Raison : ${reason}`,
+          `Prix de "${articleData.designation}" (${articleData.ref}) modifié de ${oldPrice} Dhs à ${newPrice} Dhs. Raison : ${reason} [Non rétroactif sur les clôtures passées]`,
           articleData.site,
           userRole,
           newPrice - oldPrice
@@ -213,7 +215,9 @@ export class ArticlesService {
       });
 
       // Update local store after transaction success
-      useArticlesStore.getState().updateArticleLocal(articleId, { price: newPrice });
+      useArticlesStore.getState().updateArticleLocal(articleId, { 
+        price: newPrice
+      });
 
       // Log price change to history in fire-and-forget style
       logPriceChange({

@@ -176,6 +176,10 @@ export const Sidebar = React.memo(function Sidebar({
 
   const handleSubmitReplacement = async () => {
     if (!currentUser || !reason.trim()) return;
+    if (currentSite === 'ALL') {
+      toast.error("Sélectionne un chantier précis dans le menu en haut de l'application avant de faire une demande de remplacement.");
+      return;
+    }
     
     const requestUuid = generateSecureUUID();
     const startDate = new Date().toISOString();
@@ -466,7 +470,11 @@ export const Sidebar = React.memo(function Sidebar({
                       setDays(5);
                       setShowReplacementModal(true);
                     }} 
-                    className="text-[10px] text-emerald-600 font-black uppercase hover:underline block pt-1"
+                    disabled={currentSite === 'ALL'}
+                    className={cn(
+                      "text-[10px] text-emerald-600 font-black uppercase hover:underline block pt-1",
+                      currentSite === 'ALL' && "opacity-50 cursor-not-allowed"
+                    )}
                   >
                     Prolonger la période
                   </button>
@@ -488,7 +496,11 @@ export const Sidebar = React.memo(function Sidebar({
                     setDays(1);
                     setShowReplacementModal(true);
                   }}
-                  className="w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(245,158,11,0.2)] active:scale-95"
+                  disabled={currentSite === 'ALL'}
+                  className={cn(
+                    "w-full py-2.5 px-3 bg-amber-500 hover:bg-amber-600 text-white rounded-xl font-black text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-[0_2px_8px_rgba(245,158,11,0.2)] active:scale-95",
+                    currentSite === 'ALL' && "opacity-50 cursor-not-allowed"
+                  )}
                 >
                   <span>🔧</span> Remplacer Magasinier
                 </button>

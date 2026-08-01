@@ -2040,7 +2040,7 @@ export function HydrominesCatalog() {
                         <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Famille Matériel</label>
                         <select
                           value={editingItem.equipmentFamily || 'CONSOMMABLES'}
-                          onChange={(e) => setEditingItem(prev => ({ ...prev, equipmentFamily: e.target.value as any }))}
+                          onChange={(e) => setEditingItem(prev => ({ ...prev, equipmentFamily: e.target.value as EquipmentFamily }))}
                           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
                         >
                           <option value="ST2G">ST2G</option>
@@ -2059,7 +2059,7 @@ export function HydrominesCatalog() {
                         <label className="text-[10px] font-black uppercase text-slate-500 tracking-wider">Statut</label>
                         <select
                           value={editingItem.status || 'ACTIF'}
-                          onChange={(e) => setEditingItem(prev => ({ ...prev, status: e.target.value as any }))}
+                          onChange={(e) => setEditingItem(prev => ({ ...prev, status: e.target.value as 'ACTIF' | 'INACTIF' }))}
                           className="w-full px-3.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 focus:outline-none cursor-pointer"
                         >
                           <option value="ACTIF">ACTIF</option>

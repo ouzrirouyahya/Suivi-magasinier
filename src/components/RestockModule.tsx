@@ -78,6 +78,10 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
   };
 
   const handleCreate = () => {
+    if (site === 'ALL') {
+      toast.error("Sélectionne un chantier précis dans le menu en haut de l'application avant de créer une demande d'achat.");
+      return;
+    }
     const items = Object.entries(selectedItems)
       .filter(([_, qty]) => qty > 0 && !isNaN(qty))  // ← guard
       .map(([id, quantity]) => ({
@@ -168,10 +172,10 @@ export function RestockModule({ site, articles, purchaseRequests, mouvements = [
             {Object.keys(selectedItems).length > 0 && (
               <button 
                 onClick={handleCreate}
-                disabled={isReadOnly}
+                disabled={isReadOnly || site === 'ALL'}
                 className={cn(
                   "btn bg-sky-600 text-white h-12 px-8 rounded-xl font-black uppercase text-xs tracking-widest shadow-xl shadow-sky-200",
-                  isReadOnly && "opacity-50 cursor-not-allowed pointer-events-none"
+                  (isReadOnly || site === 'ALL') && "opacity-50 cursor-not-allowed pointer-events-none"
                 )}
               >
                 Générer Demande d'Achat

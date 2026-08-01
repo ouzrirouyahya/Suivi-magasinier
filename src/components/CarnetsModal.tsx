@@ -4,6 +4,16 @@ import { SiteCode, Mouvement, Article, EnginMaster, PerfoMaster } from '../types
 import { cn } from '../lib/utils';
 import { useInventory } from '../context/InventoryContext';
 
+const safeGetYearMonth = (rawDate: unknown): string => {
+  if (!rawDate) return '';
+  if (typeof rawDate === 'string') return rawDate.slice(0, 7);
+  if (typeof rawDate === 'object' && rawDate !== null && 'toDate' in rawDate && typeof (rawDate as { toDate: () => Date }).toDate === 'function') {
+    return (rawDate as { toDate: () => Date }).toDate().toISOString().slice(0, 7);
+  }
+  const d = new Date(String(rawDate));
+  return !isNaN(d.getTime()) ? d.toISOString().slice(0, 7) : '';
+};
+
 interface CarnetsModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -29,17 +39,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
     return sitePerfos.map(p => {
       const perfoMovementsThisMonth = mouvements.filter(m => {
         if (m.type !== 'SORTIE' || (site !== 'ALL' && m.site !== site) || m.perforateur !== p.code) return false;
-        try {
-          const rawDate: any = m.date;
-          const dateStr = (typeof rawDate === 'string') 
-            ? rawDate 
-            : (rawDate && typeof rawDate.toDate === 'function') 
-              ? rawDate.toDate().toISOString() 
-              : new Date(rawDate as any).toISOString();
-          return dateStr.slice(0, 7) === currentMonthStr;
-        } catch {
-          return false;
-        }
+        return safeGetYearMonth(m.date) === currentMonthStr;
       });
       const monthQty = perfoMovementsThisMonth.reduce((sum, m) => 
         sum + m.items.reduce((acc, it) => acc + (it.quantity || 0), 0), 0
@@ -52,17 +52,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
     return siteEngins.map(e => {
       const enginMovementsThisMonth = mouvements.filter(m => {
         if (m.type !== 'SORTIE' || (site !== 'ALL' && m.site !== site) || m.engin !== e.code) return false;
-        try {
-          const rawDate: any = m.date;
-          const dateStr = (typeof rawDate === 'string') 
-            ? rawDate 
-            : (rawDate && typeof rawDate.toDate === 'function') 
-              ? rawDate.toDate().toISOString() 
-              : new Date(rawDate as any).toISOString();
-          return dateStr.slice(0, 7) === currentMonthStr;
-        } catch {
-          return false;
-        }
+        return safeGetYearMonth(m.date) === currentMonthStr;
       });
       const monthQty = enginMovementsThisMonth.reduce((sum, m) => 
         sum + m.items.reduce((acc, it) => acc + (it.quantity || 0), 0), 0

@@ -838,7 +838,7 @@ export function formatMovementsSummaryDashboard(movements: Mouvement[], articles
           if (m.type === 'ENTREE' || m.type === 'RETOUR' || m.type === 'TRANSFERT_IN') {
             totalQtyIn += item.quantity || 0;
             totalValIn += total;
-          } else {
+          } else if (m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT') {
             totalQtyOut += item.quantity || 0;
             totalValOut += total;
           }
@@ -878,7 +878,7 @@ export function formatMovementsSummaryDashboard(movements: Mouvement[], articles
       if (m.type === 'ENTREE' || m.type === 'RETOUR' || m.type === 'TRANSFERT_IN') {
         grandQtyIn += item.quantity || 0;
         grandValIn += total;
-      } else {
+      } else if (m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT') {
         grandQtyOut += item.quantity || 0;
         grandValOut += total;
       }

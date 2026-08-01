@@ -190,13 +190,15 @@ export function FinancialDashboard() {
       return sum + (qty * price);
     }, 0);
 
-  const siteStockValue = articles
-    .filter(a => a.active !== false && a.site === currentSite)
-    .reduce((sum, a) => {
-      const qty = Number(a.quantity) || 0;
-      const price = Number(a.price) || 0;
-      return sum + (qty * price);
-    }, 0);
+  const siteStockValue = currentSite === 'ALL'
+    ? totalStockValue
+    : articles
+        .filter(a => a.active !== false && a.site === currentSite)
+        .reduce((sum, a) => {
+          const qty = Number(a.quantity) || 0;
+          const price = Number(a.price) || 0;
+          return sum + (qty * price);
+        }, 0);
   
   // Last 30 days entries vs exits
   const thirtyDaysAgo = new Date();
@@ -363,7 +365,7 @@ export function FinancialDashboard() {
         />
         <KPI 
           icon={PieChart} 
-          label="Valeur Site Actuel" 
+          label={currentSite === 'ALL' ? "Valeur Totale (Tous Sites)" : "Valeur Site Actuel"} 
           value={formatCurrency(siteStockValue)} 
           color="indigo" 
           trend="Local" 
