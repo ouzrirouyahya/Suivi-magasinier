@@ -40,7 +40,11 @@ export function useMaintenance() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'maintenanceLogs');
     });
-    return unsub;
+    const key = `maintenanceLogs_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setMaintenanceLogs, currentUser, currentSite]);
 
   // Subscribe to engins
@@ -60,7 +64,11 @@ export function useMaintenance() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'engins');
     });
-    return unsub;
+    const key = `engins_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setEngins, currentUser, currentSite]);
 
   // Subscribe to perfos
@@ -80,7 +88,11 @@ export function useMaintenance() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'perfos');
     });
-    return unsub;
+    const key = `perfos_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setPerfos, currentUser, currentSite]);
 
   // Subscribe to agents
@@ -100,7 +112,11 @@ export function useMaintenance() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'agents');
     });
-    return unsub;
+    const key = `agents_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setAgents, currentUser, currentSite]);
 
   const addMaintenanceLog = useCallback(async (log: MaintenanceLog) => {

@@ -80,8 +80,20 @@ export function calculatePriceUpdates(
 type InventoryContextType = ReturnType<typeof useInventoryMaster>;
 const InventoryContext = createContext<InventoryContextType | null>(null);
 
+function useShallowMemo<T extends Record<string, any>>(obj: T): T {
+  const ref = React.useRef<T>(obj);
+  const changed =
+    Object.keys(obj).length !== Object.keys(ref.current).length ||
+    Object.keys(obj).some((key) => obj[key] !== ref.current[key]);
+  if (changed) {
+    ref.current = obj;
+  }
+  return ref.current;
+}
+
 export function InventoryProvider({ children }: { children: ReactNode }) {
-  const value = useInventoryMaster();
+  const rawValue = useInventoryMaster();
+  const value = useShallowMemo(rawValue);
 
   return (
     <InventoryContext.Provider value={value}>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { collection, onSnapshot, db } from '../lib/db';
+import { snapshotManager } from '../lib/snapshotManager';
 
 export function useOnlineStatus() {
   const [presenceData, setPresenceData] = useState<Record<string, string>>({});
@@ -21,7 +22,10 @@ export function useOnlineStatus() {
       console.error('[useOnlineStatus] Error fetching presence:', error);
     });
 
-    return () => unsubscribe();
+    snapshotManager.registerListener('presence_status', unsubscribe);
+    return () => {
+      snapshotManager.unsubscribe('presence_status');
+    };
   }, []);
 
   // Fonction pour recalculer le Set des utilisateurs en ligne

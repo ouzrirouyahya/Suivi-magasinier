@@ -51,7 +51,11 @@ export function useNotifications() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'notifications');
     });
-    return unsub;
+    const key = `notifications_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setNotifications, currentUser, currentSite]);
 
   const addNotification = useCallback(async (notif: Partial<AppNotification>) => {

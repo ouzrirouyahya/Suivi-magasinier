@@ -33,7 +33,10 @@ export function useCatalog() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'catalog');
     });
-    return unsub;
+    snapshotManager.registerListener('catalog_master', unsub);
+    return () => {
+      snapshotManager.unsubscribe('catalog_master');
+    };
   }, [setCatalog, currentUser]);
 
   // Subscribe to hydromines catalog
@@ -49,7 +52,10 @@ export function useCatalog() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'hydromines_catalog');
     });
-    return unsub;
+    snapshotManager.registerListener('hydromines_catalog_master', unsub);
+    return () => {
+      snapshotManager.unsubscribe('hydromines_catalog_master');
+    };
   }, [setHydrominesCatalog, currentUser]);
 
   const addToHydrominesCatalog = useCallback(async (

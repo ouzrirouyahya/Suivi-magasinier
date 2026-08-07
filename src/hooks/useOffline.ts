@@ -66,8 +66,9 @@ export function useOffline() {
     if (retryQueue.length === 0 || isSyncingRef.current) return;
     isSyncingRef.current = true;
     
-    // Transitionner visuellement vers le mode RECOVERING pendant la synchronisation
-    setNetworkQuality('RECOVERING');
+    try {
+      // Transitionner visuellement vers le mode RECOVERING pendant la synchronisation
+      setNetworkQuality('RECOVERING');
     
     const queue = [...retryQueue];
     const processedIds: string[] = [];
@@ -190,7 +191,9 @@ export function useOffline() {
     
     // Rétablir la qualité réseau d'origine une fois fini
     setNetworkQuality('ONLINE');
-    isSyncingRef.current = false;
+    } finally {
+      isSyncingRef.current = false;
+    }
   }, []);
 
   // Network monitoring

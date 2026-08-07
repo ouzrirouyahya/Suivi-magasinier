@@ -53,6 +53,9 @@ export const offlineService = {
       case 'closeTransfert':
         res = await transfersService.closeTransfert(payload.id, payload.comment);
         break;
+      case 'cancelTransfert':
+        res = await transfersService.cancelTransfert(payload.id, payload.userEmail, payload.reason);
+        break;
       case 'addMaintenanceLog':
         await maintenanceService.addMaintenanceLog(payload);
         return;

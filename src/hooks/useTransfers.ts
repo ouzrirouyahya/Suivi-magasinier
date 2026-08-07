@@ -42,7 +42,11 @@ export function useTransfers() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'transferts');
     });
-    return unsub;
+    const key = `transferts_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setTransferts, currentSite, currentUser]);
 
   const addTransfert = useCallback(async (t: Transfert) => {
@@ -311,12 +315,46 @@ export function useTransfers() {
     }
   }, []);
 
+  const cancelTransfert = useCallback(async (id: string, reason?: string) => {
+    const userEmail = currentUser?.email || 'Inconnu';
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      const res = await transfersService.cancelTransfert(id, userEmail, reason, true);
+      if (!res.success) throw new Error(res.error);
+      
+      const intentId = 'can_' + crypto.randomUUID();
+      const payload = { intentId, type: 'cancelTransfert', payload: { id, userEmail, reason } };
+      await offlineQueue.add(payload);
+      
+      const { retryQueue, setRetryQueue } = useSystemStore.getState();
+      setRetryQueue([...retryQueue, {
+        intentId,
+        type: 'cancelTransfert',
+        payload: { id, userEmail, reason },
+        retryCount: 0,
+        maxRetries: 3
+      }]);
+      toast.info("Mode hors-ligne : annulation et réintégration de stock enregistrées localement.");
+      return;
+    }
+
+    try {
+      const res = await transfersService.cancelTransfert(id, userEmail, reason);
+      if (!res.success) throw new Error(res.error);
+      toast.success("Transfert annulé et stocks réintégrés sur le site source.");
+    } catch (err: any) {
+      toast.error(`Erreur d'annulation : ${err.message}`);
+      throw err;
+    }
+  }, [currentUser]);
+
   return {
     transferts,
     addTransfert,
     completeTransfert,
     approveTransfert,
     closeTransfert,
+    cancelTransfert,
     expedierTransfert,
     receptionnerTransfert,
     accepterEtCloturerTransfert,

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { collection, onSnapshot, query, orderBy, limit, where, startAfter, getDocs, DocumentSnapshot, db } from '../lib/db';
 import { useSystemStore } from '../stores/system.store';
 import { auditService } from '../services/audit.service';
+import { snapshotManager } from '../lib/snapshotManager';
 import { AuditLog } from '../types';
 import { serializeFirestoreData, handleFirestoreError, OperationType } from '../lib/utils';
 import { useAuthStore } from '../stores/auth.store';
@@ -61,7 +62,11 @@ export function useAudit() {
       handleFirestoreError(error, OperationType.LIST, 'auditLogs');
     });
 
-    return unsub;
+    const key = `auditLogs_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [currentUser, currentSite, dateFilter, setAuditLogs]);
 
   const loadMoreAuditLogs = async () => {

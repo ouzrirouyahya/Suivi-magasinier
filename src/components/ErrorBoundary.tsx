@@ -30,6 +30,12 @@ export class ErrorBoundary extends React.Component<Props, State> {
     });
   }
 
+  componentDidUpdate(prevProps: Props) {
+    if (this.state.hasError && prevProps.componentName !== this.props.componentName) {
+      this.setState({ hasError: false, error: null, errorInfo: null });
+    }
+  }
+
   handleReset = () => {
     this.setState({ hasError: false, error: null, errorInfo: null });
   };

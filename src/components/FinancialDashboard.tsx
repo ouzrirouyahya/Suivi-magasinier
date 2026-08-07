@@ -42,14 +42,14 @@ export function FinancialDashboard() {
   // Taux de Rotation Calculation
   const tauxRotationStats = useMemo(() => {
     const activeArticlesValue = articles
-      .filter(a => a.active !== false)
+      .filter(a => a.active !== false && (currentSite === 'ALL' || a.site === currentSite))
       .reduce((sum, a) => sum + ((Number(a.quantity) || 0) * (Number(a.price) || 0)), 0);
 
     const oneYearAgo = new Date();
     oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
 
     const sortiesValue12Mois = mouvements
-      .filter(m => m.type === 'SORTIE' && new Date(toDateString(m.date)) >= oneYearAgo)
+      .filter(m => m.type === 'SORTIE' && (currentSite === 'ALL' || m.site === currentSite) && new Date(toDateString(m.date)) >= oneYearAgo)
       .reduce((sum, m) => sum + (m.items?.reduce((s, it) => s + ((Number(it.quantity) || 0) * (Number(it.price) || 0)), 0) || 0), 0);
 
     const taux = activeArticlesValue > 0 ? (sortiesValue12Mois / activeArticlesValue) : 0;
@@ -69,12 +69,13 @@ export function FinancialDashboard() {
       badge,
       colorClass
     };
-  }, [articles, mouvements]);
+  }, [articles, mouvements, currentSite]);
 
   // Ruptures Coûteuses Calculation
   const rupturesStats = useMemo(() => {
     const count = articles.filter(a => 
       a.active !== false && 
+      (currentSite === 'ALL' || a.site === currentSite) &&
       (a.minStock || 0) > 0 && 
       (a.quantity || 0) <= (a.minStock || 0) && 
       (Number(a.price) || 0) > 10000
@@ -92,11 +93,11 @@ export function FinancialDashboard() {
       badge,
       colorClass
     };
-  }, [articles]);
+  }, [articles, currentSite]);
 
   // Stock Dormant (+1an) Calculation
   const dormantStats = useMemo(() => {
-    const activeArticles = articles.filter(a => a.active !== false);
+    const activeArticles = articles.filter(a => a.active !== false && (currentSite === 'ALL' || a.site === currentSite));
     const totalValue = activeArticles.reduce((sum, a) => sum + ((Number(a.quantity) || 0) * (Number(a.price) || 0)), 0);
     if (totalValue <= 0) {
       return {
@@ -113,7 +114,7 @@ export function FinancialDashboard() {
     const activeQtyArticles = activeArticles.filter(a => (Number(a.quantity) || 0) > 0);
     const lastSortieDateMap: Record<string, number> = {};
     mouvements.forEach(m => {
-      if (m.type === 'SORTIE') {
+      if (m.type === 'SORTIE' && (currentSite === 'ALL' || m.site === currentSite)) {
         const mTime = new Date(toDateString(m.date)).getTime();
         m.items?.forEach(it => {
           if (it.articleId) {
@@ -147,11 +148,11 @@ export function FinancialDashboard() {
       badge,
       colorClass
     };
-  }, [articles, mouvements]);
+  }, [articles, mouvements, currentSite]);
 
   // Précision Inventaire Calculation
   const precisionStats = useMemo(() => {
-    const validInventaires = inventaires.filter(inv => inv.status === 'VALIDE');
+    const validInventaires = inventaires.filter(inv => inv.status === 'VALIDE' && (currentSite === 'ALL' || inv.site === currentSite));
     const allItems = validInventaires.flatMap(inv => inv.items || []);
     const matchingItems = allItems.filter(item => item.difference === 0).length;
     const precisionPercent = allItems.length > 0 ? (matchingItems / allItems.length * 100) : null;
@@ -179,7 +180,7 @@ export function FinancialDashboard() {
       badge,
       colorClass
     };
-  }, [inventaires]);
+  }, [inventaires, currentSite]);
 
   // Financial Stats Calculation
   const totalStockValue = articles
@@ -207,11 +208,11 @@ export function FinancialDashboard() {
   const filterLast30 = (m: any) => new Date(m.date || m.timestamp) >= thirtyDaysAgo;
 
   const totalEntriesValue = mouvements
-    .filter(m => filterLast30(m) && (m.type === 'ENTREE' || m.type === 'TRANSFERT_IN'))
+    .filter(m => filterLast30(m) && (currentSite === 'ALL' || m.site === currentSite) && (m.type === 'ENTREE' || m.type === 'TRANSFERT_IN'))
     .reduce((sum, m) => sum + (m.items?.reduce((s, it) => s + ((Number(it.quantity) || 0) * (Number(it.price) || 0)), 0) || 0), 0);
 
   const totalExitsValue = mouvements
-    .filter(m => filterLast30(m) && (m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT'))
+    .filter(m => filterLast30(m) && (currentSite === 'ALL' || m.site === currentSite) && (m.type === 'SORTIE' || m.type === 'TRANSFERT_OUT'))
     .reduce((sum, m) => sum + (m.items?.reduce((s, it) => s + ((Number(it.quantity) || 0) * (Number(it.price) || 0)), 0) || 0), 0);
 
   // Chart Data: Stock Value by Site

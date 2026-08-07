@@ -193,6 +193,7 @@ export interface MouvementItem {
   beneficiaryId?: string; // ID of worker receiving the item
   beneficiaryName?: string; // Name of worker receiving the item
   beneficiaryService?: string; // Service of worker receiving the item
+  beneficiaire?: string; // Nom du bénéficiaire spécifique à l'article
   quantityReceived?: number; // Saisie à la réception (Phase 7)
   quantityDamaged?: number; // Saisie à la réception (Phase 7)
   comment?: string; // Commentaire par article (Phase 7)
@@ -268,6 +269,8 @@ export type TransfertStatus =
   | 'RECEIVED' 
   | 'DISPUTED' 
   | 'CLOSED'
+  | 'CANCELLED'
+  | 'ANNULE'
   | 'EN_TRANSIT' | 'RECU' // garder UNIQUEMENT pour compatibilité descendante avec commentaire
   | 'BROUILLON' | 'DEMANDE' | 'APPROUVE' | 'EXPEDIE' | 'RECEPTIONNE' | 'ACCEPTE' | 'LITIGE'; // Autres statuts historiques pour compatibilité descendante
 

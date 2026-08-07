@@ -2,6 +2,7 @@ import { create } from 'zustand';
 import { UserAccount, SiteCode } from '../types';
 import { logger } from '../lib/utils';
 import { IndexedDBStorage } from '../core/indexedDBStorage';
+import { snapshotManager } from '../lib/snapshotManager';
 
 interface AuthState {
   currentUser: UserAccount | null;
@@ -98,6 +99,7 @@ export const useAuthStore = create<AuthState>((set, get) => {
           localStorage.setItem('hydromines_cached_user', JSON.stringify(minimizeUser(nextUser)));
         } else {
           localStorage.removeItem('hydromines_cached_user');
+          snapshotManager.clearAllListeners();
           // Clear all local cache on logout for high security
           IndexedDBStorage.saveCollection('articles', []);
           IndexedDBStorage.saveCollection('mouvements', []);

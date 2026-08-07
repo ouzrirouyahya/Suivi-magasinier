@@ -1,11 +1,62 @@
+// Registre centralisé des écouteurs pour éviter les fuites de mémoire et dédoubler les abonnements
+const activeListeners = new Map<string, () => void>();
+
 export const snapshotManager = {
-  
+  registerListener(key: string, unsubscribe: () => void): void {
+    // Si un abonnement avec la même clé est déjà actif, on l'arrête avant d'enregistrer le nouveau
+    const existing = activeListeners.get(key);
+    if (existing) {
+      try {
+        existing();
+      } catch (err) {
+        console.warn(`[snapshotManager] Erreur désabonnement listener ${key}:`, err);
+      }
+    }
+    activeListeners.set(key, unsubscribe);
+  },
+
+  unsubscribe(key: string): void {
+    const existing = activeListeners.get(key);
+    if (existing) {
+      try {
+        existing();
+      } catch (err) {
+        console.warn(`[snapshotManager] Erreur désabonnement listener ${key}:`, err);
+      }
+      activeListeners.delete(key);
+    }
+  },
+
+  clearAllListeners(): void {
+    activeListeners.forEach((unsubscribe, key) => {
+      try {
+        unsubscribe();
+      } catch (err) {
+        console.warn(`[snapshotManager] Erreur désabonnement global (${key}):`, err);
+      }
+    });
+    activeListeners.clear();
+  },
+
   markCollectionSaved(colName: string): void {
     try {
       const raw = localStorage.getItem('hydromines_snapshot_state');
       const state = raw ? JSON.parse(raw) : { collections: {} };
       state.collections[colName] = new Date().toISOString();
-      localStorage.setItem('hydromines_snapshot_state', JSON.stringify(state));
+      try {
+        localStorage.setItem('hydromines_snapshot_state', JSON.stringify(state));
+      } catch (e) {
+        // En cas d'erreur de quota localStorage, on purge les entrées corrompues ou obsolètes et on réessaye
+        try {
+          for (let i = localStorage.length - 1; i >= 0; i--) {
+            const k = localStorage.key(i);
+            if (k && k.includes('_corrupted_')) {
+              localStorage.removeItem(k);
+            }
+          }
+          localStorage.setItem('hydromines_snapshot_state', JSON.stringify(state));
+        } catch {}
+      }
       // Émettre un custom event pour que useInitialSnapshot le capte
       window.dispatchEvent(new CustomEvent('hydromines:collection-saved', {
         detail: { collection: colName }

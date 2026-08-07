@@ -104,7 +104,7 @@ export function useInventory() {
     addTransfert: transfers.addTransfert,
     approveTransfert: transfers.approveTransfert,
     completeTransfert: transfers.completeTransfert,
-    cancelTransfert: transfers.closeTransfert,
+    cancelTransfert: transfers.cancelTransfert,
     closeTransfert: transfers.closeTransfert,
     expedierTransfert: transfers.expedierTransfert,
     receptionnerTransfert: transfers.receptionnerTransfert,

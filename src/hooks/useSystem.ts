@@ -2,6 +2,7 @@ import { useEffect, useCallback } from 'react';
 import { doc, onSnapshot, setDoc, db } from '../lib/db';
 import { useSystemStore } from '../stores/system.store';
 import { useAuthStore } from '../stores/auth.store';
+import { snapshotManager } from '../lib/snapshotManager';
 import { toast } from 'sonner';
 
 export function useSystem() {
@@ -36,7 +37,10 @@ export function useSystem() {
     }, (err) => {
       console.warn("Telemetry lock read restrictions active or document uninitialized:", err.message);
     });
-    return unsub;
+    snapshotManager.registerListener('system_config', unsub);
+    return () => {
+      snapshotManager.unsubscribe('system_config');
+    };
   }, [setMaintenanceMode, setMaintenanceReason]);
 
   const toggleMaintenanceLock = useCallback(async (enabled: boolean, reason?: string) => {

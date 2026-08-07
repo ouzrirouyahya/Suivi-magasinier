@@ -340,7 +340,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
                       <div className="pl-4 flex-1">
                         <div className="flex items-center gap-3">
                           <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase">{p.code}</span>
-                          <span className="text-[10px] font-black bg-sky-50 text-sky-600 border border-sky-100 rounded-full px-2.5 py-0.5 uppercase tracking-wider">{site}</span>
+                          <span className="text-[10px] font-black bg-sky-50 text-sky-600 border border-sky-100 rounded-full px-2.5 py-0.5 uppercase tracking-wider">{p.site}</span>
                         </div>
                         <p className="text-xs text-slate-400 font-bold uppercase tracking-tight mt-2 flex items-center gap-1.5">
                           Sorties ce mois-ci : <span className="font-extrabold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-md">{p.monthQty} item{p.monthQty > 1 ? 's' : ''}</span>
@@ -355,7 +355,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
                 ) : (
                   <div className="col-span-full py-16 text-center bg-white border border-slate-200/60 rounded-3xl p-12">
                     <Drill className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 font-black text-lg uppercase tracking-wider">Aucun perforateur recensé sur le site {site}</p>
+                    <p className="text-slate-500 font-black text-lg uppercase tracking-wider">Aucun perforateur recensé{site === 'ALL' ? '' : ` sur le site ${site}`}</p>
                   </div>
                 )
               ) : (
@@ -376,7 +376,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
                         <div className="flex items-center gap-2.5 flex-wrap">
                           <span className="text-2xl font-black text-slate-900 tracking-tighter uppercase">{e.code}</span>
                           <span className="text-[10px] font-black bg-slate-100 text-slate-600 border border-slate-200 rounded-full px-2.5 py-0.5 uppercase tracking-wider">{e.type}</span>
-                          <span className="text-[10px] font-black bg-sky-50 text-sky-600 border border-sky-100 rounded-full px-2.5 py-0.5 uppercase tracking-wider">{site}</span>
+                          <span className="text-[10px] font-black bg-sky-50 text-sky-600 border border-sky-100 rounded-full px-2.5 py-0.5 uppercase tracking-wider">{e.site}</span>
                         </div>
                         <p className="text-xs text-slate-400 font-bold uppercase tracking-tight mt-2 flex items-center gap-1.5">
                           Sorties ce mois-ci : <span className="font-extrabold text-rose-600 bg-rose-50 border border-rose-100 px-2 py-0.5 rounded-md">{e.monthQty} item{e.monthQty > 1 ? 's' : ''}</span>
@@ -391,7 +391,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
                 ) : (
                   <div className="col-span-full py-16 text-center bg-white border border-slate-200/60 rounded-3xl p-12">
                     <Wrench className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-                    <p className="text-slate-500 font-black text-lg uppercase tracking-wider">Aucun engin recensé sur le site {site}</p>
+                    <p className="text-slate-500 font-black text-lg uppercase tracking-wider">Aucun engin recensé{site === 'ALL' ? '' : ` sur le site ${site}`}</p>
                   </div>
                 )
               )}
@@ -412,7 +412,7 @@ export function CarnetsModal({ isOpen, onClose, site, articles }: CarnetsModalPr
                 </button>
                 <div className="flex items-center gap-3">
                   <h2 className="text-4xl font-black text-slate-900 tracking-tighter uppercase leading-none">CARNET — {selectedMachine}</h2>
-                  <span className="text-xs font-black bg-sky-50 text-sky-600 border border-sky-100 rounded-full px-3 py-1 uppercase tracking-widest">{site}</span>
+                  <span className="text-xs font-black bg-sky-50 text-sky-600 border border-sky-100 rounded-full px-3 py-1 uppercase tracking-widest">{site === 'ALL' ? 'TOUS LES SITES' : site}</span>
                 </div>
               </div>
 

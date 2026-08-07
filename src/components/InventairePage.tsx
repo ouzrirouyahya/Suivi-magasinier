@@ -27,7 +27,7 @@ import { useInventory } from '../context/InventoryContext';
 import { movementsService } from '../modules/movements/movements.service';
 
 interface InventairePageProps {
-  currentSite: SiteCode;
+  currentSite: SiteCode | 'ALL';
   articles: Article[];
   inventaires: Inventaire[];
   onSaveInventaire: (i: Inventaire) => Promise<void> | void;

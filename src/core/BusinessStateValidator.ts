@@ -173,6 +173,45 @@ export function validateMouvementInvariants(
     };
   }
 
+  // Validation des mouvements de SORTIE pour la traçabilité renforcée
+  if (mouvement.type === 'SORTIE') {
+    for (const item of mouvement.items) {
+      const article = articleMap.get(item.articleId);
+      if (article) {
+        const cat = (article.category || article.type || '').toUpperCase();
+        const isSensitive = cat.includes('EPI') || cat.includes('OUTIL') || cat.includes('EQUIPEMENT');
+        const hasBeneficiary = !!(item.beneficiaire?.trim() || mouvement.beneficiaire?.trim());
+        
+        if (isSensitive && !hasBeneficiary) {
+          return {
+            isValid: false,
+            classification: 'STATE_INCONSISTENCY',
+            errorMsg: `Attribution obligatoire : Un bénéficiaire doit être désigné pour la sortie du matériel sensible "${article.designation}" (${article.ref}).`,
+            inconsistentField: 'beneficiaire',
+          };
+        }
+      }
+    }
+
+    const hasTraceability = !!(
+      mouvement.beneficiaire?.trim() ||
+      mouvement.engin?.trim() ||
+      mouvement.referenceEngin?.trim() ||
+      mouvement.notes?.trim() ||
+      mouvement.motif?.trim() ||
+      mouvement.items.some(i => i.beneficiaire?.trim() || i.beneficiaryName?.trim())
+    );
+
+    if (!hasTraceability) {
+      return {
+        isValid: false,
+        classification: 'STATE_INCONSISTENCY',
+        errorMsg: 'Motif ou justification de sortie obligatoire : Veuillez spécifier un bénéficiaire, un engin destinataire ou un motif de sortie.',
+        inconsistentField: 'notes',
+      };
+    }
+  }
+
   return { isValid: true, classification: 'VALID' };
 }
 

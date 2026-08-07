@@ -150,6 +150,7 @@ export function HydrominesCatalog() {
   // Form states for adding from technical catalog
   const [techItemUnit, setTechItemUnit] = useState('Pcs');
   const [techItemIsCritical, setTechItemIsCritical] = useState(false);
+  const [isAddingCatalogItem, setIsAddingCatalogItem] = useState(false);
 
   const isAdminOrMagasinier = currentUser?.role === 'ADMIN' || currentUser?.role === 'SUPER_ADMIN' || currentUser?.role === 'MAGASINIER';
 
@@ -466,12 +467,17 @@ export function HydrominesCatalog() {
 
     setIsSaving(true);
     try {
-      await saveHydrominesCatalogItem(finalItem);
+      await saveHydrominesCatalogItem(finalItem, !isEdit);
       toast.success(isEdit ? "Pièce mise à jour avec succès !" : "Pièce ajoutée au catalogue !");
       setIsModalOpen(false);
       setEditingItem(null);
     } catch (e: any) {
-      toast.error(`Erreur d'enregistrement : ${e.message || e}`);
+      const msg = e.message || String(e);
+      if (msg.startsWith("REFERENCE_DEJA_UTILISEE")) {
+        toast.error(`La référence "${editingItem.reference}" existe déjà dans le Catalogue Excellence.`);
+      } else {
+        toast.error(`Erreur d'enregistrement : ${msg}`);
+      }
     } finally {
       setIsSaving(false);
     }
@@ -649,10 +655,16 @@ export function HydrominesCatalog() {
 
   // Handle adding selected item from tech catalog search
   const handleAddSelectedCatalogItem = async () => {
-    if (!selectedCatalogItem) return;
+    if (isAddingCatalogItem) return;
+    setIsAddingCatalogItem(true);
+    if (!selectedCatalogItem) {
+      setIsAddingCatalogItem(false);
+      return;
+    }
 
     if (isAlreadyInHM(selectedCatalogItem.reference)) {
       toast.warning(`La référence ${selectedCatalogItem.reference} existe déjà dans le Catalogue Excellence ⭐`);
+      setIsAddingCatalogItem(false);
       return;
     }
 
@@ -681,13 +693,15 @@ export function HydrominesCatalog() {
     };
 
     try {
-      await saveHydrominesCatalogItem(newItem);
+      await saveHydrominesCatalogItem(newItem, true);
       toast.success(`La pièce ${newItem.reference} a été ajoutée avec succès au Catalogue Excellence ⭐`);
       
       // Clear selection so they can keep adding consecutive elements without closing physical modal
       setSelectedCatalogItem(null);
     } catch (e: any) {
       toast.error(`Erreur d'enregistrement : ${e.message || e}`);
+    } finally {
+      setIsAddingCatalogItem(false);
     }
   };
 
@@ -1941,10 +1955,11 @@ export function HydrominesCatalog() {
                               <button
                                 type="button"
                                 onClick={handleAddSelectedCatalogItem}
-                                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md shadow-sky-600/10 cursor-pointer transition-all active:scale-95"
+                                disabled={isAddingCatalogItem}
+                                className="w-full flex items-center justify-center gap-2 px-6 py-3 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-black uppercase tracking-widest shadow-md shadow-sky-600/10 cursor-pointer transition-all active:scale-95 disabled:opacity-50"
                               >
                                 <Save className="w-4 h-4" />
-                                Ajouter au Catalogue Excellence
+                                {isAddingCatalogItem ? 'Ajout en cours...' : 'Ajouter au Catalogue Excellence'}
                               </button>
                             )}
                           </div>

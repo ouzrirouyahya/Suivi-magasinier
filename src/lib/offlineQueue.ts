@@ -119,7 +119,21 @@ export const offlineQueue = {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(queue));
     } catch (e) {
-      console.error('[OfflineQueue] localStorage quota dépassé :', e);
+      console.error('[OfflineQueue] localStorage quota dépassé, purge en cours :', e);
+      try {
+        // 1. Supprimer les fichiers corrompus / de debug dans localStorage
+        for (let i = localStorage.length - 1; i >= 0; i--) {
+          const k = localStorage.key(i);
+          if (k && (k.includes('_corrupted_') || k.includes('cache_'))) {
+            localStorage.removeItem(k);
+          }
+        }
+        // 2. Si la file est très longue, on élague les opérations mortes (dead letters / échecs définitifs)
+        const activeOnly = queue.filter(item => item.retryCount < item.maxRetries);
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(activeOnly.slice(-100)));
+      } catch (err) {
+        console.error('[OfflineQueue] Impossible de sauvegarder même après purge:', err);
+      }
     }
   }
 };

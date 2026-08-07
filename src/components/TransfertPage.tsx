@@ -129,6 +129,10 @@ export function TransfertPage({ currentSite, articles, transferts, onAddTransfer
       logger.warn('[PoW Transfer Security failure]', e);
     }
 
+    if (currentSite === 'ALL') {
+      toast.error("Veuillez sélectionner un chantier source spécifique pour créer un transfert.");
+      return;
+    }
     if (!targetSite || items.length === 0) return;
     
     const parsedItems = items.map(it => ({

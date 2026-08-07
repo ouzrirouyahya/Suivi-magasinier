@@ -722,6 +722,176 @@ export class TransfersService {
       return { success: false, error: error.message || 'Erreur lors de la clôture du transfert' };
     }
   }
+
+  /**
+   * Cancel a transfer and restore deducted stock to source site (transitions -> CANCELLED)
+   */
+  async cancelTransfert(id: string, userEmail: string, reason?: string, isSimulation: boolean = false): Promise<{ success: boolean; error?: string }> {
+    try {
+      const historyEntry: TransfertHistoryEntry = {
+        status: 'CANCELLED',
+        date: new Date().toISOString(),
+        userEmail,
+        comment: reason || 'Annulation du bon de transfert et réintégration des stocks source'
+      };
+
+      if (isSimulation) {
+        const { transferts } = useTransfersStore.getState();
+        const { articles } = useArticlesStore.getState();
+        const tIndex = transferts.findIndex(tx => tx.id === id);
+
+        if (tIndex !== -1) {
+          const tx = transferts[tIndex];
+          if (tx.status === 'RECEIVED' || tx.status === 'CLOSED' || tx.status === 'RECU' || tx.status === 'CANCELLED') {
+            return { success: false, error: `Impossible d'annuler un transfert avec statut ${tx.status}` };
+          }
+
+          // Restituer les stocks au site de départ
+          const updatedArticles = [...articles];
+          tx.items.forEach(item => {
+            const index = updatedArticles.findIndex(a => a.id === item.articleId);
+            if (index !== -1) {
+              const art = updatedArticles[index];
+              updatedArticles[index] = { ...art, quantity: art.quantity + item.quantity };
+            }
+          });
+
+          useArticlesStore.getState().setArticles(updatedArticles);
+          const updatedHistory = [...(tx.history || []), historyEntry];
+          useTransfersStore.getState().updateTransfertLocal(id, {
+            status: 'CANCELLED',
+            disputeReason: reason,
+            history: updatedHistory
+          });
+
+          // Mouvement de réintégration local
+          const localReturnMvt: Mouvement = {
+            id: 'mvt_local_' + generateSecureUUID(),
+            site: tx.sourceSite,
+            date: new Date().toISOString(),
+            type: 'TRANSFERT_IN',
+            reference: tx.reference,
+            createdBy: userEmail,
+            items: tx.items.map(i => ({
+              articleId: i.articleId,
+              quantity: i.quantity,
+              price: i.price || 0,
+              articleDesignation: i.articleDesignation || '',
+              articleRef: i.articleRef || '',
+              articleUnit: i.articleUnit || 'PIECE'
+            })),
+            notes: `Réintégration suite à annulation du transfert réf: ${tx.reference}`,
+            status: 'VALIDE'
+          };
+          useMovementsStore.getState().addMouvementLocal(localReturnMvt);
+        }
+        return { success: true };
+      }
+
+      const localArticlesToUpdate: { id: string; quantity: number }[] = [];
+
+      await runTransaction(db, async (transaction) => {
+        const targetMonth = new Date().toISOString().slice(0, 7);
+        const closingRef = doc(db, 'monthlyClosings', targetMonth);
+        const closingSnap = await transaction.get(closingRef);
+        if (closingSnap.exists()) {
+          throw new Error(`PERIODE_CLOTUREE: La période ${targetMonth} est close. Annulation impossible.`);
+        }
+
+        const tRef = doc(db, 'transferts', id);
+        const tSnap = await transaction.get(tRef);
+        if (!tSnap.exists()) {
+          throw new Error("TRANSFERT_INTROUVABLE");
+        }
+        const transfert = tSnap.data() as Transfert;
+
+        if (transfert.status === 'RECEIVED' || transfert.status === 'CLOSED' || transfert.status === 'RECU' || transfert.status === 'CANCELLED') {
+          throw new Error(`TRANSFERT_IMPOSSIBLE_ANNULER: Le transfert a le statut ${transfert.status}`);
+        }
+
+        // Restituer les stocks au site de départ
+        let totalValue = 0;
+        const inboundItems: MouvementItem[] = [];
+
+        for (const item of transfert.items) {
+          const articleRef = doc(db, 'articles', item.articleId);
+          const articleSnap = await transaction.get(articleRef);
+          if (articleSnap.exists()) {
+            const article = articleSnap.data() as Article;
+            const newQty = (article.quantity || 0) + item.quantity;
+            transaction.update(articleRef, { quantity: newQty });
+            localArticlesToUpdate.push({ id: item.articleId, quantity: newQty });
+            
+            totalValue += item.quantity * (item.price || article.price || 0);
+
+            inboundItems.push({
+              articleId: item.articleId,
+              quantity: item.quantity,
+              price: item.price || article.price || 0,
+              articleDesignation: article.designation,
+              articleRef: article.ref,
+              articleUnit: article.unit || 'PIECE'
+            });
+          }
+        }
+
+        // Mouvement de réintégration sur le site de départ
+        if (inboundItems.length > 0) {
+          const returnMvtId = generateSecureUUID();
+          const returnMvtRef = doc(db, 'mouvements', returnMvtId);
+          transaction.set(returnMvtRef, cleanObject({
+            id: returnMvtId,
+            site: transfert.sourceSite,
+            date: new Date().toISOString(),
+            type: 'TRANSFERT_IN',
+            reference: transfert.reference,
+            createdBy: userEmail,
+            items: inboundItems,
+            notes: `Réintégration de stock suite à annulation du transfert réf: ${transfert.reference}${reason ? ' (' + reason + ')' : ''}`,
+            status: 'VALIDE'
+          }));
+        }
+
+        const updatedHistory = [...(transfert.history || []), historyEntry];
+        transaction.update(tRef, {
+          status: 'CANCELLED',
+          disputeReason: reason || 'Transfert annulé',
+          history: updatedHistory
+        });
+
+        // Audit Log
+        const auditId = generateSecureUUID();
+        const auditLogRef = doc(db, 'auditLogs', auditId);
+        transaction.set(auditLogRef, cleanObject({
+          id: auditId,
+          timestamp: new Date().toISOString(),
+          userEmail,
+          site: transfert.sourceSite,
+          action: 'TRANSFERT_CANCELLED',
+          details: `Annulation du transfert ${transfert.reference} et réintégration de ${totalValue} MAD de stock.`,
+          amount: totalValue
+        }));
+      });
+
+      // Update local store state
+      localArticlesToUpdate.forEach(work => {
+        useArticlesStore.getState().updateArticleLocal(work.id, { quantity: work.quantity });
+      });
+
+      const t = useTransfersStore.getState().transferts.find(tx => tx.id === id);
+      const updatedHistory = t ? [...(t.history || []), historyEntry] : [historyEntry];
+      useTransfersStore.getState().updateTransfertLocal(id, {
+        status: 'CANCELLED',
+        disputeReason: reason || 'Transfert annulé',
+        history: updatedHistory
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      logger.error('[cancelTransfert] Erreur:', error);
+      return { success: false, error: error.message || 'Erreur lors de l\'annulation du transfert' };
+    }
+  }
 }
 
 export const transfersService = new TransfersService();

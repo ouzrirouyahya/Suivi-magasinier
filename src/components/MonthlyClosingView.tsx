@@ -102,20 +102,20 @@ export function MonthlyClosingView() {
 
   // Vigilance 1: Zéro transfert en cours (active transfers in transit)
   const activeTransfers = useMemo(() => {
-    return transferts.filter(t => t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT');
-  }, [transferts]);
+    return transferts.filter(t => (t.status === 'EN_TRANSIT' || t.status === 'IN_TRANSIT') && (currentSite === 'ALL' || t.sourceSite === currentSite || t.targetSite === currentSite));
+  }, [transferts, currentSite]);
 
   // Vigilance 2: Zéro bon de mouvement ou demande de suppression en cours
   const pendingRequests = useMemo(() => {
-    const pendingDeletions = deletionRequests.filter(r => r.status === 'PENDING_APPROVAL');
-    const pendingTransfersList = transferts.filter(t => t.status === 'PENDING_APPROVAL');
+    const pendingDeletions = deletionRequests.filter(r => r.status === 'PENDING_APPROVAL' && (currentSite === 'ALL' || r.site === currentSite));
+    const pendingTransfersList = transferts.filter(t => t.status === 'PENDING_APPROVAL' && (currentSite === 'ALL' || t.sourceSite === currentSite || t.targetSite === currentSite));
     return [...pendingDeletions, ...pendingTransfersList];
-  }, [deletionRequests, transferts]);
+  }, [deletionRequests, transferts, currentSite]);
 
   // Vigilance 3: Zéro stock négatif
   const negativeStockArticles = useMemo(() => {
-    return articles.filter(a => (a.quantity || 0) < 0);
-  }, [articles]);
+    return articles.filter(a => (a.quantity || 0) < 0 && (currentSite === 'ALL' || a.site === currentSite));
+  }, [articles, currentSite]);
 
   const isVigilance1Passed = activeTransfers.length === 0;
   const isVigilance2Passed = pendingRequests.length === 0;
@@ -128,7 +128,7 @@ export function MonthlyClosingView() {
   // ------------------------------------------------------------
   const closingStats = useMemo(() => {
     // 1. Total stock items (distinct articles)
-    const activeArticles = articles.filter(a => a.active !== false);
+    const activeArticles = articles.filter(a => a.active !== false && (currentSite === 'ALL' || a.site === currentSite));
     const totalItems = activeArticles.length;
 
     // 2. Total quantity of parts in stock
@@ -142,7 +142,7 @@ export function MonthlyClosingView() {
     }, 0);
 
     // 4. Movements count for the chosen target month
-    const targetMouvements = mouvements.filter(m => m.date && toDateString(m.date).startsWith(targetMonth));
+    const targetMouvements = mouvements.filter(m => (currentSite === 'ALL' || m.site === currentSite) && m.date && toDateString(m.date).startsWith(targetMonth));
     const mouvementsCount = targetMouvements.length;
 
     // 5. Per-site analytical breakdown (derived from active articles)
@@ -180,7 +180,7 @@ export function MonthlyClosingView() {
         : null,
       siteMetrics
     };
-  }, [articles, mouvements, targetMonth, isOutOf90DayWindow]);
+  }, [articles, mouvements, targetMonth, isOutOf90DayWindow, currentSite]);
 
   // Execute the Month Closing operation
   const handleCloseMonth = async () => {

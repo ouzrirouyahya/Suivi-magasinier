@@ -147,9 +147,14 @@ export function useMovements() {
       handleFirestoreError(error, OperationType.LIST, 'mouvements_pending');
     });
 
+    const keyStd = `mouvements_std_${currentSite}`;
+    const keyPending = `mouvements_pending_${currentSite}`;
+    snapshotManager.registerListener(keyStd, unsubStd);
+    snapshotManager.registerListener(keyPending, unsubPending);
+
     return () => {
-      unsubStd();
-      unsubPending();
+      snapshotManager.unsubscribe(keyStd);
+      snapshotManager.unsubscribe(keyPending);
     };
   }, [setMouvements, currentSite, currentUser]);
 
@@ -183,7 +188,11 @@ export function useMovements() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'distributions');
     });
-    return unsub;
+    const key = `distributions_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setDistributions, currentSite, currentUser]);
 
   // Subscribe to purchase requests
@@ -216,7 +225,11 @@ export function useMovements() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'purchaseRequests');
     });
-    return unsub;
+    const key = `purchaseRequests_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setPurchaseRequests, currentSite, currentUser]);
 
   // Subscribe to anomaly reports
@@ -249,7 +262,11 @@ export function useMovements() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'anomalyReports');
     });
-    return unsub;
+    const key = `anomalyReports_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setAnomalyReports, currentSite, currentUser]);
 
   // Subscribe to inventaires
@@ -282,7 +299,11 @@ export function useMovements() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'inventaires');
     });
-    return unsub;
+    const key = `inventaires_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setInventaires, currentSite, currentUser]);
 
   const addMouvement = useCallback(async (mouvement: Mouvement) => {

@@ -7,7 +7,7 @@ import { articleService } from '../services/article.service';
 import { offlineService } from '../services/offline.service';
 import { snapshotManager } from '../lib/snapshotManager';
 import { Article, CatalogItem, DeletionRequest, HydrominesCatalogItem, SiteCode } from '../types';
-import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID, handleFirestoreError, OperationType, logger } from '../lib/utils';
+import { serializeFirestoreData, generateId, cleanObject, generateSecureUUID, handleFirestoreError, OperationType, logger, sanitizeForFirestoreId } from '../lib/utils';
 import { migrateDocument } from '../lib/migrations';
 import { toast } from 'sonner';
 import { offlineQueue } from '../lib/offlineQueue';
@@ -83,7 +83,11 @@ export function useArticles() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'articles');
     });
-    return unsub;
+    const key = `articles_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setArticles, currentSite, currentUser]);
 
   // Subscribe to deletion requests
@@ -105,7 +109,11 @@ export function useArticles() {
     }, (error) => {
       handleFirestoreError(error, OperationType.LIST, 'deletionRequests');
     });
-    return unsub;
+    const key = `deletionRequests_${currentSite}`;
+    snapshotManager.registerListener(key, unsub);
+    return () => {
+      snapshotManager.unsubscribe(key);
+    };
   }, [setDeletionRequests, currentUser, currentSite]);
 
   // Computed: ghostArticles
@@ -370,7 +378,7 @@ export function useArticles() {
       const batch = writeBatch(db);
 
       for (const item of chunk) {
-        const artId = generateId();
+        const artId = `${targetSite}_${sanitizeForFirestoreId(item.reference)}`;
         const art: Article = {
           id: artId,
           site: targetSite,
