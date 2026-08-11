@@ -172,7 +172,6 @@ const LoginPage: React.FC = () => {
       logger.log("🔄 [LoginPage] handleLogin cliqué, connexion par redirection...");
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
-      sessionStorage.setItem('pendingRedirectAuth', 'true');
       await signInWithRedirect(auth, googleProvider);
       // La suite est gérée automatiquement par useAuth.ts (getRedirectResult + onAuthStateChanged)
     } catch (error: any) {
