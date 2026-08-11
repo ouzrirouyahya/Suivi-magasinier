@@ -162,6 +162,13 @@ const LoginPage: React.FC = () => {
 
   const handleLogin = async () => {
     try {
+      const ua = navigator.userAgent || '';
+      const isInAppBrowser = /FBAN|FBAV|Instagram|Line\/|WhatsApp|Messenger/i.test(ua);
+      if (isInAppBrowser) {
+        toast.error("Merci d'ouvrir ce lien dans Chrome ou Safari (pas depuis WhatsApp/Instagram) pour vous connecter.", { duration: 8000 });
+        return;
+      }
+
       logger.log("🔄 [LoginPage] handleLogin cliqué, connexion par redirection...");
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
