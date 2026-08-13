@@ -1,5 +1,12 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
+import { 
+  initializeAuth, 
+  indexedDBLocalPersistence, 
+  browserLocalPersistence, 
+  browserSessionPersistence, 
+  inMemoryPersistence,
+  GoogleAuthProvider 
+} from 'firebase/auth';
 import { getStorage } from 'firebase/storage';
 import {
   initializeFirestore,
@@ -50,7 +57,14 @@ export const db = initializeFirestore(app, {
   })
 }, DATABASE_ID);
 
-export const auth = getAuth(app);
+export const auth = initializeAuth(app, {
+  persistence: [
+    indexedDBLocalPersistence,
+    browserLocalPersistence,
+    browserSessionPersistence,
+    inMemoryPersistence
+  ]
+});
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();
 auth.languageCode = 'fr';
