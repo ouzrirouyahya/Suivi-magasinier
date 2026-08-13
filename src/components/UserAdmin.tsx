@@ -3,7 +3,7 @@ import { Users, Shield, CheckCircle2, XCircle, Mail, Clock, Search, Truck, Drill
 import { UserAccount, EnginMaster, AgentMaster, PerfoMaster, SiteCode, toDateString } from '../types';
 import { cn, generateId, logger } from '../lib/utils';
 import { SITES, SERVICES } from '../demoData';
-import { collection, onSnapshot, query, doc, updateDoc, db } from '../lib/db';
+import { collection, onSnapshot, query, doc, updateDoc, getDoc, db } from '../lib/db';
 import { toast } from 'sonner';
 import { useInventory } from '../context/InventoryContext';
 import { useOnlineStatus } from '../hooks/useOnlineStatus';
@@ -502,9 +502,14 @@ export const UserAdmin = React.memo(function UserAdmin({
       });
 
       const userRef = doc(db, 'accounts', req.userId);
+      const userSnap = await getDoc(userRef);
+      const originalAssignedSite = userSnap.exists() ? (userSnap.data().assignedSite ?? null) : null;
+
       await updateDoc(userRef, {
         isReplacingMagasinier: true,
         canWrite: true,
+        assignedSite: req.site,
+        originalAssignedSite: originalAssignedSite,
         replacementRequestStatus: 'APPROVED',
         replacementStartDate: req.startDate,
         replacementEndDate: req.endDate,

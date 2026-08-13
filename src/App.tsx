@@ -205,6 +205,7 @@ function AuthenticatedLayout() {
   }
 
   if (authTimedOut && !isLoaded && !currentUser) {
+    toast.warning('[DEBUG] Timeout auth atteint (8s) — isLoaded toujours false, aucun utilisateur détecté', { duration: 10000 });
     return <AppRoutes />;
   }
 

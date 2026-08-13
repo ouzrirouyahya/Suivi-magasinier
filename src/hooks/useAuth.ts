@@ -25,21 +25,19 @@ export function useAuth() {
     let unsubUser: (() => void) | null = null;
 
     getRedirectResult(auth)
-      .then(result => { 
-        if (result) logger.log('[useAuth] Redirect auth OK', result.user?.email); 
-      })
-      .catch(error => { 
-        const errorMsg = error.message || '';
-        const isRefererBlocked = errorMsg.includes('requests-from-referer-') || error.code?.includes('referer') || errorMsg.includes('blocked');
-        if (isRefererBlocked) {
-          const hostname = window.location.hostname;
-          toast.error(`Accès bloqué par les restrictions de clé API Google Cloud. Veuillez ajouter le domaine "${hostname}" aux "Restrictions de sites Web" dans votre console Google Cloud.`, { duration: 15000 });
+      .then(result => {
+        if (result && result.user) {
+          toast.success(`[DEBUG] Redirect OK : ${result.user.email}`, { duration: 10000 });
         } else {
-          toast.error(`Erreur connexion : ${error.message}`); 
+          toast.info('[DEBUG] getRedirectResult() : aucun résultat (pas de redirection en attente)', { duration: 10000 });
         }
+      })
+      .catch(error => {
+        toast.error(`[DEBUG] Erreur redirect : code=${error.code || 'inconnu'} | message=${error.message || error}`, { duration: 15000 });
       });
 
     const unsubAuth = onAuthStateChanged(auth, (user) => {
+      toast.info(`[DEBUG] onAuthStateChanged : ${user ? user.email : 'aucun utilisateur'}`, { duration: 10000 });
       logger.log("🔄 [useAuth] onAuthStateChanged déclenché. Utilisateur connecté :", user ? { email: user.email, uid: user.uid, displayName: user.displayName } : "aucun");
       if (unsubUser) {
         logger.log("🔄 [useAuth] Nettoyage de l'écouteur précédent");
@@ -174,6 +172,7 @@ export function useAuth() {
               isReplacingMagasinier: false,
               replacementRequestStatus: 'EXPIRED',
               canWrite: false,
+              ...(currentUser.originalAssignedSite ? { assignedSite: currentUser.originalAssignedSite } : {}),
               updatedAt: new Date().toISOString()
             }, { merge: true });
             toast.info("⏰ Votre période de remplacement a expiré. Retour en mode lecture seule.");
