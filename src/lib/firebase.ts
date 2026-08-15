@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { 
   initializeAuth, 
+  browserPopupRedirectResolver,
   indexedDBLocalPersistence, 
   browserLocalPersistence, 
   browserSessionPersistence, 
@@ -63,7 +64,8 @@ export const auth = initializeAuth(app, {
     browserLocalPersistence,
     browserSessionPersistence,
     inMemoryPersistence
-  ]
+  ],
+  popupRedirectResolver: browserPopupRedirectResolver
 });
 export const storage = getStorage(app);
 export const googleProvider = new GoogleAuthProvider();

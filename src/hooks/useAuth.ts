@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { onAuthStateChanged } from '../lib/firebase';
+import { onAuthStateChanged, getRedirectResult } from '../lib/firebase';
 import { doc, onSnapshot, collection, setDoc, db } from '../lib/db';
 import { auth } from '../lib/firebase';
 import { useAuthStore } from '../stores/auth.store';
@@ -23,6 +23,16 @@ export function useAuth() {
 
   useEffect(() => {
     let unsubUser: (() => void) | null = null;
+
+    getRedirectResult(auth)
+      .then(result => {
+        if (result?.user) {
+          logger.log("✅ [useAuth] Connexion réussie (redirect) :", result.user.email);
+        }
+      })
+      .catch(error => {
+        logger.error("❌ [useAuth] Erreur redirect :", error);
+      });
 
     const unsubAuth = onAuthStateChanged(auth, (user) => {
       logger.log("🔄 [useAuth] onAuthStateChanged déclenché. Utilisateur connecté :", user ? { email: user.email, uid: user.uid, displayName: user.displayName } : "aucun");

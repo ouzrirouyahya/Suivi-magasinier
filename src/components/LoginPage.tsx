@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { auth, googleProvider, db, signInWithPopup } from '../lib/firebase';
+import { auth, googleProvider, db, signInWithPopup, signInWithRedirect } from '../lib/firebase';
 import { setDoc, doc } from '../lib/db';
 import { cleanObject, logger } from '../lib/utils';
 import { toast } from 'sonner';
@@ -172,17 +172,38 @@ const LoginPage: React.FC = () => {
       setIsSubmitting(true);
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
-      const result = await signInWithPopup(auth, googleProvider);
-      logger.log("✅ [LoginPage] Connexion réussie :", result.user.email);
+
+      const isMobile = /Android|iPhone|iPad|iPod/i.test(ua);
+      const isStandalonePWA = window.matchMedia('(display-mode: standalone)').matches
+        || (window.navigator as any).standalone === true;
+
+      if (isMobile || isStandalonePWA) {
+        // Sur mobile / PWA installée : le popup est souvent bloqué silencieusement,
+        // on utilise directement la redirection (fiable maintenant que le header 
+        // COOP fautif a été retiré).
+        await signInWithRedirect(auth, googleProvider);
+        return;
+      }
+
+      try {
+        const result = await signInWithPopup(auth, googleProvider);
+        logger.log("✅ [LoginPage] Connexion réussie (popup) :", result.user.email);
+      } catch (popupError: any) {
+        // Si le popup est bloqué ou échoue sur desktop, on bascule sur la redirection
+        if (
+          popupError.code === 'auth/popup-blocked' ||
+          popupError.code === 'auth/popup-closed-by-user' ||
+          popupError.code === 'auth/cancelled-popup-request'
+        ) {
+          logger.log("⚠️ [LoginPage] Popup indisponible, bascule vers redirection...");
+          await signInWithRedirect(auth, googleProvider);
+          return;
+        }
+        throw popupError;
+      }
     } catch (error: any) {
       logger.error("❌ [LoginPage] Erreur de connexion :", error);
-      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
-        // L'utilisateur a fermé le popup, pas une vraie erreur, on ne montre rien
-      } else if (error.code === 'auth/popup-blocked') {
-        setAuthError("Le popup de connexion a été bloqué par le navigateur. Autorisez les popups pour ce site et réessayez.");
-      } else {
-        setAuthError(`Erreur de connexion : ${error.message || error}`);
-      }
+      setAuthError(`Erreur de connexion : ${error.message || error}`);
     } finally {
       setIsSubmitting(false);
     }
