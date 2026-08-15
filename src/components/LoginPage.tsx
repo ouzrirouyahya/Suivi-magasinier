@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion } from 'motion/react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { auth, googleProvider, db, signInWithRedirect } from '../lib/firebase';
+import { auth, googleProvider, db, signInWithPopup } from '../lib/firebase';
 import { setDoc, doc } from '../lib/db';
 import { cleanObject, logger } from '../lib/utils';
 import { toast } from 'sonner';
@@ -163,31 +163,28 @@ const LoginPage: React.FC = () => {
   const handleLogin = async () => {
     try {
       const ua = navigator.userAgent || '';
-      const isInAppBrowser = /FBAN|FBAV|Instagram|Line\/|WhatsApp|Messenger/i.test(ua);
+      const isInAppBrowser = /FBAN|FBAV|Instagram|Line\//i.test(ua);
       if (isInAppBrowser) {
-        toast.error("Merci d'ouvrir ce lien dans Chrome ou Safari (pas depuis WhatsApp/Instagram) pour vous connecter.", { duration: 8000 });
+        toast.error("Merci d'ouvrir ce lien dans Chrome ou Safari (pas depuis Instagram/Facebook) pour vous connecter.", { duration: 8000 });
         return;
       }
 
-      logger.log("🔄 [LoginPage] handleLogin cliqué, connexion par redirection...");
+      setIsSubmitting(true);
       setAuthError(null);
       googleProvider.setCustomParameters({ prompt: 'select_account' });
-      await signInWithRedirect(auth, googleProvider);
-      // La suite est gérée automatiquement par useAuth.ts (getRedirectResult + onAuthStateChanged)
+      const result = await signInWithPopup(auth, googleProvider);
+      logger.log("✅ [LoginPage] Connexion réussie :", result.user.email);
     } catch (error: any) {
-      logger.error("❌ [LoginPage] Échec de la connexion par redirection :", error);
-      const errorMsg = error.message || '';
-      const isRefererBlocked = errorMsg.includes('requests-from-referer-') || error.code?.includes('referer') || errorMsg.includes('blocked');
-
-      if (isRefererBlocked) {
-        const hostname = window.location.hostname;
-        setAuthError('API_KEY_REFERER_BLOCKED');
-        toast.error(`Accès bloqué par les restrictions de clé API Google Cloud. Veuillez ajouter le domaine "${hostname}" aux restrictions de votre clé API dans Google Cloud Console.`, { duration: 15000 });
+      logger.error("❌ [LoginPage] Erreur de connexion :", error);
+      if (error.code === 'auth/popup-closed-by-user' || error.code === 'auth/cancelled-popup-request') {
+        // L'utilisateur a fermé le popup, pas une vraie erreur, on ne montre rien
+      } else if (error.code === 'auth/popup-blocked') {
+        setAuthError("Le popup de connexion a été bloqué par le navigateur. Autorisez les popups pour ce site et réessayez.");
       } else {
-        setAuthError(error.code || 'unknown');
-        toast.error(`Erreur de connexion : ${error.message || error}`);
+        setAuthError(`Erreur de connexion : ${error.message || error}`);
       }
-      sessionStorage.removeItem('pendingRedirectAuth');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

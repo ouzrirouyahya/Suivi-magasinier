@@ -58,12 +58,6 @@ function AuthenticatedLayout() {
   const [isSigningOut, setIsSigningOut] = useState<boolean>(false);
   const [progressComplete, setProgressComplete] = useState<boolean>(false);
 
-  const [authTimedOut, setAuthTimedOut] = useState(false);
-  useEffect(() => {
-    const t = setTimeout(() => setAuthTimedOut(true), 8000);
-    return () => clearTimeout(t);
-  }, []);
-
   const handleEntranceComplete = () => {
     setShowEntrance(false);
     sessionStorage.setItem('hydromines_entrance_played', 'true');
@@ -198,15 +192,10 @@ function AuthenticatedLayout() {
   const hasPlayedIntro = sessionStorage.getItem('hydromines_login_intro_played') === 'true';
   const shouldShowLoader = hasPlayedIntro || currentUser;
 
-  if (shouldShowLoader && (!isLoaded || !progressComplete) && !authTimedOut) {
+  if (shouldShowLoader && (!isLoaded || !progressComplete)) {
     return (
       <PageLoading isLoaded={isLoaded} onComplete={() => setProgressComplete(true)} />
     );
-  }
-
-  if (authTimedOut && !isLoaded && !currentUser) {
-    toast.warning('[DEBUG] Timeout auth atteint (8s) — isLoaded toujours false, aucun utilisateur détecté', { duration: 10000 });
-    return <AppRoutes />;
   }
 
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';

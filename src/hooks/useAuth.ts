@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { onAuthStateChanged, getRedirectResult } from '../lib/firebase';
+import { onAuthStateChanged } from '../lib/firebase';
 import { doc, onSnapshot, collection, setDoc, db } from '../lib/db';
 import { auth } from '../lib/firebase';
 import { useAuthStore } from '../stores/auth.store';
@@ -24,20 +24,7 @@ export function useAuth() {
   useEffect(() => {
     let unsubUser: (() => void) | null = null;
 
-    getRedirectResult(auth)
-      .then(result => {
-        if (result && result.user) {
-          toast.success(`[DEBUG] Redirect OK : ${result.user.email}`, { duration: 10000 });
-        } else {
-          toast.info('[DEBUG] getRedirectResult() : aucun résultat (pas de redirection en attente)', { duration: 10000 });
-        }
-      })
-      .catch(error => {
-        toast.error(`[DEBUG] Erreur redirect : code=${error.code || 'inconnu'} | message=${error.message || error}`, { duration: 15000 });
-      });
-
     const unsubAuth = onAuthStateChanged(auth, (user) => {
-      toast.info(`[DEBUG] onAuthStateChanged : ${user ? user.email : 'aucun utilisateur'}`, { duration: 10000 });
       logger.log("🔄 [useAuth] onAuthStateChanged déclenché. Utilisateur connecté :", user ? { email: user.email, uid: user.uid, displayName: user.displayName } : "aucun");
       if (unsubUser) {
         logger.log("🔄 [useAuth] Nettoyage de l'écouteur précédent");
