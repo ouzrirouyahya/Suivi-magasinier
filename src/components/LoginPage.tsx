@@ -207,7 +207,7 @@ const LoginPage: React.FC = () => {
       const isRefererBlocked = errorMsg.includes('requests-from-referer-') || error.code?.includes('referer') || errorMsg.includes('blocked');
       if (isRefererBlocked) {
         setAuthError('API_KEY_REFERER_BLOCKED');
-        toast.error("Accès bloqué par les restrictions de clé API Google Cloud pour ce domaine. Vous pouvez utiliser le bouton 'Accès Direct Immédiat' ci-dessous pour entrer dans l'application.", { duration: 12000 });
+        toast.error("Erreur de connexion. Merci de réessayer dans quelques instants.", { duration: 8000 });
       } else if (error.code === 'auth/popup-blocked') {
         setAuthError("Le popup de connexion a été bloqué par le navigateur. Autorisez les popups pour ce site et réessayez.");
       } else {
@@ -216,24 +216,6 @@ const LoginPage: React.FC = () => {
     } finally {
       setIsSubmitting(false);
     }
-  };
-
-  const handleDirectAccess = () => {
-    const adminUser: UserAccount = {
-      id: 'super-admin-direct',
-      email: 'ouzrirouyahya@gmail.com',
-      name: 'Yahya Ouzrirou (Super Admin)',
-      role: 'SUPER_ADMIN',
-      active: true,
-      status: 'APPROVED',
-      canWrite: true,
-      createdAt: new Date().toISOString()
-    };
-    useAuthStore.getState().setCurrentUser(adminUser);
-    useAuthStore.getState().setIsLoaded(true);
-    useAuthStore.getState().setIsAuthenticated(true);
-    toast.success("Accès autorisé : Bienvenue dans votre espace Mon Magasin !");
-    navigate('/');
   };
 
   const handleSubmitRequest = async () => {
@@ -819,32 +801,21 @@ const LoginPage: React.FC = () => {
                        Connexion Google
                     </button>
 
-                    <button
-                      type="button"
-                      onClick={handleDirectAccess}
-                      className="w-full py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white rounded-xl flex items-center justify-center gap-2 font-black text-[11px] uppercase tracking-wider shadow-sm transition-all hover:-translate-y-0.5 active:scale-95 cursor-pointer"
-                    >
-                      <ArrowRight className="w-3.5 h-3.5" />
-                      Accéder à Mon Magasin (Super Admin)
-                    </button>
                   </div>
 
                   {authError && (
                     <div className="mt-4 bg-rose-50 border border-rose-200 p-3.5 rounded-xl text-left space-y-1.5 text-xs">
                       <div className="flex items-center gap-2 text-rose-700 font-extrabold uppercase tracking-wider text-[10px]">
                         <span className="w-1.5 h-1.5 rounded-full bg-rose-600 animate-pulse" />
-                        {authError === 'API_KEY_REFERER_BLOCKED' ? 'Clé API Google Cloud restreinte' : 'Erreur de connexion'}
+                        {authError === 'API_KEY_REFERER_BLOCKED' ? 'Connexion temporairement indisponible' : 'Erreur de connexion'}
                       </div>
                       {authError === 'API_KEY_REFERER_BLOCKED' ? (
-                        <div className="space-y-1.5 text-slate-600">
-                          <p className="font-bold text-[10px] leading-relaxed uppercase">
-                            Votre clé API Google Cloud limite l'utilisation aux domaines spécifiés et bloque le domaine de développement d'AI Studio :
+                        <div className="space-y-1 text-slate-600 text-[10px] leading-relaxed">
+                          <p className="font-semibold text-rose-800">
+                            Un problème de configuration empêche la connexion depuis ce domaine.
                           </p>
-                          <p className="font-mono text-[9px] bg-white p-1.5 rounded border border-rose-100 break-all select-all text-rose-600 font-bold">
-                            {window.location.origin}
-                          </p>
-                          <p className="font-medium text-[9.5px] leading-relaxed">
-                            <strong>Solution :</strong> Ajoutez ce domaine dans les restrictions de votre console Google Cloud.
+                          <p className="text-slate-500">
+                            Merci de réessayer dans quelques instants ou de contacter le support.
                           </p>
                         </div>
                       ) : (

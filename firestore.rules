@@ -393,6 +393,7 @@ service cloud.firestore {
           // L'utilisateur ne peut pas modifier lui-même son statut d'approbation s'il est déjà défini
           && (incoming().status == existing().status || (!existing().keys().contains('status') && incoming().status == 'PENDING'))
           && (!incoming().keys().contains('canWrite') || incoming().canWrite == existing().get('canWrite', false))
+          && (!incoming().keys().contains('assignedSite') || incoming().assignedSite == existing().get('assignedSite', null))
           && (!incoming().keys().contains('hideLastConnection') || existing().role == 'SUPER_ADMIN')
           && isValidAccount(incoming())
         )
